@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "vitest run test/smoke.live.test.ts --config vitest.smoke.config.ts",
+    "playtest": "vite-node -c vitest.config.ts scripts/playtest.ts --",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {

@@ -5,7 +5,7 @@ import { WORLD_BIBLE } from "./content";
 import { preRollDice } from "./dice";
 import { StringFieldExtractor, sseEvent } from "./stream";
 
-/** Vstup, kterým klient žádá o úvodní scénu nové hry. */
+/** Značka prvního záznamu historie — klient pod ní zasadí pevný úvodní text. */
 export const GAME_START_INPUT = "[ZAČÁTEK HRY]";
 
 // Strukturované výstupy: vše required, volitelnost přes null; mapy jako pole dvojic
@@ -205,11 +205,10 @@ export function buildTurnMessage(state: GameState, playerInput: string, dice: nu
     boj: state.combat,
     tah: state.turn,
   };
+  // Úvodní scéna je pevný text — klient ji zobrazí sám a zasadí do historie;
+  // GM už dostává jen běžné tahy (případně vypršení času).
   let intro = "";
-  if (playerInput === GAME_START_INPUT) {
-    intro =
-      "\n[POKYN] Toto je první tah. Napiš úvodní scénu: probuzení v rabínově domě, rabínův vzkaz, první náznak, že na půdě není něco v pořádku (šámes buší na dveře). Představ situaci a čas. Žádný test.\n";
-  } else if (state.timeMinutes >= TIME_LIMIT_MIN && !state.ending) {
+  if (state.timeMinutes >= TIME_LIMIT_MIN && !state.ending) {
     intro = "\n[POKYN] Čas vypršel — rabi Löw se vrací. Vyhlas odpovídající konec.\n";
   }
   return [

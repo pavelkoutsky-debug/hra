@@ -77,6 +77,28 @@ describe("applyGmResult", () => {
   });
 });
 
+describe("sledování návštěv lokací", () => {
+  it("přesun do nové lokace nastaví navstiveno: flag", () => {
+    const s = newGameState("ucenec");
+    const next = applyGmResult(s, gmResult({}, { location: "synagoga" }));
+    expect(next.location).toBe("synagoga");
+    expect(next.flags["navstiveno:synagoga"]).toBe(true);
+  });
+
+  it("startovní lokace je navštívená od začátku a flag se drží i bez přesunu", () => {
+    const s = newGameState("sikula");
+    expect(s.flags["navstiveno:rabinuv-dum"]).toBe(true);
+    const next = applyGmResult(s, gmResult());
+    expect(next.flags["navstiveno:rabinuv-dum"]).toBe(true);
+  });
+
+  it("vymyšlené id lokace flag nedostane", () => {
+    const s = newGameState("ucenec");
+    const next = applyGmResult(s, gmResult({}, { location: "atlantida" }));
+    expect(next.flags["navstiveno:atlantida"]).toBeUndefined();
+  });
+});
+
 describe("applyNpcOutcome", () => {
   it("zapisuje fakta jako flagy a posouvá vztah s ořezem", () => {
     const s = newGameState("ucenec");

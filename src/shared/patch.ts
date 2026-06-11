@@ -1,5 +1,6 @@
 import type { GameState, GmResult, StatePatch } from "./types";
 import { TIME_LIMIT_MIN } from "./rules";
+import { LOCATION_IDS } from "./canon";
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -25,6 +26,12 @@ export function applyGmResult(state: GameState, result: GmResult): GameState {
   }
 
   Object.assign(next.flags, p.flags_set ?? {});
+
+  // Návštěvy lokací sleduje deterministicky kód, ne GM (kanonické popisy první návštěvy).
+  // Nastavuje se každý tah pro aktuální lokaci — samoopravné i pro starší savy.
+  if (LOCATION_IDS.includes(next.location)) {
+    next.flags[`navstiveno:${next.location}`] = true;
+  }
 
   for (const [axis, delta] of Object.entries(p.axes_delta ?? {})) {
     if (axis in next.axes && typeof delta === "number") {

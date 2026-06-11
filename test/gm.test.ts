@@ -60,10 +60,10 @@ describe("buildTurnMessage", () => {
     expect(msg).toContain("do návratu rabiho zbývá 24 h 00 min");
   });
 
-  it("první tah dostane pokyn k úvodní scéně", () => {
+  it("značka začátku hry už žádný zvláštní pokyn nedostává (úvod je pevný text)", () => {
     const s = newGameState("ucenec");
     const msg = buildTurnMessage(s, GAME_START_INPUT, [1, 2, 3]);
-    expect(msg).toContain("první tah");
+    expect(msg).not.toContain("[POKYN]");
   });
 });
 

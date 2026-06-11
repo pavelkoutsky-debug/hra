@@ -1,6 +1,7 @@
 import type { ArchetypeId, GameState, TurnRecord } from "../shared/types";
 import { newGameState } from "../shared/rules";
 import { applyGmResult, applyNpcOutcome } from "../shared/patch";
+import { archetypeIntro, firstVisitText, npcIntro } from "../shared/canon";
 import { gmTurn, npcTurn, login, ApiError } from "./api";
 import * as ui from "./ui";
 import { saveGame, loadGame, clearSave, exportSave, importSave, saveToken, loadToken, type LogEntry } from "./save";
@@ -71,6 +72,14 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
     addLog("gm", result.narration);
     ui.renderChecks(result.checks);
 
+    // První návštěva lokace → po naraci zobrazíme kanonický popis (před aplikací patche,
+    // která flag `navstiveno:` nastaví).
+    const newLoc = result.state_patch?.location;
+    const canonText =
+      newLoc && newLoc !== state.location && !state.flags[`navstiveno:${newLoc}`]
+        ? firstVisitText(newLoc)
+        : null;
+
     history.push({ player: playerInput, narration: result.narration });
     state = applyGmResult(state, result);
     syncUi();
@@ -85,6 +94,11 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
       persist();
       ui.showEnding("Tmavá ulička", result.narration);
       return;
+    }
+
+    if (canonText) {
+      ui.appendEntry("kanon", canonText);
+      addLog("kanon", canonText);
     }
 
     if (result.npc_dialogue) {
@@ -105,6 +119,15 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
 
 function startDialogue(npcId: string): void {
   dialogue = { npcId, npcName: npcId, lines: [], facts: [], attitudeDelta: 0 };
+  // První setkání: kanonické představení postavy + flag (nastavuje klient, ne LLM).
+  if (state && !state.flags[`potkal:${npcId}`]) {
+    const intro = npcIntro(npcId);
+    if (intro) {
+      ui.appendEntry("kanon", intro);
+      addLog("kanon", intro);
+    }
+    state.flags[`potkal:${npcId}`] = true;
+  }
   ui.setDialogueBanner(npcId);
   ui.setQuickActions([], () => {});
 }
@@ -181,7 +204,14 @@ function startNewGame(archetype: ArchetypeId): void {
   ui.setDialogueBanner(null);
   ui.showScreen("screen-game");
   syncUi();
-  void playGmTurn(GAME_START_INPUT);
+  // Pevný úvod: okamžitě, bez API volání. Zasadí se do historie, aby na něj GM navázal.
+  const { intro, quickActions } = archetypeIntro(archetype);
+  ui.appendEntry("gm", intro);
+  addLog("gm", intro);
+  history.push({ player: GAME_START_INPUT, narration: intro });
+  ui.setQuickActions(quickActions, (text) => void submitInput(text));
+  ui.setBusy(false);
+  persist();
 }
 
 function continueGame(): void {
@@ -191,6 +221,10 @@ function continueGame(): void {
   history = save.history;
   logEntries = save.log;
   dialogue = null;
+  // Migrace starších savů: bez navstiveno: flagů by se kánon zobrazil i v rozehrané lokaci.
+  if (!Object.keys(state.flags).some((k) => k.startsWith("navstiveno:"))) {
+    state.flags[`navstiveno:${state.location}`] = true;
+  }
   ui.showScreen("screen-game");
   ui.restoreLog(logEntries);
   ui.setDialogueBanner(null);

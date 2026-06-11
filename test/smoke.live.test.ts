@@ -1,49 +1,34 @@
 /**
  * Živý smoke test proti Anthropic API — spouští se jen ručně:
  *   ANTHROPIC_API_KEY=... npm run smoke
- * Odehraje úvodní scénu (GM/Opus) a jednu repliku NPC (Haiku). Stojí pár korun.
+ * Odehraje první skutečný tah (GM/Opus, navazuje na pevný úvod) a jednu repliku NPC (Haiku).
+ * Stojí pár korun.
  */
 import { describe, expect, it } from "vitest";
 import { runGmTurn, GAME_START_INPUT } from "../src/worker/gm";
 import { runNpcTurn } from "../src/worker/npc";
 import { newGameState } from "../src/shared/rules";
+import { archetypeIntro } from "../src/shared/canon";
+import { drainSse } from "./helpers/sse";
 import type { GmResult, NpcResult } from "../src/shared/types";
 
 const apiKey = process.env.ANTHROPIC_API_KEY;
 
-async function drainSse(stream: ReadableStream<Uint8Array>): Promise<{ deltas: string; done: any }> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-  let deltas = "";
-  let done: any = null;
-  for (;;) {
-    const { value, done: eof } = await reader.read();
-    if (eof) break;
-    buf += decoder.decode(value, { stream: true });
-    let i;
-    while ((i = buf.indexOf("\n\n")) !== -1) {
-      const line = buf.slice(0, i).split("\n").find((l) => l.startsWith("data: "));
-      buf = buf.slice(i + 2);
-      if (!line) continue;
-      const msg = JSON.parse(line.slice(6));
-      if (msg.t === "delta") deltas += msg.text;
-      if (msg.t === "done") done = msg;
-      if (msg.t === "err") throw new Error(msg.message);
-    }
-  }
-  return { deltas, done };
-}
-
 describe.skipIf(!apiKey)("živý smoke test", () => {
-  it("GM odehraje úvodní scénu česky a vrátí validní strukturu", { timeout: 180_000 }, async () => {
+  it("GM naváže na pevný úvod a vrátí validní strukturu", { timeout: 180_000 }, async () => {
     const state = newGameState("ucenec");
-    const stream = await runGmTurn(apiKey!, { state, history: [], playerInput: GAME_START_INPUT });
+    const { intro } = archetypeIntro("ucenec");
+    const history = [{ player: GAME_START_INPUT, narration: intro }];
+    const stream = await runGmTurn(apiKey!, {
+      state,
+      history,
+      playerInput: "Otevřu Avramovi dveře a zeptám se, co se na půdě stalo.",
+    });
     const { deltas, done } = await drainSse(stream);
 
     expect(done, "stream musí skončit done zprávou").toBeTruthy();
     const result = done.result as GmResult;
-    console.log("\n--- GM úvod ---\n" + result.narration + "\n");
+    console.log("\n--- GM první tah ---\n" + result.narration + "\n");
 
     expect(result.narration.length).toBeGreaterThan(100);
     expect(deltas).toBe(result.narration); // streaming extrakce sedí s finálním JSONem

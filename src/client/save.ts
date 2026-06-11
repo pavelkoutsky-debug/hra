@@ -1,7 +1,7 @@
 import type { GameState, TurnRecord } from "../shared/types";
 
 export interface LogEntry {
-  kind: "gm" | "player" | "npc-line" | "system";
+  kind: "gm" | "player" | "npc-line" | "system" | "kanon";
   text: string;
   speaker?: string;
 }

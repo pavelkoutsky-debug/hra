@@ -1,4 +1,5 @@
 import type { ArchetypeId, Attributes, AttributeId, GameState } from "./types";
+import { CHRONICLE_SEED } from "./canon";
 
 /** Model vypravěče/rozhodčího hry. */
 export const GM_MODEL = "claude-opus-4-8";
@@ -86,9 +87,10 @@ export function newGameState(archetypeId: ArchetypeId): GameState {
     location: "rabinuv-dum",
     timeMinutes: 0,
     inventory: [...a.inventory],
-    flags: {},
+    // Kanonický popis startovní lokace je součástí pevného úvodu hry.
+    flags: { "navstiveno:rabinuv-dum": true },
     npcAttitudes: {},
-    chronicle: "",
+    chronicle: CHRONICLE_SEED,
     axes: { povest: 0, golem: 0, odhaleni: 0, pogrom: 2 },
     combat: null,
     ending: null,

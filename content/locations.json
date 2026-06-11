@@ -3,60 +3,70 @@
     "name": "Rabínův dům",
     "district": "ghetto",
     "image": "/img/rabinuv-dum.svg",
-    "blurb": "Tichá pracovna plná knih, vůně vosku a inkoustu. Mistrova židle je prázdná."
+    "blurb": "Tichá pracovna plná knih, vůně vosku a inkoustu. Mistrova židle je prázdná.",
+    "firstVisit": "Rabínův dům u Starého hřbitova je tichý jako modlitba po amen. Pracovna v přízemí dýchá voskem, inkoustem a starým papírem; police se prohýbají pod folianty v hebrejštině, latině i němčině a mezi nimi stojí mosazný astroláb, dar od dvorského astronoma. Mistrova židle s vysokým opěradlem je obrácena ke stolu, jako by se pán domu měl každou chvíli vrátit. Podlaha vrže na třetím prkně od prahu a kamna v rohu drží teplo dlouho po vyhasnutí. Je to dům, kde se i ticho zdá učené."
   },
   "synagoga": {
     "name": "Staronová synagoga",
     "district": "ghetto",
     "image": "/img/synagoga.svg",
-    "blurb": "Gotické cihlové štíty, těžké dveře, šero, v němž se modlitby vsakují do zdí."
+    "blurb": "Gotické cihlové štíty, těžké dveře, šero, v němž se modlitby vsakují do zdí.",
+    "firstVisit": "Staronová synagoga stojí v sevření uliček jako loď zakletá do kamene. Cihlové stupňovité štíty se zvedají nad střechy ghetta a zdivo je tak staré, že se říká, že kameny přinesli andělé z rozbořeného Chrámu. Uvnitř vládne chladné šero; světlo padá dovnitř úzkými okny a vsakuje se do lavic ohlazených staletími dlaní. Vzadu za almemorem vede ke stropu úzký žebřík — končí u dvířek do podkroví, o kterých se v obci nemluví. Tady má i šepot ozvěnu."
   },
   "puda-synagogy": {
     "name": "Půda synagogy",
     "district": "ghetto",
     "image": "/img/puda-synagogy.svg",
-    "blurb": "Prach, trámy a tálesy. A v rohu pod plachtou cosi velkého, co by nemělo dýchat."
+    "blurb": "Prach, trámy a tálesy. A v rohu pod plachtou cosi velkého, co by nemělo dýchat.",
+    "firstVisit": "Půda Staronové je nízká a dlouhá jako rakev obce. Trámy zčernalé stářím nesou střechu, která pamatuje požáry i zázraky; pod nimi leží vrstvy prachu, svazky vyřazených knih a truhly se starými tálesy, jichž se nikdo nesmí dotknout. Pavučiny tu visí jako záclony a vzduch je hustý — vůně holubího peří, studeného kamene a čehosi těžšího, co nemá jméno. V rohu pod režnou plachtou se rýsuje cosi velkého a nehybného. Říká se, že sem rabín zakázal vstup pod trestem klatby."
   },
   "radnice": {
     "name": "Židovská radnice",
     "district": "ghetto",
     "image": "/img/radnice.svg",
-    "blurb": "Úřad primase Maisela. Listiny, pečetě a politika, na níž stojí bezpečí obce."
+    "blurb": "Úřad primase Maisela. Listiny, pečetě a politika, na níž stojí bezpečí obce.",
+    "firstVisit": "Židovská radnice stojí hned vedle synagogy, nová a pyšná — Maiselovy peníze jsou v každém trámu. Síň v patře vede k úřadovně primase: těžké dubové dveře, na stěnách privilegia a výnosy s pečetěmi v rámech. Všechno tu voní pečetním voskem a mocí, jaká se v ghettu rodí pomalu a chrání opatrně. Na chodbě skřípou husí brka písařů a u dveří čekává řada prosebníků s čepicemi v dlaních. Tady se rozhoduje, co obec přežije."
   },
   "hrbitov": {
     "name": "Starý židovský hřbitov",
     "district": "ghetto",
     "image": "/img/hrbitov.svg",
-    "blurb": "Náhrobky natěsnané jako dav. Vrány, sníh a jména, která nesmí být zapomenuta."
+    "blurb": "Náhrobky natěsnané jako dav. Vrány, sníh a jména, která nesmí být zapomenuta.",
+    "firstVisit": "Starý hřbitov je les kamene. Náhrobky se tísní jeden přes druhý, nakloněné, propadlé, vrstvené přes sebe jako dav při požáru — pod jedním hrobem leží dalších deset. Mezi deskami se krčí bezy a šípky a sníh tu zůstává ležet déle než jinde. Jména v kameni jsou hebrejská, oblá staletími; na hrobech učenců leží kamínky jako drobné mince pro věčnost. Vrány sedí na pomnících jako černí svědci. Je to nejtišší místo ghetta — a přesto tu člověk nikdy nemá pocit, že je sám."
   },
   "ulicka-ghetta": {
     "name": "Ulička ghetta a brána",
     "district": "ghetto",
     "image": "/img/ulicka-ghetta.svg",
-    "blurb": "Kašna, zastavárna, drbny a stráž u brány. Tudy proudí život i řeči celé čtvrti."
+    "blurb": "Kašna, zastavárna, drbny a stráž u brány. Tudy proudí život i řeči celé čtvrti.",
+    "firstVisit": "Ulička je tepna ghetta: křivá, těsná, věčně vlhká. Domy se naklánějí k sobě, až si střechy skoro šeptají, okapy plivou na dlažbu a v podloubích se tísní krámky — řezník, vetešník, pekař. Uprostřed stojí kamenná kašna, u níž se nabírá voda i novinky. O kus dál visí nad dveřmi tři mosazné koule zastavárny. Ulička ústí k těžké bráně v hradbě ghetta — okované dveře, špehýrka, závora silná jako paže. Tudy vede jediná cesta do křesťanského města."
   },
   "krcma": {
     "name": "Krčma U Tří studní",
     "district": "stare-mesto",
     "image": "/img/krcma.svg",
-    "blurb": "Kouř, pivo a cizí řeči. U okna pije voják, který se bojí zavřít oči."
+    "blurb": "Kouř, pivo a cizí řeči. U okna pije voják, který se bojí zavřít oči.",
+    "firstVisit": "Krčma U Tří studní se krčí v uličce u Týna, nízká a začouzená. Uvnitř to páchne pivem, lojem a mokrou vlnou; stropní trámy visí tak nízko, že vyšší hosté chodí s pokorou. Dlouhé stoly nesou vrypy nožů a kruhy od džbánů, v krbu praská oheň a na stěně bledne malovaný obrázek tří studní, podle nichž dům dostal jméno. Vzadu za nálevem jsou dveře do zadní místnosti — pro hosty, kteří platí za to, aby nebyli vidět."
   },
   "staromak": {
     "name": "Staroměstské náměstí",
     "district": "stare-mesto",
     "image": "/img/staromak.svg",
-    "blurb": "Trh pod Týnem, orloj odměřuje čas a kazatelův hlas sbírá hněv davu."
+    "blurb": "Trh pod Týnem, orloj odměřuje čas a kazatelův hlas sbírá hněv davu.",
+    "firstVisit": "Staroměstské náměstí se otevírá jako kamenné moře. Nad ním trčí věže Týnského chrámu, orloj na radnici odměřuje hodiny a pod podloubími se tísní krámy a stánky trhu. Dlažba je prošlapaná koly, kopyty a tisíci podrážek; vzduch voní pečenými kaštany, koňmi a kadidlem od kostelních vrat. Mezi měšťany v kožiších se proplétají nosiči, žebráci i páni s kordy. Pro chlapce z ghetta je to cizí svět — široký, hlučný a ostražitý: tady jsi host, kterého si všímají."
   },
   "dilna-scotty": {
     "name": "Dílna mistra Scotty",
     "district": "stare-mesto",
     "image": "/img/dilna-scotty.svg",
-    "blurb": "Křivule, vycpaný krokodýl a sametový hlas, který prodává zázraky na dluh."
+    "blurb": "Křivule, vycpaný krokodýl a sametový hlas, který prodává zázraky na dluh.",
+    "firstVisit": "Dílna v Týnském dvoře vypadá jako sen horečnatého učence. Ze stropu visí vycpaný krokodýl, na policích se leskne mosaz a sklo — křivule, baňky s barevnými tekutinami, zrcadla. Na stolech se vrší hvězdné mapy, voskové pečeti a knihy v pěti jazycích, v koutě syčí malá pec. Všechno je rozestavěno tak, aby návštěvníka ohromilo dřív, než stačí smlouvat. Voní to sírou, růžovou vodou a penězi — cizími."
   },
   "dum-sberatele": {
     "name": "Dům hraběte z Lobkowicz",
     "district": "stare-mesto",
     "image": "/img/dum-sberatele.svg",
-    "blurb": "Erb nad vraty, sbírka kuriozit za okny — a v prosklené skříňce ukradené Slovo."
+    "blurb": "Erb nad vraty, sbírka kuriozit za okny — a v prosklené skříňce ukradené Slovo.",
+    "firstVisit": "Dům v Železné ulici je pevnost z pýchy a kamene. Nad vraty se skví vytesaný erb, okna v patře mají skutečná skla — v mrazu se lesknou jako zrcadla. Za vraty dvůr s kočárem, mramorové schodiště a chodby plné kuriozit: rohy bájných zvířat, hodinové strojky, mapy nových světů, vycpaní ptáci s peřím jako drahokamy. Sloužící tu chodí tiše a hosté jen ohlášeni. Všechno tu má svou skříňku, svůj zámek a svůj štítek — sbírka muže, který věří, že svět lze vlastnit."
   }
 }

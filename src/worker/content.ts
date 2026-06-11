@@ -12,8 +12,10 @@ import scotta from "../../content/npcs/scotta.md";
 import lukas from "../../content/npcs/lukas.md";
 import vilem from "../../content/npcs/vilem.md";
 import lobkowicz from "../../content/npcs/lobkowicz.md";
+import { locationCanonAppendix } from "../shared/canon";
 
-export const WORLD_BIBLE = worldBible;
+// Bible světa + kanonické popisy lokací (GM se jich drží, ale neopakuje je — viz příloha).
+export const WORLD_BIBLE = worldBible + locationCanonAppendix();
 
 export const NPC_CARDS: Record<string, string> = {
   avram,

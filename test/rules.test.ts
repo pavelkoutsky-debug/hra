@@ -38,6 +38,13 @@ describe("archetypy", () => {
     expect(s.location).toBe("rabinuv-dum");
     expect(s.ending).toBeNull();
   });
+
+  it("nový stav má zasazenou kroniku a navštívenou startovní lokaci", () => {
+    const s = newGameState("presvedcivy");
+    expect(s.chronicle.length).toBeGreaterThan(50);
+    expect(s.chronicle).toContain("Rabi Löw"); // premisa v kronice
+    expect(s.flags["navstiveno:rabinuv-dum"]).toBe(true);
+  });
 });
 
 describe("remainingTime", () => {

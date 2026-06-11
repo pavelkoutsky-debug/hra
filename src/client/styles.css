@@ -126,6 +126,10 @@ input:focus { outline: 1px solid var(--amber-dim); }
 .entry.npc-line { color: var(--ink); }
 .entry.npc-line .speaker { color: var(--amber); font-variant: small-caps; }
 .entry.system { color: var(--ink-dim); font-size: 0.85rem; text-align: center; }
+.entry.kanon {
+  color: var(--ink-dim); font-style: italic; white-space: pre-wrap;
+  border-left: 2px solid var(--amber-dim); padding-left: 12px;
+}
 .check {
   max-width: 720px; margin: -8px auto 18px;
   font-size: 0.82rem; color: var(--ink-dim);
