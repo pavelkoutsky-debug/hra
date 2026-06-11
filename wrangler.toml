@@ -17,11 +17,10 @@ globs = ["**/*.md"]
 # Tvrdý denní strop GM tahů (ochrana nákladů). Tahy nad limit hra zdvořile odmítne.
 DAILY_TURN_LIMIT = "150"
 
-# Volitelné: KV namespace pro počítadlo denních limitů.
-# Vytvoř příkazem `wrangler kv namespace create LIMITS` a odkomentuj:
-# [[kv_namespaces]]
-# binding = "LIMITS"
-# id = "<id z příkazu výše>"
+# KV namespace pro počítadlo denních limitů (ochrana nákladů).
+[[kv_namespaces]]
+binding = "LIMITS"
+id = "76ab02542a224e7c938c1bfee25bfe10"
 
 # Secrets (nastav přes `wrangler secret put <NÁZEV>`):
 #   ANTHROPIC_API_KEY  — API klíč Anthropic
