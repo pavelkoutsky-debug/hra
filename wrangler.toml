@@ -2,6 +2,8 @@
 name = "ucednikova-noc"
 main = "src/worker/index.ts"
 compatibility_date = "2025-01-01"
+# Anthropic SDK importuje node:path apod. — bez nodejs_compat Worker spadne při prvním volání API.
+compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "./dist"
