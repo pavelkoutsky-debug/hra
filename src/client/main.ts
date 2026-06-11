@@ -54,11 +54,18 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
   }
 
   const entry = ui.appendEntry("gm");
-  entry.classList.add("streaming");
+  entry.classList.add("streaming", "thinking"); // „vypravěč přemýšlí…“ dokud nezačne téct text
 
   try {
-    const { result } = await gmTurn(token, { state, history, playerInput }, (text) => ui.appendToEntry(entry, text));
-    entry.classList.remove("streaming");
+    const { result } = await gmTurn(
+      token,
+      { state, history, playerInput },
+      (text) => {
+        entry.classList.remove("thinking");
+        ui.appendToEntry(entry, text);
+      },
+    );
+    entry.classList.remove("streaming", "thinking");
     entry.textContent = result.narration; // sjednocení s finálním textem
     ui.scrollLog();
     addLog("gm", result.narration);
@@ -87,7 +94,7 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
     }
     persist();
   } catch (err) {
-    entry.classList.remove("streaming");
+    entry.classList.remove("streaming", "thinking");
     if (!entry.textContent) entry.remove();
     showError(err);
     if (err instanceof ApiError && err.status === 401) backToLogin();

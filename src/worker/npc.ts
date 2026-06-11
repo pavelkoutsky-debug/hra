@@ -63,7 +63,7 @@ export async function runNpcTurn(apiKey: string, body: NpcRequestBody): Promise<
   const client = new Anthropic({ apiKey });
   const params = {
     model: NPC_MODEL,
-    max_tokens: 1200,
+    max_tokens: 2000,
     output_config: { format: { type: "json_schema", schema: NPC_SCHEMA } },
     system: card + buildNpcContext(body.npcId, body.state),
     messages: buildNpcMessages(body),
@@ -79,14 +79,26 @@ export async function runNpcTurn(apiKey: string, body: NpcRequestBody): Promise<
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      let lastBeat = 0;
       try {
         for await (const event of stream) {
           if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
             const piece = extractor.push(event.delta.text);
             if (piece) controller.enqueue(sseEvent({ t: "delta", text: piece }));
+          } else {
+            const now = Date.now();
+            if (now - lastBeat > 1000) {
+              lastBeat = now;
+              controller.enqueue(sseEvent({ t: "think" }));
+            }
           }
         }
-        const raw = JSON.parse(extractor.full) as RawNpcOutput;
+        let raw: RawNpcOutput;
+        try {
+          raw = JSON.parse(extractor.full) as RawNpcOutput;
+        } catch {
+          throw new Error("Postava nedokončila odpověď. Zkus to znovu.");
+        }
         controller.enqueue(sseEvent({ t: "done", result: raw, npcName: NPC_NAMES[body.npcId] ?? body.npcId }));
       } catch (err) {
         controller.enqueue(sseEvent({ t: "err", message: err instanceof Error ? err.message : "Neznámá chyba" }));

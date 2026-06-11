@@ -120,6 +120,7 @@ input:focus { outline: 1px solid var(--amber-dim); }
 .entry.gm { white-space: pre-wrap; }
 .entry.gm.streaming::after { content: "▌"; color: var(--amber); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+.entry.gm.thinking::before { content: "vypravěč přemýšlí…"; color: var(--ink-dim); font-style: italic; }
 .entry.player { color: var(--amber); font-style: italic; }
 .entry.player::before { content: "» "; }
 .entry.npc-line { color: var(--ink); }

@@ -250,7 +250,9 @@ export async function runGmTurn(apiKey: string, body: GmRequestBody): Promise<Re
 
   const params = {
     model: GM_MODEL,
-    max_tokens: 4000,
+    // Pozor: s adaptivním thinkingem se do max_tokens počítají i přemýšlecí tokeny —
+    // nízký limit usekne JSON uprostřed a tah spadne. Streamujeme, takže velký limit nevadí.
+    max_tokens: 16000,
     thinking: { type: "adaptive" as const },
     output_config: {
       effort: "medium", // svižnost interaktivní hry > maximální hloubka
@@ -277,14 +279,28 @@ export async function runGmTurn(apiKey: string, body: GmRequestBody): Promise<Re
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      let lastBeat = 0;
       try {
         for await (const event of stream) {
           if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
             const piece = extractor.push(event.delta.text);
             if (piece) controller.enqueue(sseEvent({ t: "delta", text: piece }));
+          } else {
+            // Model nejdřív přemýšlí (i desítky sekund) a žádný text neteče — posílej
+            // heartbeat, ať klient ví, že tah žije, a spojení nevypadá mrtvé.
+            const now = Date.now();
+            if (now - lastBeat > 1000) {
+              lastBeat = now;
+              controller.enqueue(sseEvent({ t: "think" }));
+            }
           }
         }
-        const raw = JSON.parse(extractor.full) as RawGmOutput;
+        let raw: RawGmOutput;
+        try {
+          raw = JSON.parse(extractor.full) as RawGmOutput;
+        } catch {
+          throw new Error("Vypravěč nedokončil odpověď. Zopakuj prosím svůj tah.");
+        }
         controller.enqueue(sseEvent({ t: "done", result: rawToGmResult(raw), dice }));
       } catch (err) {
         controller.enqueue(sseEvent({ t: "err", message: err instanceof Error ? err.message : "Neznámá chyba" }));
