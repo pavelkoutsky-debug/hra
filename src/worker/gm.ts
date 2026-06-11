@@ -234,7 +234,8 @@ export function buildGmMessages(body: GmRequestBody, dice: number[]): Anthropic.
 const OUTPUT_CONTRACT = `
 
 ## 10. Technický kontrakt výstupu
-Odpovídáš VŽDY strukturovaným JSONem podle zadaného schématu. Pole \`narration\` piš jako první. Mapy předávej jako pole dvojic (flags_set, npc_attitude_delta). Osy, které se nemění, vracej s hodnotou 0. Nikdy nevkládej JSON ani technické poznámky do narration.`;
+Odpovídáš VŽDY strukturovaným JSONem podle zadaného schématu. Pole \`narration\` piš jako první. Mapy předávej jako pole dvojic (flags_set, npc_attitude_delta). Osy, které se nemění, vracej s hodnotou 0. Nikdy nevkládej JSON ani technické poznámky do narration.
+Naraci VŽDY dokonči celou větou — nikdy ji neusekni kvůli zbytku JSONu. U epilogu konce raději text kratší a úplný než dlouhý a useknutý.`;
 
 /**
  * Spustí jeden GM tah a vrátí SSE stream:

@@ -4,7 +4,7 @@ import { CHRONICLE_SEED } from "./canon";
 /** Model vypravěče/rozhodčího hry. */
 export const GM_MODEL = "claude-opus-4-8";
 /** Model NPC dialogů. */
-export const NPC_MODEL = "claude-haiku-4-5";
+export const NPC_MODEL = "claude-sonnet-4-6";
 
 /** Rabi se vrací za 24 herních hodin. */
 export const TIME_LIMIT_MIN = 24 * 60;

@@ -1,5 +1,16 @@
 # PLAYTEST — Učedníkova noc
 
+> **Stav oprav (2. kolo):** Všechny nálezy z tohoto reportu vyřešeny a nasazeny na produkci.
+> - **[STŘEDNÍ] Utínání epilogu** → opraveno instrukcí v kontraktu výstupu + cíl 250–350 slov. Živě ověřeno na konci `navrat-mistra`: epilog kompletní, končí celou větou.
+> - **[NÍZKÁ] NPC artefakty** → NPC přesunuto na model **Sonnet 4.6** + posílený kontrakt (čistá čeština). Živě ověřeno: dialogy plynulé, gesta v náznaku, bez cizích slov.
+> - **[NÍZKÁ] Klíče flagů / quick actions po souboji** → instrukce v bibli §2.8 / §2.4.
+> - **Imerze GM/NPC** → nová sekce bible §1.1 (smyslové kotvení, reaktivní svět, tikající čas, Golem jako přízrak, diegetické rychlé akce) + imerzní dodatek NPC kontraktu. Ověřeno živě na produkci.
+>
+> Původní report níže odpovídá stavu před opravami.
+
+---
+
+
 Testováno lokálně přes playtest harness (`npm run playtest`, přímá volání `runGmTurn`/`runNpcTurn`, model claude-opus-4-8 / claude-haiku-4-5), tah po tahu z pohledu hráče. Verze: po zavedení pevných kanonických textů a odolnosti proti rozbíjení.
 
 ## Rozsah
