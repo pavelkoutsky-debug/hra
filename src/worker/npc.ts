@@ -108,6 +108,7 @@ export async function runNpcTurn(apiKey: string, body: NpcRequestBody): Promise<
         }
         controller.enqueue(sseEvent({ t: "done", result: raw, npcName: NPC_NAMES[body.npcId] ?? body.npcId }));
       } catch (err) {
+        console.error("[npc stream]", err);
         controller.enqueue(sseEvent({ t: "err", message: err instanceof Error ? err.message : "Neznámá chyba" }));
       } finally {
         controller.close();

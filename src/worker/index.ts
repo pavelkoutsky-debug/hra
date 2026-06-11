@@ -72,6 +72,11 @@ export default {
         if (!(await authorized(env, request))) return json({ error: "Nepřihlášen." }, 401);
         if (!env.ANTHROPIC_API_KEY) return json({ error: "Chybí ANTHROPIC_API_KEY." }, 500);
 
+        const limit = await checkDailyLimit(env);
+        if (!limit.ok) {
+          return json({ error: `Denní limit hry (${limit.limit} tahů) je vyčerpán. Zkus to zítra.` }, 429);
+        }
+
         const body = (await request.json()) as NpcRequestBody;
         if (!body?.npcId || !body?.state || typeof body.playerInput !== "string") {
           return json({ error: "Neplatný požadavek." }, 400);
@@ -82,6 +87,7 @@ export default {
 
       return json({ error: "Nenalezeno." }, 404);
     } catch (err) {
+      console.error(`[${url.pathname}]`, err);
       return json({ error: err instanceof Error ? err.message : "Chyba serveru." }, 500);
     }
   },

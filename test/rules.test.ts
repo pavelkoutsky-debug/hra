@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateCheck, newGameState, remainingTime, ARCHETYPES, TIME_LIMIT_MIN } from "../src/shared/rules";
+import { evaluateCheck, newGameState, remainingTime, gameClock, ARCHETYPES, TIME_LIMIT_MIN } from "../src/shared/rules";
 
 describe("evaluateCheck", () => {
   it("počítá bonus atribut × 3", () => {
@@ -44,6 +44,18 @@ describe("archetypy", () => {
     expect(s.chronicle.length).toBeGreaterThan(50);
     expect(s.chronicle).toContain("Rabi Löw"); // premisa v kronice
     expect(s.flags["navstiveno:rabinuv-dum"]).toBe(true);
+  });
+});
+
+describe("gameClock", () => {
+  it("hra začíná v 6:00 prvního dne", () => {
+    expect(gameClock(newGameState("ucenec"))).toBe("6:00 · 1. den");
+  });
+
+  it("po půlnoci nastává 2. den", () => {
+    const s = newGameState("ucenec");
+    s.timeMinutes = 18 * 60 + 30; // 0:30
+    expect(gameClock(s)).toBe("0:30 · 2. den");
   });
 });
 

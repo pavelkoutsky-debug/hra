@@ -303,6 +303,7 @@ export async function runGmTurn(apiKey: string, body: GmRequestBody): Promise<Re
         }
         controller.enqueue(sseEvent({ t: "done", result: rawToGmResult(raw), dice }));
       } catch (err) {
+        console.error("[gm stream]", err);
         controller.enqueue(sseEvent({ t: "err", message: err instanceof Error ? err.message : "Neznámá chyba" }));
       } finally {
         controller.close();

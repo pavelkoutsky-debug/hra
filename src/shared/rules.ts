@@ -98,6 +98,15 @@ export function newGameState(archetypeId: ArchetypeId): GameState {
   };
 }
 
+/** Aktuální herní hodina a den (hra začíná v 6:00 prvního dne). */
+export function gameClock(state: GameState): string {
+  const total = 6 * 60 + state.timeMinutes;
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  const day = state.timeMinutes >= 18 * 60 ? "2. den" : "1. den";
+  return `${h}:${m.toString().padStart(2, "0")} · ${day}`;
+}
+
 /** Zbývající čas do návratu rabiho, formátovaný pro UI. */
 export function remainingTime(state: GameState): { minutes: number; label: string } {
   const minutes = Math.max(0, TIME_LIMIT_MIN - state.timeMinutes);

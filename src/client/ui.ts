@@ -1,5 +1,5 @@
 import type { CheckResult, GameState } from "../shared/types";
-import { ATTRIBUTE_NAMES, getArchetype, remainingTime, ARCHETYPES } from "../shared/rules";
+import { ATTRIBUTE_NAMES, getArchetype, remainingTime, gameClock, ARCHETYPES } from "../shared/rules";
 import locationsJson from "../../content/locations.json";
 import type { LogEntry } from "./save";
 
@@ -72,6 +72,7 @@ function escapeHtml(s: string): string {
 }
 
 export function updateHud(state: GameState): void {
+  $("hud-clock").textContent = gameClock(state);
   $("hud-time").textContent = remainingTime(state).label;
   $("hud-hp").textContent = `${state.hp}/${state.maxHp}`;
 }

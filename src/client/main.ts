@@ -111,10 +111,17 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
     entry.classList.remove("streaming", "thinking");
     if (!entry.textContent) entry.remove();
     showError(err);
+    restoreInput(opts.echo !== false ? playerInput : "");
     if (err instanceof ApiError && err.status === 401) backToLogin();
   } finally {
     if (!state?.ending) ui.setBusy(false);
   }
+}
+
+/** Po chybě vrátí hráčův text do vstupu, ať ho nemusí psát znovu. */
+function restoreInput(text: string): void {
+  const input = ui.$("player-input") as HTMLInputElement;
+  if (text && !input.value) input.value = text;
 }
 
 function startDialogue(npcId: string): void {
@@ -169,6 +176,7 @@ async function playNpcTurn(playerInput: string): Promise<void> {
     entry.classList.remove("streaming");
     if (!entry.querySelector(".speaker")?.nextSibling) entry.remove();
     showError(err);
+    restoreInput(playerInput);
   } finally {
     if (!state?.ending) ui.setBusy(false);
   }
