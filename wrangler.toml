@@ -1,0 +1,28 @@
+# Učedníkova noc — Cloudflare Worker
+name = "ucednikova-noc"
+main = "src/worker/index.ts"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+# Texty herního obsahu se importují přímo do Workeru
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+
+[vars]
+# Tvrdý denní strop GM tahů (ochrana nákladů). Tahy nad limit hra zdvořile odmítne.
+DAILY_TURN_LIMIT = "150"
+
+# Volitelné: KV namespace pro počítadlo denních limitů.
+# Vytvoř příkazem `wrangler kv namespace create LIMITS` a odkomentuj:
+# [[kv_namespaces]]
+# binding = "LIMITS"
+# id = "<id z příkazu výše>"
+
+# Secrets (nastav přes `wrangler secret put <NÁZEV>`):
+#   ANTHROPIC_API_KEY  — API klíč Anthropic
+#   ACCESS_CODE        — přístupový kód pro hráče

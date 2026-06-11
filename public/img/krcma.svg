@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#3a2f1d"/>
+      <stop offset="60%" stop-color="#221b10"/>
+      <stop offset="100%" stop-color="#0f0c07"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#g)"/>
+  <g stroke="#6b5a36" stroke-width="1" opacity="0.5" fill="none">
+    <path d="M40 320 L40 140 L80 100 L120 140 L120 320"/>
+    <path d="M520 320 L520 120 L560 80 L600 120 L600 320"/>
+    <path d="M0 320 H640"/>
+    <circle cx="320" cy="96" r="40"/>
+  </g>
+  <text x="320" y="200" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#d9a441" font-style="italic">Krčma U Tří studní</text>
+  <text x="320" y="232" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#8a7a55" letter-spacing="4">PRAHA · 1592</text>
+</svg>

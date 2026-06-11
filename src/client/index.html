@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Učedníkova noc — textová adventura z rudolfínské Prahy</title>
+  <meta name="description" content="AI textová adventura: Praha 1592, ukradený šém a neklidný Golem." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Přihlášení -->
+  <section id="screen-login" class="screen active">
+    <div class="panel narrow">
+      <h1 class="title">Učedníkova noc</h1>
+      <p class="subtitle">Praha léta Páně 1592 · textová adventura</p>
+      <p class="prose">Rabi Löw odjel na Hrad. Z půdy Staronové synagogy zmizel šém.<br />A Golem v noci chodí…</p>
+      <form id="login-form">
+        <label for="access-code">Přístupový kód</label>
+        <input id="access-code" type="password" autocomplete="off" placeholder="kód od správce hry" />
+        <p id="login-error" class="error" hidden></p>
+        <button type="submit" class="btn primary">Vstoupit do hry</button>
+      </form>
+      <p id="continue-row" class="prose" hidden>
+        <button id="btn-continue" class="btn ghost">Pokračovat v uložené hře</button>
+      </p>
+    </div>
+  </section>
+
+  <!-- Výběr postavy -->
+  <section id="screen-archetype" class="screen">
+    <div class="panel">
+      <h2>Kdo jsi, učedníku?</h2>
+      <p class="prose">Vyber, kým jsi v domě rabiho Löwa. Atribut s hodnotou 0 znamená, že se ti taková věc prostě nepovede — hledej jinou cestu.</p>
+      <div id="archetype-cards" class="cards"></div>
+    </div>
+  </section>
+
+  <!-- Hra -->
+  <section id="screen-game" class="screen">
+    <header id="location-header">
+      <img id="location-img" alt="" />
+      <div class="loc-text">
+        <h2 id="location-name">—</h2>
+        <p id="location-blurb"></p>
+      </div>
+      <div class="hud">
+        <div class="hud-item" title="Čas do návratu rabiho Löwa">⌛ <span id="hud-time">—</span></div>
+        <div class="hud-item" title="Zdraví">♥ <span id="hud-hp">—</span></div>
+      </div>
+    </header>
+
+    <main id="game-main">
+      <div id="log" aria-live="polite"></div>
+
+      <div id="dialogue-banner" hidden>
+        <span>Rozhovor: <strong id="dialogue-npc">—</strong></span>
+        <button id="btn-end-dialogue" class="btn small ghost">Ukončit rozhovor</button>
+      </div>
+
+      <div id="quick-actions" class="chips"></div>
+
+      <form id="input-form">
+        <input id="player-input" type="text" autocomplete="off" placeholder="Co uděláš?" maxlength="500" />
+        <button type="submit" class="btn primary" id="btn-send">▶</button>
+      </form>
+    </main>
+
+    <aside id="sidebar">
+      <h3 id="char-name">—</h3>
+      <dl id="char-attrs"></dl>
+      <h4>Inventář</h4>
+      <ul id="char-inventory"></ul>
+      <div class="side-actions">
+        <button id="btn-save-export" class="btn small ghost">Exportovat uloženou hru</button>
+        <label class="btn small ghost file-label">Nahrát uloženou hru<input id="save-import" type="file" accept="application/json" hidden /></label>
+        <button id="btn-new-game" class="btn small danger">Nová hra</button>
+      </div>
+    </aside>
+  </section>
+
+  <!-- Konec hry -->
+  <section id="screen-ending" class="screen">
+    <div class="panel narrow center">
+      <p class="subtitle">KONEC</p>
+      <h1 id="ending-title" class="title">—</h1>
+      <div id="ending-text" class="prose epilogue"></div>
+      <button id="btn-restart" class="btn primary">Hrát znovu</button>
+    </div>
+  </section>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
