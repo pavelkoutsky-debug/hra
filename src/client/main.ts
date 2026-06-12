@@ -4,6 +4,9 @@ import { applyGmResult, applyNpcOutcome } from "../shared/patch";
 import { gmTurn, npcTurn, login, ApiError } from "./api";
 import * as ui from "./ui";
 import { saveGame, loadGame, clearSave, exportSave, importSave, saveToken, loadToken, type LogEntry } from "./save";
+import { music } from "./audio/music";
+
+const CRT_KEY = "ucednikova-noc:crt";
 
 const GAME_START_INPUT = "[ZAČÁTEK HRY]";
 
@@ -34,6 +37,7 @@ function syncUi(): void {
   ui.updateHud(state);
   ui.setLocation(state);
   ui.renderSidebar(state);
+  music.playForState(state);
 }
 
 function showError(err: unknown): void {
@@ -63,20 +67,24 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
     ui.scrollLog();
     addLog("gm", result.narration);
     ui.renderChecks(result.checks);
+    if (result.checks.length) music.sfx("dice");
 
     history.push({ player: playerInput, narration: result.narration });
+    const before = state;
     state = applyGmResult(state, result);
+    if (state.inventory.length > before.inventory.length) music.sfx("item");
+    if (state.hp < before.hp) music.sfx("hurt");
     syncUi();
 
     if (state.ending && result.ending) {
       persist();
-      ui.showEnding(result.ending.title, result.narration);
+      ui.showEnding(result.ending.title, result.narration, state.ending);
       return;
     }
     if (state.ending) {
       // pojistka (smrt bez explicitního konce od GM)
       persist();
-      ui.showEnding("Tmavá ulička", result.narration);
+      ui.showEnding("Tmavá ulička", result.narration, state.ending);
       return;
     }
 
@@ -98,7 +106,7 @@ async function playGmTurn(playerInput: string, opts: { echo?: boolean } = {}): P
 
 function startDialogue(npcId: string): void {
   dialogue = { npcId, npcName: npcId, lines: [], facts: [], attitudeDelta: 0 };
-  ui.setDialogueBanner(npcId);
+  ui.setDialogueBanner(npcId, npcId);
   ui.setQuickActions([], () => {});
 }
 
@@ -120,7 +128,7 @@ async function playNpcTurn(playerInput: string): Promise<void> {
     entry.classList.remove("streaming");
     if (dialogue.npcName !== npcName) {
       dialogue.npcName = npcName;
-      ui.setDialogueBanner(npcName);
+      ui.setDialogueBanner(npcName, dialogue.npcId);
       const speakerEl = entry.querySelector(".speaker");
       if (speakerEl) speakerEl.textContent = `${npcName}: `;
     }
@@ -199,6 +207,45 @@ function continueGame(): void {
 function backToLogin(): void {
   ui.showScreen("screen-login");
   (ui.$("continue-row") as HTMLElement).hidden = !loadGame();
+  music.play("title");
+}
+
+/** Retro přepínače ve stavové liště + odemčení zvuku prvním gestem (autoplay policy). */
+function wireRetroControls(): void {
+  const unlock = () => music.unlock();
+  document.addEventListener("pointerdown", unlock, { once: true });
+  document.addEventListener("keydown", unlock, { once: true });
+
+  const musicBtn = ui.$("btn-music");
+  musicBtn.classList.toggle("off", music.isMuted);
+  musicBtn.addEventListener("click", () => {
+    music.setMuted(!music.isMuted);
+    musicBtn.classList.toggle("off", music.isMuted);
+  });
+
+  const crt = ui.$("crt-overlay");
+  const crtBtn = ui.$("btn-crt");
+  const applyCrt = (on: boolean) => {
+    crt.hidden = !on;
+    crtBtn.classList.toggle("off", !on);
+  };
+  applyCrt(localStorage.getItem(CRT_KEY) === "1");
+  crtBtn.addEventListener("click", () => {
+    const on = crt.hidden;
+    localStorage.setItem(CRT_KEY, on ? "1" : "0");
+    applyCrt(on);
+  });
+
+  // titulní pixel art (pokud už je vygenerovaný)
+  const art = document.querySelector<HTMLElement>(".title-art");
+  if (art) {
+    const img = new Image();
+    img.onload = () => {
+      art.style.backgroundImage = `url(${img.src})`;
+      art.classList.add("loaded");
+    };
+    img.src = "/img/screens/screen-title.png";
+  }
 }
 
 function wireEvents(): void {
@@ -251,12 +298,14 @@ function wireEvents(): void {
     if (confirm("Opravdu začít novou hru? Uložená pozice bude smazána.")) {
       clearSave();
       ui.showScreen("screen-archetype");
+      music.play("title");
     }
   });
 
   ui.$("btn-restart").addEventListener("click", () => {
     clearSave();
     ui.showScreen("screen-archetype");
+    music.play("title");
   });
 
   ui.renderArchetypeCards((id) => startNewGame(id as ArchetypeId));
@@ -264,6 +313,7 @@ function wireEvents(): void {
 
 function init(): void {
   wireEvents();
+  wireRetroControls();
   backToLogin();
 }
 

@@ -11,7 +11,8 @@ export default defineConfig({
   server: {
     proxy: {
       // při `npm run dev` běží API na wrangler dev (port 8787)
-      "/api": "http://localhost:8787",
+      // regex s lomítkem, aby pravidlo nechytalo modul /api.ts
+      "^/api/": "http://localhost:8787",
     },
   },
 });

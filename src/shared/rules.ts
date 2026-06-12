@@ -96,6 +96,15 @@ export function newGameState(archetypeId: ArchetypeId): GameState {
   };
 }
 
+/** Kanonické názvy předmětů — GM je preferuje, klient na ně mapuje pixel art ikony. */
+export const CANONICAL_ITEM_NAMES = [
+  "modlitební kniha", "rabínův doporučující dopis", "svíce a křesadlo", "paklíče", "nůž",
+  "smotané lano", "měšec s groši", "stříbrný prsten", "seznam dlužníků otce", "šém",
+  "mosazný knoflík", "dlužní úpis", "láhev vína", "dopis s lobkowiczkou pečetí", "propustka",
+  "klíč od synagogy", "klíč od skříňky", "stříbrná spona", "glejt posla", "hebrejské opisy",
+  "hřbitovní hlína a vltavská voda",
+];
+
 /** Zbývající čas do návratu rabiho, formátovaný pro UI. */
 export function remainingTime(state: GameState): { minutes: number; label: string } {
   const minutes = Math.max(0, TIME_LIMIT_MIN - state.timeMinutes);

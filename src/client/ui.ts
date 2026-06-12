@@ -2,6 +2,7 @@ import type { CheckResult, GameState } from "../shared/types";
 import { ATTRIBUTE_NAMES, getArchetype, remainingTime, ARCHETYPES } from "../shared/rules";
 import locationsJson from "../../content/locations.json";
 import type { LogEntry } from "./save";
+import { itemIcon } from "./items";
 
 interface LocationInfo {
   name: string;
@@ -82,11 +83,18 @@ export function setLocation(state: GameState): void {
   $("location-blurb").textContent = loc?.blurb ?? "";
   const img = $("location-img") as HTMLImageElement;
   if (loc?.image) {
+    const legacy = `/img/${state.location}.svg`;
+    img.classList.remove("noart");
+    img.onerror = () => {
+      // pixel art scéna ještě nedodána → starý placeholder, jinak jen gradient pozadí
+      if (img.src.endsWith(".png")) img.src = legacy;
+      else { img.classList.add("noart"); img.removeAttribute("src"); }
+    };
     img.src = loc.image;
     img.alt = loc.name;
-    img.hidden = false;
   } else {
-    img.hidden = true;
+    img.classList.add("noart");
+    img.removeAttribute("src");
   }
 }
 
@@ -105,9 +113,31 @@ export function renderSidebar(state: GameState): void {
   const inv = $("char-inventory");
   inv.innerHTML = "";
   for (const item of state.inventory) {
-    const li = document.createElement("li");
-    li.textContent = item;
-    inv.appendChild(li);
+    const slot = document.createElement("div");
+    slot.className = "inv-slot";
+    const img = document.createElement("img");
+    img.src = itemIcon(item);
+    img.alt = item;
+    img.onerror = () => {
+      // ikona ještě nedodána → textová zkratka předmětu
+      img.remove();
+      const fb = document.createElement("span");
+      fb.className = "inv-fallback";
+      fb.textContent = item.slice(0, 2).toUpperCase();
+      slot.prepend(fb);
+    };
+    const label = document.createElement("span");
+    label.className = "inv-label";
+    label.textContent = item;
+    slot.append(img, label);
+    inv.appendChild(slot);
+  }
+  // doplnit prázdné sloty do násobku řádku (4 sloupce)
+  const fill = (4 - (state.inventory.length % 4)) % 4 || (state.inventory.length === 0 ? 4 : 0);
+  for (let i = 0; i < fill; i++) {
+    const slot = document.createElement("div");
+    slot.className = "inv-slot empty";
+    inv.appendChild(slot);
   }
 }
 
@@ -130,14 +160,22 @@ export function setBusy(busy: boolean): void {
   if (!busy) ($("player-input") as HTMLInputElement).focus();
 }
 
-export function setDialogueBanner(npcName: string | null): void {
+export function setDialogueBanner(npcName: string | null, npcId?: string): void {
   const banner = $("dialogue-banner");
+  const portrait = $("dialogue-portrait") as HTMLImageElement;
   if (npcName) {
     $("dialogue-npc").textContent = npcName;
     banner.hidden = false;
+    if (npcId) {
+      portrait.hidden = false;
+      portrait.onerror = () => { portrait.hidden = true; };
+      portrait.src = `/img/portraits/portrait-${npcId}.png`;
+      portrait.alt = npcName;
+    }
     ($("player-input") as HTMLInputElement).placeholder = "Co řekneš?";
   } else {
     banner.hidden = true;
+    portrait.hidden = true;
     ($("player-input") as HTMLInputElement).placeholder = "Co uděláš?";
   }
 }
@@ -156,7 +194,7 @@ export function renderArchetypeCards(onPick: (id: string) => void): void {
         return v === 0 ? `<span class="zero">${name} ${v}</span>` : `${name} ${v}`;
       })
       .join(" · ");
-    card.innerHTML = `<h3>${a.name}</h3><p>${escapeHtml(a.description)}</p><div class="attrs">${attrLine}<br><em>${a.inventory.join(", ")}</em></div>`;
+    card.innerHTML = `<img class="card-art" src="/img/archetypes/archetype-${a.id}.png" alt="" onerror="this.hidden=true"><h3>${a.name}</h3><p>${escapeHtml(a.description)}</p><div class="attrs">${attrLine}<br><em>${a.inventory.join(", ")}</em></div>`;
     const pick = () => onPick(a.id);
     card.addEventListener("click", pick);
     card.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") pick(); });
@@ -164,9 +202,17 @@ export function renderArchetypeCards(onPick: (id: string) => void): void {
   }
 }
 
-export function showEnding(title: string, epilogue: string): void {
+export function showEnding(title: string, epilogue: string, endingId?: string | null): void {
   $("ending-title").textContent = title;
   $("ending-text").textContent = epilogue;
+  const img = $("ending-img") as HTMLImageElement;
+  if (endingId) {
+    img.hidden = false;
+    img.onerror = () => { img.hidden = true; };
+    img.src = `/img/screens/screen-ending-${endingId}.png`;
+  } else {
+    img.hidden = true;
+  }
   showScreen("screen-ending");
 }
 

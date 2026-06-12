@@ -2,61 +2,61 @@
   "rabinuv-dum": {
     "name": "Rabínův dům",
     "district": "ghetto",
-    "image": "/img/rabinuv-dum.svg",
+    "image": "/img/scenes/scene-rabinuv-dum.png",
     "blurb": "Tichá pracovna plná knih, vůně vosku a inkoustu. Mistrova židle je prázdná."
   },
   "synagoga": {
     "name": "Staronová synagoga",
     "district": "ghetto",
-    "image": "/img/synagoga.svg",
+    "image": "/img/scenes/scene-synagoga.png",
     "blurb": "Gotické cihlové štíty, těžké dveře, šero, v němž se modlitby vsakují do zdí."
   },
   "puda-synagogy": {
     "name": "Půda synagogy",
     "district": "ghetto",
-    "image": "/img/puda-synagogy.svg",
+    "image": "/img/scenes/scene-puda-synagogy.png",
     "blurb": "Prach, trámy a tálesy. A v rohu pod plachtou cosi velkého, co by nemělo dýchat."
   },
   "radnice": {
     "name": "Židovská radnice",
     "district": "ghetto",
-    "image": "/img/radnice.svg",
+    "image": "/img/scenes/scene-radnice.png",
     "blurb": "Úřad primase Maisela. Listiny, pečetě a politika, na níž stojí bezpečí obce."
   },
   "hrbitov": {
     "name": "Starý židovský hřbitov",
     "district": "ghetto",
-    "image": "/img/hrbitov.svg",
+    "image": "/img/scenes/scene-hrbitov.png",
     "blurb": "Náhrobky natěsnané jako dav. Vrány, sníh a jména, která nesmí být zapomenuta."
   },
   "ulicka-ghetta": {
     "name": "Ulička ghetta a brána",
     "district": "ghetto",
-    "image": "/img/ulicka-ghetta.svg",
+    "image": "/img/scenes/scene-ulicka-ghetta.png",
     "blurb": "Kašna, zastavárna, drbny a stráž u brány. Tudy proudí život i řeči celé čtvrti."
   },
   "krcma": {
     "name": "Krčma U Tří studní",
     "district": "stare-mesto",
-    "image": "/img/krcma.svg",
+    "image": "/img/scenes/scene-krcma.png",
     "blurb": "Kouř, pivo a cizí řeči. U okna pije voják, který se bojí zavřít oči."
   },
   "staromak": {
     "name": "Staroměstské náměstí",
     "district": "stare-mesto",
-    "image": "/img/staromak.svg",
+    "image": "/img/scenes/scene-staromak.png",
     "blurb": "Trh pod Týnem, orloj odměřuje čas a kazatelův hlas sbírá hněv davu."
   },
   "dilna-scotty": {
     "name": "Dílna mistra Scotty",
     "district": "stare-mesto",
-    "image": "/img/dilna-scotty.svg",
+    "image": "/img/scenes/scene-dilna-scotty.png",
     "blurb": "Křivule, vycpaný krokodýl a sametový hlas, který prodává zázraky na dluh."
   },
   "dum-sberatele": {
     "name": "Dům hraběte z Lobkowicz",
     "district": "stare-mesto",
-    "image": "/img/dum-sberatele.svg",
+    "image": "/img/scenes/scene-dum-sberatele.png",
     "blurb": "Erb nad vraty, sbírka kuriozit za okny — a v prosklené skříňce ukradené Slovo."
   }
 }
