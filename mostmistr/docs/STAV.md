@@ -8,7 +8,7 @@ Poslední aktualizace: 20. 11. 2026
 |---|---|
 | M0 Základy | Hotovo, sloučeno do `main`, nasazeno na Netlify (20. 11. 2026) |
 | M1a Průzkum (krok, tlumení, výkon) | Hotovo, sloučeno do `main`; kritérium splněno i na počítači zadavatele |
-| M1b Jádro | Hotovo, čeká na schválení a sloučení (pull request č. 3) |
+| M1b Jádro | Hotovo, sloučeno do `main` (20. 11. 2026) |
 | M2 První hratelná verze | Nezačato |
 | M3a až M8 | Nezačato |
 

@@ -1,8 +1,9 @@
-import { jeUvnitr } from "./geometrie";
+import { cenaNavrhu } from "./cena";
+import { jeUvnitr, type Bod, type Obdelnik } from "./geometrie";
 import { ID_PRVKU, KATALOG, NEJMENSI_DELKA, type IdPrvku } from "./katalog";
 import { ChybaDat, cislo, jedenZ, jenZnameKlice, logicka, polozky, text, objekt, volitelne } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
-import type { Uroven } from "./uroven";
+import { vyskaTerenu, type Uroven } from "./uroven";
 
 export const VERZE_NAVRHU = 1;
 
@@ -140,7 +141,10 @@ export type DruhProblemu =
   | "prut-dlouhy"
   | "prvek-nepovoleny"
   | "prvek-neni-hotovy"
-  | "svar-nepovoleny";
+  | "svar-nepovoleny"
+  | "stycnik-v-terenu"
+  | "prut-v-zakazane-zone"
+  | "nad-rozpocet";
 
 /** Porušení pravidla úrovně. `stycnik` a `prut` jsou id z návrhu. */
 export interface ProblemNavrhu {
@@ -170,6 +174,9 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (obsazeno.has(klic)) problemy.push({ druh: "stycniky-na-stejnem-miste", stycnik: s.id });
     else obsazeno.set(klic, s.id);
     if (s.svar && !uroven.povoleneSvary) problemy.push({ druh: "svar-nepovoleny", stycnik: s.id });
+    // Pod povrchem terénu se staví jen v kotvách a na základech.
+    const vOpore = uroven.kotvy.some((k) => k.x === s.x && k.y === s.y) || uroven.zaklady.some((z) => z.x === s.x && z.y === s.y);
+    if (!vOpore && s.y < vyskaTerenu(uroven, s.x) - 1e-9) problemy.push({ druh: "stycnik-v-terenu", stycnik: s.id });
   }
 
   const dvojice = new Set<string>();
@@ -187,6 +194,31 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (delka > polozka.nejvetsiDelka + 1e-9) problemy.push({ druh: "prut-dlouhy", prut: p.id });
     if (!uroven.povolenePrvky.includes(p.prvek)) problemy.push({ druh: "prvek-nepovoleny", prut: p.id });
     if (!polozka.hotovo) problemy.push({ druh: "prvek-neni-hotovy", prut: p.id });
+    if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {
+      problemy.push({ druh: "prut-v-zakazane-zone", prut: p.id });
+    }
   }
+  if (uroven.rozpocet !== null && cenaNavrhu(navrh) > uroven.rozpocet) problemy.push({ druh: "nad-rozpocet" });
   return problemy;
+}
+
+/**
+ * Prochází úsečka a–b vnitřkem obdélníku? Dotyk hrany nebo rohu se nepočítá: po hraně
+ * zakázané zóny se stavět smí. Ořezání úsečky obdélníkem (Liang–Barsky).
+ */
+export function useckaProtinaVnitrek(a: Bod, b: Bod, z: Obdelnik): boolean {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  let od = 0;
+  let po = 1;
+  const orez = (smer: number, vzdalenost: number): boolean => {
+    if (smer === 0) return vzdalenost > 0; // rovnoběžně s hranou: musí ležet ostře uvnitř pásu
+    const t = vzdalenost / smer;
+    if (smer < 0) od = Math.max(od, t);
+    else po = Math.min(po, t);
+    return od < po;
+  };
+  return (
+    orez(-dx, a.x - z.xMin) && orez(dx, z.xMax - a.x) && orez(-dy, a.y - z.yMin) && orez(dy, z.yMax - a.y) && po - od > 1e-9
+  );
 }
