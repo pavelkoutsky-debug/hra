@@ -1,7 +1,7 @@
 // Referenční mosty pro měření výkonu: příhradový most s dolní mostovkou.
 
 import type { PopisSoustavy } from "../src/jadro/soustava";
-import { PRUREZY, type Prurez } from "./prurezy";
+import { PRUREZY, type IdPrurezu, type Prurez } from "./prurezy";
 
 export interface ZadaniMostu {
   /** Počet polí příhrady. */
@@ -13,6 +13,8 @@ export interface ZadaniMostu {
   podporaPo: number;
   /** Všechny styčníky svařené; jinak kloubová příhrada. */
   svarene: boolean;
+  /** Průřez prutů příhrady; výchozí je lehký ocelový nosník. */
+  prut?: IdPrurezu;
 }
 
 export interface ReferencniMost {
@@ -39,13 +41,14 @@ export function prihradovyMost(z: ZadaniMostu): ReferencniMost {
   const pridej = (prurez: Prurez, a: number, b: number): void => {
     popis.prvky.push({ ...prurez, a, b, kloubA: !z.svarene, kloubB: !z.svarene });
   };
+  const prut = PRUREZY[z.prut ?? "ocel-lehka"];
   for (let i = 0; i < z.poli; i++) {
     pridej(PRUREZY["mostovka-drevo"], dolni(i), dolni(i + 1));
-    pridej(PRUREZY["ocel-lehka"], horni(i), horni(i + 1));
+    pridej(prut, horni(i), horni(i + 1));
     const kStredu = i < z.poli / 2;
-    pridej(PRUREZY["ocel-lehka"], kStredu ? horni(i) : dolni(i), kStredu ? dolni(i + 1) : horni(i + 1));
+    pridej(prut, kStredu ? horni(i) : dolni(i), kStredu ? dolni(i + 1) : horni(i + 1));
   }
-  for (let i = 0; i <= z.poli; i++) pridej(PRUREZY["ocel-lehka"], dolni(i), horni(i));
+  for (let i = 0; i <= z.poli; i++) pridej(prut, dolni(i), horni(i));
 
   return { popis, mostovka: Array.from({ length: z.poli + 1 }, (_, i) => dolni(i)) };
 }

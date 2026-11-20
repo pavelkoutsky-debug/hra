@@ -1,0 +1,25 @@
+{
+  "verzeFyziky": 1,
+  "otisky": {
+    "tram-kloubovy": "b4315cc76d7bb8d9",
+    "tram-svareny": "733ca9752cf34249",
+    "prihrada-drevena": "6e6d913789fd083b",
+    "prihrada-ocelova-kloubova": "d3c9f62bc6c43a47",
+    "prihrada-ocelova-svarena": "66e4ba99fc5c3f29",
+    "protismer": "61482eb3c7d1388b",
+    "lavka-chodci": "7d643f6d9fe4b567",
+    "lavka-pochod-v-rezonanci": "4c3ef94544f60bf1",
+    "lavka-ladeny-tlumic": "46c9adb38a0c4af1",
+    "dav-na-lavce": "aac0819d215d1a25",
+    "oblouk": "8203830634bb3e8a",
+    "zaveseny": "f2eabece8db59a18",
+    "pilir": "0123d6b5b2c8d95b",
+    "pruzne-ulozeni": "091b6745d3439233",
+    "konzola": "68f178ed5393644d",
+    "retez": "f39795619bc23dc5",
+    "pretizeni-drevo": "a84d4ed25721177c",
+    "pretizeni-ocel": "229d58ffec113de7",
+    "pretizeni-zaveseny": "00c8cb5008d1091e",
+    "dlouhy-most": "960b65dce8f912b4"
+  }
+}

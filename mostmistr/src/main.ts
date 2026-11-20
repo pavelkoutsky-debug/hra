@@ -3,7 +3,8 @@ import type { Bod } from "./data/geometrie";
 import { jeUvnitr } from "./data/geometrie";
 import type { Uroven } from "./data/uroven";
 import { cislo, datum, meritkoVykresu } from "./ui/formaty";
-import { jeKlicTextu, t } from "./ui/slovnik";
+import { doplnTexty, prvek, udaj } from "./ui/dom";
+import { t } from "./ui/slovnik";
 import { celyVyrez, obrazNaSvet, omezNaVyrez, posunO, zoomKolem, type Kamera } from "./vykres/kamera";
 import { pripojOvladani } from "./vykres/ovladani";
 import { Platno } from "./vykres/platno";
@@ -13,31 +14,6 @@ import { KlientZkousky } from "./zkouska/klient";
 /** Volný okraj kolem výřezu při zobrazení celého výkresu, v pixelech. */
 const OKRAJ_VYKRESU = 28;
 const KROK_ZOOMU_TLACITKEM = 1.25;
-
-function prvek<T extends Element>(selektor: string, typ: new () => T): T {
-  const nalezeny = document.querySelector(selektor);
-  if (!(nalezeny instanceof typ)) throw new Error(`Na stránce chybí prvek ${selektor}.`);
-  return nalezeny;
-}
-
-function udaj(jmeno: string): HTMLElement {
-  return prvek(`[data-udaj="${jmeno}"]`, HTMLElement);
-}
-
-/** Doplní do stránky texty ze slovníku podle atributů data-text a data-popis. */
-function doplnTexty(): void {
-  for (const uzel of document.querySelectorAll<HTMLElement>("[data-text]")) {
-    const klic = uzel.dataset.text ?? "";
-    if (jeKlicTextu(klic)) uzel.textContent = t(klic);
-  }
-  for (const uzel of document.querySelectorAll<HTMLElement>("[data-popis]")) {
-    const klic = uzel.dataset.popis ?? "";
-    if (jeKlicTextu(klic)) {
-      uzel.setAttribute("aria-label", t(klic));
-      uzel.title = t(klic);
-    }
-  }
-}
 
 function spust(uroven: Uroven): void {
   const canvas = prvek(".vykres__platno", HTMLCanvasElement);

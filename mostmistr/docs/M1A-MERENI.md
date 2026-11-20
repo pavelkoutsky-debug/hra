@@ -11,7 +11,7 @@
 | Největší referenční most (300 styčníků, 597 prutů, 60 kol) | aspoň 3× rychleji než reálný čas | 7,4× se svařenými styčníky, 12× s kloubovými |
 | Běžná úroveň kampaně (26 styčníků, 49 prutů, 12 kol) | aspoň 10× | 100× až 175× |
 
-Měřeno v bezhlavém Chromiu 157 na jednom jádře procesoru Xeon 2,1 GHz. To je spíš pomalejší stroj než běžný notebook, ale **na tvém počítači to ověřené není**. Stránka `/mereni.html` to změří za deset sekund.
+Měřeno v bezhlavém Chromiu 157 na jednom jádře procesoru Xeon 2,1 GHz. **Potvrzeno i na počítači zadavatele** (Chrome 157, Windows, sestavení `0.2.0 e4e2146`): největší most 8,1× se svařenými a 14× s kloubovými styčníky, běžná úroveň 117× až 175×.
 
 Čísla zahrnují most, kola a obě tlumení. Nezahrnují kontrolu porušení, plný model vozidel, chodce ani skryté dělení dlouhých prutů. Odhaduji, že to krok prodraží nejvýš dvakrát až třikrát; u běžných úrovní zbývá rezerva o řád, u největšího mostu se svařenými styčníky by se rezerva vyčerpala. Skutečnou cenu změří M1b.
 
@@ -107,6 +107,8 @@ Bezhlavé Chromium 157, jedno jádro Xeon 2,1 GHz, medián ze sekundového měř
 
 Největší most má metrová pole; běžná a velká úroveň dvoumetrová.
 
+**Na počítači zadavatele** (Chrome 157, Windows, 14 jader) vyšel krok s provozem o 5 až 15 % rychleji: běžná úroveň 2,5 a 3,5 µs, velká 6,0 a 8,5 µs, největší most 16 a 28 µs. Příprava největšího svařeného mostu trvala 0,9 s.
+
 **Příprava před zkouškou** (nejvyšší frekvence, rovnováha pod vlastní tíhou, deset vlastních tvarů):
 
 | Most | Neznámých | Čas |
@@ -129,7 +131,7 @@ U běžných úrovní stačí na okamžitou odezvu ve stavebním režimu. U nejv
 
 | Riziko | Stav |
 |---|---|
-| Výkon na tvém počítači a v jiných prohlížečích | Neověřeno. Změří `/mereni.html`. |
+| Výkon v jiných prohlížečích a na slabších zařízeních | Na počítači zadavatele v Chromu potvrzeno. Firefox, Safari a telefony neověřeny; změří `/mereni.html`. |
 | Porušení vytvoří kusy kratší než 1 m a krok by se musel zkrátit | Neřešeno. Plán: nové styčníky dostanou hmotu navíc tak, aby nejvyšší frekvence nevzrostla. Ověřit v M1b. |
 | Viskózní tlumič nastavený hráčem může krok zkrátit | Neřešeno. Plán: poloimplicitní integrace tlumiče, omezený rozsah nastavení. |
 | Plný model vozidel, chodci a kontrola porušení krok prodraží | Odhad 2× až 3×; změří M1b. |

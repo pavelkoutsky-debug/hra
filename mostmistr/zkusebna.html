@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b2f5c" />
+    <meta name="description" content="Mostmistr – zkušebna: ověřovací případy fyzikálního jádra." />
+    <title>Mostmistr – zkušebna</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styly.css" />
+  </head>
+  <body>
+    <div class="hra">
+      <header class="lista">
+        <span class="lista__nazev" data-text="hra.nazev"></span>
+        <span class="lista__oddil" data-text="zkusebna.nadpis"></span>
+        <select id="pripad" data-popis="zkusebna.pripad"></select>
+        <button type="button" class="tlacitko" id="prehrat"></button>
+        <button type="button" class="tlacitko" id="od-zacatku" data-text="zkusebna.odZacatku"></button>
+        <span class="lista__skupina" role="group" data-popis="zkusebna.rychlost">
+          <button type="button" class="tlacitko" data-rychlost="0.25">¼×</button>
+          <button type="button" class="tlacitko" data-rychlost="1">1×</button>
+          <button type="button" class="tlacitko" data-rychlost="4">4×</button>
+        </span>
+        <span class="lista__mezera"></span>
+        <a class="tlacitko" href="/otisky.html" data-text="zkusebna.otisky"></a>
+        <a class="tlacitko" href="/mereni.html" data-text="zkusebna.mereni"></a>
+        <a class="tlacitko" href="/" data-text="lista.hra"></a>
+      </header>
+
+      <div class="zkusebna">
+        <main class="vykres">
+          <canvas class="vykres__platno" tabindex="0"></canvas>
+          <p class="vykres__chyba" data-udaj="chyba" role="alert" hidden></p>
+          <p class="legenda">
+            <span data-text="zkusebna.legenda.vyuziti"></span>
+            <span>0 %</span>
+            <span class="legenda__skala"></span>
+            <span>100 %</span>
+            <span><span class="legenda__cara"></span> <span data-text="zkusebna.legenda.tlak"></span></span>
+            <span><span class="legenda__cara legenda__cara--tah"></span> <span data-text="zkusebna.legenda.tah"></span></span>
+          </p>
+        </main>
+
+        <footer class="osa">
+          <div class="osa__drah">
+            <span class="osa__spocitano"></span>
+            <span class="osa__znacky"></span>
+            <input type="range" id="cas" min="0" max="1" step="0.01" value="0" data-popis="zkusebna.cas" />
+          </div>
+          <output class="osa__cas" data-udaj="cas"></output>
+        </footer>
+
+        <aside class="panel">
+          <h2 data-udaj="nazev"></h2>
+          <p data-udaj="popis"></p>
+
+          <h3 data-text="zkusebna.overeni"></h3>
+          <p data-udaj="prubeh" role="status"></p>
+          <table class="overeni" hidden>
+            <thead>
+              <tr>
+                <th data-text="zkusebna.sloupec.velicina"></th>
+                <th data-text="zkusebna.sloupec.namereno"></th>
+                <th data-text="zkusebna.sloupec.ocekavano"></th>
+                <th data-text="zkusebna.sloupec.vysledek"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <div data-oddil="poruseni" hidden>
+            <h3 data-text="zkusebna.poruseni"></h3>
+            <ul class="poruseni"></ul>
+          </div>
+
+          <h3 data-text="zkusebna.vypocet"></h3>
+          <p data-udaj="krok"></p>
+          <p data-udaj="vypocet"></p>
+        </aside>
+      </div>
+    </div>
+    <noscript>Mostmistr potřebuje zapnutý JavaScript.</noscript>
+    <script type="module" src="/src/zkusebna/stranka.ts"></script>
+  </body>
+</html>

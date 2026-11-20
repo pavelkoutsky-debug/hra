@@ -67,4 +67,4 @@ export type ZpravaZeZkousky =
   | { typ: "konec"; vysledek: VysledekZkousky }
   | { typ: "chyba"; kod: KodChyby; podrobnosti?: string };
 
-export type KodChyby = "jina-verze-fyziky" | "jadro-neni-hotove" | "neplatny-vstup";
+export type KodChyby = "jina-verze-fyziky" | "zkouska-neni-hotova" | "neplatny-vstup";

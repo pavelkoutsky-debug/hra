@@ -102,14 +102,22 @@ describe("čtení návrhu", () => {
 describe("kontrola návrhu proti úrovni", () => {
   const druhy = (navrh: NavrhMostu): string[] => zkontrolujNavrh(navrh, uroven).map((p) => p.druh);
 
-  it("dokud jádro prvky neumí, hlásí u každého prutu, že prvek není hotový", () => {
-    // Stav v milníku M0. Až jádro prvky zvládne, tento test se změní na „bez problémů“.
-    expect(Object.values(KATALOG).some((polozka) => polozka.hotovo)).toBe(false);
-    expect(zkontrolujNavrh(trojuhelnik(), uroven)).toEqual([
-      { druh: "prvek-neni-hotovy", prut: 0 },
-      { druh: "prvek-neni-hotovy", prut: 1 },
-      { druh: "prvek-neni-hotovy", prut: 2 },
-    ]);
+  it("návrh z hotových prvků projde bez výhrad", () => {
+    expect(zkontrolujNavrh(trojuhelnik(), uroven)).toEqual([]);
+  });
+
+  it("prvek, jehož vlastnosti jsou zatím jen předběžné, odmítne", () => {
+    // Hotové jsou prvky s ustálenými vlastnostmi; ostatní se zpřístupní s milníkem, kdy přijdou do hry.
+    const hotove = Object.entries(KATALOG)
+      .filter(([, polozka]) => polozka.hotovo)
+      .map(([id]) => id);
+    expect(hotove).toEqual(["mostovka-drevo", "drevo-lehke", "drevo-tezke", "ocel-lehka", "ocel-tezka", "tlumic", "pruzina"]);
+    for (const polozka of Object.values(KATALOG)) {
+      if (polozka.predbezne) expect(polozka.hotovo).toBe(false);
+    }
+    const sLanem = trojuhelnik();
+    sLanem.pruty[1]!.prvek = "lano";
+    expect(zkontrolujNavrh(sLanem, uroven)).toEqual([{ druh: "prvek-neni-hotovy", prut: 1 }]);
   });
 
   it("pozná návrh pro jinou úroveň", () => {

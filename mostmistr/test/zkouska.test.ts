@@ -34,12 +34,12 @@ describe("běh zkoušky", () => {
     expect(prijate[0]).toMatchObject({ typ: "chyba", kod: "jina-verze-fyziky" });
   });
 
-  it("dokud jádro neexistuje, zkoušku poctivě odmítne místo předstíraného výsledku", () => {
-    // Stav v milníku M0; s jádrem v M1b tento test nahradí skutečné zkoušky.
-    expect(VERZE_FYZIKY).toBe(0);
+  it("dokud zkouška s provozem neexistuje, poctivě ji odmítne místo předstíraného výsledku", () => {
+    // Stav po milníku M1b: jádro je hotové, běh zkoušky podle jízdního řádu přijde v M2.
+    expect(VERZE_FYZIKY).toBe(1);
     const { beh: b, prijate } = beh();
     b.prijmi({ typ: "start", vstup: vstup(VERZE_FYZIKY) });
-    expect(prijate).toEqual([{ typ: "chyba", kod: "jadro-neni-hotove" }]);
+    expect(prijate).toEqual([{ typ: "chyba", kod: "zkouska-neni-hotova" }]);
   });
 
   it("zásah hráče a zastavení bez běžící zkoušky nic neodešlou", () => {

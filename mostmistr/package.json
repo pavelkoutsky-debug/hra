@@ -1,6 +1,6 @@
 {
   "name": "mostmistr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Mostmistr — 2D stavění mostů ve stylu technického výkresu s vlastní fyzikou",
@@ -15,7 +15,8 @@
     "test:e2e": "vite build && vitest run --config vitest.e2e.config.ts",
     "build": "npm run check && npm run test && vite build",
     "preview": "vite preview",
-    "mereni": "vite build && vitest run --config vitest.e2e.config.ts test/e2e/mereni.e2e.ts"
+    "mereni": "vite build && vitest run --config vitest.e2e.config.ts test/e2e/mereni.e2e.ts",
+    "otisky": "MM_ZAPIS_OTISKU=1 vitest run test/regrese.test.ts -t \"otisky referenčních mostů\""
   },
   "devDependencies": {
     "@types/node": "22.20.5",

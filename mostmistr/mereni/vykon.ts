@@ -1,13 +1,14 @@
 // Měření výkonu jádra na referenčních mostech. Běží v prohlížeči (v pracovním vlákně)
 // i v Node; nezávisí na ničem z prohlížeče kromě hodin.
 
+import { vytvorBremena, zatizeniBremeny } from "../src/jadro/bremena";
 import { krok, spoctiSily, TIHOVE_ZRYCHLENI, type NastaveniKroku } from "../src/jadro/integrator";
 import { najdiRovnovahu, nejvyssiFrekvence, vlastniTvarySoustavy } from "../src/jadro/matice";
+import { Simulace } from "../src/jadro/simulace";
 import { sestavSoustavu, type Soustava } from "../src/jadro/soustava";
-import { betaProUtlum, mezKroku, REZERVA_KROKU, zvolKrok } from "../src/jadro/stabilita";
+import { mezKroku, REZERVA_KROKU } from "../src/jadro/stabilita";
 import { volneStupne } from "../src/jadro/stupne";
-import { vytvorModalniTlumeni } from "../src/jadro/tlumeni";
-import { krokKol, vytvorKola } from "./kola";
+import { vytvorTrasu } from "../src/jadro/trasa";
 import { prihradovyMost, REFERENCNI_MOSTY } from "./mosty";
 
 /** Kolik vlastních tvarů se tlumí. */
@@ -29,7 +30,10 @@ export interface VysledekMereni {
   priprava: { nejvyssiFrekvence: number; rovnovaha: number; vlastniTvary: number };
   /** Samotný most bez provozu, s tlumením úměrným hmotě a krokem těsně pod holou mezí. */
   holeJadro: { mikrosekundNaKrok: number; nasobekRealnehoCasu: number };
-  /** Most s koly, tlumením vlastních tvarů a tlumením nejvyšších frekvencí. */
+  /**
+   * Úplná zkouška: most s koly na pneumatikách, tlumením vlastních tvarů i nejvyšších
+   * frekvencí a s průběžným posuzováním namáhání a porušení.
+   */
   sProvozem: { mikrosekundNaKrok: number; nasobekRealnehoCasu: number };
 }
 
@@ -84,27 +88,52 @@ function zmerMost(
   const mikroHole = zmerKrok(hodiny, () => krok(s, hole), trvaniMs);
   zkontroluj(s, zadani.nazev);
 
-  // S provozem: táž konstrukce s tlumením nejvyšších frekvencí, koly a tlumením vlastních tvarů.
-  const dt = zvolKrok(omegaMax);
-  const beta = betaProUtlum(omegaMax);
-  const tlumeny = sestavSoustavu({
-    stycniky: most.popis.stycniky,
-    prvky: most.popis.prvky.map((p) => ({ ...p, beta })),
-  });
-  if (najdiRovnovahu(tlumeny, stupne, nulove, TIHOVE_ZRYCHLENI) < 0) {
+  // Úplná zkouška tak, jak ji počítá hra: kola jsou hmoty na pneumatikách rozestavené
+  // po mostě a pomalu jedoucí, aby na něm vydržela po celé měření.
+  const HMOTA_KOLA = 500;
+  const TUHOST_PNEUMATIKY = 1e6;
+  const TLUMENI_PNEUMATIKY = 5e3;
+  const rozpeti = zadani.poli * zadani.delkaPole;
+  const stycnikuMostu = most.popis.stycniky.length;
+  const sednuti = (HMOTA_KOLA * TIHOVE_ZRYCHLENI) / TUHOST_PNEUMATIKY;
+  const sKoly = {
+    stycniky: [...most.popis.stycniky],
+    prvky: most.popis.prvky,
+  };
+  for (let i = 0; i < zadani.kol; i++) {
+    sKoly.stycniky.push({ x: (rozpeti * (i + 0.25)) / zadani.kol, y: -sednuti, pevneX: true, hmota: HMOTA_KOLA });
+  }
+  const zkouseny = sestavSoustavu(sKoly);
+  for (let i = 0; i < zadani.kol; i++) zkouseny.vx[stycnikuMostu + i] = 0.2;
+  const stupneMostu = volneStupne(zkouseny).filter((kod) => kod < 3 * stycnikuMostu);
+  if (najdiRovnovahu(zkouseny, stupneMostu, new Float64Array(stupneMostu.length), TIHOVE_ZRYCHLENI) < 0) {
     throw new Error(`Referenční most „${zadani.nazev}“ nemá rovnováhu.`);
   }
-  const kola = vytvorKola(tlumeny, most.mostovka, zadani.kol);
-  const sProvozem: NastaveniKroku = {
-    dt,
+  const naMostovce = new Set(most.mostovka);
+  const pruty: number[] = [];
+  for (let e = 0; e < zkouseny.pocetPrvku; e++) {
+    if (naMostovce.has(zkouseny.prvekA[e]!) && naMostovce.has(zkouseny.prvekB[e]!)) pruty.push(e);
+  }
+  const bremena = vytvorBremena(
+    vytvorTrasu(zkouseny, pruty),
+    Array.from({ length: zadani.kol }, (_, i) => ({
+      stycnik: stycnikuMostu + i,
+      tuhost: TUHOST_PNEUMATIKY,
+      tlumeni: TLUMENI_PNEUMATIKY,
+    })),
+  );
+  const simulace = new Simulace(zkouseny, {
     tiha: TIHOVE_ZRYCHLENI,
-    alfa: 0,
-    modalni: vytvorModalniTlumeni(tlumeny, stupne, tvary, UTLUM, dt),
-    dalsiSily: (soustava) => krokKol(soustava, kola, dt, TIHOVE_ZRYCHLENI),
-  };
-  spoctiSily(tlumeny, sProvozem.tiha, 0);
-  const mikroProvoz = zmerKrok(hodiny, () => krok(tlumeny, sProvozem), trvaniMs);
-  zkontroluj(tlumeny, zadani.nazev);
+    utlum: UTLUM,
+    zatizeni: zatizeniBremeny(bremena),
+    tlumeneStupne: stupneMostu,
+  });
+  const dt = simulace.dt;
+  const mikroProvoz = zmerKrok(hodiny, () => simulace.krok(), trvaniMs);
+  zkontroluj(zkouseny, zadani.nazev);
+  if (simulace.porusena || simulace.rozpadla) {
+    throw new Error(`Referenční most „${zadani.nazev}“ se při měření porušil.`);
+  }
 
   return {
     nazev: zadani.nazev,

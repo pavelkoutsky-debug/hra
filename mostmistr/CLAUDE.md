@@ -12,6 +12,7 @@ Spouštěj ve složce `mostmistr/`.
 - `npm run build` — kontrola, testy a sestavení (totéž spouští Netlify)
 - `npm run test:e2e` — sestavení a průchod hrou v bezhlavém prohlížeči; snímky do `test/e2e/vystup/` nebo do složky z proměnné `MM_SNIMKY`
 - `MM_TRVANI=1000 npm run mereni` — měření výkonu jádra v bezhlavém prohlížeči; výsledky vypíše a uloží do `mereni.json` ve složce snímků
+- `npm run otisky` — znovu zapíše otisky regresní sady; jen po vědomé změně fyziky (viz „Verze fyziky“)
 
 Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po změně vzhledu si snímky prohlédni; testy nepoznají, že výkres vypadá špatně.
 
@@ -22,10 +23,12 @@ Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po zm�
 - **Rozhraní zkoušky.** Hra se simulací mluví jen zprávami z `src/zkouska/protokol.ts`. Stejné zprávy tečou přes Web Worker i v testech.
 - **Žádná fyzikální knihovna ani herní framework.** Jádro je vlastní a ověřuje se proti analytickým řešením (koncepce, kap. 7.10).
 - **Jednotky.** Metry, kilogramy, newtony, sekundy. Osa y světa míří nahoru. Rastr je 1 m.
-- **Jádro bez goniometrie.** Vnitřní smyčka simulace smí používat jen sčítání, násobení, dělení a odmocninu; `Math.sin`, `Math.cos` a `Math.atan2` nedávají ve všech prohlížečích stejné bity. Natočení se drží jako jednotkový vektor. V testech a jednorázové přípravě goniometrie nevadí.
+- **Bitová shoda mezi prohlížeči.** Všechno, co vstupuje do simulace (`src/jadro/`, `src/data/katalog.ts`, `src/zkouska/stavba.ts`, `src/zkouska/regrese.ts`), smí počítat jen sčítáním, násobením, dělením a odmocninou. `Math.sin`, `Math.cos`, `Math.atan2`, `Math.hypot` ani operátor `**` nedávají všude stejné bity. Natočení se drží jako jednotkový vektor. V testech, zkušebně a kreslení goniometrie nevadí.
 - **Pole v jádře.** Stav simulace je v plochých `Float64Array`; ve vnitřních smyčkách nic nealokuj.
 - **Formáty dat mají verze.** Změna formátu úrovně nebo návrhu znamená zvýšit verzi, přidat převod do řetězu a ponechat starý soubor jako test. Ceny a vlastnosti prvků žijí jen v `src/data/katalog.ts`.
-- **Verze fyziky.** `VERZE_FYZIKY` se zvyšuje, kdykoli se změní výsledek zkoušky stejného mostu. Změnu popiš v `docs/STAV.md`.
+- **Verze fyziky.** `VERZE_FYZIKY` se zvyšuje, kdykoli se změní výsledek zkoušky stejného mostu. Pozná se to tak, že test `test/regrese.test.ts` ohlásí jiný otisk. Když je změna záměrná: zvyš verzi, popiš změnu v `docs/STAV.md` a zapiš otisky znovu (`npm run otisky`). Když záměrná není, je to chyba.
+- **Simulace.** Zkoušku krokuje třída `Simulace` (`src/jadro/simulace.ts`): volí krok a tlumení, posuzuje namáhání, provádí porušení. Provoz a jiné vnější síly do ní vstupují rozhraním `Zatizeni`; kola a chodci jsou `Bremena`. Samotný `krok` integrátoru volej přímo jen v testech jádra.
+- **Výchozí stav je rovnováha.** Před zkouškou se hledá `najdiRovnovahu`; konstrukce puštěná z nakreslené polohy by se rozezněla.
 - **Texty.** Všechny texty pro hráče jdou přes `src/ui/slovnik.ts`.
 - **Barvy.** Žlutá je vyhrazená pro varování. Využití prutů má jednu škálu bílá → žlutá → červená; tlak plná čára, tah dvojitá.
 - **Kořen repozitáře neměň.** Je v něm jiný, nesouvisející projekt.

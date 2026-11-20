@@ -1,6 +1,7 @@
 import type { VlastniTvary } from "./matice";
+import { energiePrvku } from "./sily";
 import type { Soustava } from "./soustava";
-import { hmotyStupnu } from "./stupne";
+import { hmotyStupnu, obnovPolohu, posunStupne, ulozPolohu } from "./stupne";
 
 /**
  * Tlumení zadané přímo vlastním tvarům: každý z prvních několika tvarů kmitání dostane
@@ -110,4 +111,52 @@ export function pridejModalniTlumeni(s: Soustava, t: ModalniTlumeni): void {
     else if (smer[k] === 1) fy[uzel] = fy[uzel]! + sila;
     else moment[uzel] = moment[uzel]! + sila;
   }
+}
+
+
+/**
+ * Poměrný útlum každého vlastního tvaru mostu z více materiálů: útlumy materiálů se váží
+ * podílem deformační energie, kterou v daném tvaru nesou jejich prvky. Ocelový most
+ * s dřevěnou mostovkou tak tlumí tvary ohýbající mostovku víc než tvary, kde pracuje ocel.
+ * `utlumPrvku` je poměrný útlum materiálu každého prvku.
+ */
+export function utlumyTvaru(
+  s: Soustava,
+  stupne: Int32Array,
+  tvary: VlastniTvary,
+  utlumPrvku: Float64Array,
+): Float64Array {
+  const n = stupne.length;
+  const pocet = tvary.omega.length;
+  const utlumy = new Float64Array(pocet);
+  const zaloha = ulozPolohu(s);
+  // Výchozí energie prvků (předpětí lan, průhyb pod vlastní tíhou) se odečítá: zajímá nás
+  // jen přírůstek od vychýlení do tvaru. Vychýlí se na obě strany, aby vypadl lineární člen.
+  const vychozi = new Float64Array(s.pocetPrvku);
+  for (let e = 0; e < s.pocetPrvku; e++) vychozi[e] = energiePrvku(s, e);
+  const prirustek = new Float64Array(s.pocetPrvku);
+
+  for (let i = 0; i < pocet; i++) {
+    const tvar = tvary.tvary.subarray(i * n, (i + 1) * n);
+    let nejvetsi = 0;
+    for (let k = 0; k < n; k++) nejvetsi = Math.max(nejvetsi, Math.abs(tvar[k]!));
+    if (!(nejvetsi > 0)) continue;
+    const meritko = 1e-4 / nejvetsi;
+    prirustek.fill(0);
+    for (const smer of [1, -1]) {
+      posunStupne(s, stupne, tvar, smer * meritko);
+      for (let e = 0; e < s.pocetPrvku; e++) prirustek[e] = prirustek[e]! + energiePrvku(s, e) - vychozi[e]!;
+      obnovPolohu(s, zaloha);
+    }
+    let celkem = 0;
+    let vazene = 0;
+    for (let e = 0; e < s.pocetPrvku; e++) {
+      // Záporný přírůstek (prvek, kterému tvar uleví) do vah nepatří.
+      const energie = Math.max(0, prirustek[e]!);
+      celkem += energie;
+      vazene += energie * (utlumPrvku[e] ?? 0);
+    }
+    utlumy[i] = celkem > 0 ? vazene / celkem : 0;
+  }
+  return utlumy;
 }
