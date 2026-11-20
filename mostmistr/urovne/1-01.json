@@ -1,0 +1,106 @@
+{
+  "verze": 1,
+  "id": "1-01",
+  "nazev": "Lávka přes potok",
+  "vyrez": {
+    "xMin": -6,
+    "yMin": -6,
+    "xMax": 14,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -6,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 1,
+      "y": -2
+    },
+    {
+      "x": 2.5,
+      "y": -3
+    },
+    {
+      "x": 5.5,
+      "y": -3
+    },
+    {
+      "x": 7,
+      "y": -2
+    },
+    {
+      "x": 8,
+      "y": 0
+    },
+    {
+      "x": 14,
+      "y": 0
+    }
+  ],
+  "hladina": -2.2,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 8,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "cesta",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 8,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 2,
+  "hmotnostVybaveni": 40,
+  "nerovnost": "A",
+  "rozpocet": 45000,
+  "inzenyrskyRozpocet": 33500,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.09
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "drevo-lehke"
+  ],
+  "povoleneSvary": false,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "chodec",
+      "pocet": 2,
+      "kadence": 1.8
+    },
+    {
+      "cas": 2,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 1,
+      "kadence": 2.0
+    }
+  ]
+}

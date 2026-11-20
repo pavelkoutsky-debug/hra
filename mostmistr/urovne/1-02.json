@@ -1,0 +1,122 @@
+{
+  "verze": 1,
+  "id": "1-02",
+  "nazev": "Cyklostezka",
+  "vyrez": {
+    "xMin": -6,
+    "yMin": -8,
+    "xMax": 18,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -6,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 2,
+      "y": -3
+    },
+    {
+      "x": 4,
+      "y": -5
+    },
+    {
+      "x": 8,
+      "y": -5
+    },
+    {
+      "x": 10,
+      "y": -3
+    },
+    {
+      "x": 12,
+      "y": 0
+    },
+    {
+      "x": 18,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 2,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 10,
+      "y": -3,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "cesta",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 12,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 2,
+  "hmotnostVybaveni": 50,
+  "nerovnost": "A",
+  "rozpocet": 60000,
+  "inzenyrskyRozpocet": 40000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.08
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "drevo-lehke"
+  ],
+  "povoleneSvary": false,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "cyklista",
+      "pocet": 2
+    },
+    {
+      "cas": 1.5,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 2,
+      "kadence": 1.9
+    },
+    {
+      "cas": 4,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "cyklista",
+      "pocet": 1
+    }
+  ]
+}

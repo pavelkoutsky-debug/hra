@@ -9,7 +9,8 @@
 // funkce, mocniny ani `Math.hypot`; geometrie stojí na celých metrech jako ve hře.
 
 import type { IdPrvku } from "../data/katalog";
-import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu } from "../data/navrh";
+import { Kreslic } from "../data/kreslic";
+import type { NavrhMostu } from "../data/navrh";
 import { VERZE_UROVNE, type Kotva, type Uroven } from "../data/uroven";
 import { vytvorBremena, zatizeniBremeny, type Bremena, type PopisBremene } from "../jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
@@ -24,6 +25,7 @@ import { sestavMost, type StavbaMostu } from "./stavba";
 
 const g = TIHOVE_ZRYCHLENI;
 
+export { Kreslic } from "../data/kreslic";
 export { Otisk, otiskSimulace } from "./otisk";
 export { nahoda } from "../jadro/nahoda";
 
@@ -75,41 +77,6 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     povoleneSvary: true,
     jizdniRad: [],
   };
-}
-
-/** Pomocník pro psaní návrhů: styčníky podle souřadnic, pruty podle koncových bodů. */
-export class Kreslic {
-  readonly stycniky: StycnikNavrhu[] = [];
-  readonly pruty: PrutNavrhu[] = [];
-  readonly #podleMista = new Map<string, number>();
-
-  /** Id styčníku v daném místě; když tam žádný není, založí ho. */
-  bod(x: number, y: number, vlastnosti: Partial<StycnikNavrhu> = {}): number {
-    const klic = `${x},${y}`;
-    let id = this.#podleMista.get(klic);
-    if (id === undefined) {
-      id = this.stycniky.length;
-      this.stycniky.push({ id, x, y });
-      this.#podleMista.set(klic, id);
-    }
-    Object.assign(this.stycniky[id]!, vlastnosti);
-    return id;
-  }
-
-  prut(prvek: IdPrvku, a: [number, number], b: [number, number], vlastnosti: Partial<PrutNavrhu> = {}): number {
-    const id = this.pruty.length;
-    this.pruty.push({ id, a: this.bod(a[0], a[1]), b: this.bod(b[0], b[1]), prvek, ...vlastnosti });
-    return id;
-  }
-
-  /** Označí všechny dosud založené styčníky jako svařené. */
-  svarVse(): void {
-    for (const st of this.stycniky) st.svar = true;
-  }
-
-  navrh(): NavrhMostu {
-    return { verze: VERZE_NAVRHU, uroven: "9-99", stycniky: this.stycniky, pruty: this.pruty };
-  }
 }
 
 /** Mostovka z polí dané délky od x = 0 do x = rozpětí. */
