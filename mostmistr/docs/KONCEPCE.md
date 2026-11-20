@@ -227,6 +227,8 @@ Když kritérium nevyjde, mám připravené zálohy v tomto pořadí: omezit nej
 
 Recenzent změřil zjednodušené jádro na 16–18 mikrosekund na krok pro největší referenční most. To odpovídá zhruba 5× reálnému času bez kol, porušení a tlumení.
 
+**Výsledek M1a:** kritérium je splněno (největší most 7× až 12×, běžná úroveň přes 100×) a zálohy nejsou potřeba. Počet kroků vyšel 1 600 až 6 400 za sekundu podle délky nejkratšího prutu. Podrobnosti jsou v [`M1A-MERENI.md`](./M1A-MERENI.md).
+
 ### 7.4 Tlumení
 
 - Jen fyzikální. Každý materiál má poměrný útlum podle měření na skutečných mostech (ocel ~0,5 %, beton ~1 %, dřevo ~1,5 %).
@@ -296,7 +298,7 @@ Pro povolená lana, kde přímý výpočet selhává, slouží jako záloha ust�
 
 ### 7.9 Determinismus
 
-Pevný krok, pevné pořadí výpočtu, vlastní implementace goniometrických funkcí a pevné násady pro náhodný dav a nerovnosti vozovky. Stejný most se zachová stejně v každém prohlížeči a záznam zkoušky jde přehrát přesně znovu. Každý výsledek nese číslo verze fyziky.
+Pevný krok, pevné pořadí výpočtu a pevné násady pro náhodný dav a nerovnosti vozovky. Jádro se obejde bez goniometrických funkcí (natočení drží jako jednotkový vektor), takže používá jen operace, které dávají všude bitově stejný výsledek. Stejný most se zachová stejně v každém prohlížeči a záznam zkoušky jde přehrát přesně znovu. Každý výsledek nese číslo verze fyziky.
 
 ### 7.10 Ověřování přesnosti
 

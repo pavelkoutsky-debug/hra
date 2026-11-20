@@ -11,6 +11,7 @@ Spouštěj ve složce `mostmistr/`.
 - `npm test` — jednotkové testy
 - `npm run build` — kontrola, testy a sestavení (totéž spouští Netlify)
 - `npm run test:e2e` — sestavení a průchod hrou v bezhlavém prohlížeči; snímky do `test/e2e/vystup/` nebo do složky z proměnné `MM_SNIMKY`
+- `MM_TRVANI=1000 npm run mereni` — měření výkonu jádra v bezhlavém prohlížeči; výsledky vypíše a uloží do `mereni.json` ve složce snímků
 
 Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po změně vzhledu si snímky prohlédni; testy nepoznají, že výkres vypadá špatně.
 
@@ -21,6 +22,8 @@ Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po zm�
 - **Rozhraní zkoušky.** Hra se simulací mluví jen zprávami z `src/zkouska/protokol.ts`. Stejné zprávy tečou přes Web Worker i v testech.
 - **Žádná fyzikální knihovna ani herní framework.** Jádro je vlastní a ověřuje se proti analytickým řešením (koncepce, kap. 7.10).
 - **Jednotky.** Metry, kilogramy, newtony, sekundy. Osa y světa míří nahoru. Rastr je 1 m.
+- **Jádro bez goniometrie.** Vnitřní smyčka simulace smí používat jen sčítání, násobení, dělení a odmocninu; `Math.sin`, `Math.cos` a `Math.atan2` nedávají ve všech prohlížečích stejné bity. Natočení se drží jako jednotkový vektor. V testech a jednorázové přípravě goniometrie nevadí.
+- **Pole v jádře.** Stav simulace je v plochých `Float64Array`; ve vnitřních smyčkách nic nealokuj.
 - **Formáty dat mají verze.** Změna formátu úrovně nebo návrhu znamená zvýšit verzi, přidat převod do řetězu a ponechat starý soubor jako test. Ceny a vlastnosti prvků žijí jen v `src/data/katalog.ts`.
 - **Verze fyziky.** `VERZE_FYZIKY` se zvyšuje, kdykoli se změní výsledek zkoušky stejného mostu. Změnu popiš v `docs/STAV.md`.
 - **Texty.** Všechny texty pro hráče jdou přes `src/ui/slovnik.ts`.

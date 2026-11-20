@@ -16,5 +16,5 @@
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "urovne"]
+  "include": ["src", "urovne", "mereni"]
 }

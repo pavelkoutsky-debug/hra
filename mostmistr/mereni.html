@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Mostmistr – měření výkonu</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #103f78;
+        color: #cfe3ff;
+        font: 13px/1.5 "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+      }
+      h1 { margin: 0 0 4px; color: #fff; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; }
+      p { max-width: 72ch; margin: 0 0 12px; }
+      button {
+        padding: 5px 14px;
+        border: 1px solid #cfe3ff;
+        border-radius: 2px;
+        background: transparent;
+        color: #cfe3ff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) { background: #1d5aa3; color: #fff; }
+      button:disabled { opacity: 0.45; cursor: default; }
+      .tabulka { overflow-x: auto; margin-top: 16px; }
+      table { border-collapse: collapse; white-space: nowrap; }
+      th, td { padding: 4px 10px; border: 1px solid rgb(207 227 255 / 0.45); text-align: right; }
+      th { color: #8fb4e6; font-weight: normal; text-align: center; }
+      td:nth-child(-n + 2), th:nth-child(-n + 2) { text-align: left; }
+      #prostredi { color: #8fb4e6; font-size: 11px; overflow-wrap: anywhere; }
+      #stav { margin-left: 12px; }
+      a { color: #fff; }
+    </style>
+  </head>
+  <body>
+    <h1>Mostmistr – měření výkonu</h1>
+    <p>
+      Změří, jak rychle tento počítač a prohlížeč počítá fyziku tří referenčních mostů.
+      Násobek reálného času říká, kolikrát rychleji než ve skutečnosti zkouška proběhne.
+      Měření trvá asi deset sekund; během něj nepřepínej na jinou záložku.
+    </p>
+    <p>
+      <button type="button" id="spustit">Spustit měření</button>
+      <button type="button" id="kopirovat" disabled>Kopírovat výsledky</button>
+      <span id="stav" role="status"></span>
+    </p>
+    <p id="prostredi"></p>
+    <div class="tabulka">
+      <table id="vysledky">
+        <thead>
+          <tr>
+            <th rowspan="2">Most</th>
+            <th rowspan="2">Styčníky</th>
+            <th rowspan="2">Styčníků / prutů / kol</th>
+            <th rowspan="2">Neznámých</th>
+            <th rowspan="2">Kroků na sekundu děje</th>
+            <th rowspan="2">1. frekvence (Hz)</th>
+            <th colspan="2">Jen most</th>
+            <th colspan="2">S koly a tlumením tvarů</th>
+            <th rowspan="2">Příprava (ms)</th>
+          </tr>
+          <tr>
+            <th>µs na krok</th>
+            <th>násobek reálného času</th>
+            <th>µs na krok</th>
+            <th>násobek reálného času</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p style="margin-top: 16px"><a href="/">Zpět na hru</a></p>
+    <script type="module" src="/mereni/stranka.ts"></script>
+  </body>
+</html>

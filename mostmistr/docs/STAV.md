@@ -6,11 +6,26 @@ Poslední aktualizace: 20. 11. 2026
 
 | Milník | Stav |
 |---|---|
-| M0 Základy | Hotovo v kódu; čeká na propojení Netlify a potvrzení zadavatele |
-| M1a Průzkum (krok, tlumení, výkon) | Nezačato |
+| M0 Základy | Hotovo, sloučeno do `main`, nasazeno na Netlify (20. 11. 2026) |
+| M1a Průzkum (krok, tlumení, výkon) | Hotovo v kódu; kritérium splněno; čeká na schválení zadavatele |
 | M1b Jádro | Nezačato |
 | M2 První hratelná verze | Nezačato |
 | M3a až M8 | Nezačato |
+
+## M1a — výsledek
+
+Podrobně v [`M1A-MERENI.md`](./M1A-MERENI.md). Stručně:
+
+- Explicitní výpočet se skutečnými tuhostmi stačí: největší referenční most 7× až 12× rychleji než reálný čas, běžná úroveň přes 100×. Zálohy z koncepce nejsou potřeba.
+- Krok určuje jen podélná vlna v nejkratším prutu: 1 600 až 6 400 kroků za sekundu.
+- Tlumení: vlastním tvarům přímo, nejvyšším frekvencím přes tuhost (ξ = 0,1).
+- Jádro nepoužívá goniometrické funkce.
+
+**Co v jádře už je** (`src/jadro/`): korotační nosník se smykem a klouby, lano, soustředění hmot, velocity Verlet, tři druhy tlumení, volba kroku, hustá matice tuhosti, Newtonovo hledání rovnováhy s rozpoznáním mechanismu, vlastní tvary, nejvyšší frekvence. Pokryto 36 testy proti analytickým řešením.
+
+**Co v jádře ještě není** (M1b): porušení a plasticita, pružina, tlumič a závaží jako prvky, skryté dělení prutů, zatížení mezi styčníky, kontakt a vozidla, regresní sada s otisky, ověřené hodnoty materiálů v katalogu, zkušebna.
+
+**Měřicí nástroje** jsou ve složce `mereni/` a na stránce `/mereni.html`. Průřezy v `mereni/prurezy.ts` jsou předběžné.
 
 ## M0 — co je hotovo
 
@@ -33,7 +48,7 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## M0 — co ověřeno není
 
-- **Nasazení na Netlify.** Konfiguraci jsem z kontejneru nemohl vyzkoušet. Kritérium milníku („na Netlify je výkres, jde posouvat a zoomovat, popisové pole ukazuje verzi“) potvrdí až zadavatel.
+- **Jak hra na Netlify vypadá a ovládá se.** Sestavení a nasazení `main@97a1637` prošlo (zadavatel poslal snímek z Netlify). Že výkres funguje i při pohledu očima, zatím nepotvrdil.
 - **Jiné prohlížeče než Chromium.**
 - **Ovládání touchpadem.** Kolečko i dvouprstý posun teď zoomují; posun je pravým tlačítkem, mezerníkem s tažením nebo šipkami.
 
@@ -41,21 +56,21 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 - Formát rekordu: přijde s ukládáním v M2.
 - Ceny a mechanické vlastnosti prvků v katalogu: v M1b po ověření proti normám. Do té doby má každý prvek `hotovo: false` a kontrola návrhu ho odmítne.
-- Vlastní goniometrické funkce a regresní sada s otisky: s jádrem v M1b.
+- Regresní sada s otisky: s jádrem v M1b. Vlastní goniometrické funkce nakonec potřeba nejsou (viz M1a).
 
 ## Co je potřeba od zadavatele
 
-1. V Netlify založit projekt z repozitáře `pavelkoutsky-debug/hra`: základní složka (Base directory) `mostmistr`, produkční větev `main`.
-2. Otevřít náhled u pull requestu M0 a potvrdit, že výkres funguje.
-3. Schválit sloučení M0 do `main`.
+1. Otevřít hru na Netlify a potvrdit, že výkres z M0 funguje; poslat adresu projektu.
+2. Na náhledu pull requestu M1a otevřít `/mereni.html`, spustit měření a poslat výsledky.
+3. Schválit sloučení M1a do `main`.
 
 ## Další krok
 
-M1a: změřit potřebný počet kroků výpočtu, variantu tlumení a výkon pro všechny prvky katalogu a tři referenční mosty. Kritérium a zálohy jsou v koncepci, kap. 7.3.
+M1b: dokončit jádro (viz „co v jádře ještě není“), ověřovací a regresní sada podle koncepce kap. 7.10, zkušebna na Netlify. Před začátkem ověřit hodnoty materiálů a průřezů proti normám.
 
 ## Zpětná vazba zadavatele
 
-Zatím žádná k běžící hře.
+- 20. 11. 2026: první nasazení na Netlify selhalo, protože `main` tehdy složku `mostmistr` ještě neobsahovala; po sloučení M0 prošlo. K běžící hře zatím žádná zpětná vazba.
 
 ## Verze fyziky
 
