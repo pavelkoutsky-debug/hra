@@ -185,6 +185,28 @@ describe("most bez ztužení", () => {
     expect(zaznam.snimky.at(-1)!.provoz.every((stav) => stav === SPADL)).toBe(true);
   });
 
+  it("konec mostu sjede z posuvné podpory a záznam to ohlásí i s novou stavbou", () => {
+    const sjeti = udalosti.filter((x) => x.druh === "sjeti");
+    expect(sjeti).toHaveLength(1);
+    // Posuvná podpora je na pravém břehu; styčník v ní je poslední z mostovky.
+    expect(jenMostovka().stycniky[sjeti[0]!.druh === "sjeti" ? sjeti[0]!.stycnik : -1]).toMatchObject({ x: 12, y: 0 });
+    expect(sjeti[0]!.cas).toBeLessThan(2);
+    // Před sjetím stavba podporu má, po něm už ne.
+    expect(zaznam.topologie.length).toBeGreaterThanOrEqual(2);
+    const stycnik = sjeti[0]!.druh === "sjeti" ? sjeti[0]!.stycnik : -1;
+    expect(zaznam.topologie[0]!.podpory[stycnik]).toBe(2);
+    expect(zaznam.topologie.at(-1)!.podpory[stycnik]).toBe(0);
+  });
+
+  it("stavba v záznamu říká, ke kterému prutu návrhu každý prvek patří", () => {
+    const stavba = zaznam.topologie[0]!;
+    expect(stavba.prut).toHaveLength(stavba.prvekA.length);
+    const pruty = new Set([...stavba.prut].filter((p) => p >= 0));
+    expect([...pruty].sort()).toEqual([0, 1, 2]);
+    // Pérování vozidla a chodců k žádnému prutu nepatří.
+    expect([...stavba.prut].some((p) => p < 0)).toBe(true);
+  });
+
   it("trosky a spadlí účastníci skončí na dně údolí, ne v nekonečnu", () => {
     const posledni = zaznam.snimky.at(-1)!;
     for (let i = 1; i < posledni.polohy.length; i += 2) {

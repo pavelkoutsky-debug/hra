@@ -29,6 +29,8 @@ export type Udalost = { cas: number } & (
       /** Využití v okamžiku porušení; 1 je mez únosnosti. */
       mira: number;
     }
+  /** Konec mostu sjel z posuvné podpory; `stycnik` je pořadí styčníku v návrhu. */
+  | { druh: "sjeti"; stycnik: number }
   /** Účastník provozu dojel na druhý břeh. */
   | { druh: "prujezd"; polozka: number; clen: number }
   /** Účastník provozu spadl. */

@@ -67,6 +67,7 @@ describe("záznam", () => {
     stycniku,
     prvekA: new Int32Array(1),
     prvekB: new Int32Array(1),
+    prut: new Int32Array(1),
     cara: new Uint8Array(1),
     klouby: new Uint8Array(1),
     podpory: new Uint8Array(stycniku),

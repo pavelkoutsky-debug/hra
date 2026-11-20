@@ -12,6 +12,8 @@ export interface Topologie {
   stycniku: number;
   prvekA: Int32Array;
   prvekB: Int32Array;
+  /** Číslo prutu, ke kterému prvek patří (ve zkoušce pořadí prutu v návrhu); −1, když k žádnému. */
+  prut: Int32Array;
   /** Druh čáry prvku; viz konstanty CARA_*. */
   cara: Uint8Array;
   /** Bit 0: kloub na konci a, bit 1: kloub na konci b. */
@@ -113,6 +115,7 @@ export function topologieSoustavy(s: Soustava, popis: PopisKresleni = {}): Topol
     stycniku: s.pocetStycniku,
     prvekA: s.prvekA.slice(0, s.pocetPrvku),
     prvekB: s.prvekB.slice(0, s.pocetPrvku),
+    prut: s.prut.slice(0, s.pocetPrvku),
     cara,
     klouby,
     podpory,

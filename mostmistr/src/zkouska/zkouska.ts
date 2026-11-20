@@ -7,6 +7,7 @@ import type { NavrhMostu } from "../data/navrh";
 import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
+import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu } from "../jadro/matice";
 import { ZPUSOB_TAH, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { Simulace, type Zatizeni } from "../jadro/simulace";
@@ -52,6 +53,7 @@ export class Zkouska {
   #dalsiSnimek = 0;
   #topologii = 0;
   #poruseni = 0;
+  #sjeti = 0;
   #udalostiProvozu = 0;
   #konec = Infinity;
   #zacala = false;
@@ -103,6 +105,7 @@ export class Zkouska {
       utlumPrvku,
       tlumeneStupne: stupne,
       zatizeni: this.#zatizeni(teren, stycnikuMostu),
+      loziska: vytvorLoziska(s, 0, stycnikuMostu),
     });
 
     this.trasyMostovky = stavba.trasy.flatMap((t) => t.pruty);
@@ -190,9 +193,13 @@ export class Zkouska {
         this.#konec = sim.cas + DOBEH;
       }
 
-      if (sim.udalosti.length > this.#poruseni) {
-        // Porušení: zaznamenat a hned vydat snímek s novou stavbou, aby se přehrávání
-        // nepokoušelo prokládat přes zlom.
+      if (sim.udalosti.length > this.#poruseni || sim.sjeti.length > this.#sjeti) {
+        // Porušení nebo sjetí z podpory: zaznamenat a hned vydat snímek s novou stavbou,
+        // aby se přehrávání nepokoušelo prokládat přes zlom.
+        for (; this.#sjeti < sim.sjeti.length; this.#sjeti++) {
+          const u = sim.sjeti[this.#sjeti]!;
+          davka.udalosti.push({ cas: u.cas, druh: "sjeti", stycnik: u.stycnik });
+        }
         for (; this.#poruseni < sim.udalosti.length; this.#poruseni++) {
           const u = sim.udalosti[this.#poruseni]!;
           if (u.prut < 0) continue;
@@ -244,7 +251,8 @@ export class Zkouska {
     for (const u of this.simulace.udalosti) if (u.prut >= 0) poruseni++;
 
     // Bez provozu projde most, který pod vlastní tíhou vydržel celý.
-    const pruchod = !rozpad && spadlo === 0 && prejelo === ucastniku && (ucastniku > 0 || (poruseni === 0 && !this.bezRovnovahy));
+    const cely = poruseni === 0 && this.simulace.sjeti.length === 0 && !this.bezRovnovahy;
+    const pruchod = !rozpad && spadlo === 0 && prejelo === ucastniku && (ucastniku > 0 || cely);
     const uroven = this.#uroven;
     const bonus = uroven.mistrovska;
     const medaile: Medaile = {
