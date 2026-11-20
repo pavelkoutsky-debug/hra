@@ -7,8 +7,8 @@ Poslední aktualizace: 20. 11. 2026
 | Milník | Stav |
 |---|---|
 | M0 Základy | Hotovo, sloučeno do `main`, nasazeno na Netlify (20. 11. 2026) |
-| M1a Průzkum (krok, tlumení, výkon) | Hotovo v kódu; kritérium splněno; čeká na schválení zadavatele |
-| M1b Jádro | Nezačato |
+| M1a Průzkum (krok, tlumení, výkon) | Hotovo, sloučeno do `main`; kritérium splněno i na počítači zadavatele |
+| M1b Jádro | Rozpracováno |
 | M2 První hratelná verze | Nezačato |
 | M3a až M8 | Nezačato |
 
@@ -71,6 +71,8 @@ M1b: dokončit jádro (viz „co v jádře ještě není“), ověřovací a reg
 ## Zpětná vazba zadavatele
 
 - 20. 11. 2026: první nasazení na Netlify selhalo, protože `main` tehdy složku `mostmistr` ještě neobsahovala; po sloučení M0 prošlo. K běžící hře zatím žádná zpětná vazba.
+- 20. 11. 2026: zadavatel pustil `/mereni.html` na svém počítači (Chrome 157, Windows, sestavení `0.2.0 e4e2146`); výsledky jsou v `M1A-MERENI.md`. Projekt na Netlify se jmenuje `mostmistr`, náhledy mají adresu `deploy-preview-N--mostmistr.netlify.app`.
+- Rozhodnutí zadavatele: pull requesty sledovat a selhání sestavení opravovat samostatně; slučovat jen s jeho souhlasem.
 
 ## Verze fyziky
 
