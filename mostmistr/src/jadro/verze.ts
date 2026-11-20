@@ -6,5 +6,6 @@
  * Co která verze přinesla, je zapsáno v docs/STAV.md.
  * - 0: jádro ještě neexistovalo.
  * - 1: první úplné jádro (milník M1b).
+ * - 2: štíhlejší průřezy dřeva po kalibraci první kapitoly (milník M2).
  */
-export const VERZE_FYZIKY = 1;
+export const VERZE_FYZIKY = 2;

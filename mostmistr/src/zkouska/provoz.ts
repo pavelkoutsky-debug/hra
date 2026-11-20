@@ -19,7 +19,7 @@ import {
 import { nahoda, nahodnaFaze } from "../jadro/nahoda";
 import type { Zatizeni } from "../jadro/simulace";
 import { popisPruziny, type PopisSoustavy, type Soustava } from "../jadro/soustava";
-import { pridejKontaktSTerenem, vyskaTerenuV, type Teren } from "../jadro/teren";
+import { pridejKontaktSTerenem, type Teren } from "../jadro/teren";
 import { prestavTrasu, type Trasa } from "../jadro/trasa";
 import { modelUcastnika } from "./vozidla";
 
@@ -34,6 +34,13 @@ const HLOUBKA_PADU = 1.5;
 const DOJEZD = 2;
 /** Odpor vody: zpomalení úměrné rychlosti, 1/s. Potopený kus klesá ustálenou rychlostí g/odpor. */
 const ODPOR_VODY = 3;
+/**
+ * Tuhost a tlumení spojení mezi nápravami (N/m, N·s/m). Při jízdě vede každou nápravu
+ * předepsaná rychlost a spojení jen nepatrně brání kývání karoserie; drží vozidlo
+ * pohromadě, až když spadne a nápravy se uvolní.
+ */
+const TUHOST_SPOJENI_NAPRAV = 2e6;
+const TLUMENI_SPOJENI_NAPRAV = 4e3;
 
 /** Účastník provozu tak, jak ho potřebuje výkres. */
 export interface PopisUcastnika {
@@ -166,6 +173,11 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
         ucastnik.kontakty.push({ trasa: cisloTrasy, bremeno: kontakty.length });
         kontakty.push(bremeno);
       }
+      // Nápravy téhož vozidla drží pohromadě spojení mezi karoseriemi (u kola mezi koly).
+      const spojovane = ucastnik.karoserie.length > 0 ? ucastnik.karoserie : ucastnik.kola;
+      for (let i = 0; i + 1 < spojovane.length; i++) {
+        popis.prvky.push(popisPruziny(spojovane[i]!, spojovane[i + 1]!, TUHOST_SPOJENI_NAPRAV, TLUMENI_SPOJENI_NAPRAV));
+      }
       plan.ucastnici.push(ucastnik);
       const draha = odCela + (trasa.konec.x - trasa.zacatek.x) + model.delka + DOJEZD;
       plan.konec = Math.max(plan.konec, polozka.cas + draha / model.rychlost);
@@ -187,6 +199,10 @@ export class Provoz implements Zatizeni {
   readonly #uroven: Uroven;
   readonly #teren: Teren;
   readonly #trasy: Trasa[];
+  /** Výška každého styčníku provozu nad jeho dotykem se zemí (osa kola, těžiště chodce). */
+  readonly #vysky: Float64Array;
+  /** Styčníky spadlých účastníků: jen ty se opírají o terén, ostatní nese trasa. */
+  readonly #naTerenu: Uint8Array;
   #nedokonceno: number;
 
   constructor(s: Soustava, plan: PlanProvozu, trasy: Trasa[], uroven: Uroven, teren: Teren) {
@@ -198,6 +214,13 @@ export class Provoz implements Zatizeni {
     this.stavy = new Uint8Array(plan.ucastnici.length);
     this.#nedokonceno = plan.ucastnici.length;
     this.bremena = trasy.map((trasa, i) => vytvorBremena(trasa, plan.kontakty[i] ?? []));
+    this.#naTerenu = new Uint8Array(s.pocetStycniku);
+    this.#vysky = new Float64Array(s.pocetStycniku);
+    for (const u of plan.ucastnici) {
+      for (const i of u.kola) this.#vysky[i] = u.vyska;
+      // Karoserie dosedne o něco výš než kola, aby vozidlo po pádu neleželo zploštělé.
+      for (const i of u.karoserie) this.#vysky[i] = u.vyska + 0.2;
+    }
     // Nikdo ještě nejede; rychlost dostane každý až při vyjetí.
     for (const u of plan.ucastnici) for (const i of u.stycniky) s.vx[i] = 0;
   }
@@ -224,16 +247,17 @@ export class Provoz implements Zatizeni {
   pridejSily(s: Soustava): void {
     for (const b of this.bremena) pridejSilyBremen(s, b);
     const od = this.#plan.prvniStycnik;
-    // Spadlí účastníci dopadají na terén; ostatní jsou vysoko nad ním a výpočet je mine.
-    pridejKontaktSTerenem(s, this.#teren, od, s.pocetStycniku);
-    const hladina = this.#uroven.hladina;
-    if (hladina !== null) pridejOdporVody(s, hladina, od, s.pocetStycniku);
+    // Spadlí účastníci dopadají na terén a do vody; ostatní nese trasa.
+    if (this.#nekdoSpadl) {
+      pridejKontaktSTerenem(s, this.#teren, od, this.#vysky.length, this.#vysky, this.#naTerenu);
+      const hladina = this.#uroven.hladina;
+      if (hladina !== null) pridejOdporVody(s, hladina, od, this.#vysky.length);
+    }
   }
 
-  posun(s: Soustava, cas: number, dt: number): void {
+  posun(s: Soustava, cas: number): void {
     for (const b of this.bremena) posunBremena(b);
     const { ucastnici } = this.#plan;
-    const hladina = this.#uroven.hladina;
     for (let k = 0; k < ucastnici.length; k++) {
       const u = ucastnici[k]!;
       const stav = this.stavy[k]!;
@@ -260,20 +284,22 @@ export class Provoz implements Zatizeni {
           this.#ukonci(k, SPADL, cas, "pad");
           // Od této chvíle se o trasu neopírá; zachytí ho až terén.
           for (const kontakt of u.kontakty) this.bremena[kontakt.trasa]!.vypnuto[kontakt.bremeno] = 1;
+          // Stává se volným tělesem: vodorovně už ho nevede předepsaná rychlost, jen setrvačnost.
+          for (const i of u.stycniky) {
+            this.#naTerenu[i] = 1;
+            s.podpora[i] = s.podpora[i]! & ~1;
+            s.invHmotaX[i] = 1 / s.hmota[i]!;
+          }
+          this.#nekdoSpadl = true;
         } else if (dojel) {
           this.#ukonci(k, PREJEL, cas, "prujezd");
           for (const i of u.stycniky) s.vx[i] = 0;
         }
-      } else if (stav === SPADL) {
-        // Po dopadu na zem nebo do vody se vodorovný pohyb rychle zastaví.
-        for (const i of u.stycniky) {
-          const naZemi = s.y[i]! <= vyskaTerenuV(this.#teren, s.x[i]!) + 0.05;
-          const veVode = hladina !== null && s.y[i]! < hladina;
-          if (naZemi || veVode) s.vx[i] = s.vx[i]! * (1 - Math.min(1, 8 * dt));
-        }
       }
     }
   }
+
+  #nekdoSpadl = false;
 
   #ukonci(k: number, stav: number, cas: number, druh: "prujezd" | "pad"): void {
     const u = this.#plan.ucastnici[k]!;

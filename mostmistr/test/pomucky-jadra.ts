@@ -1,4 +1,5 @@
 // Společné stavebnice pro testy jádra.
+import { MATERIALY, type Material } from "../src/data/katalog";
 import { NOSNIK, type PopisPrvku, type PopisSoustavy } from "../src/jadro/soustava";
 
 export type Prurez = Omit<PopisPrvku, "a" | "b">;
@@ -35,3 +36,64 @@ export function nosnik(prurez: Prurez, delka: number, dilu: number, podpory: "ko
   }
   return popis;
 }
+
+/** Průřez pro `prutZPrurezu`: plocha, moment setrvačnosti, smykové plochy a průřezové moduly. */
+interface Rozmery {
+  A: number;
+  I: number;
+  As: number;
+  Av?: number;
+  W: number;
+  Wpl: number;
+  hmotnostNaMetr?: number;
+}
+
+/**
+ * Prut z daného materiálu a průřezu se stejnými pravidly, jakými ho skládá hra z katalogu.
+ * Testy jádra mají vlastní pevné průřezy, aby jejich očekávané hodnoty nezávisely na tom,
+ * jak se průřezy v katalogu ladí pro hru.
+ */
+function prutZPrurezu(m: Material, p: Rozmery): Prurez {
+  const prut: Prurez = {
+    druh: NOSNIK,
+    EA: m.E * p.A,
+    EI: m.E * p.I,
+    GAs: m.G * p.As,
+    hmotnostNaMetr: p.hmotnostNaMetr ?? m.hustota * p.A,
+    polomerSetrvacnosti: Math.sqrt(p.I / p.A),
+    unosnost: {
+      tah: m.mez.tah * p.A,
+      tlak: m.mez.tlak * p.A,
+      moment: m.mez.ohyb * (m.tvarny ? p.Wpl : p.W),
+      smyk: m.mez.smyk * (p.Av ?? p.As),
+    },
+  };
+  if (m.tvarny) {
+    prut.tvarny = {
+      silaPretrzeni: m.pevnostVTahu! * p.A,
+      mezniNatoceni: m.mezniNatoceni!,
+      mezniProtazeni: m.mezniProtazeni!,
+    };
+  }
+  return prut;
+}
+
+/** Dvojice dřevěných trámů 140 × 280 mm z lepeného dřeva: křehký prut. */
+export const DREVENY_TRAM: Prurez = prutZPrurezu(MATERIALY.drevo, {
+  A: 2 * 0.14 * 0.28,
+  I: (2 * 0.14 * 0.28 ** 3) / 12,
+  As: (2 * 5 * 0.14 * 0.28) / 6,
+  Av: (2 * 2 * 0.14 * 0.28) / 3,
+  W: (2 * 0.14 * 0.28 ** 2) / 6,
+  Wpl: (2 * 0.14 * 0.28 ** 2) / 4,
+});
+
+/** Dvojice ocelových nosníků HEB 200: tvárný prut. */
+export const OCELOVY_NOSNIK: Prurez = prutZPrurezu(MATERIALY.ocel, {
+  A: 2 * 78.1e-4,
+  I: 2 * 5696e-8,
+  As: 2 * 24.83e-4,
+  W: 2 * 569.6e-6,
+  Wpl: 2 * 642.5e-6,
+  hmotnostNaMetr: 2 * 61.3,
+});

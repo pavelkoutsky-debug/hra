@@ -9,7 +9,7 @@ Poslední aktualizace: 20. 11. 2026
 | M0 Základy | Hotovo, sloučeno do `main`, nasazeno na Netlify (20. 11. 2026) |
 | M1a Průzkum (krok, tlumení, výkon) | Hotovo, sloučeno do `main`; kritérium splněno i na počítači zadavatele |
 | M1b Jádro | Hotovo, sloučeno do `main` (20. 11. 2026) |
-| M2 První hratelná verze | Nezačato |
+| M2 První hratelná verze | Rozpracováno |
 | M3a až M8 | Nezačato |
 
 ## M1b — výsledek
@@ -108,3 +108,4 @@ M2, první hratelná verze: editor, zkouška ve workeru s osobním autem a chodc
 |---|---|
 | 0 | Jádro neexistuje |
 | 1 | První úplné jádro (M1b): nosník se smykem, lano, pružina s tlumičem, plasticita, porušení, pohyblivé zatížení, skryté dělení prutů |
+| 2 | Kalibrace první kapitoly (M2): štíhlejší průřezy dřeva (lehký trám 2× 60 × 120 mm, těžký 2× 120 × 240 mm, mostovka z fošen 80 mm). Styčník, který po porušení osiří, se zastaví. |

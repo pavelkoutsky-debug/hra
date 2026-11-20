@@ -12,6 +12,10 @@
 // - Každý nakreslený prut představuje dvojici stejných profilů: levou a pravou stranu
 //   mostu promítnutou do roviny výkresu. Průřezy níže už dvojici zahrnují.
 //
+// Průřezy dřeva jsou od M2 zvolené pro hru (koncepce, kap. 5: průřezy se ladí při kalibraci
+// úrovní): s původními masivními trámy využil provoz první kapitoly jen pár procent
+// únosnosti a nic se nikdy nezlomilo. Materiál a jeho pevnosti zůstaly.
+//
 // Stav ověření (20. 11. 2026). Zdrojové normy se z vývojového prostředí otevřít
 // nepodařilo; „potvrzeno“ znamená shodu s veřejně dostupnými tabulkami nalezenými
 // vyhledáváním, „z paměti“ znamená bez nezávislého potvrzení.
@@ -184,14 +188,14 @@ function deskaNaMetr(t: number): Prurez {
 
 // Délky nosných prvků jsou z koncepce (kap. 5); u tlumiče, pružiny a pístu jsou předběžné.
 export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
-  // Dřevěná deska tloušťky 140 mm.
+  // Dřevěná mostovka z fošen tloušťky 80 mm. Osobní auto unese s rezervou, těžký náklad ne.
   "mostovka-drevo": {
     druh: "mostovka",
     nejvetsiDelka: 4,
     hotovo: true,
     cena: { zaMetr: 2500 },
     material: "drevo",
-    prurez: deskaNaMetr(0.14),
+    prurez: deskaNaMetr(0.08),
     naMetrSirky: true,
   },
   // Železobetonová deska tloušťky 250 mm; spřažení s ocelovými trámy zatím zanedbáno.
@@ -215,23 +219,23 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     prurez: { A: 2 * 76.7e-4, I: 2 * 3038e-8, As: 2 * 30e-4, W: 2 * 333.6e-6, Wpl: 2 * 400e-6, hmotnostNaMetr: 370 },
     predbezne: true,
   },
-  // 2× lepené dřevo 140 × 280 mm.
+  // 2× lepené dřevo 60 × 120 mm: lehký trám, který se v tlaku brzy vzpírá.
   "drevo-lehke": {
     druh: "prut",
     nejvetsiDelka: 6,
     hotovo: true,
     cena: { zaMetr: 1200 },
     material: "drevo",
-    prurez: dvaObdelniky(0.14, 0.28),
+    prurez: dvaObdelniky(0.06, 0.12),
   },
-  // 2× lepené dřevo 200 × 480 mm.
+  // 2× lepené dřevo 120 × 240 mm: čtyřikrát víc dřeva, šestnáctkrát větší odolnost ve vzpěru.
   "drevo-tezke": {
     druh: "prut",
     nejvetsiDelka: 6,
     hotovo: true,
     cena: { zaMetr: 2800 },
     material: "drevo",
-    prurez: dvaObdelniky(0.2, 0.48),
+    prurez: dvaObdelniky(0.12, 0.24),
   },
   // 2× HEB 200.
   "ocel-lehka": {

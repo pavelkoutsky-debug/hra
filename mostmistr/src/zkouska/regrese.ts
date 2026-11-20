@@ -248,7 +248,7 @@ function tramovyMost(svar: boolean): NavrhMostu {
 
 function drevenaPrihrada(): NavrhMostu {
   const k = new Kreslic();
-  prihrada(k, 24, 4, 4, "drevo-tezke", "drevo-lehke");
+  prihrada(k, 24, 4, 4, "drevo-tezke", "drevo-tezke");
   return k.navrh();
 }
 
@@ -317,7 +317,7 @@ function zavesenyMost(): NavrhMostu {
 function mostSPilirem(): NavrhMostu {
   const k = new Kreslic();
   mostovka(k, 24, 4);
-  for (let x = 0; x < 24; x += 4) k.prut("drevo-tezke", [x, 0], [x + 4, 0]);
+  for (let x = 0; x < 24; x += 4) k.prut("ocel-lehka", [x, 0], [x + 4, 0]);
   k.prut("pilir", [12, -8], [12, 0]);
   k.svarVse();
   return k.navrh();
@@ -420,8 +420,8 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 24 }),
       navrh: drevenaPrihrada(),
       vozy: [
-        { x: -1, rychlost: 10, hmota: 3000 },
-        { x: -5, rychlost: 10, hmota: 5000 },
+        { x: -1, rychlost: 10, hmota: 1500 },
+        { x: -5, rychlost: 10, hmota: 2500 },
       ],
     }),
   },
@@ -432,9 +432,9 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 32 }),
       navrh: ocelovaPrihrada(32, false),
       vozy: [
-        { x: -1, rychlost: 11, hmota: 9000 },
-        { x: -4.6, rychlost: 11, hmota: 9000 },
-        { x: -6, rychlost: 11, hmota: 8000 },
+        { x: -1, rychlost: 11, hmota: 3000 },
+        { x: -4.6, rychlost: 11, hmota: 3000 },
+        { x: -6, rychlost: 11, hmota: 2500 },
       ],
     }),
   },
@@ -445,9 +445,9 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 32 }),
       navrh: ocelovaPrihrada(32, true),
       vozy: [
-        { x: -1, rychlost: 11, hmota: 9000 },
-        { x: -4.6, rychlost: 11, hmota: 9000 },
-        { x: -6, rychlost: 11, hmota: 8000 },
+        { x: -1, rychlost: 11, hmota: 3000 },
+        { x: -4.6, rychlost: 11, hmota: 3000 },
+        { x: -6, rychlost: 11, hmota: 2500 },
       ],
     }),
   },
@@ -459,7 +459,7 @@ export const SCENARE: readonly Scenar[] = [
       navrh: drevenaPrihrada(),
       vozy: [
         { x: -2, rychlost: 9, hmota: 1500 },
-        { x: 27, rychlost: -12, hmota: 3500, frekvence: 1.2 },
+        { x: 27, rychlost: -12, hmota: 2500, frekvence: 1.2 },
       ],
     }),
   },
@@ -539,8 +539,8 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 24, zaklady: [{ x: 12, y: -8 }] }),
       navrh: mostSPilirem(),
       vozy: [
-        { x: -1, rychlost: 10, hmota: 4000 },
-        { x: -5.5, rychlost: 10, hmota: 8000 },
+        { x: -1, rychlost: 10, hmota: 2000 },
+        { x: -5.5, rychlost: 10, hmota: 4000 },
       ],
     }),
   },

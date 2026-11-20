@@ -89,6 +89,15 @@ export function topologieSoustavy(s: Soustava, popis: PopisKresleni = {}): Topol
   const znacky = new Uint8Array(s.pocetStycniku);
   for (const i of popis.skryte ?? []) znacky[i] = STYCNIK_SKRYTY;
   for (const i of popis.zavazi ?? []) znacky[i] = STYCNIK_ZAVAZI;
+  // Styčník, do kterého po porušení nevede žádný prut a nic neváží, se nekreslí.
+  const pripojeny = new Uint8Array(s.pocetStycniku);
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    pripojeny[s.prvekA[e]!] = 1;
+    pripojeny[s.prvekB[e]!] = 1;
+  }
+  for (let i = 0; i < s.pocetStycniku; i++) {
+    if (pripojeny[i] === 0 && !(s.hmota[i]! > 0) && (s.podpora[i]! & 3) === 0) znacky[i] = STYCNIK_SKRYTY;
+  }
   // Prvek mezi dvěma skrytými styčníky patří účastníkovi provozu (pérování).
   for (let e = 0; e < s.pocetPrvku; e++) {
     if (znacky[s.prvekA[e]!] === STYCNIK_SKRYTY && znacky[s.prvekB[e]!] === STYCNIK_SKRYTY) cara[e] = CARA_SKRYTA;

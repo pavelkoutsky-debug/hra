@@ -508,19 +508,19 @@ function prejezdSily(): BehPripadu {
 
 /** Příhradový most, po kterém jede kolona kol: součet reakcí musí odpovídat tíze. */
 function mostSKoly(): BehPripadu {
-  // Nízká dřevěná příhrada pod těžkými koly: pruty jsou znatelně namáhané, takže je
-  // na výkresu vidět barevná škála využití.
+  // Nízká dřevěná příhrada z těžkých trámů pod těžkými koly: pruty jsou znatelně namáhané,
+  // takže je na výkresu vidět barevná škála využití.
   const zadani = { ...REFERENCNI_MOSTY[0]!, vyska: 2 };
-  const most = prihradovyMost({ ...zadani, svarene: false, prut: "drevo-lehke" });
+  const most = prihradovyMost({ ...zadani, svarene: false, prut: "drevo-tezke" });
   const rozpeti = zadani.poli * zadani.delkaPole;
   const stycnikuMostu = most.popis.stycniky.length;
 
   // Kola jsou styčníky soustavy vedené vodorovně stálou rychlostí; s mostovkou je spojuje
   // pneumatika. Začínají na zemi před mostem, dosednutá vlastní tíhou.
   const KOL = 6;
-  const hmotaKola = 10_000;
-  const tuhost = 6e6;
-  const tlumeni = 8e4;
+  const hmotaKola = 6_000;
+  const tuhost = 3.6e6;
+  const tlumeni = 5e4;
   const rychlost = 4;
   const rozestup = 3;
   const sednuti = (hmotaKola * g) / tuhost;

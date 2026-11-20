@@ -58,7 +58,7 @@ const CS = {
   "zkusebna.nasledek.kloub": "vznikl plastický kloub",
   "zkusebna.most.nazev": "Příhradový most s kolonou",
   "zkusebna.most.popis":
-    "Nízká dřevěná kloubová příhrada o rozpětí 24 m. Ze břehu na ni najíždí kolona šesti kol po deseti tunách; každé kolo je hmota na pneumatice a jede 4 m/s. Barva prutu ukazuje, jak moc je namáhaný. Dokud je celá kolona na mostě, musí součet sil v podporách odpovídat tíze mostu a kol.",
+    "Nízká kloubová příhrada z těžkých dřevěných trámů o rozpětí 24 m. Ze břehu na ni najíždí kolona šesti kol po šesti tunách; každé kolo je hmota na pneumatice a jede 4 m/s. Barva prutu ukazuje, jak moc je namáhaný. Dokud je celá kolona na mostě, musí součet sil v podporách odpovídat tíze mostu a kol.",
   "zkusebna.pretizeni.nazev": "Vazník zatížený do zlomu",
   "zkusebna.pretizeni.popis":
     "Dřevěný vazník o rozpětí 8 m: dvě krokve a táhlo. Lis tlačí na vrchol stále větší silou. Krokve jsou tlačené a štíhlé, proto má první povolit krokev vzpěrem, a to při síle, kterou dává posudek prutu. Táhlo do té doby nese vodorovnou složku síly v krokvi. Po zlomu lis povolí a vazník se zřítí.",

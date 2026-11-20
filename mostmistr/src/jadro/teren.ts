@@ -79,8 +79,19 @@ const NEJVETSI_ZABOR = 0.5;
  * Síla míří k nejbližšímu bodu povrchu, ne vždy svisle: styčník, který se zhoupne do strmé
  * stěny údolí, je vodorovně za stěnou, ale metry pod povrchem břehu nad ní. Svislý kontakt
  * by ho vystřelil vzhůru; správně ho stěna odrazí zpět do údolí.
+ *
+ * `vysky` udává pro každý styčník, jak vysoko nad svým dotykem s terénem leží (osa kola
+ * nad vozovkou); bez nich se terénu dotýká styčník sám. `jen` omezí kontakt na styčníky
+ * s nenulovou hodnotou.
  */
-export function pridejKontaktSTerenem(s: Soustava, t: Teren, od = 0, po = s.pocetStycniku): number {
+export function pridejKontaktSTerenem(
+  s: Soustava,
+  t: Teren,
+  od = 0,
+  po = s.pocetStycniku,
+  vysky?: Float64Array,
+  jen?: Uint8Array,
+): number {
   if (t.usek.length < s.pocetStycniku) {
     const vetsi = new Int32Array(s.pocetStycniku);
     vetsi.set(t.usek);
@@ -90,9 +101,9 @@ export function pridejKontaktSTerenem(s: Soustava, t: Teren, od = 0, po = s.poce
   const posledni = t.x.length - 2;
   let dotyku = 0;
   for (let i = od; i < po; i++) {
-    if (invHmotaY[i] === 0) continue;
+    if (invHmotaY[i] === 0 || (jen && jen[i] === 0)) continue;
     const px = x[i]!;
-    const py = y[i]!;
+    const py = vysky ? y[i]! - vysky[i]! : y[i]!;
     const povrch = vyskaTerenuV(t, px, t.usek[i]!);
     if (!(povrch > py)) continue;
     dotyku++;

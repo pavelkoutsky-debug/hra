@@ -147,7 +147,7 @@ export class Zkouska {
         }
         void cas;
       },
-      posun: (s, cas, dt) => provoz.posun(s, cas, dt),
+      posun: (s, cas) => provoz.posun(s, cas),
       poZmene: (s) => provoz.poZmene(s),
       zmenaKroku: (dt) => provoz.zmenaKroku(dt),
       pridavnaFrekvence: (s) => provoz.pridavnaFrekvence(s),
