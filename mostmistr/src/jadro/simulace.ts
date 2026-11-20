@@ -2,6 +2,7 @@
 // a po každé změně stavby znovu volí krok výpočtu a tlumení.
 
 import { krok, spoctiSily, type NastaveniKroku } from "./integrator";
+import { uvolniSjeta, type Loziska } from "./loziska";
 import { nejvyssiFrekvence, vlastniTvarySoustavy } from "./matice";
 import { vyhodnotNamahani } from "./namahani";
 import { najdiPoruseni, provedPoruseni, type Poruseni } from "./poruseni";
@@ -82,6 +83,15 @@ export interface NastaveniSimulace {
    * nezávisí: s polovičním krokem má vyjít v toleranci totéž.
    */
   zkraceniKroku?: number;
+  /** Posuvné podpory s konečnou úložnou délkou; konec mostu, který z nich sjede, podporu ztratí. */
+  loziska?: Loziska;
+}
+
+/** Konec mostu sjel z posuvné podpory. */
+export interface UdalostSjeti {
+  cas: number;
+  krok: number;
+  stycnik: number;
 }
 
 /** Porušení i s časem, kdy nastalo. */
@@ -93,6 +103,8 @@ export interface UdalostPoruseni extends Poruseni {
 export class Simulace {
   readonly soustava: Soustava;
   readonly udalosti: UdalostPoruseni[] = [];
+  /** Konce mostu, které sjely z posuvné podpory. */
+  readonly sjeti: UdalostSjeti[] = [];
   /** Výpočet se rozpadl na neplatná čísla; další krokování nemá smysl. */
   rozpadla = false;
 
@@ -162,8 +174,9 @@ export class Simulace {
     return this.#krok.dt;
   }
 
+  /** Stavba už není ta původní: něco se zlomilo, nebo konec mostu sjel z podpory. */
   get porusena(): boolean {
-    return this.udalosti.length > 0;
+    return this.udalosti.length > 0 || this.sjeti.length > 0;
   }
 
   /** Posune simulaci o jeden krok. */
@@ -188,6 +201,15 @@ export class Simulace {
       provedPoruseni(s, poruseni);
       this.udalosti.push({ ...poruseni, cas: this.#cas, krok: this.#kroku });
       zmeneno = true;
+    }
+    const loziska = this.#nastaveni.loziska;
+    if (loziska) {
+      const sjete: number[] = [];
+      if (uvolniSjeta(s, loziska, sjete) > 0) {
+        for (const stycnik of sjete) this.sjeti.push({ cas: this.#cas, krok: this.#kroku, stycnik });
+        prepoctiHmoty(s);
+        zmeneno = true;
+      }
     }
     if (zmeneno) this.poZmeneStavby();
 

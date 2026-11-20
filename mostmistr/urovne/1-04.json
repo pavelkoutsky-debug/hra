@@ -1,0 +1,129 @@
+{
+  "verze": 1,
+  "id": "1-04",
+  "nazev": "Hluboké údolí",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -14,
+    "xMax": 32,
+    "yMax": 10
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 4,
+      "y": -6
+    },
+    {
+      "x": 8,
+      "y": -11
+    },
+    {
+      "x": 16,
+      "y": -11
+    },
+    {
+      "x": 20,
+      "y": -6
+    },
+    {
+      "x": 24,
+      "y": 0
+    },
+    {
+      "x": 32,
+      "y": 0
+    }
+  ],
+  "hladina": -9.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 24,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 4,
+      "y": -6,
+      "typ": "pevna"
+    },
+    {
+      "x": 20,
+      "y": -6,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "cesta",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 24,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 100,
+  "nerovnost": "A",
+  "rozpocet": 200000,
+  "inzenyrskyRozpocet": 125000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.2
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "drevo-lehke",
+    "drevo-tezke"
+  ],
+  "povoleneSvary": false,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "auto",
+      "pocet": 2
+    },
+    {
+      "cas": 3,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "auto"
+    },
+    {
+      "cas": 4,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "cyklista",
+      "pocet": 2
+    },
+    {
+      "cas": 6,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 2,
+      "kadence": 2.0
+    }
+  ]
+}

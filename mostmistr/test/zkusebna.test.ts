@@ -67,6 +67,7 @@ describe("záznam", () => {
     stycniku,
     prvekA: new Int32Array(1),
     prvekB: new Int32Array(1),
+    prut: new Int32Array(1),
     cara: new Uint8Array(1),
     klouby: new Uint8Array(1),
     podpory: new Uint8Array(stycniku),
@@ -79,6 +80,7 @@ describe("záznam", () => {
     vyuziti: Float32Array.from([x / 10]),
     kola: new Float32Array(0),
     sily: new Float32Array(0),
+    provoz: new Uint8Array(0),
   });
   const zaznam = new Zaznam();
   zaznam.pridejTopologii(stavba(1));

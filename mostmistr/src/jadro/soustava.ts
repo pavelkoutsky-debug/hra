@@ -454,7 +454,12 @@ export function prepoctiHmoty(s: Soustava): void {
   for (let i = 0; i < n; i++) {
     const hmota = s.hmota[i]!;
     const podpora = s.podpora[i]!;
-    // Styčník bez hmoty (osiřelý po porušení) se nepohybuje.
+    // Styčník bez hmoty (osiřelý po porušení) se nepohybuje: zůstane stát tam, kde osiřel.
+    if (!(hmota > 0)) {
+      s.vx[i] = 0;
+      s.vy[i] = 0;
+      s.omega[i] = 0;
+    }
     s.invHmotaX[i] = (podpora & 1) !== 0 || !(hmota > 0) ? 0 : 1 / hmota;
     s.invHmotaY[i] = (podpora & 2) !== 0 || !(hmota > 0) ? 0 : 1 / hmota;
     // Styčník, do kterého nevede žádný tuhý konec, se neotáčí: jeho natočení nic neovlivní.

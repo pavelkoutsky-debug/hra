@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cislo, datum, delka, meritkoVykresu, vyskovaKota } from "../src/ui/formaty";
+import { celeCislo, cislo, datum, delka, hmotnost, koruny, meritkoVykresu, procenta, vyskovaKota } from "../src/ui/formaty";
 
 describe("čísla po česku", () => {
   it("desetinná čárka", () => {
@@ -43,5 +43,30 @@ describe("měřítko výkresu", () => {
 describe("datum", () => {
   it("den, měsíc a rok s tečkami", () => {
     expect(datum(new Date(2026, 10, 20))).toBe("20. 11. 2026");
+  });
+});
+
+describe("částky, procenta a hmotnosti", () => {
+  it("tisíce odděluje úzká nedělitelná mezera", () => {
+    expect(celeCislo(0)).toBe("0");
+    expect(celeCislo(999)).toBe("999");
+    expect(celeCislo(33500)).toBe("33\u202f500");
+    expect(celeCislo(1234567.4)).toBe("1\u202f234\u202f567");
+    expect(celeCislo(-2500)).toBe("−2\u202f500");
+  });
+
+  it("koruny mají jednotku za nedělitelnou mezerou", () => {
+    expect(koruny(33133)).toBe("33\u202f133\u00a0Kč");
+    expect(koruny(0)).toBe("0\u00a0Kč");
+  });
+
+  it("podíl se píše jako celá procenta", () => {
+    expect(procenta(0.756)).toBe("76\u00a0%");
+    expect(procenta(1.35)).toBe("135\u00a0%");
+  });
+
+  it("hmotnost do tuny v kilogramech, výš v tunách", () => {
+    expect(hmotnost(924.4)).toBe("924\u00a0kg");
+    expect(hmotnost(3400)).toBe("3,4\u00a0t");
   });
 });

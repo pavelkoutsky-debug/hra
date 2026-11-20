@@ -7,6 +7,7 @@ import {
   CARA_LANO,
   CARA_MOSTOVKA,
   CARA_PRUZINA,
+  CARA_SKRYTA,
   STYCNIK_BEZNY,
   STYCNIK_ZAVAZI,
   type Snimek,
@@ -58,6 +59,8 @@ export function nakresliKonstrukci(
   t: Topologie,
   s: Snimek,
   polomerKola: number,
+  /** Tloušťka čáry prvku v pixelech; bez ní (nebo když vrátí undefined) se použije výchozí. */
+  tloustkaPrvku?: (prvek: number) => number | undefined,
 ): void {
   const m = kamera.meritko;
   const bod = (i: number): { x: number; y: number } =>
@@ -71,7 +74,7 @@ export function nakresliKonstrukci(
   for (const jenMostovka of [true, false]) {
     for (let e = 0; e < t.prvekA.length; e++) {
       const cara = t.cara[e]!;
-      if ((cara === CARA_MOSTOVKA) !== jenMostovka) continue;
+      if (cara === CARA_SKRYTA || (cara === CARA_MOSTOVKA) !== jenMostovka) continue;
       const a = bod(t.prvekA[e]!);
       const b = bod(t.prvekB[e]!);
       if (cara === CARA_PRUZINA) {
@@ -80,7 +83,8 @@ export function nakresliKonstrukci(
       }
       const vyuziti = s.vyuziti[e]!;
       const tloustka =
-        cara === CARA_MOSTOVKA ? mezi(0.22 * m, 4.5, 9) : cara === CARA_LANO ? 1.6 : mezi(0.13 * m, 3, 6);
+        tloustkaPrvku?.(e) ??
+        (cara === CARA_MOSTOVKA ? mezi(0.22 * m, 4.5, 9) : cara === CARA_LANO ? 1.6 : mezi(0.13 * m, 3, 6));
 
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);

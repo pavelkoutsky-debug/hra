@@ -76,14 +76,15 @@ describe("most sestavený z návrhu", () => {
 
   it("konce prutů jsou kloubové, ve svařeném styčníku tuhé", () => {
     for (const svar of [false, true]) {
-      const stavba = sestavMost(uroven, prihrada(svar).navrh());
-      // Svislice 4 m se nedělí: jediný prvek s oběma konci v styčnících návrhu.
-      const svislice = stavba.popis.prvky.filter((p) => stavba.popis.stycniky[p.a]!.x === stavba.popis.stycniky[p.b]!.x);
-      expect(svislice).toHaveLength(7);
-      for (const prvek of svislice) {
-        expect(prvek.kloubA).toBe(!svar);
-        expect(prvek.kloubB).toBe(!svar);
-      }
+      const navrh = prihrada(svar).navrh();
+      const stavba = sestavMost(uroven, navrh);
+      navrh.pruty.forEach((_, cislo) => {
+        // Prut může být skrytě rozdělený; o spoji ve styčníku návrhu rozhoduje jeho první a poslední díl.
+        const dily = stavba.popis.prvky.filter((p) => p.prut === cislo);
+        expect(dily.length).toBeGreaterThan(0);
+        expect(dily[0]!.kloubA).toBe(!svar);
+        expect(dily.at(-1)!.kloubB).toBe(!svar);
+      });
     }
   });
 
@@ -91,18 +92,21 @@ describe("most sestavený z návrhu", () => {
     const k = prihrada();
     const navrh = k.navrh();
     const stavba = sestavMost(uroven, navrh);
-    // Diagonála 5,66 m z lehkého dřeva (21 Hz) se dělí na dva díly, pole mostovky 4 m (14 Hz) také.
+    // Diagonála 5,66 m z lehkého dřeva má první ohybovou frekvenci 9 Hz; v pásmu do 30 Hz leží
+    // jeden její tvar, dělí se tedy na dva díly.
     const diagonala = navrh.pruty.findIndex((p) => p.prvek === "drevo-lehke" && navrh.stycniky[p.a]!.x !== navrh.stycniky[p.b]!.x);
     const dily = stavba.popis.prvky.filter((p) => p.prut === diagonala);
-    expect(dily).toHaveLength(2);
+    const vlastnosti = vlastnostiPrutu("drevo-lehke", uroven.sirkaMostovky)!;
+    expect(dily).toHaveLength(pocetDiluNosniku(Math.sqrt(32), vlastnosti.EI, vlastnosti.hmotnostNaMetr));
+    expect(dily.length).toBeGreaterThanOrEqual(2);
     expect(dily[0]!.b).toBe(dily[1]!.a);
     expect(dily[0]!.b).toBeGreaterThanOrEqual(stavba.stycnikuNavrhu);
     expect(dily[0]).toMatchObject({ kloubA: true });
     expect(dily[0]!.kloubB).toBeUndefined();
     expect(dily[1]!.kloubA).toBeUndefined();
-    expect(dily[1]).toMatchObject({ kloubB: true });
+    expect(dily.at(-1)).toMatchObject({ kloubB: true });
     expect(dily[0]!.vzpernaDelka).toBeCloseTo(Math.sqrt(32), 12);
-    expect(dily[0]!.klidovaDelka).toBeCloseTo(Math.sqrt(32) / 2, 12);
+    expect(dily[0]!.klidovaDelka).toBeCloseTo(Math.sqrt(32) / dily.length, 12);
 
     const s = sestavSoustavu(stavba.popis);
     const e = stavba.popis.prvky.indexOf(dily[0]!);

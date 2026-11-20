@@ -96,7 +96,7 @@ Jde o **původní hru v žánru stavění mostů**: vlastní název, úrovně, g
 |---|---|
 | Průchod | Všichni přešli a přejeli, nikdo nespadl. Na úrovních s chodci navíc kmitání nesmí být nepřijatelné. |
 | Rozpočet | Úspěšná zkouška s cenou pod „inženýrským rozpočtem“. Ten je na ukazateli rozpočtu vyznačen ryskou. |
-| Mistrovská | Úspěšná zkouška a bonus úrovně: rezerva únosnosti (největší využití pod 80 %), komfort chodců, nebo komfort cestujících v autobusu či vlaku. |
+| Mistrovská | Úspěšná zkouška a bonus úrovně: rezerva únosnosti (největší využití pod prahem úrovně), komfort chodců, nebo komfort cestujících v autobusu či vlaku. *(Upřesněno v M2: práh rezervy je údaj úrovně odvozený z referenčního mostu; v první kapitole 8 až 25 %, protože dřevo má proti chodcům a jednomu autu velkou rezervu.)* |
 
 Medaile za rozpočet a mistrovskou lze získat různými návrhy. Nejlevnější most nemusí být zároveň nejpohodlnější.
 
@@ -104,7 +104,7 @@ Medaile za rozpočet a mistrovskou lze získat různými návrhy. Nejlevnější
 
 ## 5. Stavební prvky
 
-Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s rezervou. Čísla v tabulce jsou výchozí návrh a v milníku M1 je ověřím proti normám; ceny a průřezy se doladí při kalibraci úrovní.
+Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s rezervou. Čísla v tabulce jsou výchozí návrh a v milníku M1 je ověřím proti normám; ceny a průřezy se doladí při kalibraci úrovní. *(M2: průřezy dřeva zeštíhleny na lehký trám 2× 60 × 120 mm, těžký 2× 120 × 240 mm a mostovku z fošen 80 mm; ceny jsou v `src/data/katalog.ts`.)*
 
 **Nosné prvky**
 
@@ -137,7 +137,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Kloub (výchozí, zdarma) | Pruty se ve styčníku volně natáčejí. Konstrukce musí být ztužená trojúhelníky. |
 | Svar (tuhý spoj) | Nastavuje se na styčník a platí se za každý připojený prut. Přenáší ohybový moment. Při přetížení v něm vznikne plastický kloub. |
 | Dělicí zámek | Styčník, který se při zvedání mostu rozpojí a po sklopení zase zamkne. |
-| Pevná kotva, posuvné ložisko, vetknutí | Dané úrovní. V analytickém panelu ukazují reakce. |
+| Pevná kotva, posuvné ložisko, vetknutí | Dané úrovní. V analytickém panelu ukazují reakce. Posuvné ložisko má úložnou délku 0,5 m: konec mostu, který se posune dál, z něj sjede a spadne. *(Doplněno v M2.)* |
 
 **Pravidla stavby**
 
@@ -396,14 +396,15 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Akce | Ovládání |
 |---|---|
 | Nakreslit prut | Tažení myší ze styčníku |
-| Posunout styčník | Tažení styčníku v režimu výběru |
+| Posunout styčník | Tažení styčníku v režimu výběru (klávesa V) nebo s klávesou Alt |
 | Vybrat oblast | Tažení obdélníku |
-| Změnit materiál hotového prutu | Výběr a klávesa materiálu |
+| Změnit materiál hotového prutu | Výběr a klávesa materiálu (číslice podle pořadí v paletě) |
 | Smazat | Delete |
 | Zrcadlit podle osy mostu | M |
 | Zpět a znovu | Ctrl+Z, Ctrl+Y |
 | Zoom a posun | Kolečko, pravé tlačítko |
 | Spustit a zastavit zkoušku | Mezerník |
+| Pozastavit přehrávání, skočit na konec | P, End |
 
 ---
 

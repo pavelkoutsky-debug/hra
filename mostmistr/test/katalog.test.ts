@@ -28,7 +28,7 @@ describe("katalog prvků", () => {
     expect(v.pretrzeni).toBeUndefined();
     expect(MATERIALY.drevo.mez.ohyb / 1e6).toBeCloseTo(31.9, 1);
     // Křehký průřez selže při dosažení meze v krajním vlákně: pružný modul 2·b·h²/6.
-    expect(v.unosnost.moment).toBeCloseTo(MATERIALY.drevo.mez.ohyb * ((2 * 0.14 * 0.28 ** 2) / 6), 3);
+    expect(v.unosnost.moment).toBeCloseTo(MATERIALY.drevo.mez.ohyb * ((2 * 0.06 * 0.12 ** 2) / 6), 3);
   });
 
   it("mostovka se násobí šířkou z úrovně", () => {
