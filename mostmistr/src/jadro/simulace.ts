@@ -6,8 +6,9 @@ import { nejvyssiFrekvence, vlastniTvarySoustavy } from "./matice";
 import { vyhodnotNamahani } from "./namahani";
 import { najdiPoruseni, provedPoruseni, type Poruseni } from "./poruseni";
 import { nastavTuhostPrvku, prepoctiHmoty, type Soustava } from "./soustava";
-import { betaProUtlum, zvolKrok } from "./stabilita";
+import { betaProUtlum, frekvenceProKrok, zvolKrok } from "./stabilita";
 import { volneStupne } from "./stupne";
+import { pridejTlumice } from "./tlumice";
 import { vytvorModalniTlumeni } from "./tlumeni";
 
 /** Po kolika krocích se posuzuje namáhání a hledá porušení. */
@@ -153,8 +154,9 @@ export class Simulace {
 
   /** Nastaví krok a tlumení úměrné tuhosti podle nejvyšší frekvence soustavy. */
   #nastavKrokATlumeniPrvku(omegaMax: number): void {
-    this.#krok.dt = zvolKrok(omegaMax);
-    this.soustava.beta.fill(betaProUtlum(omegaMax));
+    const omega = frekvenceProKrok(omegaMax);
+    this.#krok.dt = zvolKrok(omega);
+    this.soustava.beta.fill(betaProUtlum(omega));
     this.#nastaveni.zatizeni?.zmenaKroku?.(this.#krok.dt);
   }
 
@@ -162,6 +164,7 @@ export class Simulace {
   #spoctiSily(): void {
     spoctiSily(this.soustava, this.#nastaveni.tiha, this.#krok.alfa, this.#krok.modalni);
     this.#nastaveni.zatizeni?.pridejSily(this.soustava, this.#cas);
+    pridejTlumice(this.soustava, this.#krok.dt);
   }
 
   #poZmeneStavby(): void {

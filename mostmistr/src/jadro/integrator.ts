@@ -1,5 +1,6 @@
 import { spoctiVnitrniSily } from "./sily";
 import type { Soustava } from "./soustava";
+import { pridejTlumice } from "./tlumice";
 import { pridejModalniTlumeni, type ModalniTlumeni } from "./tlumeni";
 
 /** Tíhové zrychlení v m/s². */
@@ -78,6 +79,7 @@ export function krok(s: Soustava, n: NastaveniKroku): void {
 
   spoctiSily(s, n.tiha, n.alfa, n.modalni);
   if (n.dalsiSily) n.dalsiSily(s);
+  if (s.pocetTlumicu > 0) pridejTlumice(s, dt);
 
   for (let i = 0; i < pocet; i++) {
     vx[i] = vx[i]! + pul * fx[i]! * invHmotaX[i]!;

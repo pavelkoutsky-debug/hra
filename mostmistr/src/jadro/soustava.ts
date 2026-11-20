@@ -6,8 +6,10 @@
 export const NOSNIK = 0;
 /** Lano: jen tah, bez ohybové tuhosti. */
 export const LANO = 1;
+/** Pružina s tlumičem: jen osová síla v tahu i tlaku, bez ohybu. */
+export const PRUZINA = 2;
 /** Druh prvku z pohledu výpočtu vnitřních sil. */
-export type DruhPrvkuJadra = typeof NOSNIK | typeof LANO;
+export type DruhPrvkuJadra = typeof NOSNIK | typeof LANO | typeof PRUZINA;
 
 export interface PopisStycniku {
   x: number;
@@ -25,8 +27,15 @@ export interface PopisPrvku {
   a: number;
   b: number;
   druh: DruhPrvkuJadra;
-  /** Osová tuhost E·A v newtonech. */
+  /** Osová tuhost E·A v newtonech. U pružiny ji může nahradit `tuhost`. */
   EA: number;
+  /** Tuhost pružiny v N/m; má přednost před E·A děleným délkou. */
+  tuhost?: number;
+  /**
+   * Viskózní tlumič podél osy prvku v N·s/m: síla je úměrná rychlosti, jakou se prvek
+   * prodlužuje. Počítá se implicitně, takže ani velmi tuhý tlumič krok nezkracuje.
+   */
+  tlumic?: number;
   /** Ohybová tuhost E·I v N·m². U lana se nepoužije. */
   EI: number;
   /** Smyková tuhost G·A_s v newtonech; Infinity znamená prvek bez smykové poddajnosti. */
@@ -142,6 +151,11 @@ export interface Soustava {
   kBB: Float64Array;
   /** Tlumení úměrné tuhosti prvku, v sekundách. */
   beta: Float64Array;
+  /** Viskózní tlumič podél osy prvku, N·s/m. */
+  tlumic: Float64Array;
+  /** Indexy prvků s tlumičem a jejich počet; síly tlumičů se počítají zvlášť (viz tlumice.ts). */
+  tlumice: Int32Array;
+  pocetTlumicu: number;
   /** Tuhosti průřezu E·A, E·I a G·A_s, ze kterých se počítá tuhost prvku dané délky. */
   EA: Float64Array;
   EI: Float64Array;
@@ -261,6 +275,9 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     kAB: new Float64Array(m),
     kBB: new Float64Array(m),
     beta: new Float64Array(m),
+    tlumic: new Float64Array(m),
+    tlumice: new Int32Array(0),
+    pocetTlumicu: 0,
     EA: new Float64Array(m),
     EI: new Float64Array(m),
     GAs: new Float64Array(m),
@@ -325,8 +342,9 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     s.klidovaDelka[e] = L;
     s.osaX0[e] = dx / delka;
     s.osaY0[e] = dy / delka;
-    s.EA[e] = p.EA;
+    s.EA[e] = p.tuhost !== undefined ? p.tuhost * L : p.EA;
     s.EI[e] = p.druh === NOSNIK ? p.EI : 0;
+    s.tlumic[e] = p.tlumic ?? 0;
     s.GAs[e] = p.GAs;
     s.polomer[e] = p.polomerSetrvacnosti;
     s.beta[e] = p.beta ?? 0;
@@ -356,6 +374,11 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
       }
     }
   });
+
+  const tlumice: number[] = [];
+  for (let e = 0; e < m; e++) if (s.tlumic[e] !== 0) tlumice.push(e);
+  s.tlumice = Int32Array.from(tlumice);
+  s.pocetTlumicu = tlumice.length;
 
   prepoctiHmoty(s);
   for (let i = 0; i < n; i++) {
@@ -433,4 +456,29 @@ export function prepoctiHmoty(s: Soustava): void {
     const setrvacnost = s.setrvacnost[i]!;
     s.invSetrvacnost[i] = (podpora & 4) !== 0 || !(setrvacnost > 0) ? 0 : 1 / setrvacnost;
   }
+}
+
+/**
+ * Popis pružiny s tlumičem mezi dvěma styčníky. Hmotnost na metr smí být nulová,
+ * pokud koncové styčníky dostanou hmotu odjinud.
+ */
+export function popisPruziny(
+  a: number,
+  b: number,
+  tuhost: number,
+  tlumic = 0,
+  hmotnostNaMetr = 0,
+): PopisPrvku {
+  return {
+    a,
+    b,
+    druh: PRUZINA,
+    EA: 0,
+    EI: 0,
+    GAs: Infinity,
+    tuhost,
+    tlumic,
+    hmotnostNaMetr,
+    polomerSetrvacnosti: 0,
+  };
 }

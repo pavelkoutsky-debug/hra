@@ -32,3 +32,18 @@ export function betaProUtlum(omegaMax: number, xi = UTLUM_NEJVYSSI_FREKVENCE): n
 export function zvolKrok(omegaMax: number, xi = UTLUM_NEJVYSSI_FREKVENCE, rezerva = REZERVA_KROKU): number {
   return rezerva * mezKroku(omegaMax, xi);
 }
+
+/**
+ * Nejdelší krok, se kterým se kdy počítá. Měkká soustava (závaží na pružině, vozidlo samo)
+ * by podle meze stability směla mít krok dlouhý, ale výpočet by pak špatně vystihl děje,
+ * na kterých záleží: s tisícem kroků za sekundu je chyba frekvence kmitání 20 Hz pod 0,1 %.
+ */
+export const NEJDELSI_KROK = 0.001;
+
+/**
+ * Nejvyšší frekvence, podle které se volí krok a tlumení úměrné tuhosti: skutečná nejvyšší
+ * frekvence soustavy, nejméně však ta, které odpovídá nejdelší dovolený krok.
+ */
+export function frekvenceProKrok(omegaMax: number): number {
+  return Math.max(omegaMax, zvolKrok(1) / NEJDELSI_KROK);
+}

@@ -38,6 +38,7 @@ const POLE_PRVKU = [
   "kAB",
   "kBB",
   "beta",
+  "tlumic",
   "EA",
   "EI",
   "GAs",
