@@ -18,12 +18,24 @@ export interface Trasa {
   yPravy: number;
 }
 
-/** Založí trasu z čísel prutů mostovky. */
-export function vytvorTrasu(s: Soustava, pruty: Iterable<number>): Trasa {
+/** Okraje trasy: kde končí pevná zem před mostem a kde začíná za ním. */
+export interface OkrajeTrasy {
+  xLevy: number;
+  yLevy: number;
+  xPravy: number;
+  yPravy: number;
+}
+
+/**
+ * Založí trasu z čísel prutů mostovky. Okraje dává úroveň (konce předmostí); bez nich
+ * se vezmou krajní styčníky mostovky. S okraji smí být trasa i bez mostovky: provoz
+ * pak z předmostí spadne.
+ */
+export function vytvorTrasu(s: Soustava, pruty: Iterable<number>, okraje?: OkrajeTrasy): Trasa {
   let nejvyssi = 0;
   for (let e = 0; e < s.pocetPrvku; e++) nejvyssi = Math.max(nejvyssi, s.prut[e]!);
   const jePrutTrasy = new Uint8Array(nejvyssi + 1);
-  for (const prut of pruty) jePrutTrasy[prut] = 1;
+  for (const prut of pruty) if (prut <= nejvyssi) jePrutTrasy[prut] = 1;
   const trasa: Trasa = {
     jePrutTrasy,
     prvky: new Int32Array(0),
@@ -34,6 +46,13 @@ export function vytvorTrasu(s: Soustava, pruty: Iterable<number>): Trasa {
     yPravy: 0,
   };
   prestavTrasu(s, trasa);
+  if (okraje) {
+    trasa.xLevy = okraje.xLevy;
+    trasa.yLevy = okraje.yLevy;
+    trasa.xPravy = okraje.xPravy;
+    trasa.yPravy = okraje.yPravy;
+    return trasa;
+  }
   if (trasa.pocet === 0) throw new Error("Trasa nemá žádný prut.");
 
   const prvni = trasa.prvky[0]!;

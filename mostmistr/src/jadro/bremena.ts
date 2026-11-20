@@ -79,6 +79,8 @@ export interface Bremena {
   /** Výsledky posledního výpočtu: síla na mostovku (kladná dolů) a prvek pod břemenem. */
   sila: Float64Array;
   prvek: Int32Array;
+  /** Břemeno je vypnuté (1): s trasou se nestýká a nic nepřenáší, například po pádu z mostu. */
+  vypnuto: Uint8Array;
   dt: number;
 }
 
@@ -106,6 +108,7 @@ export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[]): Br
     spojniceMinula: new Float64Array(n).fill(Number.NaN),
     sila: new Float64Array(n),
     prvek: new Int32Array(n).fill(BEZ_OPORY),
+    vypnuto: new Uint8Array(n),
     dt: 0,
   };
   popisy.forEach((p, i) => {
@@ -168,6 +171,12 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
   const { trasa, stycnik, pole, vyska, spojnice, spojniceMinula, sila, prvek, amplitudy } = b;
   const { prvky } = trasa;
   for (let i = 0; i < b.pocet; i++) {
+    if (b.vypnuto[i] === 1) {
+      sila[i] = 0;
+      prvek[i] = BEZ_OPORY;
+      vyska[i] = spojnice[i] = Number.NaN;
+      continue;
+    }
     const uzel = stycnik[i]!;
     const x = uzel >= 0 ? s.x[uzel]! : b.x[i]!;
 

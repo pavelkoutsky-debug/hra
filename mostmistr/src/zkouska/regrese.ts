@@ -13,87 +13,22 @@ import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu } fr
 import { VERZE_UROVNE, type Kotva, type Uroven } from "../data/uroven";
 import { vytvorBremena, zatizeniBremeny, type Bremena, type PopisBremene } from "../jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
+import { nahoda, nahodnaFaze } from "../jadro/nahoda";
 import { najdiRovnovahu, vlastniTvarySoustavy } from "../jadro/matice";
 import { Simulace, type NastaveniSimulace } from "../jadro/simulace";
 import { sestavSoustavu, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
 import { vytvorTrasu } from "../jadro/trasa";
+import { otiskSimulace } from "./otisk";
 import { sestavMost, type StavbaMostu } from "./stavba";
 
 const g = TIHOVE_ZRYCHLENI;
 
-// ---------------------------------------------------------------------------------------
-// Otisk
-
-/** Kontrolní součet FNV-1a přes bajty čísel, ve dvou nezávislých 32bitových větvích. */
-export class Otisk {
-  #a = 0x811c9dc5;
-  #b = 0x01000193;
-  readonly #cislo = new Float64Array(1);
-  readonly #bajty = new Uint8Array(this.#cislo.buffer);
-
-  pridej(hodnota: number): void {
-    // Záporná nula se od kladné liší jen znaménkovým bitem a na výsledek výpočtu vliv nemá.
-    this.#cislo[0] = hodnota === 0 ? 0 : hodnota;
-    for (let i = 0; i < 8; i++) {
-      const bajt = this.#bajty[i]!;
-      this.#a = Math.imul(this.#a ^ bajt, 0x01000193);
-      this.#b = Math.imul(this.#b ^ (bajt + i), 0x85ebca6b);
-    }
-  }
-
-  pridejPole(pole: Float64Array, pocet: number): void {
-    for (let i = 0; i < pocet; i++) this.pridej(pole[i]!);
-  }
-
-  get hodnota(): string {
-    const hex = (n: number): string => (n >>> 0).toString(16).padStart(8, "0");
-    return hex(this.#a) + hex(this.#b);
-  }
-}
-
-/** Otisk okamžitého stavu simulace. */
-export function otiskSimulace(sim: Simulace): string {
-  const s = sim.soustava;
-  const otisk = new Otisk();
-  otisk.pridej(s.pocetStycniku);
-  otisk.pridej(s.pocetPrvku);
-  otisk.pridej(sim.kroku);
-  otisk.pridej(sim.udalosti.length);
-  for (const pole of [s.x, s.y, s.cosN, s.sinN, s.vx, s.vy, s.omega]) otisk.pridejPole(pole, s.pocetStycniku);
-  otisk.pridejPole(s.plastA, s.pocetPrvku);
-  otisk.pridejPole(s.plastB, s.pocetPrvku);
-  otisk.pridejPole(s.plastDelka, s.pocetPrvku);
-  return otisk.hodnota;
-}
+export { Otisk, otiskSimulace } from "./otisk";
+export { nahoda } from "../jadro/nahoda";
 
 // ---------------------------------------------------------------------------------------
 // Stavebnice scénářů
-
-/** Generátor náhodných čísel 0 až 1 (Mulberry32); jen celočíselné operace a jedno dělení. */
-export function nahoda(nasada: number): () => number {
-  let stav = nasada >>> 0;
-  return () => {
-    stav = (stav + 0x6d2b79f5) >>> 0;
-    let t = stav;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** Náhodná fáze jako jednotkový vektor: bod uvnitř kruhu promítnutý na kružnici. */
-function nahodnaFaze(nahodne: () => number): [number, number] {
-  for (;;) {
-    const x = 2 * nahodne() - 1;
-    const y = 2 * nahodne() - 1;
-    const d = x * x + y * y;
-    if (d > 0.01 && d <= 1) {
-      const delka = Math.sqrt(d);
-      return [x / delka, y / delka];
-    }
-  }
-}
 
 interface ZadaniUrovne {
   rozpeti: number;

@@ -7,6 +7,7 @@ import {
   CARA_LANO,
   CARA_MOSTOVKA,
   CARA_PRUZINA,
+  CARA_SKRYTA,
   STYCNIK_BEZNY,
   STYCNIK_ZAVAZI,
   type Snimek,
@@ -71,7 +72,7 @@ export function nakresliKonstrukci(
   for (const jenMostovka of [true, false]) {
     for (let e = 0; e < t.prvekA.length; e++) {
       const cara = t.cara[e]!;
-      if ((cara === CARA_MOSTOVKA) !== jenMostovka) continue;
+      if (cara === CARA_SKRYTA || (cara === CARA_MOSTOVKA) !== jenMostovka) continue;
       const a = bod(t.prvekA[e]!);
       const b = bod(t.prvekB[e]!);
       if (cara === CARA_PRUZINA) {
