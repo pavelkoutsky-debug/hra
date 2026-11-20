@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/jadro", "src/zkouska/protokol.ts", "src/zkouska/beh.ts", "src/data", "urovne"]
+}

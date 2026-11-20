@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b2f5c" />
+    <meta name="description" content="Mostmistr: stavění mostů na technickém výkresu s poctivou fyzikou." />
+    <title>Mostmistr</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styly.css" />
+  </head>
+  <body>
+    <div class="hra">
+      <header class="lista">
+        <span class="lista__nazev" data-text="hra.nazev"></span>
+        <span class="lista__uroven" data-udaj="uroven"></span>
+        <span class="lista__mezera"></span>
+        <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
+        <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
+        <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres"></button>
+      </header>
+
+      <main class="vykres">
+        <canvas class="vykres__platno" tabindex="0"></canvas>
+        <output class="vykres__souradnice" data-udaj="souradnice"></output>
+        <p class="vykres__napoveda" data-text="napoveda.ovladani"></p>
+        <p class="vykres__chyba" data-udaj="chyba" role="alert" hidden></p>
+
+        <dl class="pole">
+          <div class="pole__bunka pole__bunka--siroka">
+            <dt data-text="pole.nazev"></dt>
+            <dd class="pole__nazev" data-udaj="nazev"></dd>
+          </div>
+          <div class="pole__bunka">
+            <dt data-text="pole.meritko"></dt>
+            <dd data-udaj="meritko"></dd>
+          </div>
+          <div class="pole__bunka">
+            <dt data-text="pole.list"></dt>
+            <dd data-udaj="list"></dd>
+          </div>
+          <div class="pole__bunka pole__bunka--siroka">
+            <dt data-text="pole.verze"></dt>
+            <dd data-udaj="verze"></dd>
+          </div>
+          <div class="pole__bunka">
+            <dt data-text="pole.fyzika"></dt>
+            <dd data-udaj="fyzika">&hellip;</dd>
+          </div>
+          <div class="pole__bunka">
+            <dt data-text="pole.datum"></dt>
+            <dd data-udaj="datum"></dd>
+          </div>
+        </dl>
+      </main>
+    </div>
+    <noscript>Mostmistr potřebuje zapnutý JavaScript.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
