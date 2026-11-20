@@ -1,0 +1,218 @@
+:root {
+  --pozadi: #103f78;
+  --lista: #0b2f5c;
+  --cara: #cfe3ff;
+  --cara-silna: #ffffff;
+  --popisek: #8fb4e6;
+  --zvyrazneni: #1d5aa3;
+  --varovani: #ffd166;
+  --pismo: "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--pozadi);
+  color: var(--cara);
+  font-family: var(--pismo);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+.hra {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Horní lišta */
+
+.lista {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 6px 12px 6px 18px;
+  background: var(--lista);
+  border-bottom: 1px solid rgb(207 227 255 / 0.6);
+}
+
+.lista__nazev {
+  color: var(--cara-silna);
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.lista__uroven {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lista__mezera {
+  flex: 1;
+}
+
+.tlacitko {
+  min-height: 28px;
+  padding: 3px 12px;
+  border: 1px solid var(--cara);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cara);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tlacitko--znak {
+  min-width: 30px;
+  padding-inline: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tlacitko:hover {
+  background: var(--zvyrazneni);
+  color: var(--cara-silna);
+}
+
+.tlacitko:active {
+  background: var(--cara);
+  color: var(--lista);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cara-silna);
+  outline-offset: 2px;
+}
+
+/* Výkres */
+
+.vykres {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.vykres__platno {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+}
+
+.vykres__platno:focus-visible {
+  outline-offset: -3px;
+}
+
+.vykres__souradnice,
+.vykres__napoveda {
+  position: absolute;
+  bottom: 10px;
+  margin: 0;
+  padding: 3px 8px;
+  background: rgb(11 47 92 / 0.85);
+  border: 1px solid rgb(207 227 255 / 0.35);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.vykres__souradnice {
+  left: 10px;
+  min-width: 190px;
+  color: var(--cara-silna);
+}
+
+.vykres__souradnice:empty {
+  display: none;
+}
+
+.vykres__napoveda {
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+.vykres__chyba {
+  position: absolute;
+  inset: 20% 10% auto;
+  margin: 0;
+  padding: 14px 18px;
+  background: var(--lista);
+  border: 1px solid var(--varovani);
+  color: var(--cara-silna);
+}
+
+/* Popisové pole */
+
+.pole {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  /* Čáry mezi buňkami tvoří mezery mřížky, kterými prosvítá barva čáry. */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  width: 250px;
+  margin: 0;
+  background: var(--cara);
+  border: 1.5px solid var(--cara);
+  pointer-events: none;
+}
+
+.pole__bunka {
+  min-width: 0;
+  padding: 3px 8px 4px;
+  background: var(--pozadi);
+}
+
+.pole__bunka--siroka {
+  grid-column: 1 / -1;
+}
+
+.pole dt {
+  color: var(--popisek);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pole dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pole__nazev {
+  color: var(--cara-silna);
+  font-size: 14px;
+}
+
+/* Na úzkém okně by se nápověda překrývala s popisovým polem. */
+@media (max-width: 1100px) {
+  .vykres__napoveda {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .lista__uroven {
+    display: none;
+  }
+}

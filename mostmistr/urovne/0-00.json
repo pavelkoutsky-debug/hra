@@ -1,0 +1,48 @@
+{
+  "verze": 1,
+  "id": "0-00",
+  "nazev": "Zkušební výkres",
+  "vyrez": { "xMin": -14, "yMin": -13, "xMax": 38, "yMax": 15 },
+  "teren": [
+    { "x": -14, "y": 0 },
+    { "x": 0, "y": 0 },
+    { "x": 2, "y": -5 },
+    { "x": 5, "y": -8 },
+    { "x": 19, "y": -8 },
+    { "x": 22, "y": -5 },
+    { "x": 24, "y": 0 },
+    { "x": 38, "y": 0 }
+  ],
+  "hladina": -6,
+  "kotvy": [
+    { "x": 0, "y": 0, "typ": "pevna" },
+    { "x": 24, "y": 0, "typ": "posuvna" },
+    { "x": 2, "y": -5, "typ": "pevna" },
+    { "x": 22, "y": -5, "typ": "pevna" }
+  ],
+  "zaklady": [{ "x": 9, "y": -8 }],
+  "zakazaneZony": [{ "xMin": 13, "yMin": -6, "xMax": 19, "yMax": -1 }],
+  "trasy": [
+    { "id": "silnice", "druh": "silnice", "zacatek": { "x": 0, "y": 0 }, "konec": { "x": 24, "y": 0 } }
+  ],
+  "sirkaMostovky": 4,
+  "hmotnostVybaveni": 300,
+  "nerovnost": "A",
+  "rozpocet": null,
+  "inzenyrskyRozpocet": null,
+  "mistrovska": null,
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "mostovka-ocelobeton",
+    "drevo-lehke",
+    "drevo-tezke",
+    "ocel-lehka",
+    "ocel-tezka",
+    "lano",
+    "pilir",
+    "tlumic",
+    "pruzina"
+  ],
+  "povoleneSvary": true,
+  "jizdniRad": []
+}

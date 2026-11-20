@@ -1,6 +1,6 @@
 # Mostmistr — analýza a herní koncepce
 
-Verze 0.2 · po nezávislé recenzi · **stav: čeká na schválení, vývoj nezačal**
+Verze 0.2 · po nezávislé recenzi · **schváleno 20. 11. 2026** · stav vývoje: [`STAV.md`](./STAV.md)
 
 Náhled zamýšlené obrazovky: [`mockup-obrazovka.svg`](./mockup-obrazovka.svg) · přehled změn proti verzi 0.1 je v kapitole 15.
 
@@ -512,7 +512,7 @@ Tuhé spoje a plasticitu umí jádro od M1b, hráči se zpřístupní v M4b.
 
 ## 14. Otevřené body
 
-Žádné. Po schválení začínám milníkem M0.
+Žádné.
 
 ---
 
