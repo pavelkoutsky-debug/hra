@@ -33,6 +33,11 @@ Jde o **původní hru v žánru stavění mostů**: vlastní název, úrovně, g
 | Zkoušení a provoz | Netlify (tvůj účet), nasazení přímo z repozitáře |
 | Priorita po základní verzi | Lidé, rezonance a tlumiče |
 | Jazyk | Čeština; texty od začátku ve slovníku, aby šla doplnit angličtina |
+| Měřítko | Rastr 1 m, rozpětí úrovní 10 až 150 m |
+| Průřezy | U dřeva a oceli vždy dva profily: lehký a těžký |
+| Měna a tón | Rozpočet v korunách, názvy úrovní podle smyšlených českých míst |
+| Synchronizace davu | Ve hře mírně zesílená oproti skutečnosti (vědomý ústupek kvůli hratelnosti) |
+| Editor úrovní | Mimo rozsah; úrovně jsou data, takže ho půjde doplnit později |
 
 ---
 
@@ -346,10 +351,6 @@ Pořadí M3 před M4 odpovídá tvé prioritě. Tuhé spoje umí jádro od M1, h
 
 ---
 
-## 14. Otevřené body k projití
+## 14. Otevřené body
 
-1. **Měřítko a rastr:** navrhuji rastr 1 m a rozpětí úrovní 10 až 150 m. Jemnější rastr dává víc volnosti, ale delší stavění.
-2. **Průřezy:** navrhuji u dřeva a oceli vždy dva profily (lehký a těžký). Víc profilů znamená víc inženýrské volby, ale složitější paletu.
-3. **Měna a tón:** rozpočet v korunách, názvy úrovní podle smyšlených českých míst.
-4. **Synchronizace davu:** vertikální „naladění“ davu na most je ve skutečnosti slabší než příčné. Ve hře ho navrhuji mírně zesílit, protože je to dobrá mechanika. Lze ho i vypnout a ponechat rezonanci jen pochodujícím útvarům a běžcům.
-5. **Editor úrovní:** teď mimo rozsah. Úrovně budou data, takže ho půjde doplnit později.
+Žádné. Body z verze 0.1 jsou uzavřené a zapsané v kapitole 2.
