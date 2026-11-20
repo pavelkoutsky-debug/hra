@@ -205,6 +205,11 @@ export interface Soustava {
    * Používá se při numerickém derivování sil, které by jinak stav měnilo.
    */
   plasticitaZmrazena: boolean;
+  /**
+   * Lana se počítají, jako by přenášela i tlak. Používá se při odhadu nejvyšší frekvence:
+   * povolené lano tuhost nemá, ale během zkoušky se může napnout a krok s tím musí počítat.
+   */
+  lanaTlaci: boolean;
 
   // Namáhání prvků; počítá `vyhodnotNamahani`.
   /** Vyhlazené využití: 1 je mez únosnosti. */
@@ -306,6 +311,7 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     plastDelka: new Float64Array(m),
     plastickaPrace: 0,
     plasticitaZmrazena: false,
+    lanaTlaci: false,
     vyuziti: new Float64Array(m),
     zpusob: new Uint8Array(m),
     mistoNamahani: new Uint8Array(m),

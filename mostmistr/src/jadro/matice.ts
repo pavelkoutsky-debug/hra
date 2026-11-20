@@ -296,6 +296,8 @@ export function nejvyssiFrekvence(s: Soustava, stupne: Int32Array, presnost = 1e
   s.omega.fill(0);
   const zmrazeno = s.plasticitaZmrazena;
   s.plasticitaZmrazena = true;
+  // Povolené lano se může během zkoušky napnout; krok musí být stabilní i potom.
+  s.lanaTlaci = true;
 
   const v = new Float64Array(n);
   let stav = 6789;
@@ -344,6 +346,7 @@ export function nejvyssiFrekvence(s: Soustava, stupne: Int32Array, presnost = 1e
   s.vx.set(vx);
   s.vy.set(vy);
   s.omega.set(omega);
+  s.lanaTlaci = false;
   spoctiVnitrniSily(s);
   s.plasticitaZmrazena = zmrazeno;
   return Math.sqrt(Math.max(0, lambda));

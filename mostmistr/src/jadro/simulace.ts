@@ -50,6 +50,11 @@ export interface NastaveniSimulace {
    * vozidla a jiná tělesa s vlastními tlumiči se sem nedávají.
    */
   tlumeneStupne?: Int32Array;
+  /**
+   * Násobek zvoleného kroku, nejvýš 1. Slouží ke kontrole, že výsledek na kroku
+   * nezávisí: s polovičním krokem má vyjít v toleranci totéž.
+   */
+  zkraceniKroku?: number;
 }
 
 /** Porušení i s časem, kdy nastalo. */
@@ -162,7 +167,7 @@ export class Simulace {
   /** Nastaví krok a tlumení úměrné tuhosti podle nejvyšší frekvence soustavy. */
   #nastavKrokATlumeniPrvku(omegaMax: number): void {
     const omega = frekvenceProKrok(omegaMax);
-    this.#krok.dt = zvolKrok(omega);
+    this.#krok.dt = zvolKrok(omega) * Math.min(1, this.#nastaveni.zkraceniKroku ?? 1);
     this.soustava.beta.fill(betaProUtlum(omega));
     this.#nastaveni.zatizeni?.zmenaKroku?.(this.#krok.dt);
   }

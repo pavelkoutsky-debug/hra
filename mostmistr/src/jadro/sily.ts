@@ -19,6 +19,7 @@ export function spoctiVnitrniSily(s: Soustava): void {
   const { osovaSila, momentA, momentB } = s;
   const { mezTahu, mezMomentu, plastA, plastB, plastDelka, zatMomentA, zatMomentB } = s;
   const plasticky = !s.plasticitaZmrazena;
+  const lanaTlaci = s.lanaTlaci;
 
   fx.fill(0);
   fy.fill(0);
@@ -40,7 +41,7 @@ export function spoctiVnitrniSily(s: Soustava): void {
     // Osová síla; kladná je tah. Trvalé protažení prvek prodlužuje.
     let osova =
       tuhostOsova[e]! * (delka - klidovaDelka[e]! - plastDelka[e]! + tlumeni * (ex * dvx + ey * dvy));
-    if (druh[e] === LANO && osova < 0) osova = 0; // lano netlačí
+    if (druh[e] === LANO && osova < 0 && !lanaTlaci) osova = 0; // lano netlačí
     if (osova > mezTahu[e]! && plasticky) osova = zplastizujTah(s, e, osova);
     osovaSila[e] = osova;
 
