@@ -77,6 +77,19 @@ body {
   cursor: pointer;
 }
 
+a.tlacitko {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tlacitko[aria-pressed="true"] {
+  background: var(--zvyrazneni);
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
 .tlacitko--znak {
   min-width: 30px;
   padding-inline: 0;
@@ -214,5 +227,205 @@ body {
 @media (max-width: 560px) {
   .lista__uroven {
     display: none;
+  }
+}
+
+/* Zkušebna */
+
+.lista__oddil {
+  color: var(--popisek);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.lista select {
+  min-height: 28px;
+  max-width: 260px;
+  padding: 3px 8px;
+  border: 1px solid var(--cara);
+  border-radius: 2px;
+  background: var(--lista);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.lista__skupina {
+  display: flex;
+  gap: 4px;
+}
+
+.zkusebna {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.zkusebna .vykres {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.panel {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  overflow-y: auto;
+  padding: 14px 16px;
+  background: rgb(11 47 92 / 0.92);
+  border-left: 1px solid rgb(207 227 255 / 0.6);
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  color: var(--cara-silna);
+  font-size: 15px;
+  font-weight: normal;
+}
+
+.panel h3 {
+  margin: 18px 0 6px;
+  color: var(--popisek);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.panel p {
+  margin: 0 0 6px;
+}
+
+.overeni {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.overeni th,
+.overeni td {
+  padding: 4px 6px 4px 0;
+  border-bottom: 1px solid rgb(207 227 255 / 0.25);
+  text-align: right;
+  vertical-align: top;
+}
+
+.overeni th {
+  color: var(--popisek);
+  font-size: 10px;
+  font-weight: normal;
+}
+
+.overeni th:first-child,
+.overeni td:first-child {
+  text-align: left;
+  white-space: normal;
+}
+
+.overeni td {
+  white-space: nowrap;
+}
+
+.overeni [data-shoda="ano"] {
+  color: var(--cara-silna);
+}
+
+.overeni [data-shoda="ne"] {
+  color: var(--varovani);
+}
+
+.osa {
+  grid-row: 2;
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--lista);
+  border-top: 1px solid rgb(207 227 255 / 0.6);
+}
+
+.osa__drah {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Světlejší pruh pod táhlem ukazuje, kolik děje je už spočítáno. */
+.osa__spocitano {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: calc(var(--spocitano, 0) * 100%);
+  height: 6px;
+  transform: translateY(-50%);
+  background: rgb(143 208 255 / 0.4);
+  pointer-events: none;
+}
+
+.osa input[type="range"] {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--cara-silna);
+  background: transparent;
+}
+
+.osa__cas {
+  min-width: 110px;
+  color: var(--cara-silna);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.legenda {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 10px;
+  background: rgb(11 47 92 / 0.85);
+  border: 1px solid rgb(207 227 255 / 0.35);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.legenda__skala {
+  width: 110px;
+  height: 9px;
+  background: linear-gradient(to right, #ffffff 0%, #ffd166 50%, #ff9a4d 80%, #ff4d3d 100%);
+}
+
+.legenda__cara {
+  display: inline-block;
+  width: 30px;
+  height: 5px;
+  background: var(--cara-silna);
+  vertical-align: middle;
+}
+
+.legenda__cara--tah {
+  background: linear-gradient(
+    to bottom,
+    var(--cara-silna) 0 34%,
+    var(--pozadi) 34% 66%,
+    var(--cara-silna) 66% 100%
+  );
+}
+
+@media (max-width: 900px) {
+  .zkusebna {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(260px, 1fr) auto auto;
+  }
+
+  .panel {
+    grid-row: 3;
+    grid-column: 1;
+    max-height: 40vh;
+    border-left: 0;
+    border-top: 1px solid rgb(207 227 255 / 0.6);
   }
 }

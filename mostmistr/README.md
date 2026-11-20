@@ -39,6 +39,7 @@ Snímky obrazovky ukládá do `test/e2e/vystup/`.
 | `src/jadro/` | Fyzika | Ne |
 | `src/zkouska/` | Rozhraní zkoušky, běh simulace, pracovní vlákno | Jen `klient.ts` a `pracovnik.ts` |
 | `src/data/` | Formáty úrovní a návrhů mostů, katalog prvků | Ne |
+| `src/zkusebna/` | Ověřovací případy jádra a stránka `zkusebna.html` | Jen `stranka.ts` a `pracovnik.ts` |
 | `src/editor/` | Stavební režim (od milníku M2) | Ano |
 | `src/vykres/` | Kreslení výkresu, kamera, ovládání | Ano |
 | `src/ui/` | Texty, formátování, panely | Ano |

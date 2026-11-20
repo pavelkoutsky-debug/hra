@@ -1,28 +1,17 @@
-// Průřezy prvků pro měření: převod položek katalogu na popis prvku jádra.
+// Průřezy prvků pro měření výkonu, odvozené z katalogu.
 
-import { vlastnostiPrutu, type IdPrvku } from "../src/data/katalog";
-import { LANO, NOSNIK, type PopisPrvku } from "../src/jadro/soustava";
+import type { IdPrvku } from "../src/data/katalog";
+import { popisPrutu, type PopisPrutu } from "../src/zkouska/stavba";
 
-export type Prurez = Omit<PopisPrvku, "a" | "b">;
+export type Prurez = PopisPrutu;
 
 /** Šířka mostovky referenčních mostů v metrech. */
 const SIRKA_MOSTOVKY = 3;
 /** Hmotnost zábradlí a vybavení mostovky, kg na metr délky. */
 const HMOTNOST_VYBAVENI = 100;
 
-/** Popis prvku jádra pro danou položku katalogu. */
-export function prurezPrvku(id: IdPrvku, sirkaMostovky = SIRKA_MOSTOVKY, hmotaNavic = 0): Prurez {
-  const v = vlastnostiPrutu(id, sirkaMostovky);
-  if (!v) throw new Error(`Prvek ${id} nemá v katalogu průřez.`);
-  return {
-    druh: id === "lano" ? LANO : NOSNIK,
-    EA: v.EA,
-    EI: v.EI,
-    GAs: v.GAs,
-    hmotnostNaMetr: v.hmotnostNaMetr + hmotaNavic,
-    polomerSetrvacnosti: v.polomerSetrvacnosti,
-  };
-}
+export const prurezPrvku = (id: IdPrvku, sirkaMostovky = SIRKA_MOSTOVKY, hmotaNavic = 0): Prurez =>
+  popisPrutu(id, sirkaMostovky, hmotaNavic);
 
 export const PRUREZY = {
   "drevo-lehke": prurezPrvku("drevo-lehke"),

@@ -1,5 +1,5 @@
 import type { Bod } from "../data/geometrie";
-import type { Kotva, Trasa, Uroven } from "../data/uroven";
+import type { Kotva, Trasa, TypKotvy, Uroven } from "../data/uroven";
 import { delka, vyskovaKota } from "../ui/formaty";
 import { t } from "../ui/slovnik";
 import { BARVY, PISMO, cara } from "./barvy";
@@ -31,10 +31,7 @@ function mezi(v: number, min: number, max: number): number {
  */
 export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
   ctx.save();
-  ctx.fillStyle = BARVY.pozadi;
-  ctx.fillRect(0, 0, s.rozmer.sirka, s.rozmer.vyska);
-
-  nakresliRastr(ctx, s);
+  nakresliPodklad(ctx, s.kamera, s.rozmer);
   nakresliVodu(ctx, s);
   nakresliTeren(ctx, s);
   for (const zona of s.uroven.zakazaneZony) nakresliZakazanouZonu(ctx, s, zona);
@@ -49,27 +46,31 @@ export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
   for (const kotva of s.uroven.kotvy) nakresliKotvu(ctx, s, kotva);
 
   nakresliOkrajVykresu(ctx, s);
-  nakresliPopiskyRastru(ctx, s);
+  nakresliPopiskyRastru(ctx, s.kamera, s.rozmer);
   if (s.kurzor) nakresliKurzor(ctx, s, s.kurzor);
   ctx.restore();
 }
 
-function nakresliRastr(ctx: Kontext, s: StavVykresu): void {
-  const { sirka, vyska } = s.rozmer;
-  const vid = viditelnaOblast(s.kamera, s.rozmer);
-  const { jemny, hlavni } = krokyRastru(s.kamera.meritko);
+/** Podklad modráku: barva pozadí a rastr. Společný pro hru i zkušebnu. */
+export function nakresliPodklad(ctx: Kontext, kamera: Kamera, rozmer: Rozmer): void {
+  ctx.fillStyle = BARVY.pozadi;
+  ctx.fillRect(0, 0, rozmer.sirka, rozmer.vyska);
+
+  const { sirka, vyska } = rozmer;
+  const vid = viditelnaOblast(kamera, rozmer);
+  const { jemny, hlavni } = krokyRastru(kamera.meritko);
 
   const cary = (krok: number, vynechNasobky: number | null, alfa: number): void => {
     ctx.beginPath();
     for (let i = Math.ceil(vid.xMin / krok); i * krok <= vid.xMax; i++) {
       if (vynechNasobky !== null && (i * krok) % vynechNasobky === 0) continue;
-      const x = ostre(svetNaObraz(s.kamera, s.rozmer, { x: i * krok, y: 0 }).x);
+      const x = ostre(svetNaObraz(kamera, rozmer, { x: i * krok, y: 0 }).x);
       ctx.moveTo(x, 0);
       ctx.lineTo(x, vyska);
     }
     for (let i = Math.ceil(vid.yMin / krok); i * krok <= vid.yMax; i++) {
       if (vynechNasobky !== null && (i * krok) % vynechNasobky === 0) continue;
-      const y = ostre(svetNaObraz(s.kamera, s.rozmer, { x: 0, y: i * krok }).y);
+      const y = ostre(svetNaObraz(kamera, rozmer, { x: 0, y: i * krok }).y);
       ctx.moveTo(0, y);
       ctx.lineTo(sirka, y);
     }
@@ -371,16 +372,24 @@ function nakresliKotuRozpeti(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {
 
 /** Značka podpory, jak se kreslí ve statických schématech. */
 function nakresliKotvu(ctx: Kontext, s: StavVykresu, kotva: Kotva): void {
-  const p = svetNaObraz(s.kamera, s.rozmer, kotva);
-  const v = mezi(0.55 * s.kamera.meritko, 9, 22);
+  nakresliZnackuPodpory(ctx, svetNaObraz(s.kamera, s.rozmer, kotva), kotva.typ, s.kamera.meritko);
+}
+
+/**
+ * Značka podpory v daném bodě plátna: trojúhelník pevné podpory, trojúhelník na
+ * válečcích u posuvné, šrafovaný blok u vetknutí. Velikost se řídí měřítkem výkresu.
+ */
+export function nakresliZnackuPodpory(ctx: Kontext, p: Bod, typ: TypKotvy, meritko: number): void {
+  const v = mezi(0.55 * meritko, 9, 22);
   const r = 0.3 * v;
 
   ctx.strokeStyle = BARVY.cara;
   ctx.fillStyle = BARVY.pozadi;
   ctx.lineWidth = 1.6;
   ctx.lineJoin = "miter";
+  ctx.setLineDash([]);
 
-  if (kotva.typ === "vetknuti") {
+  if (typ === "vetknuti") {
     // Vetknutí: plný blok, do kterého je prut zapuštěn.
     ctx.fillRect(p.x - 0.7 * v, p.y - 0.7 * v, 1.4 * v, 1.4 * v);
     ctx.strokeRect(p.x - 0.7 * v, p.y - 0.7 * v, 1.4 * v, 1.4 * v);
@@ -403,7 +412,7 @@ function nakresliKotvu(ctx: Kontext, s: StavVykresu, kotva: Kotva): void {
     ctx.stroke();
 
     ctx.beginPath();
-    if (kotva.typ === "posuvna") {
+    if (typ === "posuvna") {
       // Posuvné ložisko: trojúhelník stojí na válečcích.
       const valecek = 0.2 * v;
       ctx.arc(p.x - 0.35 * v, spodek + valecek + 1, valecek, 0, 2 * Math.PI);
@@ -445,22 +454,22 @@ function nakresliOkrajVykresu(ctx: Kontext, s: StavVykresu): void {
 }
 
 /** Popisky hlavních čar rastru podél horního a levého okraje plátna. */
-function nakresliPopiskyRastru(ctx: Kontext, s: StavVykresu): void {
-  const vid = viditelnaOblast(s.kamera, s.rozmer);
-  const { hlavni } = krokyRastru(s.kamera.meritko);
-  const minus = (n: number): string => (n < 0 ? `−${-n}` : String(n));
+export function nakresliPopiskyRastru(ctx: Kontext, kamera: Kamera, rozmer: Rozmer): void {
+  const vid = viditelnaOblast(kamera, rozmer);
+  const { hlavni } = krokyRastru(kamera.meritko);
+  const minus = (n: number): string => (n < 0 ? `\u2212${-n}` : String(n));
 
   ctx.font = `10px ${PISMO}`;
   ctx.fillStyle = BARVY.popisek;
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
   for (let i = Math.ceil(vid.xMin / hlavni); i * hlavni <= vid.xMax; i++) {
-    const x = svetNaObraz(s.kamera, s.rozmer, { x: i * hlavni, y: 0 }).x;
+    const x = svetNaObraz(kamera, rozmer, { x: i * hlavni, y: 0 }).x;
     ctx.fillText(minus(i * hlavni), x + 3, 3);
   }
   ctx.textBaseline = "bottom";
   for (let i = Math.ceil(vid.yMin / hlavni); i * hlavni <= vid.yMax; i++) {
-    const y = svetNaObraz(s.kamera, s.rozmer, { x: 0, y: i * hlavni }).y;
+    const y = svetNaObraz(kamera, rozmer, { x: 0, y: i * hlavni }).y;
     if (y < 18) continue; // roh patří popiskům osy x
     ctx.fillText(minus(i * hlavni), 3, y - 2);
   }

@@ -29,9 +29,10 @@ export default defineConfig({
     target: "es2022",
     sourcemap: true,
     rollupOptions: {
-      // Vedle hry se sestavuje i měřicí stránka (nástroj pro vývoj).
+      // Vedle hry se sestavuje zkušebna a měřicí stránka.
       input: {
         index: fileURLToPath(new URL("./index.html", import.meta.url)),
+        zkusebna: fileURLToPath(new URL("./zkusebna.html", import.meta.url)),
         mereni: fileURLToPath(new URL("./mereni.html", import.meta.url)),
       },
     },

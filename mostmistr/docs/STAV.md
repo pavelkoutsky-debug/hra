@@ -12,6 +12,18 @@ Poslední aktualizace: 20. 11. 2026
 | M2 První hratelná verze | Nezačato |
 | M3a až M8 | Nezačato |
 
+## M1b — průběh
+
+Hotovo:
+
+- **Katalog** (`src/data/katalog.ts`): materiály se středními pevnostmi a průřezy prvků jako dvojice profilů. V hlavičce souboru je u každé hodnoty stav ověření; zdrojové normy se z vývojového prostředí otevřít nepodařilo, část hodnot je jen z paměti.
+- **Zkušebna** (`/zkusebna.html`): čtyři ověřovací případy (most s koly, rezonance nosníku, vlastní frekvence, kyvadlo). Simulace běží napřed v pracovním vlákně, záznam se přehrává na výkresu s časovou osou, vedle je porovnání s teorií a rychlost výpočtu. Tytéž případy běží v testu `test/zkusebna.test.ts`.
+- **Záznam a přehrávání** (`src/zkouska/zaznam.ts`, `src/ui/prehravani.ts`, `src/vykres/konstrukce.ts`): stavební kameny, které použije i hra.
+
+Zbývá: porušení a plasticita, pružina a tlumič jako prvky, skryté dělení prutů, zatížení mezi styčníky, pohyblivé zatížení (síla, odpružená hmota, chodec), stavba soustavy z návrhu a skutečný běh zkoušky, regresní sada s otisky, další případy zkušebny (plastická únosnost, vzpěr, přejezd břemene, laděný tlumič).
+
+Poučení: nosník vychýlený jen svislým posunem styčníků je osově natažený a po puštění se rozezní podélně; výchozí stav případů má být skutečná rovnováha (viz případ „nosnik“).
+
 ## M1a — výsledek
 
 Podrobně v [`M1A-MERENI.md`](./M1A-MERENI.md). Stručně:
