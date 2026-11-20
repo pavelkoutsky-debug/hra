@@ -21,6 +21,7 @@ export function spoctiVnitrniSily(s: Soustava): void {
   fx.fill(0);
   fy.fill(0);
   moment.fill(0);
+  vynulujZatizeniPrvku(s);
 
   const pocet = s.pocetPrvku;
   for (let e = 0; e < pocet; e++) {
@@ -82,6 +83,23 @@ export function spoctiVnitrniSily(s: Soustava): void {
     fx[b] = fx[b]! - silaX;
     fy[b] = fy[b]! - silaY;
   }
+}
+
+/** Zapomene zatížení prvků z minulého kroku; nuluje jen prvky, které nějaké měly. */
+function vynulujZatizeniPrvku(s: Soustava): void {
+  const { zatizenePrvky, zatSilaA, zatSilaB, zatMomentA, zatMomentB, zatMomentPole } = s;
+  for (let i = 0; i < s.pocetZatizenych; i++) {
+    const e = zatizenePrvky[i]!;
+    zatSilaA[e] = 0;
+    zatSilaB[e] = 0;
+    zatMomentA[e] = 0;
+    zatMomentB[e] = 0;
+    zatMomentPole[3 * e] = 0;
+    zatMomentPole[3 * e + 1] = 0;
+    zatMomentPole[3 * e + 2] = 0;
+    s.jeZatizen[e] = 0;
+  }
+  s.pocetZatizenych = 0;
 }
 
 /** Deformační energie všech prvků v aktuální poloze, v joulech. */

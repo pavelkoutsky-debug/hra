@@ -126,6 +126,25 @@ export interface Soustava {
   kBB: Float64Array;
   /** Tlumení úměrné tuhosti prvku, v sekundách. */
   beta: Float64Array;
+  /** Smykový parametr Φ = 12·EI/(GA_s·L²); 0 u prvku bez smykové poddajnosti. */
+  fi: Float64Array;
+  /** Klouby na koncích: bit 0 konec a, bit 1 konec b. */
+  kloub: Uint8Array;
+  /** Hmotnost prvku na metr délky, kg/m. */
+  hmotnostNaMetr: Float64Array;
+
+  // Zatížení působící na prvky mezi styčníky v aktuálním kroku (kola, lidé); viz zatizeni.ts.
+  // Náhradní styčníkové síly napříč prvkem a momenty, které už byly přičteny ke styčníkům.
+  zatSilaA: Float64Array;
+  zatSilaB: Float64Array;
+  zatMomentA: Float64Array;
+  zatMomentB: Float64Array;
+  /** Moment od zatížení na prostě uloženém prvku ve čtvrtinách: indexy 3e, 3e+1, 3e+2. */
+  zatMomentPole: Float64Array;
+  /** Prvky, které mají v tomto kroku zatížení, jejich počet a příznak u každého prvku. */
+  zatizenePrvky: Int32Array;
+  pocetZatizenych: number;
+  jeZatizen: Uint8Array;
 
   // Výsledky posledního výpočtu sil, pro vyhodnocení namáhání.
   osovaSila: Float64Array;
@@ -173,6 +192,17 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     kAB: new Float64Array(m),
     kBB: new Float64Array(m),
     beta: new Float64Array(m),
+    fi: new Float64Array(m),
+    kloub: new Uint8Array(m),
+    hmotnostNaMetr: new Float64Array(m),
+    zatSilaA: new Float64Array(m),
+    zatSilaB: new Float64Array(m),
+    zatMomentA: new Float64Array(m),
+    zatMomentB: new Float64Array(m),
+    zatMomentPole: new Float64Array(3 * m),
+    zatizenePrvky: new Int32Array(m),
+    pocetZatizenych: 0,
+    jeZatizen: new Uint8Array(m),
     osovaSila: new Float64Array(m),
     momentA: new Float64Array(m),
     momentB: new Float64Array(m),
@@ -202,6 +232,9 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     s.osaY0[e] = dy / delka;
     s.tuhostOsova[e] = p.EA / L;
     s.beta[e] = p.beta ?? 0;
+    s.hmotnostNaMetr[e] = p.hmotnostNaMetr;
+    // Lano moment nepřenáší na žádném konci.
+    s.kloub[e] = p.druh === NOSNIK ? (p.kloubA ? 1 : 0) | (p.kloubB ? 2 : 0) : 3;
 
     // Hmota prvku se dělí napůl mezi jeho konce.
     const hmotaPrvku = p.hmotnostNaMetr * L;
@@ -210,6 +243,7 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
 
     if (p.druh === NOSNIK) {
       const fi = Number.isFinite(p.GAs) ? (12 * p.EI) / (p.GAs * L * L) : 0;
+      s.fi[e] = fi;
       const zaklad = p.EI / (L * (1 + fi));
       const kloubA = p.kloubA ?? false;
       const kloubB = p.kloubB ?? false;
