@@ -5,6 +5,7 @@ Hráč navrhne most, spustí zatěžovací zkoušku a sleduje, jestli přes něj
 
 - Koncepce hry: [`docs/KONCEPCE.md`](docs/KONCEPCE.md)
 - Co je hotovo a co se chystá: [`docs/STAV.md`](docs/STAV.md)
+- Měření kroku, tlumení a výkonu fyziky: [`docs/M1A-MERENI.md`](docs/M1A-MERENI.md)
 
 Projekt žije v podsložce repozitáře a je nezávislý na projektu v jeho kořeni.
 
@@ -26,6 +27,7 @@ npm run dev
 | `npm run build` | Typová kontrola, jednotkové testy a sestavení do `dist/` |
 | `npm run test:e2e` | Sestavení a průchod hrou v bezhlavém prohlížeči |
 | `npm run preview` | Náhled hotového sestavení |
+| `npm run mereni` | Měření výkonu fyzikálního jádra v bezhlavém prohlížeči |
 
 Průchod hrou potřebuje Chromium pro Playwright (`npx playwright install chromium`).
 Snímky obrazovky ukládá do `test/e2e/vystup/`.
@@ -41,6 +43,7 @@ Snímky obrazovky ukládá do `test/e2e/vystup/`.
 | `src/vykres/` | Kreslení výkresu, kamera, ovládání | Ano |
 | `src/ui/` | Texty, formátování, panely | Ano |
 | `urovne/` | Data úrovní | — |
+| `mereni/` | Měření výkonu jádra a stránka `mereni.html` | Jen `stranka.ts` a `pracovnik.ts` |
 | `test/` | Jednotkové testy a průchod hrou | — |
 
 Vrstvy bez prohlížeče hlídá `tsconfig.jadro.json`: typová kontrola v nich odmítne cokoli z DOM.

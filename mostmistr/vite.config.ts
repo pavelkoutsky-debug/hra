@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 /** Krátký otisk commitu: na Netlify z proměnné COMMIT_REF, lokálně z gitu. */
@@ -27,6 +28,13 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+    rollupOptions: {
+      // Vedle hry se sestavuje i měřicí stránka (nástroj pro vývoj).
+      input: {
+        index: fileURLToPath(new URL("./index.html", import.meta.url)),
+        mereni: fileURLToPath(new URL("./mereni.html", import.meta.url)),
+      },
+    },
   },
   worker: {
     format: "es",

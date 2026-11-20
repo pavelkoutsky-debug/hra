@@ -4,5 +4,5 @@
     "lib": ["ES2022"],
     "types": []
   },
-  "include": ["src/jadro", "src/zkouska/protokol.ts", "src/zkouska/beh.ts", "src/data", "urovne"]
+  "include": ["src/jadro", "src/zkouska/protokol.ts", "src/zkouska/beh.ts", "src/data", "urovne", "mereni/prurezy.ts", "mereni/mosty.ts", "mereni/kola.ts", "mereni/vykon.ts"]
 }
