@@ -126,8 +126,13 @@ export interface Prurez {
   A: number;
   /** Moment setrvačnosti k ose ohybu v rovině výkresu. */
   I: number;
-  /** Smyková plocha. */
+  /** Smyková plocha pro výpočet průhybu od smyku. */
   As: number;
+  /**
+   * Smyková plocha pro únosnost; když chybí, bere se `As`. U obdélníku je to ⅔ plochy,
+   * protože smykové napětí je uprostřed výšky jedenapůlkrát větší než průměrné.
+   */
+  Av?: number;
   /** Pružný průřezový modul. */
   W: number;
   /** Plastický průřezový modul; u křehkých materiálů se nepoužije. */
@@ -157,6 +162,7 @@ function dvaObdelniky(b: number, h: number): Prurez {
     A: 2 * b * h,
     I: (2 * b * h ** 3) / 12,
     As: (2 * 5 * b * h) / 6,
+    Av: (2 * 2 * b * h) / 3,
     W: (2 * b * h ** 2) / 6,
     Wpl: (2 * b * h ** 2) / 4,
   };
@@ -164,7 +170,7 @@ function dvaObdelniky(b: number, h: number): Prurez {
 
 /** Deska tloušťky t na jeden metr šířky. */
 function deskaNaMetr(t: number): Prurez {
-  return { A: t, I: t ** 3 / 12, As: (5 * t) / 6, W: t ** 2 / 6, Wpl: t ** 2 / 4 };
+  return { A: t, I: t ** 3 / 12, As: (5 * t) / 6, Av: (2 * t) / 3, W: t ** 2 / 6, Wpl: t ** 2 / 4 };
 }
 
 // Délky nosných prvků jsou z koncepce (kap. 5); u tlumiče, pružiny a pístu jsou předběžné.
@@ -246,7 +252,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     nejvetsiDelka: 12,
     hotovo: false,
     material: "zelezobeton",
-    prurez: { A: 2, I: (2 * 1 ** 3) / 12, As: (5 * 2) / 6, W: (2 * 1 ** 2) / 6, Wpl: (2 * 1 ** 2) / 4 },
+    prurez: { A: 2, I: (2 * 1 ** 3) / 12, As: (5 * 2) / 6, Av: (2 * 2) / 3, W: (2 * 1 ** 2) / 6, Wpl: (2 * 1 ** 2) / 4 },
     predbezne: true,
   },
   tlumic: { druh: "tlumic", nejvetsiDelka: 6, hotovo: false },
@@ -302,7 +308,7 @@ export function vlastnostiPrutu(id: IdPrvku, sirkaMostovky: number): VlastnostiP
       tlak: m.mez.tlak * A,
       // Tvárný průřez využije plastickou rezervu, křehký selže při dosažení meze v krajním vlákně.
       moment: m.mez.ohyb * (m.tvarny ? p.Wpl : p.W) * nasobek,
-      smyk: m.mez.smyk * p.As * nasobek,
+      smyk: m.mez.smyk * (p.Av ?? p.As) * nasobek,
     },
     tvarny: m.tvarny,
     utlum: m.utlum,

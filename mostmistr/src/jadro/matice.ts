@@ -27,6 +27,8 @@ export function sestavMaticiTuhosti(s: Soustava, stupne: Int32Array): Float64Arr
   s.vx.fill(0);
   s.vy.fill(0);
   s.omega.fill(0);
+  const zmrazeno = s.plasticitaZmrazena;
+  s.plasticitaZmrazena = true;
 
   const smer = new Float64Array(n);
   const plus = new Float64Array(n);
@@ -59,6 +61,7 @@ export function sestavMaticiTuhosti(s: Soustava, stupne: Int32Array): Float64Arr
   s.vy.set(vy);
   s.omega.set(omega);
   spoctiVnitrniSily(s);
+  s.plasticitaZmrazena = zmrazeno;
   return K;
 }
 
@@ -291,6 +294,8 @@ export function nejvyssiFrekvence(s: Soustava, stupne: Int32Array, presnost = 1e
   s.vx.fill(0);
   s.vy.fill(0);
   s.omega.fill(0);
+  const zmrazeno = s.plasticitaZmrazena;
+  s.plasticitaZmrazena = true;
 
   const v = new Float64Array(n);
   let stav = 6789;
@@ -340,6 +345,7 @@ export function nejvyssiFrekvence(s: Soustava, stupne: Int32Array, presnost = 1e
   s.vy.set(vy);
   s.omega.set(omega);
   spoctiVnitrniSily(s);
+  s.plasticitaZmrazena = zmrazeno;
   return Math.sqrt(Math.max(0, lambda));
 }
 
@@ -372,12 +378,15 @@ export function najdiRovnovahu(
   s.vx.fill(0);
   s.vy.fill(0);
   s.omega.fill(0);
+  const zmrazeno = s.plasticitaZmrazena;
+  s.plasticitaZmrazena = true;
 
   const obnovRychlosti = (): void => {
     s.vx.set(vx);
     s.vy.set(vy);
     s.omega.set(omega);
     spoctiVnitrniSily(s);
+    s.plasticitaZmrazena = zmrazeno;
   };
 
   let meritko = 0;

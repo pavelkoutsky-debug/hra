@@ -21,12 +21,21 @@ export function vlastnostiNeboChyba(id: IdPrvku, sirkaMostovky: number): Vlastno
 }
 
 function popisZVlastnosti(v: VlastnostiPrutu, lano: boolean, hmotaNavic: number): PopisPrutu {
-  return {
+  const popis: PopisPrutu = {
     druh: lano ? LANO : NOSNIK,
     EA: v.EA,
     EI: v.EI,
     GAs: v.GAs,
     hmotnostNaMetr: v.hmotnostNaMetr + hmotaNavic,
     polomerSetrvacnosti: v.polomerSetrvacnosti,
+    unosnost: { ...v.unosnost },
   };
+  if (v.pretrzeni) {
+    popis.tvarny = {
+      silaPretrzeni: v.pretrzeni.sila,
+      mezniNatoceni: v.pretrzeni.mezniNatoceni,
+      mezniProtazeni: v.pretrzeni.mezniProtazeni,
+    };
+  }
+  return popis;
 }

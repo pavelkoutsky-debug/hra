@@ -45,6 +45,18 @@ export interface PopisPrvku {
    * Působí jen na deformaci, pohyb prvku jako tuhého celku netlumí.
    */
   beta?: number;
+  /** Únosnost průřezu: osová síla [N], moment [N·m], posouvající síla [N]. Bez ní se prvek neposuzuje. */
+  unosnost?: { tah: number; tlak: number; moment: number; smyk: number };
+  /**
+   * Délka pro posouzení vzpěru; výchozí je délka prvku. U prutu skrytě rozděleného
+   * na několik prvků je to délka celého prutu.
+   */
+  vzpernaDelka?: number;
+  /**
+   * Tvárný prvek: po dosažení únosnosti v tahu nebo ohybu se plasticky deformuje
+   * a poruší se až po vyčerpání mezní deformace.
+   */
+  tvarny?: { silaPretrzeni: number; mezniNatoceni: number; mezniProtazeni: number };
 }
 
 export interface PopisSoustavy {
@@ -133,6 +145,41 @@ export interface Soustava {
   /** Hmotnost prvku na metr délky, kg/m. */
   hmotnostNaMetr: Float64Array;
 
+  // Únosnost prvků; Infinity znamená, že se daný způsob namáhání neposuzuje.
+  unosnostTah: Float64Array;
+  unosnostTlak: Float64Array;
+  unosnostMoment: Float64Array;
+  unosnostSmyk: Float64Array;
+  /** Eulerova kritická síla prutu ve vzpěru. */
+  kritickaSila: Float64Array;
+
+  // Plasticita tvárných prvků. Mez je Infinity u prvků, které se plasticky nedeformují.
+  mezTahu: Float64Array;
+  mezMomentu: Float64Array;
+  silaPretrzeni: Float64Array;
+  mezniNatoceni: Float64Array;
+  mezniProtazeni: Float64Array;
+  /** Trvalé natočení v plastickém kloubu na konci a a b, v radiánech. */
+  plastA: Float64Array;
+  plastB: Float64Array;
+  /** Trvalé protažení prvku v metrech. */
+  plastDelka: Float64Array;
+  /** Práce spotřebovaná plastickou deformací od začátku, v joulech. */
+  plastickaPrace: number;
+  /**
+   * Zmrazí plastické deformace: síly se počítají pružně z aktuálního stavu.
+   * Používá se při numerickém derivování sil, které by jinak stav měnilo.
+   */
+  plasticitaZmrazena: boolean;
+
+  // Namáhání prvků; počítá `vyhodnotNamahani`.
+  /** Vyhlazené využití: 1 je mez únosnosti. */
+  vyuziti: Float64Array;
+  /** Rozhodující způsob namáhání; viz konstanty ZPUSOB_* v namahani.ts. */
+  zpusob: Uint8Array;
+  /** Místo největšího namáhání: 0 konec a, 1 až 3 čtvrtiny prutu, 4 konec b. */
+  mistoNamahani: Uint8Array;
+
   // Zatížení působící na prvky mezi styčníky v aktuálním kroku (kola, lidé); viz zatizeni.ts.
   // Náhradní styčníkové síly napříč prvkem a momenty, které už byly přičteny ke styčníkům.
   zatSilaA: Float64Array;
@@ -195,6 +242,24 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     fi: new Float64Array(m),
     kloub: new Uint8Array(m),
     hmotnostNaMetr: new Float64Array(m),
+    unosnostTah: new Float64Array(m).fill(Infinity),
+    unosnostTlak: new Float64Array(m).fill(Infinity),
+    unosnostMoment: new Float64Array(m).fill(Infinity),
+    unosnostSmyk: new Float64Array(m).fill(Infinity),
+    kritickaSila: new Float64Array(m).fill(Infinity),
+    mezTahu: new Float64Array(m).fill(Infinity),
+    mezMomentu: new Float64Array(m).fill(Infinity),
+    silaPretrzeni: new Float64Array(m).fill(Infinity),
+    mezniNatoceni: new Float64Array(m).fill(Infinity),
+    mezniProtazeni: new Float64Array(m).fill(Infinity),
+    plastA: new Float64Array(m),
+    plastB: new Float64Array(m),
+    plastDelka: new Float64Array(m),
+    plastickaPrace: 0,
+    plasticitaZmrazena: false,
+    vyuziti: new Float64Array(m),
+    zpusob: new Uint8Array(m),
+    mistoNamahani: new Uint8Array(m),
     zatSilaA: new Float64Array(m),
     zatSilaB: new Float64Array(m),
     zatMomentA: new Float64Array(m),
@@ -235,6 +300,27 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     s.hmotnostNaMetr[e] = p.hmotnostNaMetr;
     // Lano moment nepřenáší na žádném konci.
     s.kloub[e] = p.druh === NOSNIK ? (p.kloubA ? 1 : 0) | (p.kloubB ? 2 : 0) : 3;
+
+    if (p.unosnost) {
+      s.unosnostTah[e] = p.unosnost.tah;
+      if (p.druh === NOSNIK) {
+        s.unosnostTlak[e] = p.unosnost.tlak;
+        s.unosnostMoment[e] = p.unosnost.moment;
+        s.unosnostSmyk[e] = p.unosnost.smyk;
+        // Eulerova síla pro kloubově uložený prut; tuhé konce se vědomě nezvýhodňují.
+        const vzperna = p.vzpernaDelka ?? L;
+        s.kritickaSila[e] = (Math.PI * Math.PI * p.EI) / (vzperna * vzperna);
+      }
+      if (p.tvarny) {
+        s.mezTahu[e] = p.unosnost.tah;
+        s.silaPretrzeni[e] = p.tvarny.silaPretrzeni;
+        s.mezniProtazeni[e] = p.tvarny.mezniProtazeni;
+        if (p.druh === NOSNIK) {
+          s.mezMomentu[e] = p.unosnost.moment;
+          s.mezniNatoceni[e] = p.tvarny.mezniNatoceni;
+        }
+      }
+    }
 
     // Hmota prvku se dělí napůl mezi jeho konce.
     const hmotaPrvku = p.hmotnostNaMetr * L;
