@@ -185,8 +185,13 @@ export function rozdelPrvek(
   const plast = s.plastDelka[e]!;
   const pomerne = (delka - puvodniDelka - plast) / puvodniDelka;
   const hmotaPrvku = s.hmotnostNaMetr[e]! * puvodniDelka;
-  const delkaE = Math.hypot(s.x[c]! - s.x[a]!, s.y[c]! - s.y[a]!);
-  const delkaF = Math.hypot(s.x[b]! - s.x[c]!, s.y[b]! - s.y[c]!);
+  // Odmocnina je na rozdíl od Math.hypot ve všech prohlížečích zaokrouhlená stejně.
+  const dxE = s.x[c]! - s.x[a]!;
+  const dyE = s.y[c]! - s.y[a]!;
+  const dxF = s.x[b]! - s.x[c]!;
+  const dyF = s.y[b]! - s.y[c]!;
+  const delkaE = Math.sqrt(dxE * dxE + dyE * dyE);
+  const delkaF = Math.sqrt(dxF * dxF + dyF * dyF);
   s.plastDelka[e] = t * plast;
   s.plastDelka[f] = (1 - t) * plast;
   s.klidovaDelka[e] = (delkaE - s.plastDelka[e]!) / (1 + pomerne);

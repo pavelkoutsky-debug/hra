@@ -27,6 +27,11 @@ export interface PopisPrvku {
   a: number;
   b: number;
   druh: DruhPrvkuJadra;
+  /**
+   * Číslo prutu, ke kterému prvek patří; výchozí je index prvku. Díly jednoho prutu
+   * skrytě rozděleného na několik prvků mají číslo společné.
+   */
+  prut?: number;
   /** Osová tuhost E·A v newtonech. U pružiny ji může nahradit `tuhost`. */
   EA: number;
   /** Tuhost pružiny v N/m; má přednost před E·A děleným délkou. */
@@ -338,7 +343,7 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     s.prvekA[e] = p.a;
     s.prvekB[e] = p.b;
     s.druh[e] = p.druh;
-    s.prut[e] = e;
+    s.prut[e] = p.prut ?? e;
     s.klidovaDelka[e] = L;
     s.osaX0[e] = dx / delka;
     s.osaY0[e] = dy / delka;

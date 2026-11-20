@@ -95,7 +95,14 @@ export class Simulace {
     const stupne = nastaveni.tlumeneStupne ?? volneStupne(soustava);
     const tvary = stupne.length > 0 ? vlastniTvarySoustavy(soustava, stupne, TLUMENYCH_TVARU) : null;
     if (tvary) {
-      this.#krok.modalni = vytvorModalniTlumeni(soustava, stupne, tvary, nastaveni.utlum, this.#krok.dt);
+      // Tlumení úměrné tuhosti prvků dává tvaru s frekvencí ω útlum β·ω/2. O ten se zadaný
+      // útlum zmenší, aby měl každý tlumený tvar dohromady právě tolik, kolik má mít.
+      const beta = soustava.beta[0] ?? 0;
+      const utlumy = new Float64Array(tvary.omega.length);
+      for (let i = 0; i < utlumy.length; i++) {
+        utlumy[i] = Math.max(0, nastaveni.utlum - 0.5 * beta * tvary.omega[i]!);
+      }
+      this.#krok.modalni = vytvorModalniTlumeni(soustava, stupne, tvary, utlumy, this.#krok.dt);
       this.#alfaPoPoruseni = 2 * nastaveni.utlum * tvary.omega[0]!;
     } else {
       this.#alfaPoPoruseni = 2 * nastaveni.utlum * 2 * Math.PI;
@@ -144,7 +151,7 @@ export class Simulace {
       this.udalosti.push({ ...poruseni, cas: this.#cas, krok: this.#kroku });
       zmeneno = true;
     }
-    if (zmeneno) this.#poZmeneStavby();
+    if (zmeneno) this.poZmeneStavby();
 
     // Pojistka: neplatná čísla se šíří celou soustavou, stačí zkontrolovat jeden součet.
     let soucet = 0;
@@ -167,7 +174,12 @@ export class Simulace {
     pridejTlumice(this.soustava, this.#krok.dt);
   }
 
-  #poZmeneStavby(): void {
+  /**
+   * Přizpůsobí výpočet změněné stavbě soustavy: zatížení si znovu dohledá prvky, tlumení
+   * vlastních tvarů nahradí tlumení úměrné hmotě a krok se zvolí znovu. Po porušení se
+   * volá sama; kdo mění stavbu zvenčí, zavolá ji po `prepoctiHmoty`.
+   */
+  poZmeneStavby(): void {
     const s = this.soustava;
     this.#nastaveni.zatizeni?.poZmene?.(s);
     // Vlastní tvary neporušené konstrukce už neplatí; dál tlumí jen hmota.
