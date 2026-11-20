@@ -8,21 +8,39 @@ Poslední aktualizace: 20. 11. 2026
 |---|---|
 | M0 Základy | Hotovo, sloučeno do `main`, nasazeno na Netlify (20. 11. 2026) |
 | M1a Průzkum (krok, tlumení, výkon) | Hotovo, sloučeno do `main`; kritérium splněno i na počítači zadavatele |
-| M1b Jádro | Rozpracováno |
+| M1b Jádro | Hotovo, čeká na schválení a sloučení (pull request č. 3) |
 | M2 První hratelná verze | Nezačato |
 | M3a až M8 | Nezačato |
 
-## M1b — průběh
+## M1b — výsledek
 
-Hotovo:
+Podrobně v [`M1B-JADRO.md`](./M1B-JADRO.md). Stručně:
 
-- **Katalog** (`src/data/katalog.ts`): materiály se středními pevnostmi a průřezy prvků jako dvojice profilů. V hlavičce souboru je u každé hodnoty stav ověření; zdrojové normy se z vývojového prostředí otevřít nepodařilo, část hodnot je jen z paměti.
-- **Zkušebna** (`/zkusebna.html`): čtyři ověřovací případy (most s koly, rezonance nosníku, vlastní frekvence, kyvadlo). Simulace běží napřed v pracovním vlákně, záznam se přehrává na výkresu s časovou osou, vedle je porovnání s teorií a rychlost výpočtu. Tytéž případy běží v testu `test/zkusebna.test.ts`.
-- **Záznam a přehrávání** (`src/zkouska/zaznam.ts`, `src/ui/prehravani.ts`, `src/vykres/konstrukce.ts`): stavební kameny, které použije i hra.
+- **Jádro je úplné** (`src/jadro/`): nosník, lano, pružina s tlumičem, závaží, zatížení mezi styčníky, posouzení namáhání, plasticita, porušení se změnou stavby za běhu, pohyblivé zatížení (síla, kolo na pneumatice, chodec), řídicí smyčka `Simulace`.
+- **Ověření**: všech 15 skupin úloh z koncepce kap. 7.10 vychází v tolerancích; čísla jsou v tabulce v `M1B-JADRO.md`.
+- **Regresní sada**: 20 referenčních mostů s otisky (`src/zkouska/regrese.ts`, `regrese-otisky.json`), k tomu poloviční krok, zrcadlový most a 40 náhodných mostů. Node a Chromium dávají bitově stejné otisky.
+- **Zkušebna** (`/zkusebna.html`): 9 případů včetně zlomení vazníku, plastického nosníku, vzpěru, přejezdu síly a laděného tlumiče; porušení jsou vyznačená na časové ose.
+- **Shoda výpočtu** (`/otisky.html`): přepočítá regresní sadu v prohlížeči zadavatele.
+- **Stavba mostu z návrhu** (`sestavMost` v `src/zkouska/stavba.ts`): podpory, klouby a svary, skryté dělení, lana, pružiny, trasy.
+- **Rychlost s úplným jádrem**: největší most 4,1× až 6,5×, běžná úroveň 58× až 106× reálného času.
+- **Verze fyziky je 1.**
 
-Zbývá: porušení a plasticita, pružina a tlumič jako prvky, skryté dělení prutů, zatížení mezi styčníky, pohyblivé zatížení (síla, odpružená hmota, chodec), stavba soustavy z návrhu a skutečný běh zkoušky, regresní sada s otisky, další případy zkušebny (plastická únosnost, vzpěr, přejezd břemene, laděný tlumič).
+Testy: 311 jednotkových, 34 kontrol v prohlížeči.
 
-Poučení: nosník vychýlený jen svislým posunem styčníků je osově natažený a po puštění se rozezní podélně; výchozí stav případů má být skutečná rovnováha (viz případ „nosnik“).
+### Co jádro zatím neumí (a kdy to přijde)
+
+- Zkouška úrovně s jízdním řádem, vozidla s karoserií, hodnocení průjezdu a komfortu: M2. `BehZkousky` do té doby zkoušku odmítá chybou `zkouska-neni-hotova`.
+- Kolize trosek s terénem: M2. Nerovnost vozovky: M4a. Výchozí poloha povolených lan ustálením v čase: M4b. Píst: M6.
+- Hlídání bilance energie z koncepce (kap. 7.5) nahrazuje jednodušší pojistka: neplatné číslo nebo rychlost přes 2 000 m/s zkoušku zastaví (`Simulace.rozpadla`).
+- Vzpěr konstrukce jako celku vychází při hrubém dělení o něco výš (viz `M1B-JADRO.md`, bod 5); možné zpřesnění je popsané tamtéž.
+- Hodnoty materiálů jsou zčásti jen z paměti (hlavička `src/data/katalog.ts`). Hotové (`hotovo: true`) jsou dřevěná mostovka, oba dřevěné a oba ocelové pruty, pružina a tlumič; prvky s předběžnými hodnotami kontrola návrhu odmítá.
+
+### Poučení z M1b
+
+- Ověřovací úlohy samy nestačí. Tři skutečné chyby (kontakt kola rozkmitávající styčníky mostovky, odhad kroku u povoleného lana, kolo opřené o utržený kus mostovky) našla až regresní sada s mosty postavenými tak, jak je postaví hráč.
+- Snímek obrazovky odhalil, že trosky padají zpomaleně; testy to neviděly, protože kontrolovaly jen okamžik porušení.
+- Výchozí stav každého případu má být skutečná rovnováha; jinak se konstrukce na začátku rozezní.
+- Všechno, co vstupuje do simulace, smí počítat jen sčítáním, násobením, dělením a odmocninou. Operátor mocniny a `Math.hypot` do jádra, katalogu ani stavby mostu nepatří.
 
 ## M1a — výsledek
 
@@ -35,9 +53,7 @@ Podrobně v [`M1A-MERENI.md`](./M1A-MERENI.md). Stručně:
 
 **Co v jádře už je** (`src/jadro/`): korotační nosník se smykem a klouby, lano, soustředění hmot, velocity Verlet, tři druhy tlumení, volba kroku, hustá matice tuhosti, Newtonovo hledání rovnováhy s rozpoznáním mechanismu, vlastní tvary, nejvyšší frekvence. Pokryto 36 testy proti analytickým řešením.
 
-**Co v jádře ještě není** (M1b): porušení a plasticita, pružina, tlumič a závaží jako prvky, skryté dělení prutů, zatížení mezi styčníky, kontakt a vozidla, regresní sada s otisky, ověřené hodnoty materiálů v katalogu, zkušebna.
-
-**Měřicí nástroje** jsou ve složce `mereni/` a na stránce `/mereni.html`. Průřezy v `mereni/prurezy.ts` jsou předběžné.
+**Měřicí nástroje** jsou ve složce `mereni/` a na stránce `/mereni.html`. Od M1b měří úplnou zkoušku včetně posuzování porušení a kol na pneumatikách.
 
 ## M0 — co je hotovo
 
@@ -66,19 +82,19 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Vědomě odloženo
 
-- Formát rekordu: přijde s ukládáním v M2.
-- Ceny a mechanické vlastnosti prvků v katalogu: v M1b po ověření proti normám. Do té doby má každý prvek `hotovo: false` a kontrola návrhu ho odmítne.
-- Regresní sada s otisky: s jádrem v M1b. Vlastní goniometrické funkce nakonec potřeba nejsou (viz M1a).
+- Formát rekordu a ceny prvků: přijdou s ukládáním a rozpočtem v M2.
+- Ověření hodnot materiálů proti zdrojovým normám: z vývojového prostředí se normy otevřít nepodařilo; u každé hodnoty je v katalogu poznamenáno, zda je potvrzená.
 
 ## Co je potřeba od zadavatele
 
-1. Otevřít hru na Netlify a potvrdit, že výkres z M0 funguje; poslat adresu projektu.
-2. Na náhledu pull requestu M1a otevřít `/mereni.html`, spustit měření a poslat výsledky.
-3. Schválit sloučení M1a do `main`.
+1. Na náhledu pull requestu M1b otevřít `/zkusebna.html` a projít případy; hlavně jestli zřícení a kmitání vypadají věrohodně.
+2. Otevřít `/otisky.html`, ideálně i ve Firefoxu nebo Safari, a poslat výsledek (stačí věta „všech 20 souhlasí“, při neshodě zkopírované výsledky).
+3. Pustit znovu `/mereni.html`; čísla teď zahrnují úplné jádro.
+4. Schválit sloučení M1b do `main`.
 
 ## Další krok
 
-M1b: dokončit jádro (viz „co v jádře ještě není“), ověřovací a regresní sada podle koncepce kap. 7.10, zkušebna na Netlify. Před začátkem ověřit hodnoty materiálů a průřezů proti normám.
+M2, první hratelná verze: editor, zkouška ve workeru s osobním autem a chodcem, časová osa, kapitola 1, ukládání. Před začátkem: ceny prvků a kolize trosek s terénem.
 
 ## Zpětná vazba zadavatele
 
@@ -91,3 +107,4 @@ M1b: dokončit jádro (viz „co v jádře ještě není“), ověřovací a reg
 | Verze | Změna |
 |---|---|
 | 0 | Jádro neexistuje |
+| 1 | První úplné jádro (M1b): nosník se smykem, lano, pružina s tlumičem, plasticita, porušení, pohyblivé zatížení, skryté dělení prutů |

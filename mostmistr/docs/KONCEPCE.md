@@ -204,7 +204,7 @@ Běžné herní enginy (Box2D, Matter.js, Rapier) řeší vazby iteračně při 
 - **Styčník:** poloha (x, y), natočení, hmotnost soustředěná z připojených prutů a vybavení.
 - **Prut:** rovinný nosníkový prvek se smykovou poddajností (Timošenkův) v korotační formulaci. Přenáší osovou sílu, ohybový moment a posouvající sílu a platí i pro velké posuny a natočení při pádu.
 - **Konce prutu:** každý konec je kloub, nebo tuhý spoj. Kloubový prut se chová jako klasický příhradový prut.
-- **Skryté dělení.** Dlouhé pruty a lana se uvnitř jádra rozdělí na několik úseků (nikdy kratších než 1 m), pokud jejich vlastní kmitání spadá do pásma, na kterém záleží. Hráč to nevidí. Díky tomu má dlouhý nosník vlastní kmitání, lano skutečný průvěs a vzpěr vznikne sám od sebe.
+- **Skryté dělení.** Dlouhé pruty a lana se uvnitř jádra rozdělí na několik úseků (nikdy kratších než 1 m), pokud jejich vlastní kmitání spadá do pásma, na kterém záleží (v M1b stanoveno na 30 Hz; dva díly na každý ohybový tvar v pásmu). Hráč to nevidí. Díky tomu má dlouhý nosník vlastní kmitání, lano skutečný průvěs a vzpěr vznikne sám od sebe.
 - **Zatížení mezi styčníky** (kolo uprostřed pole, vlastní tíha): přenáší se do styčníků přesnými vzorci pro daný typ uložení a ohybový moment uvnitř prutu se dopočítává analyticky.
 - **Dráha kola** je hladká křivka proložená mostovkou, ne lomená čára. Jinak by každý zlom ve styčníku dával nefyzikální ráz.
 - **Lana:** jen tah, nulová ohybová tuhost, předpětí zkrácením klidové délky.
@@ -229,13 +229,15 @@ Recenzent změřil zjednodušené jádro na 16–18 mikrosekund na krok pro nejv
 
 **Výsledek M1a:** kritérium je splněno (největší most 7× až 12×, běžná úroveň přes 100×) a zálohy nejsou potřeba. Počet kroků vyšel 1 600 až 6 400 za sekundu podle délky nejkratšího prutu. Podrobnosti jsou v [`M1A-MERENI.md`](./M1A-MERENI.md).
 
+**Výsledek M1b:** s úplným jádrem (porušení, kola na pneumatikách, obě tlumení) vychází největší most 4,1× až 6,5× a běžná úroveň 58× až 106×; kritérium platí dál. Nejdelší krok je omezen na 1 ms. Podrobnosti a ověření proti teorii jsou v [`M1B-JADRO.md`](./M1B-JADRO.md).
+
 ### 7.4 Tlumení
 
 - Jen fyzikální. Každý materiál má poměrný útlum podle měření na skutečných mostech (ocel ~0,5 %, beton ~1 %, dřevo ~1,5 %).
 - Tlumení se zadává přímo prvním zhruba deseti vlastním tvarům mostu. Útlum tvaru se určí podle toho, jakou část deformační energie nesou jednotlivé materiály.
 - Rezonanční zesílení pak odpovídá zadanému útlumu přesně.
 - K tomu malé tlumení nejvyšších frekvencí, které odstraní numerické zvonění v silách prutů.
-- Po prvním porušení se konstrukce změní a vlastní tvary přestanou platit. Od té chvíle se použije jednodušší tlumení úměrné hmotě.
+- Po prvním porušení se konstrukce změní a vlastní tvary přestanou platit. Od té chvíle se použije jednodušší tlumení úměrné hmotě. Vztahuje se jen ke kmitání: pohyb, kterým se část konstrukce hýbe jako tuhý celek (pád utrženého kusu, sklápění zlomené poloviny mostu kolem podpory), nebrzdí. *(Upřesněno v M1b.)*
 
 ### 7.5 Porušení
 
@@ -259,7 +261,7 @@ Recenzent změřil zjednodušené jádro na 16–18 mikrosekund na krok pro nejv
 - Kloub po porušení vzniká jen uprostřed nebo ve čtvrtinách prutu, aby nevznikl libovolně krátký úsek.
 - Nově vzniklé styčníky mají zaručenou nejmenší hmotu.
 - Tlumiče se integrují poloimplicitně.
-- Jádro průběžně hlídá bilanci energie. Když se rozejde, zkouška se zastaví s chybou, ne s „výbuchem“ mostu.
+- Jádro hlídá, že se výpočet nerozešel. Když se rozejde, zkouška se zastaví s chybou, ne s „výbuchem“ mostu. *(V M1b jako pojistka na neplatná čísla a nesmyslné rychlosti; hlídání bilance energie zatím není.)*
 
 Porušení se vyhodnocuje z krátce vyhlazeného průběhu, aby prut nepraskl kvůli numerické špičce trvající zlomek milisekundy. Trosky se dál simulují a kolidují s terénem.
 
