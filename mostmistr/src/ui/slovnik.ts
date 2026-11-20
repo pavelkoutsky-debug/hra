@@ -43,6 +43,7 @@ const CS = {
   "zkusebna.legenda.tah": "tah",
   "zkusebna.chyba": "Výpočet selhal: {duvod}",
   "zkusebna.mereni": "Měření výkonu",
+  "zkusebna.otisky": "Shoda výpočtu",
   "zkusebna.poruseni": "Porušení",
   "zkusebna.poruseni.zadne": "Konstrukce vydržela bez porušení.",
   "zkusebna.poruseni.radek": "{cas} s · prut {prut}: {zpusob}, {nasledek}",

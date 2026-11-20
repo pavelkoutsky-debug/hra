@@ -92,31 +92,37 @@ function levy(s: Soustava, e: number): number {
 
 /** Poloha na prvku (0 na konci a, 1 na konci b), kterou naposledy určila `vyskaNaPrvku`. */
 export let mistoNaPrvku = 0;
+/** Výška spojnice styčníků v témže místě, bez průhybu prvku. */
+export let vyskaSpojnice = 0;
+
+/** Prvek skloněný víc než 60° od vodorovné provoz neunese: kolo by z něj sklouzlo. */
+const NEJMENSI_KOSINUS_SKLONU = 0.5;
 
 /**
  * Výška osy prvku `e` nad souřadnicí `x`. Bere se skutečná ohybová čára (tvarové funkce
  * Timošenkova nosníku), ne spojnice styčníků: lomená čára by kolu na každém styčníku
  * vnutila skok ve sklonu a chovala se jako nerovnost vozovky, která tam není.
- * Polohu na prvku uloží do `mistoNaPrvku`.
+ * Polohu na prvku uloží do `mistoNaPrvku`, výšku spojnice do `vyskaSpojnice`.
+ * U příliš strmého prvku (utržený kus mostovky) vrací NaN.
  */
 export function vyskaNaPrvku(s: Soustava, e: number, x: number): number {
   const a = s.prvekA[e]!;
   const b = s.prvekB[e]!;
   const dx = s.x[b]! - s.x[a]!;
   const dy = s.y[b]! - s.y[a]!;
+  const delka = Math.sqrt(dx * dx + dy * dy);
+  const ex = dx / delka;
+  const ey = dy / delka;
+  if (!(ex >= NEJMENSI_KOSINUS_SKLONU || ex <= -NEJMENSI_KOSINUS_SKLONU)) return Number.NaN;
   let xi = (x - s.x[a]!) / dx;
   if (!(xi >= 0)) xi = 0;
   else if (xi > 1) xi = 1;
   mistoNaPrvku = xi;
   const naSpojnici = s.y[a]! + xi * dy;
+  vyskaSpojnice = naSpojnici;
 
   const kloub = s.kloub[e]!;
   if (s.druh[e] !== NOSNIK || kloub === 3) return naSpojnici;
-  const delka = Math.sqrt(dx * dx + dy * dy);
-  const ex = dx / delka;
-  const ey = dy / delka;
-  // Na strmém prvku by přepočet průhybu na svislou výšku ztrácel smysl.
-  if (ex < 0.2 && ex > -0.2) return naSpojnici;
 
   const cosAlfa = s.osaX0[e]! * ex + s.osaY0[e]! * ey;
   const sinAlfa = s.osaX0[e]! * ey - s.osaY0[e]! * ex;

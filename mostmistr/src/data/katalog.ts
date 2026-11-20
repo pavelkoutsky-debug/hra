@@ -1,6 +1,10 @@
 // Katalog materiálů, stavebních prvků a druhů provozu.
 // Jediné místo, kde žijí vlastnosti prvků. Uložené mosty a rekordy je neobsahují.
 //
+// Hodnoty vstupují do simulace, která má dát ve všech prohlížečích bitově stejný výsledek.
+// Proto se tu počítá jen sčítáním, násobením, dělením a odmocninou; operátor mocniny
+// a ostatní funkce Math takovou záruku nemají.
+//
 // Jak číst hodnoty:
 // - Jednotky SI: Pa, m², m⁴, m³, kg/m³, kg/m.
 // - Pevnosti jsou odhad středních hodnot skutečného materiálu, ne normové hodnoty
@@ -160,17 +164,17 @@ export interface PolozkaKatalogu {
 function dvaObdelniky(b: number, h: number): Prurez {
   return {
     A: 2 * b * h,
-    I: (2 * b * h ** 3) / 12,
+    I: (2 * b * h * h * h) / 12,
     As: (2 * 5 * b * h) / 6,
     Av: (2 * 2 * b * h) / 3,
-    W: (2 * b * h ** 2) / 6,
-    Wpl: (2 * b * h ** 2) / 4,
+    W: (2 * b * h * h) / 6,
+    Wpl: (2 * b * h * h) / 4,
   };
 }
 
 /** Deska tloušťky t na jeden metr šířky. */
 function deskaNaMetr(t: number): Prurez {
-  return { A: t, I: t ** 3 / 12, As: (5 * t) / 6, Av: (2 * t) / 3, W: t ** 2 / 6, Wpl: t ** 2 / 4 };
+  return { A: t, I: (t * t * t) / 12, As: (5 * t) / 6, Av: (2 * t) / 3, W: (t * t) / 6, Wpl: (t * t) / 4 };
 }
 
 // Délky nosných prvků jsou z koncepce (kap. 5); u tlumiče, pružiny a pístu jsou předběžné.
@@ -179,7 +183,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
   "mostovka-drevo": {
     druh: "mostovka",
     nejvetsiDelka: 4,
-    hotovo: false,
+    hotovo: true,
     material: "drevo",
     prurez: deskaNaMetr(0.14),
     naMetrSirky: true,
@@ -204,14 +208,14 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     predbezne: true,
   },
   // 2× lepené dřevo 140 × 280 mm.
-  "drevo-lehke": { druh: "prut", nejvetsiDelka: 6, hotovo: false, material: "drevo", prurez: dvaObdelniky(0.14, 0.28) },
+  "drevo-lehke": { druh: "prut", nejvetsiDelka: 6, hotovo: true, material: "drevo", prurez: dvaObdelniky(0.14, 0.28) },
   // 2× lepené dřevo 200 × 480 mm.
-  "drevo-tezke": { druh: "prut", nejvetsiDelka: 6, hotovo: false, material: "drevo", prurez: dvaObdelniky(0.2, 0.48) },
+  "drevo-tezke": { druh: "prut", nejvetsiDelka: 6, hotovo: true, material: "drevo", prurez: dvaObdelniky(0.2, 0.48) },
   // 2× HEB 200.
   "ocel-lehka": {
     druh: "prut",
     nejvetsiDelka: 12,
-    hotovo: false,
+    hotovo: true,
     material: "ocel",
     prurez: {
       A: 2 * 78.1e-4,
@@ -226,7 +230,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
   "ocel-tezka": {
     druh: "prut",
     nejvetsiDelka: 12,
-    hotovo: false,
+    hotovo: true,
     material: "ocel",
     prurez: {
       A: 2 * 197.8e-4,
@@ -252,11 +256,11 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     nejvetsiDelka: 12,
     hotovo: false,
     material: "zelezobeton",
-    prurez: { A: 2, I: (2 * 1 ** 3) / 12, As: (5 * 2) / 6, Av: (2 * 2) / 3, W: (2 * 1 ** 2) / 6, Wpl: (2 * 1 ** 2) / 4 },
+    prurez: { A: 2, I: 2 / 12, As: (5 * 2) / 6, Av: (2 * 2) / 3, W: 2 / 6, Wpl: 2 / 4 },
     predbezne: true,
   },
-  tlumic: { druh: "tlumic", nejvetsiDelka: 6, hotovo: false },
-  pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: false },
+  tlumic: { druh: "tlumic", nejvetsiDelka: 6, hotovo: true },
+  pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: true },
   pist: { druh: "pist", nejvetsiDelka: 8, hotovo: false },
 };
 

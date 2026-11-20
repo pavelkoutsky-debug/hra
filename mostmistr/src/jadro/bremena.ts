@@ -12,13 +12,21 @@
 
 import type { Zatizeni } from "./simulace";
 import type { Soustava } from "./soustava";
-import { mistoNaPrvku, najdiPrvekTrasy, prestavTrasu, vyskaNaPrvku, type Trasa } from "./trasa";
+import { mistoNaPrvku, najdiPrvekTrasy, prestavTrasu, vyskaNaPrvku, vyskaSpojnice, type Trasa } from "./trasa";
 import { pridejSiluNaPrvek } from "./zatizeni";
 
 /** Břemeno jede po pevné zemi před mostem nebo za ním. */
 export const NA_ZEMI = -1;
 /** Břemeno nemá pod sebou nic. */
 export const BEZ_OPORY = -2;
+
+/**
+ * Největší stlačení pružiny kontaktu v metrech. Když je povrch nad styčníkem výš, nejde
+ * o dosednutí: styčník je pod utrženým kusem mostovky, který se přes něj jen promítá.
+ */
+const NEJVETSI_STLACENI = 0.5;
+/** Kolik kol se nanejvýš sejde na jednom prvku mostovky; pro odhad kroku výpočtu. */
+const KOL_NA_PRVKU = 3;
 
 export interface PopisBremene {
   /** Styčník soustavy, který břemeno nese; bez něj je břemeno pouhá síla. */
@@ -63,9 +71,11 @@ export interface Bremena {
   krokSin: Float64Array;
   /** Index v seznamu trasy, kde břemeno naposledy bylo. */
   pole: Int32Array;
-  /** Výška povrchu pod břemenem teď a o krok dřív; z rozdílu se určí rychlost pro tlumení. */
+  /** Výška povrchu pod břemenem (včetně průhybu prvku), pro kreslení. */
   vyska: Float64Array;
-  vyskaMinula: Float64Array;
+  /** Výška spojnice styčníků pod břemenem teď a o krok dřív; z rozdílu je rychlost pro tlumení. */
+  spojnice: Float64Array;
+  spojniceMinula: Float64Array;
   /** Výsledky posledního výpočtu: síla na mostovku (kladná dolů) a prvek pod břemenem. */
   sila: Float64Array;
   prvek: Int32Array;
@@ -92,7 +102,8 @@ export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[]): Br
     krokSin: new Float64Array(n),
     pole: new Int32Array(n),
     vyska: new Float64Array(n).fill(Number.NaN),
-    vyskaMinula: new Float64Array(n).fill(Number.NaN),
+    spojnice: new Float64Array(n).fill(Number.NaN),
+    spojniceMinula: new Float64Array(n).fill(Number.NaN),
     sila: new Float64Array(n),
     prvek: new Int32Array(n).fill(BEZ_OPORY),
     dt: 0,
@@ -136,7 +147,7 @@ export function nastavKrokBremen(b: Bremena, dt: number): void {
 
 /** Posune síly bez styčníku a fáze buzení o krok. */
 export function posunBremena(b: Bremena): void {
-  const { x, rychlost, stycnik, fazeCos, fazeSin, krokCos, krokSin, vyska, vyskaMinula } = b;
+  const { x, rychlost, stycnik, fazeCos, fazeSin, krokCos, krokSin, spojnice, spojniceMinula } = b;
   const dt = b.dt;
   for (let i = 0; i < b.pocet; i++) {
     if (stycnik[i]! < 0) x[i] = x[i]! + rychlost[i]! * dt;
@@ -144,7 +155,7 @@ export function posunBremena(b: Bremena): void {
     const sn = fazeSin[i]!;
     fazeCos[i] = c * krokCos[i]! - sn * krokSin[i]!;
     fazeSin[i] = sn * krokCos[i]! + c * krokSin[i]!;
-    vyskaMinula[i] = vyska[i]!;
+    spojniceMinula[i] = spojnice[i]!;
   }
 }
 
@@ -154,7 +165,7 @@ export function posunBremena(b: Bremena): void {
  * čas volat opakovaně.
  */
 export function pridejSilyBremen(s: Soustava, b: Bremena): void {
-  const { trasa, stycnik, pole, vyska, vyskaMinula, sila, prvek, amplitudy } = b;
+  const { trasa, stycnik, pole, vyska, spojnice, spojniceMinula, sila, prvek, amplitudy } = b;
   const { prvky } = trasa;
   for (let i = 0; i < b.pocet; i++) {
     const uzel = stycnik[i]!;
@@ -164,21 +175,28 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
     let e = NA_ZEMI;
     let xi = 0;
     let povrch: number;
-    if (x < trasa.xLevy) povrch = trasa.yLevy;
-    else if (x > trasa.xPravy) povrch = trasa.yPravy;
+    let naSpojnici: number;
+    if (x < trasa.xLevy) povrch = naSpojnici = trasa.yLevy;
+    else if (x > trasa.xPravy) povrch = naSpojnici = trasa.yPravy;
     else {
       const j = najdiPrvekTrasy(s, trasa, x, pole[i]!);
-      if (j < 0) {
-        e = BEZ_OPORY;
-        povrch = Number.NaN;
-      } else {
+      povrch = naSpojnici = Number.NaN;
+      if (j >= 0) {
         pole[i] = j;
         e = prvky[j]!;
         povrch = vyskaNaPrvku(s, e, x);
+        naSpojnici = vyskaSpojnice;
         xi = mistoNaPrvku;
+      }
+      // Povrch vysoko nad styčníkem není opora, ale kus mostovky, pod kterým břemeno je.
+      const stlaceni = uzel >= 0 ? povrch + b.vyskaNad[i]! - s.y[uzel]! : 0;
+      if (!(povrch === povrch) || stlaceni > NEJVETSI_STLACENI) {
+        e = BEZ_OPORY;
+        povrch = naSpojnici = Number.NaN;
       }
     }
     vyska[i] = povrch;
+    spojnice[i] = naSpojnici;
     prvek[i] = e;
     if (e === BEZ_OPORY) {
       sila[i] = 0;
@@ -187,10 +205,12 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
 
     let tlak: number;
     if (uzel >= 0) {
-      // Pružina a tlumič mezi styčníkem a povrchem; rychlost povrchu pod jedoucím
-      // břemenem z rozdílu výšek zahrnuje průhyb mostu i sklon, po kterém břemeno jede.
-      const minula = vyskaMinula[i]!;
-      const rychlostPovrchu = minula === minula && b.dt > 0 ? (povrch - minula) / b.dt : 0;
+      // Pružina a tlumič mezi styčníkem a povrchem. Rychlost povrchu pod jedoucím břemenem
+      // se bere z rozdílu výšek, takže zahrnuje pohyb mostu i sklon, po kterém břemeno jede.
+      // Počítá se ze spojnice styčníků, ne z ohybové čáry: ta závisí na natočení lehkých
+      // styčníků mostovky a tlumič by přes ni rozkmital jejich nejrychlejší kmity.
+      const minula = spojniceMinula[i]!;
+      const rychlostPovrchu = minula === minula && b.dt > 0 ? (naSpojnici - minula) / b.dt : 0;
       tlak =
         b.tuhost[i]! * (povrch + b.vyskaNad[i]! - s.y[uzel]!) +
         b.tlumeni[i]! * (rychlostPovrchu - s.vy[uzel]!);
@@ -222,6 +242,38 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
   }
 }
 
+/**
+ * O kolik kontakty břemen zvýší nejvyšší frekvenci soustavy: horní odhad přírůstku jejího
+ * čtverce (rad²/s²). Pružina kontaktu o tuhosti k v místě ξ prvku přidává tuhost k·N·Nᵀ,
+ * kde N jsou tvarové funkce; její největší vlastní číslo je k·Σ N_i²/m_i. Rozhodují
+ * natočení lehkých styčníků mostovky (rameno nejvýš pětina délky prvku).
+ */
+export function pridavnaFrekvenceBremen(s: Soustava, b: Bremena): number {
+  let tuhost = 0;
+  let kontaktu = 0;
+  let naStycniku = 0;
+  for (let i = 0; i < b.pocet; i++) {
+    const uzel = b.stycnik[i]!;
+    if (uzel < 0) continue;
+    kontaktu++;
+    if (b.tuhost[i]! > tuhost) tuhost = b.tuhost[i]!;
+    // Vlastní kmitání styčníku břemene na pružině kontaktu.
+    naStycniku = Math.max(naStycniku, b.tuhost[i]! * s.invHmotaY[uzel]!);
+  }
+  if (kontaktu === 0) return 0;
+  let naMostovce = 0;
+  for (let j = 0; j < b.trasa.pocet; j++) {
+    const e = b.trasa.prvky[j]!;
+    const a = s.prvekA[e]!;
+    const c = s.prvekB[e]!;
+    const rameno = 0.2 * s.klidovaDelka[e]!;
+    const poddajnost =
+      rameno * rameno * (s.invSetrvacnost[a]! + s.invSetrvacnost[c]!) + s.invHmotaY[a]! + s.invHmotaY[c]!;
+    if (poddajnost > naMostovce) naMostovce = poddajnost;
+  }
+  return naStycniku + Math.min(kontaktu, KOL_NA_PRVKU) * tuhost * naMostovce;
+}
+
 /** Zabalí břemena do rozhraní, které volá simulace. */
 export function zatizeniBremeny(b: Bremena): Zatizeni {
   return {
@@ -229,5 +281,6 @@ export function zatizeniBremeny(b: Bremena): Zatizeni {
     posun: () => posunBremena(b),
     poZmene: (s) => prestavTrasu(s, b.trasa),
     zmenaKroku: (dt) => nastavKrokBremen(b, dt),
+    pridavnaFrekvence: (s) => pridavnaFrekvenceBremen(s, b),
   };
 }

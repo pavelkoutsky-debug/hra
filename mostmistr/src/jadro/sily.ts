@@ -19,7 +19,6 @@ export function spoctiVnitrniSily(s: Soustava): void {
   const { osovaSila, momentA, momentB } = s;
   const { mezTahu, mezMomentu, plastA, plastB, plastDelka, zatMomentA, zatMomentB } = s;
   const plasticky = !s.plasticitaZmrazena;
-  const lanaTlaci = s.lanaTlaci;
 
   fx.fill(0);
   fy.fill(0);
@@ -41,7 +40,7 @@ export function spoctiVnitrniSily(s: Soustava): void {
     // Osová síla; kladná je tah. Trvalé protažení prvek prodlužuje.
     let osova =
       tuhostOsova[e]! * (delka - klidovaDelka[e]! - plastDelka[e]! + tlumeni * (ex * dvx + ey * dvy));
-    if (druh[e] === LANO && osova < 0 && !lanaTlaci) osova = 0; // lano netlačí
+    if (druh[e] === LANO && osova < 0) osova = 0; // lano netlačí
     if (osova > mezTahu[e]! && plasticky) osova = zplastizujTah(s, e, osova);
     osovaSila[e] = osova;
 
@@ -198,28 +197,32 @@ function vynulujZatizeniPrvku(s: Soustava): void {
   s.pocetZatizenych = 0;
 }
 
+/** Deformační energie prvku `e` v aktuální poloze, v joulech. */
+export function energiePrvku(s: Soustava, e: number): number {
+  const a = s.prvekA[e]!;
+  const b = s.prvekB[e]!;
+  const dx = s.x[b]! - s.x[a]!;
+  const dy = s.y[b]! - s.y[a]!;
+  const delka = Math.sqrt(dx * dx + dy * dy);
+  const protazeni = delka - s.klidovaDelka[e]! - s.plastDelka[e]!;
+  let energie = 0;
+  if (!(s.druh[e] === LANO && protazeni < 0)) energie = 0.5 * s.tuhostOsova[e]! * protazeni * protazeni;
+
+  if (s.druh[e] === NOSNIK) {
+    const ex = dx / delka;
+    const ey = dy / delka;
+    const cosAlfa = s.osaX0[e]! * ex + s.osaY0[e]! * ey;
+    const sinAlfa = s.osaX0[e]! * ey - s.osaY0[e]! * ex;
+    const psiA = s.sinN[a]! * cosAlfa - s.cosN[a]! * sinAlfa - s.plastA[e]!;
+    const psiB = s.sinN[b]! * cosAlfa - s.cosN[b]! * sinAlfa - s.plastB[e]!;
+    energie += 0.5 * s.kAA[e]! * psiA * psiA + s.kAB[e]! * psiA * psiB + 0.5 * s.kBB[e]! * psiB * psiB;
+  }
+  return energie;
+}
+
 /** Deformační energie všech prvků v aktuální poloze, v joulech. */
 export function deformacniEnergie(s: Soustava): number {
-  const { x, y, cosN, sinN, prvekA, prvekB, druh, klidovaDelka, osaX0, osaY0, tuhostOsova, kAA, kAB, kBB } = s;
   let energie = 0;
-  for (let e = 0; e < s.pocetPrvku; e++) {
-    const a = prvekA[e]!;
-    const b = prvekB[e]!;
-    const dx = x[b]! - x[a]!;
-    const dy = y[b]! - y[a]!;
-    const delka = Math.sqrt(dx * dx + dy * dy);
-    const protazeni = delka - klidovaDelka[e]! - s.plastDelka[e]!;
-    if (!(druh[e] === LANO && protazeni < 0)) energie += 0.5 * tuhostOsova[e]! * protazeni * protazeni;
-
-    if (druh[e] === NOSNIK) {
-      const ex = dx / delka;
-      const ey = dy / delka;
-      const cosAlfa = osaX0[e]! * ex + osaY0[e]! * ey;
-      const sinAlfa = osaX0[e]! * ey - osaY0[e]! * ex;
-      const psiA = sinN[a]! * cosAlfa - cosN[a]! * sinAlfa - s.plastA[e]!;
-      const psiB = sinN[b]! * cosAlfa - cosN[b]! * sinAlfa - s.plastB[e]!;
-      energie += 0.5 * kAA[e]! * psiA * psiA + kAB[e]! * psiA * psiB + 0.5 * kBB[e]! * psiB * psiB;
-    }
-  }
+  for (let e = 0; e < s.pocetPrvku; e++) energie += energiePrvku(s, e);
   return energie;
 }

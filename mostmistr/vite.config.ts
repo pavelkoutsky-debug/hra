@@ -29,11 +29,12 @@ export default defineConfig({
     target: "es2022",
     sourcemap: true,
     rollupOptions: {
-      // Vedle hry se sestavuje zkušebna a měřicí stránka.
+      // Vedle hry se sestavuje zkušebna, měřicí stránka a kontrola shody výpočtu.
       input: {
         index: fileURLToPath(new URL("./index.html", import.meta.url)),
         zkusebna: fileURLToPath(new URL("./zkusebna.html", import.meta.url)),
         mereni: fileURLToPath(new URL("./mereni.html", import.meta.url)),
+        otisky: fileURLToPath(new URL("./otisky.html", import.meta.url)),
       },
     },
   },

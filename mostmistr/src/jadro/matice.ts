@@ -6,7 +6,7 @@
 // styčníků to stačí; rozklad soustavy s 900 neznámými trvá desetiny sekundy.
 
 import { spoctiVnitrniSily } from "./sily";
-import type { Soustava } from "./soustava";
+import { LANO, type Soustava } from "./soustava";
 import { hmotyStupnu, obnovPolohu, posunStupne, silyStupnu, ulozPolohu } from "./stupne";
 
 /** Krok numerické derivace sil: metry u posunů, radiány u natočení. */
@@ -296,8 +296,6 @@ export function nejvyssiFrekvence(s: Soustava, stupne: Int32Array, presnost = 1e
   s.omega.fill(0);
   const zmrazeno = s.plasticitaZmrazena;
   s.plasticitaZmrazena = true;
-  // Povolené lano se může během zkoušky napnout; krok musí být stabilní i potom.
-  s.lanaTlaci = true;
 
   const v = new Float64Array(n);
   let stav = 6789;
@@ -346,10 +344,23 @@ export function nejvyssiFrekvence(s: Soustava, stupne: Int32Array, presnost = 1e
   s.vx.set(vx);
   s.vy.set(vy);
   s.omega.set(omega);
-  s.lanaTlaci = false;
   spoctiVnitrniSily(s);
   s.plasticitaZmrazena = zmrazeno;
-  return Math.sqrt(Math.max(0, lambda));
+
+  // Povolené lano teď žádnou tuhost nemá, ale během zkoušky se může napnout a krok musí
+  // zůstat stabilní i potom. Tuhost k mezi dvěma hmotami přidá ke čtverci nejvyšší
+  // frekvence nejvýš dvojnásobek součtu k/m přes povolená lana ve styčníku.
+  let povolena = 0;
+  const pridano = new Float64Array(s.pocetStycniku);
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    if (s.druh[e] !== LANO || s.osovaSila[e]! > 0) continue;
+    const a = s.prvekA[e]!;
+    const b = s.prvekB[e]!;
+    pridano[a] = pridano[a]! + 2 * s.tuhostOsova[e]! * Math.max(s.invHmotaX[a]!, s.invHmotaY[a]!);
+    pridano[b] = pridano[b]! + 2 * s.tuhostOsova[e]! * Math.max(s.invHmotaX[b]!, s.invHmotaY[b]!);
+  }
+  for (let i = 0; i < s.pocetStycniku; i++) if (pridano[i]! > povolena) povolena = pridano[i]!;
+  return Math.sqrt(Math.max(0, lambda) + povolena);
 }
 
 /** Největší posun (m) nebo natočení (rad) v jednom kroku hledání rovnováhy. */

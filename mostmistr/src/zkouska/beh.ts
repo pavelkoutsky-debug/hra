@@ -5,7 +5,9 @@ import type { ZpravaProZkousku, ZpravaZeZkousky } from "./protokol";
  * Běh zkoušky nezávislý na tom, kudy zprávy tečou. Ve hře ho obaluje Web Worker
  * (`pracovnik.ts`), v testech se volá přímo.
  *
- * V milníku M0 umí jen ohlásit verzi fyziky; samotná simulace přijde s jádrem v M1b.
+ * Zatím umí jen ohlásit verzi fyziky. Jádro je hotové (M1b), ale běh zkoušky s provozem
+ * podle jízdního řádu a s hodnocením přijde až s první hratelnou verzí (M2); do té doby
+ * zkoušku poctivě odmítne.
  */
 export class BehZkousky {
   readonly #posli: (zprava: ZpravaZeZkousky) => void;
@@ -28,7 +30,7 @@ export class BehZkousky {
           });
           return;
         }
-        this.#posli({ typ: "chyba", kod: "jadro-neni-hotove" });
+        this.#posli({ typ: "chyba", kod: "zkouska-neni-hotova" });
         return;
       case "vstup":
       case "stop":

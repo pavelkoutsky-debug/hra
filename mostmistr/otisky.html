@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Mostmistr – shoda výpočtu</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #103f78;
+        color: #cfe3ff;
+        font: 13px/1.5 "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+      }
+      h1 { margin: 0 0 4px; color: #fff; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; }
+      p { max-width: 76ch; margin: 0 0 12px; }
+      button {
+        padding: 5px 14px;
+        border: 1px solid #cfe3ff;
+        border-radius: 2px;
+        background: transparent;
+        color: #cfe3ff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) { background: #1d5aa3; color: #fff; }
+      button:disabled { opacity: 0.45; cursor: default; }
+      .tabulka { overflow-x: auto; margin-top: 16px; }
+      table { border-collapse: collapse; white-space: nowrap; }
+      th, td { padding: 4px 10px; border: 1px solid rgb(207 227 255 / 0.45); text-align: right; }
+      th { color: #8fb4e6; font-weight: normal; text-align: center; }
+      td:first-child, th:first-child { text-align: left; }
+      td[data-shoda="ano"] { color: #fff; }
+      td[data-shoda="ne"] { color: #ffd166; }
+      #prostredi { color: #8fb4e6; font-size: 11px; overflow-wrap: anywhere; }
+      #stav { margin-left: 12px; }
+      #souhrn { margin-top: 16px; color: #fff; }
+      #souhrn[data-shoda="ne"] { color: #ffd166; }
+      a { color: #fff; }
+    </style>
+  </head>
+  <body>
+    <h1>Mostmistr – shoda výpočtu</h1>
+    <p>
+      Spočítá dvacet referenčních mostů a porovná otisk výsledku s otiskem, který vyšel při vývoji.
+      Fyzika má dát v každém prohlížeči a na každém počítači bitově stejný výsledek; díky tomu jde
+      záznam zkoušky přehrát přesně znovu. Když některý otisk nesouhlasí, pošli mi prosím výsledky.
+    </p>
+    <p>
+      <button type="button" id="spustit" disabled>Spustit znovu</button>
+      <button type="button" id="kopirovat" disabled>Kopírovat výsledky</button>
+      <span id="stav" role="status"></span>
+    </p>
+    <p id="prostredi"></p>
+    <div class="tabulka">
+      <table id="vysledky">
+        <thead>
+          <tr>
+            <th>Most a scénář</th>
+            <th>Kroků</th>
+            <th>Porušení</th>
+            <th>Výpočet [ms]</th>
+            <th>Otisk</th>
+            <th>Má vyjít</th>
+            <th>Shoda</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="souhrn" role="status"></p>
+    <p><a href="/zkusebna.html">Zkušebna</a> · <a href="/mereni.html">Měření výkonu</a> · <a href="/">Zpět na výkres</a></p>
+    <noscript>Stránka potřebuje zapnutý JavaScript.</noscript>
+    <script type="module" src="/mereni/otisky.ts"></script>
+  </body>
+</html>

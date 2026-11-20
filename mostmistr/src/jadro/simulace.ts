@@ -9,7 +9,7 @@ import { nastavTuhostPrvku, prepoctiHmoty, type Soustava } from "./soustava";
 import { betaProUtlum, frekvenceProKrok, UTLUM_NEJVYSSI_FREKVENCE, zvolKrok } from "./stabilita";
 import { volneStupne } from "./stupne";
 import { pridejTlumice } from "./tlumice";
-import { vytvorModalniTlumeni } from "./tlumeni";
+import { utlumyTvaru, vytvorModalniTlumeni } from "./tlumeni";
 import {
   NEJVYSSI_ALFA,
   pridejTlumeniHmotou,
@@ -25,6 +25,11 @@ const VYHLAZENI = 0.005;
 const NEJVIC_PORUSENI_NAJEDNOU = 4;
 /** Kolik vlastních tvarů dostane přímo zadaný útlum. */
 const TLUMENYCH_TVARU = 10;
+/**
+ * Rychlost styčníku v m/s, nad kterou se výpočet považuje za rozpadlý. Troska padající
+ * z půlkilometrové výšky má 100 m/s; švihnutí přetrženého lana pár set.
+ */
+const NEJVYSSI_RYCHLOST = 2000;
 
 /**
  * Zatížení, které do soustavy vstupuje zvenčí: provoz, budič, zkušební síla.
@@ -43,6 +48,11 @@ export interface Zatizeni {
   poZmene?(s: Soustava): void;
   /** Krok výpočtu se změnil (na začátku a po porušení). */
   zmenaKroku?(dt: number): void;
+  /**
+   * O kolik zatížení zvýší čtverec nejvyšší frekvence soustavy (rad²/s²), když na ni působí
+   * přes pružiny (pneumatiky). Simulace podle toho zkrátí krok.
+   */
+  pridavnaFrekvence?(s: Soustava): number;
 }
 
 export interface NastaveniSimulace {
@@ -50,6 +60,12 @@ export interface NastaveniSimulace {
   tiha: number;
   /** Poměrný útlum konstrukce (stejný pro všechny tlumené tvary). */
   utlum: number;
+  /**
+   * Poměrný útlum materiálu každého prvku. Když je zadán, dostane každý tlumený tvar
+   * útlum vážený podle toho, které prvky se v něm deformují, a `utlum` se použije
+   * jen tam, kde tvary nejsou (po porušení).
+   */
+  utlumPrvku?: Float64Array;
   zatizeni?: Zatizeni;
   /**
    * Volné stupně, ze kterých se počítají vlastní tvary pro tlumení. Výchozí jsou všechny;
@@ -108,7 +124,7 @@ export class Simulace {
       for (const kod of nastaveni.tlumeneStupne) this.#tlumeny[(kod / 3) | 0] = 1;
     }
 
-    this.#vychoziOmega = nejvyssiFrekvence(soustava, volneStupne(soustava));
+    this.#vychoziOmega = this.#nejvyssiFrekvence();
     this.#nastavKrokATlumeniPrvku(this.#vychoziOmega);
 
     // Tlumení vlastních tvarů; soustava, která není tvarově určitá, ho mít nemůže.
@@ -118,9 +134,10 @@ export class Simulace {
       // Tlumení úměrné tuhosti prvků dává tvaru s frekvencí ω útlum β·ω/2. O ten se zadaný
       // útlum zmenší, aby měl každý tlumený tvar dohromady právě tolik, kolik má mít.
       const beta = soustava.beta[0] ?? 0;
+      const zadane = nastaveni.utlumPrvku ? utlumyTvaru(soustava, stupne, tvary, nastaveni.utlumPrvku) : null;
       const utlumy = new Float64Array(tvary.omega.length);
       for (let i = 0; i < utlumy.length; i++) {
-        utlumy[i] = Math.max(0, nastaveni.utlum - 0.5 * beta * tvary.omega[i]!);
+        utlumy[i] = Math.max(0, (zadane ? zadane[i]! : nastaveni.utlum) - 0.5 * beta * tvary.omega[i]!);
       }
       this.#krok.modalni = vytvorModalniTlumeni(soustava, stupne, tvary, utlumy, this.#krok.dt);
       this.#alfaPoPoruseni = Math.min(NEJVYSSI_ALFA, 2 * nastaveni.utlum * tvary.omega[0]!);
@@ -175,9 +192,23 @@ export class Simulace {
     if (zmeneno) this.poZmeneStavby();
 
     // Pojistka: neplatná čísla se šíří celou soustavou, stačí zkontrolovat jeden součet.
+    // Rychlost, jaké v mostě nic dosáhnout nemůže, znamená, že se výpočet rozkmital.
     let soucet = 0;
-    for (let i = 0; i < s.pocetStycniku; i++) soucet += s.x[i]! + s.y[i]!;
-    if (!Number.isFinite(soucet)) this.rozpadla = true;
+    let nejrychlejsi = 0;
+    for (let i = 0; i < s.pocetStycniku; i++) {
+      soucet += s.x[i]! + s.y[i]!;
+      const rychlost = s.vx[i]! * s.vx[i]! + s.vy[i]! * s.vy[i]!;
+      if (rychlost > nejrychlejsi) nejrychlejsi = rychlost;
+    }
+    if (!Number.isFinite(soucet) || nejrychlejsi > NEJVYSSI_RYCHLOST * NEJVYSSI_RYCHLOST) this.rozpadla = true;
+  }
+
+  /** Nejvyšší frekvence soustavy včetně pružin, kterými na ni působí zatížení. */
+  #nejvyssiFrekvence(): number {
+    const s = this.soustava;
+    const omega = nejvyssiFrekvence(s, volneStupne(s));
+    const navic = this.#nastaveni.zatizeni?.pridavnaFrekvence?.(s) ?? 0;
+    return Math.sqrt(omega * omega + navic);
   }
 
   /** Nastaví krok a tlumení úměrné tuhosti podle nejvyšší frekvence soustavy. */
@@ -232,7 +263,7 @@ export class Simulace {
     if (zmekceno) prepoctiHmoty(s);
 
     // Rozdělené pruty, které dál nesou, mají kratší díly a krok se podle nich zkrátí.
-    const omegaMax = nejvyssiFrekvence(s, volneStupne(s));
+    const omegaMax = this.#nejvyssiFrekvence();
     if (omegaMax > 0) this.#nastavKrokATlumeniPrvku(Math.max(omegaMax, this.#vychoziOmega));
     // Souvislé části konstrukce se porušením změnily.
     this.#hmotou = vytvorTlumeniHmotou(s, this.#alfaPoPoruseni, this.#tlumeny);
