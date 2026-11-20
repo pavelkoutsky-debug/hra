@@ -256,7 +256,7 @@ a.tlacitko {
 
 .zkusebna {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
 }
@@ -318,6 +318,11 @@ a.tlacitko {
 .overeni td:first-child {
   text-align: left;
   white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.overeni td:last-child {
+  padding-right: 0;
 }
 
 .overeni td {
@@ -360,6 +365,33 @@ a.tlacitko {
   transform: translateY(-50%);
   background: rgb(143 208 255 / 0.4);
   pointer-events: none;
+}
+
+/* Značky porušení: svislé čárky nad osou v okamžiku, kdy prut povolil. */
+.osa__znacky {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.osa__znacka {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  margin-left: -1px;
+  background: #ff4d3d;
+}
+
+.poruseni {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.poruseni li {
+  padding: 3px 0;
+  border-bottom: 1px solid rgb(207 227 255 / 0.25);
 }
 
 .osa input[type="range"] {

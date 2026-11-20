@@ -87,6 +87,7 @@ describe("zkušebna", () => {
     await stranka.locator("#cas").fill("5");
     expect(await casDeje()).toBe(5);
     await stranka.screenshot({ path: `${SLOZKA}/05-zkusebna-most.png` });
+    expect(await stranka.locator(".poruseni").getAttribute("data-pocet")).toBe("0");
   });
 
   it("rychlost přehrávání se dá změnit", async () => {
@@ -99,10 +100,17 @@ describe("zkušebna", () => {
     await stranka.locator('[data-rychlost="1"]').click();
   });
 
-  for (const [pripad, snimek, cas] of [
-    ["rezonance", "06-zkusebna-rezonance", "25.5"],
-    ["nosnik", "07-zkusebna-nosnik", "0.1"],
-    ["kyvadlo", "08-zkusebna-kyvadlo", "0.6"],
+  // Případ, název snímku, čas snímku v sekundách a počet porušení, která v něm mají nastat
+  // (null = aspoň jedno, přesný počet závisí na průběhu zřícení).
+  for (const [pripad, snimek, cas, poruseni] of [
+    ["pretizeni", "06-zkusebna-pretizeni", "5.5", null],
+    ["plast", "07-zkusebna-plast", "9.25", null],
+    ["vzper", "08-zkusebna-vzper", "12.5", 0],
+    ["prejezd", "09-zkusebna-prejezd", "0.7", 0],
+    ["rezonance", "10-zkusebna-rezonance", "25.5", 0],
+    ["tlumic", "11-zkusebna-tlumic", "15.5", 0],
+    ["nosnik", "12-zkusebna-nosnik", "0.1", 0],
+    ["kyvadlo", "13-zkusebna-kyvadlo", "0.6", 0],
   ] as const) {
     it(`případ „${pripad}“ doběhne a sedí s teorií`, async () => {
       await stranka.locator("#pripad").selectOption(pripad);
@@ -113,10 +121,32 @@ describe("zkušebna", () => {
       expect(shody.length).toBeGreaterThan(0);
       expect(shody.every((shoda) => shoda === "ano")).toBe(true);
       expect(stranka.url()).toContain(`pripad=${pripad}`);
+
+      // Porušení jsou vypsaná v panelu a vyznačená na časové ose.
+      const pocet = Number(await stranka.locator(".poruseni").getAttribute("data-pocet"));
+      if (poruseni === null) expect(pocet).toBeGreaterThan(0);
+      else expect(pocet).toBe(poruseni);
+      expect(await stranka.locator(".osa__znacka").count()).toBe(pocet);
+      expect(await stranka.locator(".poruseni li").count()).toBeGreaterThan(0);
+
       await stranka.locator("#cas").fill(cas);
       await stranka.screenshot({ path: `${SLOZKA}/${snimek}.png` });
     });
   }
+
+  it("po zřícení jde záznam přehrát až do konce a vrátit před zlom", async () => {
+    await stranka.locator("#pripad").selectOption("pretizeni");
+    await pockejNaVysledek();
+    const konec = Number(await stranka.locator("#cas").getAttribute("max"));
+    // Děj skončil brzy po zlomu, ne až po devíti ohlášených sekundách.
+    expect(konec).toBeGreaterThan(5);
+    expect(konec).toBeLessThan(8.5);
+    // Táhlo má krok jedné setiny sekundy.
+    await stranka.locator("#cas").fill((Math.floor(konec * 100) / 100).toFixed(2));
+    await stranka.screenshot({ path: `${SLOZKA}/14-zkusebna-po-zriceni.png` });
+    await stranka.locator("#cas").fill("1");
+    expect(await casDeje()).toBe(1);
+  });
 
   it("adresa s parametrem otevře rovnou zvolený případ", async () => {
     await stranka.goto(`${adresa}zkusebna.html?pripad=kyvadlo`);

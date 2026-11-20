@@ -1,76 +1,125 @@
-// Běh jednoho případu zkušebny: krokuje simulaci a vydává snímky pro záznam.
-// Nezávisí na prohlížeči; ve zkušebně ho pohání pracovní vlákno, v testech Node.
+// Běh jednoho případu zkušebny: krokuje simulaci a vydává snímky, změny stavby a porušení
+// pro záznam. Nezávisí na prohlížeči; ve zkušebně ho pohání pracovní vlákno, v testech Node.
 
-import { krok } from "../jadro/integrator";
-import { topologieSoustavy, type Snimek, type Topologie } from "../zkouska/zaznam";
+import { BEZ_OPORY } from "../jadro/bremena";
+import { ZPUSOB_TAH } from "../jadro/namahani";
+import {
+  topologieSoustavy,
+  type PopisKresleni,
+  type Snimek,
+  type Topologie,
+  type UdalostZaznamu,
+} from "../zkouska/zaznam";
 import type { BehPripadu, Overeni } from "./pripady";
 
 /** Počet snímků záznamu na sekundu děje. */
 export const SNIMKU_ZA_SEKUNDU = 60;
 /** Poloměr kola při kreslení, v metrech. */
 export const POLOMER_KOLA = 0.45;
-/** Podíl únosnosti v tahu, od kterého se prut kreslí jako tažený. */
-const PRAH_TAHU = 0.02;
+
+/** Co běh vydal od minulého volání. */
+export interface DavkaZaznamu {
+  snimky: Snimek[];
+  /** Nové stavby konstrukce v pořadí, v jakém vznikly. */
+  topologie: Topologie[];
+  udalosti: UdalostZaznamu[];
+}
 
 export class BehZkusebny {
-  readonly topologie: Topologie;
   readonly #pripad: BehPripadu;
-  #cas = 0;
-  #kroku = 0;
+  readonly #kresleni: PopisKresleni;
   #dalsiSnimek = 0;
+  #topologii = 0;
+  #udalosti = 0;
+  #casPoruseni = Infinity;
+  #zacal = false;
 
   constructor(pripad: BehPripadu) {
     this.#pripad = pripad;
-    this.topologie = topologieSoustavy(pripad.soustava, pripad.mostovka);
+    const skryte: number[] = [];
+    const bremena = pripad.bremena;
+    if (bremena) {
+      for (let i = 0; i < bremena.pocet; i++) if (bremena.stycnik[i]! >= 0) skryte.push(bremena.stycnik[i]!);
+    }
+    this.#kresleni = { mostovka: pripad.mostovka, skryte, zavazi: pripad.zavazi ?? [] };
   }
 
   get cas(): number {
-    return this.#cas;
+    return this.#pripad.simulace.cas;
   }
 
   get kroku(): number {
-    return this.#kroku;
+    return this.#pripad.simulace.kroku;
+  }
+
+  /** Krok výpočtu na začátku děje; po porušení se může zkrátit. */
+  get dt(): number {
+    return this.#pripad.simulace.dt;
+  }
+
+  /** Do kdy děj nejvýš poběží; po porušení se může zkrátit. */
+  get konec(): number {
+    const { trvani, dobehPoPoruseni } = this.#pripad;
+    return dobehPoPoruseni === undefined ? trvani : Math.min(trvani, this.#casPoruseni + dobehPoPoruseni);
   }
 
   get hotovo(): boolean {
-    return this.#cas >= this.#pripad.trvani;
+    return this.cas >= this.konec || this.#pripad.simulace.rozpadla;
   }
 
   get pocetKol(): number {
-    return this.#pripad.kola?.pocet ?? 0;
+    return this.#pripad.bremena?.pocet ?? 0;
   }
 
   /**
-   * Posune děj nejvýš o `sekundDeje` a pro každý okamžik záznamu zavolá `vydej`.
-   * První volání vydá i snímek výchozího stavu.
+   * Posune děj nejvýš o `sekundDeje` a vrátí, co přibylo do záznamu.
+   * První volání vydá i výchozí stavbu a snímek výchozího stavu.
    */
-  pokracuj(sekundDeje: number, vydej: (snimek: Snimek) => void): void {
-    const { soustava, nastaveni, trvani, predKrokem, poKroku } = this.#pripad;
-    const do_ = Math.min(trvani, this.#cas + sekundDeje);
-    if (this.#kroku === 0) {
-      vydej(this.#snimek());
+  pokracuj(sekundDeje: number): DavkaZaznamu {
+    const { simulace, poKroku } = this.#pripad;
+    const davka: DavkaZaznamu = { snimky: [], topologie: [], udalosti: [] };
+    if (!this.#zacal) {
+      this.#zacal = true;
+      davka.topologie.push(this.#novaTopologie());
+      davka.snimky.push(this.#snimek());
       this.#dalsiSnimek = 1 / SNIMKU_ZA_SEKUNDU;
     }
-    while (this.#cas < do_) {
-      if (predKrokem) predKrokem(this.#cas);
-      krok(soustava, nastaveni);
-      this.#kroku += 1;
-      // Čas se počítá z počtu kroků, aby se v něm nesčítala zaokrouhlovací chyba.
-      this.#cas = this.#kroku * nastaveni.dt;
-      if (poKroku) poKroku(this.#cas);
-      if (this.#cas >= this.#dalsiSnimek) {
-        vydej(this.#snimek());
+    const do_ = this.cas + sekundDeje;
+    while (this.cas < do_ && !this.hotovo) {
+      simulace.krok();
+      if (poKroku) poKroku(simulace.cas);
+
+      if (simulace.udalosti.length > this.#udalosti) {
+        // Porušení: zaznamenat, co se stalo, a hned vydat snímek s novou stavbou,
+        // aby se přehrávání nepokoušelo prokládat přes zlom.
+        for (let i = this.#udalosti; i < simulace.udalosti.length; i++) {
+          const u = simulace.udalosti[i]!;
+          davka.udalosti.push({ cas: u.cas, prut: u.prut, zpusob: u.zpusob, nasledek: u.nasledek });
+        }
+        this.#udalosti = simulace.udalosti.length;
+        this.#casPoruseni = Math.min(this.#casPoruseni, simulace.cas);
+        davka.topologie.push(this.#novaTopologie());
+        davka.snimky.push(this.#snimek());
+      } else if (simulace.cas >= this.#dalsiSnimek) {
+        davka.snimky.push(this.#snimek());
         this.#dalsiSnimek += 1 / SNIMKU_ZA_SEKUNDU;
       }
     }
+    return davka;
   }
 
   vyhodnot(): Overeni[] {
     return this.#pripad.vyhodnot();
   }
 
+  #novaTopologie(): Topologie {
+    this.#topologii += 1;
+    return topologieSoustavy(this.#pripad.simulace.soustava, this.#kresleni);
+  }
+
   #snimek(): Snimek {
-    const { soustava: s, unosnost, kola } = this.#pripad;
+    const { simulace, bremena, sily } = this.#pripad;
+    const s = simulace.soustava;
     const polohy = new Float32Array(2 * s.pocetStycniku);
     for (let i = 0; i < s.pocetStycniku; i++) {
       polohy[2 * i] = s.x[i]!;
@@ -78,22 +127,31 @@ export class BehZkusebny {
     }
     const vyuziti = new Float32Array(s.pocetPrvku);
     for (let e = 0; e < s.pocetPrvku; e++) {
-      const osova = s.osovaSila[e]!;
-      const moment = Math.max(Math.abs(s.momentA[e]!), Math.abs(s.momentB[e]!));
-      // Prosté sečtení podílů osové síly a momentu; přesnější posudek přijde s porušením.
-      const podilOsovy = Math.abs(osova) / (osova >= 0 ? unosnost.tah[e]! : unosnost.tlak[e]!);
-      const podil = podilOsovy + moment / unosnost.moment[e]!;
-      // Jako tažený se prut kreslí jen tehdy, když je tah znatelný; prut namáhaný
-      // jen ohybem má osovou sílu kolem nuly a její znaménko nic neznamená.
-      vyuziti[e] = osova > 0 && podilOsovy > PRAH_TAHU ? podil : -podil;
+      // Jako tažený se kreslí prut, u kterého rozhoduje tah; ohyb a tlak plnou čarou.
+      vyuziti[e] = s.zpusob[e] === ZPUSOB_TAH ? s.vyuziti[e]! : -s.vyuziti[e]!;
     }
-    const stredyKol = new Float32Array(2 * (kola?.pocet ?? 0));
-    if (kola) {
-      for (let i = 0; i < kola.pocet; i++) {
-        stredyKol[2 * i] = kola.x[i]!;
-        stredyKol[2 * i + 1] = kola.y[i]! + POLOMER_KOLA;
+    const kola = new Float32Array(2 * (bremena?.pocet ?? 0));
+    if (bremena) {
+      for (let i = 0; i < bremena.pocet; i++) {
+        const uzel = bremena.stycnik[i]!;
+        if (uzel >= 0) {
+          kola[2 * i] = s.x[uzel]!;
+          kola[2 * i + 1] = s.y[uzel]! + POLOMER_KOLA;
+        } else {
+          kola[2 * i] = bremena.x[i]!;
+          // Síla bez styčníku se kreslí jako kolo položené na mostovce.
+          const povrch = bremena.prvek[i] === BEZ_OPORY ? Number.NaN : bremena.vyska[i]!;
+          kola[2 * i + 1] = povrch + POLOMER_KOLA;
+        }
       }
     }
-    return { cas: this.#cas, polohy, vyuziti, kola: stredyKol };
+    const sipky = new Float32Array(4 * (sily?.length ?? 0));
+    sily?.forEach((sila, i) => {
+      sipky[4 * i] = s.x[sila.stycnik]!;
+      sipky[4 * i + 1] = s.y[sila.stycnik]!;
+      sipky[4 * i + 2] = sila.fx;
+      sipky[4 * i + 3] = sila.fy;
+    });
+    return { cas: simulace.cas, topologie: this.#topologii - 1, polohy, vyuziti, kola, sily: sipky };
   }
 }

@@ -6,8 +6,9 @@
 // ho vede předepsaná rychlost (zadržený posun x s nenulovou rychlostí). Ke každému břemenu
 // může patřit budicí síla s periodou kroku: tu přenáší jen mostovka.
 //
-// Kontakt je jednostranný: břemeno mostovku tlačí, ale netahá. Mimo okraje trasy jede
-// po pevné zemi; kde mostovka chybí, ztrácí oporu a padá.
+// Kontakt styčníku je jednostranný: břemeno mostovku tlačí, ale netahá. Síla bez styčníku
+// je předepsaná včetně znaménka. Mimo okraje trasy jede břemeno po pevné zemi; kde
+// mostovka chybí, ztrácí oporu a padá.
 
 import type { Zatizeni } from "./simulace";
 import type { Soustava } from "./soustava";
@@ -199,7 +200,8 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
       tlak = b.tiha[i]!;
     }
 
-    if (b.frekvence[i] !== 0 && tlak > 0) {
+    // Budicí síla patří k břemenu, které na mostovce stojí; odskočené kolo nebudí nic.
+    if (b.frekvence[i] !== 0 && (tlak > 0 || uzel < 0)) {
       // Harmonické složky z fáze základní frekvence, bez goniometrie:
       // sin 2φ = 2sc, cos 2φ = c² − s², sin 3φ = s(3 − 4s²), cos 3φ = c(4c² − 3).
       const c = b.fazeCos[i]!;
@@ -212,7 +214,8 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
         amplitudy[k + 3]! * (c * c - sn * sn) +
         amplitudy[k + 4]! * (sn * (3 - 4 * sn * sn)) +
         amplitudy[k + 5]! * (c * (4 * c * c - 3));
-      if (tlak < 0) tlak = 0;
+      // Styčník mostovku jen tlačí. Síla bez styčníku je předepsaná a smí i táhnout (budič).
+      if (tlak < 0 && uzel >= 0) tlak = 0;
     }
     sila[i] = tlak;
     if (e >= 0 && tlak !== 0) pridejSiluNaPrvek(s, e, xi, 0, -tlak);

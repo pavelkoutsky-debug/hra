@@ -6,10 +6,16 @@ import { nejvyssiFrekvence, vlastniTvarySoustavy } from "./matice";
 import { vyhodnotNamahani } from "./namahani";
 import { najdiPoruseni, provedPoruseni, type Poruseni } from "./poruseni";
 import { nastavTuhostPrvku, prepoctiHmoty, type Soustava } from "./soustava";
-import { betaProUtlum, frekvenceProKrok, zvolKrok } from "./stabilita";
+import { betaProUtlum, frekvenceProKrok, UTLUM_NEJVYSSI_FREKVENCE, zvolKrok } from "./stabilita";
 import { volneStupne } from "./stupne";
 import { pridejTlumice } from "./tlumice";
 import { vytvorModalniTlumeni } from "./tlumeni";
+import {
+  NEJVYSSI_ALFA,
+  pridejTlumeniHmotou,
+  vytvorTlumeniHmotou,
+  type TlumeniHmotou,
+} from "./tlumeniHmotou";
 
 /** Po kolika krocích se posuzuje namáhání a hledá porušení. */
 const INTERVAL_POSUDKU = 4;
@@ -51,6 +57,11 @@ export interface NastaveniSimulace {
    */
   tlumeneStupne?: Int32Array;
   /**
+   * Poměrný útlum, který tlumení úměrné tuhosti prvků dodá nejvyšší frekvenci soustavy.
+   * Výchozí hodnota potlačuje numerické zvonění; nula ho vypne (ověřování zachování energie).
+   */
+  utlumNejvyssi?: number;
+  /**
    * Násobek zvoleného kroku, nejvýš 1. Slouží ke kontrole, že výsledek na kroku
    * nezávisí: s polovičním krokem má vyjít v toleranci totéž.
    */
@@ -78,6 +89,9 @@ export class Simulace {
   #vychoziOmega = 0;
   /** Tlumení úměrné hmotě, které po prvním porušení nahradí tlumení vlastních tvarů. */
   #alfaPoPoruseni = 0;
+  #hmotou: TlumeniHmotou | null = null;
+  /** Styčníky konstrukce (1) a břemen (0); břemena mají vlastní tlumiče a tady se netlumí. */
+  #tlumeny: Uint8Array | null = null;
 
   /**
    * Soustava má být ve výchozí rovnováze (viz `najdiRovnovahu`), jinak se na začátku
@@ -87,10 +101,11 @@ export class Simulace {
     this.soustava = soustava;
     this.#nastaveni = nastaveni;
     this.#krok = { dt: 0, tiha: nastaveni.tiha, alfa: 0 };
-    const zatizeni = nastaveni.zatizeni;
-    if (zatizeni) {
-      // Integrátor volá další síly po posunu, tedy pro stav na konci kroku.
-      this.#krok.dalsiSily = (s) => zatizeni.pridejSily(s, this.#cas + this.#krok.dt);
+    // Integrátor volá další síly po posunu, tedy pro stav na konci kroku.
+    this.#krok.dalsiSily = (s) => this.#pridejDalsiSily(s, this.#cas + this.#krok.dt);
+    if (nastaveni.tlumeneStupne) {
+      this.#tlumeny = new Uint8Array(soustava.pocetStycniku);
+      for (const kod of nastaveni.tlumeneStupne) this.#tlumeny[(kod / 3) | 0] = 1;
     }
 
     this.#vychoziOmega = nejvyssiFrekvence(soustava, volneStupne(soustava));
@@ -108,10 +123,11 @@ export class Simulace {
         utlumy[i] = Math.max(0, nastaveni.utlum - 0.5 * beta * tvary.omega[i]!);
       }
       this.#krok.modalni = vytvorModalniTlumeni(soustava, stupne, tvary, utlumy, this.#krok.dt);
-      this.#alfaPoPoruseni = 2 * nastaveni.utlum * tvary.omega[0]!;
+      this.#alfaPoPoruseni = Math.min(NEJVYSSI_ALFA, 2 * nastaveni.utlum * tvary.omega[0]!);
     } else {
-      this.#alfaPoPoruseni = 2 * nastaveni.utlum * 2 * Math.PI;
-      this.#krok.alfa = this.#alfaPoPoruseni;
+      // Bez vlastních tvarů není podle čeho tlumení ladit; bere se, jako by kmitala na 1 Hz.
+      this.#alfaPoPoruseni = Math.min(NEJVYSSI_ALFA, 2 * nastaveni.utlum * 2 * Math.PI);
+      this.#hmotou = vytvorTlumeniHmotou(soustava, this.#alfaPoPoruseni, this.#tlumeny);
     }
     this.#spoctiSily();
   }
@@ -167,16 +183,23 @@ export class Simulace {
   /** Nastaví krok a tlumení úměrné tuhosti podle nejvyšší frekvence soustavy. */
   #nastavKrokATlumeniPrvku(omegaMax: number): void {
     const omega = frekvenceProKrok(omegaMax);
-    this.#krok.dt = zvolKrok(omega) * Math.min(1, this.#nastaveni.zkraceniKroku ?? 1);
-    this.soustava.beta.fill(betaProUtlum(omega));
+    const xi = this.#nastaveni.utlumNejvyssi ?? UTLUM_NEJVYSSI_FREKVENCE;
+    this.#krok.dt = zvolKrok(omega, xi) * Math.min(1, this.#nastaveni.zkraceniKroku ?? 1);
+    this.soustava.beta.fill(betaProUtlum(omega, xi));
     this.#nastaveni.zatizeni?.zmenaKroku?.(this.#krok.dt);
   }
 
   /** Síly mostu i zatížení pro okamžitý stav; z nich vychází první půlkrok rychlostí. */
   #spoctiSily(): void {
-    spoctiSily(this.soustava, this.#nastaveni.tiha, this.#krok.alfa, this.#krok.modalni);
-    this.#nastaveni.zatizeni?.pridejSily(this.soustava, this.#cas);
+    spoctiSily(this.soustava, this.#nastaveni.tiha, 0, this.#krok.modalni);
+    this.#pridejDalsiSily(this.soustava, this.#cas);
     pridejTlumice(this.soustava, this.#krok.dt);
+  }
+
+  /** Tlumení úměrné hmotě (po porušení) a vnější zatížení pro stav v čase `cas`. */
+  #pridejDalsiSily(s: Soustava, cas: number): void {
+    if (this.#hmotou) pridejTlumeniHmotou(s, this.#hmotou);
+    this.#nastaveni.zatizeni?.pridejSily(s, cas);
   }
 
   /**
@@ -189,7 +212,6 @@ export class Simulace {
     this.#nastaveni.zatizeni?.poZmene?.(s);
     // Vlastní tvary neporušené konstrukce už neplatí; dál tlumí jen hmota.
     delete this.#krok.modalni;
-    this.#krok.alfa = this.#alfaPoPoruseni;
 
     // Utržené kusy nic nenesou. Když jsou krátké, změkčí se tak, aby jejich podélné
     // kmitání nebylo rychlejší než nejvyšší frekvence původní soustavy a nezkracovalo krok.
@@ -212,6 +234,8 @@ export class Simulace {
     // Rozdělené pruty, které dál nesou, mají kratší díly a krok se podle nich zkrátí.
     const omegaMax = nejvyssiFrekvence(s, volneStupne(s));
     if (omegaMax > 0) this.#nastavKrokATlumeniPrvku(Math.max(omegaMax, this.#vychoziOmega));
+    // Souvislé části konstrukce se porušením změnily.
+    this.#hmotou = vytvorTlumeniHmotou(s, this.#alfaPoPoruseni, this.#tlumeny);
     this.#spoctiSily();
   }
 }

@@ -1,5 +1,4 @@
-// Pracovní vlákno zkušebny: počítá případ napřed a po dávkách posílá snímky.
-import type { Snimek } from "../zkouska/zaznam";
+// Pracovní vlákno zkušebny: počítá případ napřed a po dávkách posílá záznam.
 import { BehZkusebny } from "./beh";
 import { PRIPADY } from "./pripady";
 import type { ZpravaProZkusebnu, ZpravaZeZkusebny } from "./zpravy";
@@ -29,27 +28,31 @@ prostredi.onmessage = (udalost) => {
     prostredi.postMessage({
       typ: "zacatek",
       pripad: id,
-      topologie: beh.topologie,
       vyrez: pripraveny.vyrez,
       trvani: pripraveny.trvani,
-      dt: pripraveny.nastaveni.dt,
-      kol: beh.pocetKol,
+      dt: beh.dt,
     });
 
     let ms = 0;
     const davka = (): void => {
       if (moje !== cisloBehu) return;
       try {
-        const snimky: Snimek[] = [];
         const zacatek = performance.now();
-        beh.pokracuj(DAVKA_DEJE, (snimek) => snimky.push(snimek));
+        const { snimky, topologie, udalosti } = beh.pokracuj(DAVKA_DEJE);
         ms += performance.now() - zacatek;
         prostredi.postMessage(
-          { typ: "snimky", pripad: id, snimky },
-          snimky.flatMap((s) => [s.polohy.buffer, s.vyuziti.buffer, s.kola.buffer]),
+          { typ: "zaznam", pripad: id, snimky, topologie, udalosti },
+          snimky.flatMap((s) => [s.polohy.buffer, s.vyuziti.buffer, s.kola.buffer, s.sily.buffer]),
         );
         if (beh.hotovo) {
-          prostredi.postMessage({ typ: "konec", pripad: id, overeni: beh.vyhodnot(), kroku: beh.kroku, ms });
+          prostredi.postMessage({
+            typ: "konec",
+            pripad: id,
+            overeni: beh.vyhodnot(),
+            kroku: beh.kroku,
+            trvani: beh.cas,
+            ms,
+          });
         } else {
           setTimeout(davka, 0);
         }
