@@ -1,6 +1,7 @@
-// Průchod hrou v bezhlavém prohlížeči nad hotovým sestavením (dist/).
+// Výkres úrovně v bezhlavém prohlížeči nad hotovým sestavením (dist/).
 // Ověřuje to, co jednotkové testy nevidí: že se stránka načte, výkres se nakreslí,
-// ovládání funguje a pracovní vlákno se simulací odpovídá.
+// ovládání pohledu funguje a pracovní vlákno se simulací odpovídá. Běží na zkušebním
+// výkresu 0-00, který do kampaně nepatří; stavbu a zkoušku mostu prochází `hra.e2e.ts`.
 import { mkdirSync, readFileSync } from "node:fs";
 import { chromium, type Browser, type Page } from "playwright";
 import { preview, type PreviewServer } from "vite";
@@ -56,7 +57,7 @@ beforeAll(async () => {
   stranka.on("console", (zprava) => {
     if (zprava.type() === "error") chybyStranky.push(zprava.text());
   });
-  await stranka.goto(adresa);
+  await stranka.goto(`${adresa}?uroven=0-00`);
   await stranka.locator("canvas").waitFor();
   await pockejNaSnimek();
 });
@@ -68,7 +69,7 @@ afterAll(async () => {
 
 describe("výkres", () => {
   it("načte se bez chyb a ukáže úroveň", async () => {
-    expect(await stranka.title()).toBe("Mostmistr");
+    expect(await stranka.title()).toBe("0-00 Zkušební výkres – Mostmistr");
     expect(await udaj("nazev")).toBe("Zkušební výkres");
     expect(await udaj("list")).toBe("0-00");
     expect(await stranka.locator('[data-udaj="chyba"]').isHidden()).toBe(true);
@@ -107,7 +108,8 @@ describe("výkres", () => {
       return { sirka: platno.width, vyska: platno.height, css: [Math.round(obrys.width), Math.round(obrys.height)] };
     });
     expect([rozmery.sirka, rozmery.vyska]).toEqual(rozmery.css);
-    expect(rozmery.sirka).toBe(1280);
+    // Vedle plátna je jen paleta; zbytek šířky okna patří výkresu.
+    expect(rozmery.sirka).toBeGreaterThan(1000);
   });
 
   it("uloží snímek výchozího pohledu", async () => {
@@ -160,7 +162,7 @@ describe("ovládání", () => {
     expect((pred.x - po.x) / (pred.y - po.y)).toBeCloseTo(2, 0);
   });
 
-  it("mezerník s levým tlačítkem posouvá, samotné levé tlačítko ne", async () => {
+  it("levé tlačítko výkres neposouvá; patří kreslení a výběru", async () => {
     const stred = await stredPlatna();
     await stranka.mouse.move(stred.x, stred.y);
     const pred = await souradnice();
@@ -170,14 +172,6 @@ describe("ovládání", () => {
     await stranka.mouse.up();
     await stranka.mouse.move(stred.x, stred.y);
     expect(await souradnice()).toEqual(pred);
-
-    await stranka.keyboard.down("Space");
-    await stranka.mouse.down();
-    await stranka.mouse.move(stred.x + 150, stred.y, { steps: 3 });
-    await stranka.mouse.up();
-    await stranka.keyboard.up("Space");
-    await stranka.mouse.move(stred.x, stred.y);
-    expect((await souradnice()).x).toBeLessThan(pred.x);
   });
 
   it("klávesa Home vrátí celý výkres", async () => {
@@ -214,8 +208,12 @@ describe("ovládání", () => {
     await pockejNaSnimek();
     await pockejNaSnimek();
     expect(await meritko()).toBeGreaterThan(pred);
-    const sirka = await stranka.evaluate(() => document.querySelector("canvas")!.width);
-    expect(sirka).toBe(800);
+    const sirky = await stranka.evaluate(() => {
+      const platno = document.querySelector("canvas")!;
+      return [platno.width, Math.round(platno.getBoundingClientRect().width)];
+    });
+    expect(sirky[0]).toBe(sirky[1]);
+    expect(sirky[0]).toBeLessThan(800);
     await stranka.screenshot({ path: `${SLOZKA_SNIMKU}/03-mensi-okno.png` });
     await stranka.setViewportSize({ width: 1280, height: 720 });
     await pockejNaSnimek();

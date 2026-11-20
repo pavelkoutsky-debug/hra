@@ -10,51 +10,201 @@
     <link rel="stylesheet" href="/src/styly.css" />
   </head>
   <body>
-    <div class="hra">
+    <!-- Přehled kampaně -->
+    <div class="hra hra--prehled" id="obrazovka-prehled" hidden>
       <header class="lista">
         <span class="lista__nazev" data-text="hra.nazev"></span>
-        <span class="lista__uroven" data-udaj="uroven"></span>
+        <span class="lista__oddil" data-text="prehled.nadpis"></span>
         <span class="lista__mezera"></span>
         <a class="tlacitko" href="/zkusebna.html" data-text="lista.zkusebna"></a>
+      </header>
+      <main class="prehled">
+        <p class="prehled__hlaseni" data-udaj="prehled-hlaseni" role="alert" hidden></p>
+        <div class="prehled__kapitoly"></div>
+        <label class="prehled__volba">
+          <input type="checkbox" id="odemknout-vse" />
+          <span data-text="prehled.odemknout"></span>
+        </label>
+        <p class="prehled__verze" data-udaj="prehled-verze"></p>
+      </main>
+    </div>
+
+    <!-- Obrazovka úrovně -->
+    <div class="hra" id="obrazovka-uroven" hidden>
+      <header class="lista">
+        <a class="lista__nazev" href="/" data-text="hra.nazev"></a>
+        <span class="lista__uroven" data-udaj="uroven"></span>
+
+        <div class="rozpocet">
+          <span class="rozpocet__popis" data-udaj="rozpocet-popis"></span>
+          <span class="rozpocet__pruh">
+            <span class="rozpocet__plneni"></span>
+            <span class="rozpocet__ryska" data-popis="rozpocet.inzenyrsky" hidden>
+              <span data-text="rozpocet.inz"></span>
+            </span>
+          </span>
+          <output class="rozpocet__castka" data-udaj="rozpocet"></output>
+        </div>
+
+        <button
+          type="button"
+          class="tlacitko tlacitko--hlavni"
+          data-akce="zkouska"
+          data-popis="zkouska.popisTlacitka"
+        ></button>
+
+        <span class="lista__mezera"></span>
+        <a class="tlacitko" href="/" data-text="lista.kampan"></a>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
         <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres"></button>
       </header>
 
-      <main class="vykres">
-        <canvas class="vykres__platno" tabindex="0"></canvas>
-        <output class="vykres__souradnice" data-udaj="souradnice"></output>
-        <p class="vykres__napoveda" data-text="napoveda.ovladani"></p>
-        <p class="vykres__chyba" data-udaj="chyba" role="alert" hidden></p>
+      <div class="uroven">
+        <aside class="paleta">
+          <h2 data-text="paleta.prvky"></h2>
+          <div class="paleta__prvky"></div>
 
-        <dl class="pole">
-          <div class="pole__bunka pole__bunka--siroka">
-            <dt data-text="pole.nazev"></dt>
-            <dd class="pole__nazev" data-udaj="nazev"></dd>
+          <h2 data-text="paleta.nastroje"></h2>
+          <button type="button" class="paleta__tlacitko" data-akce="vyber" aria-pressed="false">
+            <kbd>V</kbd><span data-text="paleta.vyber"></span>
+          </button>
+          <button type="button" class="paleta__tlacitko" data-akce="zrcadlit">
+            <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
+          </button>
+          <div class="paleta__dvojice">
+            <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
+              <kbd>Del</kbd><span data-text="paleta.smazat"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="smazat-vse" data-popis="paleta.smazatVse.popis">
+              <span data-text="paleta.smazatVse"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="zpet" data-popis="paleta.zpet.popis">
+              <span data-text="paleta.zpet"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="znovu" data-popis="paleta.znovu.popis">
+              <span data-text="paleta.znovu"></span>
+            </button>
           </div>
-          <div class="pole__bunka">
-            <dt data-text="pole.meritko"></dt>
-            <dd data-udaj="meritko"></dd>
+
+          <h2 data-text="paleta.most"></h2>
+          <div class="paleta__dvojice">
+            <button type="button" class="paleta__tlacitko" data-akce="export"><span data-text="paleta.export"></span></button>
+            <button type="button" class="paleta__tlacitko" data-akce="import"><span data-text="paleta.import"></span></button>
           </div>
-          <div class="pole__bunka">
-            <dt data-text="pole.list"></dt>
-            <dd data-udaj="list"></dd>
+
+          <h2 data-text="paleta.zadani"></h2>
+          <p class="paleta__zadani" data-udaj="zadani"></p>
+          <ul class="medaile" data-udaj="podminky"></ul>
+        </aside>
+
+        <main class="vykres">
+          <canvas class="vykres__platno" tabindex="0"></canvas>
+          <p class="vykres__hlaseni" data-udaj="hlaseni" role="status"></p>
+          <output class="vykres__souradnice" data-udaj="souradnice"></output>
+          <p class="vykres__napoveda" data-text="napoveda.ovladani" data-jen="stavba"></p>
+          <p class="vykres__napoveda" data-text="napoveda.zkouska" data-jen="zkouska"></p>
+          <p class="vykres__chyba" data-udaj="chyba" role="alert" hidden></p>
+
+          <section class="vysledek" hidden>
+            <div class="vysledek__hlavicka">
+              <span class="vysledek__otisk" data-udaj="otisk"></span>
+              <h2 data-udaj="vysledek-nadpis"></h2>
+              <p data-udaj="vysledek-shrnuti"></p>
+            </div>
+            <ul class="medaile" data-udaj="vysledek-medaile"></ul>
+            <dl class="vysledek__cisla">
+              <dt data-text="vysledek.cena"></dt>
+              <dd data-udaj="vysledek-cena"></dd>
+              <dt data-text="vysledek.vyuziti"></dt>
+              <dd data-udaj="vysledek-vyuziti"></dd>
+              <dt data-text="vysledek.poruseni"></dt>
+              <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
+            </dl>
+            <div class="vysledek__tlacitka">
+              <a class="tlacitko tlacitko--hlavni" data-akce="dalsi" data-text="vysledek.dalsi" hidden></a>
+              <button type="button" class="tlacitko" data-akce="upravit" data-text="vysledek.upravit"></button>
+              <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
+              <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika"></button>
+            </div>
+          </section>
+
+          <dl class="pole">
+            <div class="pole__bunka pole__bunka--siroka">
+              <dt data-text="pole.nazev"></dt>
+              <dd class="pole__nazev" data-udaj="nazev"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.cena"></dt>
+              <dd data-udaj="cena"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.hmotnost"></dt>
+              <dd data-udaj="hmotnost"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.medaile"></dt>
+              <dd class="pole__medaile" data-udaj="medaile"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.list"></dt>
+              <dd data-udaj="list"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.meritko"></dt>
+              <dd data-udaj="meritko"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.fyzika"></dt>
+              <dd data-udaj="fyzika">&hellip;</dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.verze"></dt>
+              <dd data-udaj="verze"></dd>
+            </div>
+            <div class="pole__bunka">
+              <dt data-text="pole.datum"></dt>
+              <dd data-udaj="datum"></dd>
+            </div>
+          </dl>
+        </main>
+
+        <footer class="osa">
+          <div class="osa__rad" data-jen="stavba">
+            <span class="osa__nadpis" data-text="rad.nadpis"></span>
+            <span class="osa__polozky" data-udaj="jizdni-rad"></span>
           </div>
-          <div class="pole__bunka pole__bunka--siroka">
-            <dt data-text="pole.verze"></dt>
-            <dd data-udaj="verze"></dd>
+          <button type="button" class="tlacitko" data-akce="prehrat" data-jen="zkouska"></button>
+          <button type="button" class="tlacitko" data-akce="na-konec" data-text="zkouska.naKonec" data-jen="zkouska"></button>
+          <span class="lista__skupina" role="group" data-popis="zkouska.rychlost" data-jen="zkouska">
+            <button type="button" class="tlacitko" data-rychlost="0.25">¼×</button>
+            <button type="button" class="tlacitko" data-rychlost="1">1×</button>
+            <button type="button" class="tlacitko" data-rychlost="4">4×</button>
+          </span>
+          <div class="osa__drah" data-jen="zkouska">
+            <span class="osa__spocitano"></span>
+            <span class="osa__znacky"></span>
+            <input type="range" id="cas" min="0" max="1" step="0.01" value="0" data-popis="zkouska.cas" />
           </div>
-          <div class="pole__bunka">
-            <dt data-text="pole.fyzika"></dt>
-            <dd data-udaj="fyzika">&hellip;</dd>
-          </div>
-          <div class="pole__bunka">
-            <dt data-text="pole.datum"></dt>
-            <dd data-udaj="datum"></dd>
-          </div>
-        </dl>
-      </main>
+          <output class="osa__cas" data-udaj="cas" data-jen="zkouska"></output>
+        </footer>
+      </div>
     </div>
+
+    <dialog class="okno" id="okno">
+      <form method="dialog">
+        <h2 data-udaj="okno-nadpis"></h2>
+        <p data-udaj="okno-popis"></p>
+        <textarea id="okno-obsah" rows="9" spellcheck="false" autocomplete="off"></textarea>
+        <p class="okno__hlaseni" data-udaj="okno-hlaseni" role="status"></p>
+        <div class="okno__tlacitka">
+          <button type="button" class="tlacitko" data-akce="okno-kopirovat" data-text="okno.kopirovat"></button>
+          <button type="button" class="tlacitko tlacitko--hlavni" data-akce="okno-nacist" data-text="okno.nacist"></button>
+          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
     <noscript>Mostmistr potřebuje zapnutý JavaScript.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>

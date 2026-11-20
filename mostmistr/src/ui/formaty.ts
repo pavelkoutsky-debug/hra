@@ -35,3 +35,25 @@ export function meritkoVykresu(pixeluNaMetr: number): string {
 export function datum(den: Date): string {
   return `${den.getDate()}. ${den.getMonth() + 1}. ${den.getFullYear()}`;
 }
+
+/** Celé číslo s úzkými nedělitelnými mezerami mezi tisíci: 33 500. */
+export function celeCislo(hodnota: number): string {
+  const zaokrouhlene = Math.round(hodnota);
+  const zapis = String(Math.abs(zaokrouhlene)).replace(/\B(?=(\d{3})+$)/g, "\u202f");
+  return zaokrouhlene < 0 ? MINUS + zapis : zapis;
+}
+
+/** Částka v korunách, např. „33 500 Kč“. */
+export function koruny(castka: number): string {
+  return `${celeCislo(castka)}\u00a0Kč`;
+}
+
+/** Podíl jako procenta bez desetinných míst; 0,756 → „76 %“. */
+export function procenta(podil: number): string {
+  return `${celeCislo(podil * 100)}\u00a0%`;
+}
+
+/** Hmotnost: do tuny v kilogramech, výš v tunách s jedním desetinným místem. */
+export function hmotnost(kg: number): string {
+  return kg < 1000 ? `${celeCislo(kg)}\u00a0kg` : `${cislo(kg / 1000, 1)}\u00a0t`;
+}

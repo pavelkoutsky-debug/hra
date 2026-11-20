@@ -34,6 +34,9 @@ npm run dev
 Průchod hrou potřebuje Chromium pro Playwright (`npx playwright install chromium`).
 Snímky obrazovky ukládá do `test/e2e/vystup/`.
 
+Hra je na stránce `/`: bez parametru ukáže přehled kampaně, s `?uroven=1-02` otevře úroveň.
+Zkušební výkres `?uroven=0-00` do kampaně nepatří a slouží testům výkresu.
+
 Vedle hry se sestavují tři pomocné stránky:
 
 | Stránka | K čemu je |
@@ -47,13 +50,14 @@ Vedle hry se sestavují tři pomocné stránky:
 | Složka | Obsah | Zná prohlížeč? |
 |---|---|---|
 | `src/jadro/` | Fyzika | Ne |
-| `src/zkouska/` | Rozhraní zkoušky, stavba mostu z návrhu, záznam, regresní sada | Jen `klient.ts` a `pracovnik.ts` |
-| `src/data/` | Formáty úrovní a návrhů mostů, katalog prvků | Ne |
+| `src/zkouska/` | Rozhraní zkoušky, stavba mostu z návrhu, provoz a vozidla, zkouška úrovně, záznam, regresní sada | Jen `klient.ts` a `pracovnik.ts` |
+| `src/data/` | Formáty úrovní, návrhů mostů a uloženého postupu, katalog prvků, ceny | Ne |
 | `src/zkusebna/` | Ověřovací případy jádra a stránka `zkusebna.html` | Jen `stranka.ts` a `pracovnik.ts` |
-| `src/editor/` | Stavební režim (od milníku M2) | Ano |
+| `src/editor/` | Stavební režim: úpravy návrhu, pravidla kreslení, výběr, historie | Ne (neví nic o plátně) |
+| `src/hra/` | Obrazovka úrovně, přehled kampaně, ukládání do paměti prohlížeče | Ano |
 | `src/vykres/` | Kreslení výkresu, kamera, ovládání | Ano |
 | `src/ui/` | Texty, formátování, panely | Ano |
-| `urovne/` | Data úrovní | — |
+| `urovne/` | Data úrovní a jejich referenční řešení | — |
 | `mereni/` | Měření výkonu, stránky `mereni.html` a `otisky.html` | Jen stránky a jejich pracovní vlákna |
 | `test/` | Jednotkové testy a průchod hrou | — |
 

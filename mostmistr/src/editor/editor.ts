@@ -152,9 +152,10 @@ export class Editor {
 
   /**
    * Stisk levého tlačítka v bodě světa. `pridat` (Shift) přidává k výběru,
-   * `posouvat` (Alt) místo kreslení táhne styčníkem.
+   * `posouvat` (Alt nebo nástroj výběru) místo kreslení táhne styčníkem,
+   * `bezKresleni` (nástroj výběru) nezačne kreslit ani z kotvy.
    */
-  stiskni(bod: Bod, volby: { pridat?: boolean; posouvat?: boolean } = {}): void {
+  stiskni(bod: Bod, volby: { pridat?: boolean; posouvat?: boolean; bezKresleni?: boolean } = {}): void {
     this.posledniDuvod = null;
     const mriz = naRastr(bod);
     const stycnik = this.stycnikU(bod);
@@ -162,7 +163,11 @@ export class Editor {
     if (volby.posouvat && stycnik !== null) {
       const s = this.#navrh.stycniky.find((x) => x.id === stycnik)!;
       this.tah = { druh: "posun", stycnik, od: { x: s.x, y: s.y }, k: { x: s.x, y: s.y }, duvod: null };
-    } else if (lzeZacit(this.#navrh, this.uroven, mriz) && Math.hypot(bod.x - mriz.x, bod.y - mriz.y) <= 0.5) {
+    } else if (
+      !volby.bezKresleni &&
+      lzeZacit(this.#navrh, this.uroven, mriz) &&
+      Math.hypot(bod.x - mriz.x, bod.y - mriz.y) <= 0.5
+    ) {
       this.tah = { druh: "prut", od: mriz, k: mriz, duvod: "prut-kratky" };
     } else {
       this.tah = { druh: "obdelnik", od: bod, k: bod };

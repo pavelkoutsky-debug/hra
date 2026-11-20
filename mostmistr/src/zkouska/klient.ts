@@ -10,10 +10,21 @@ export class KlientZkousky {
     this.#pracovnik.onmessage = (udalost: MessageEvent<ZpravaZeZkousky>) => {
       for (const posluchac of this.#posluchaci) posluchac(udalost.data);
     };
+    // Pád vlákna (nenačtený skript, chyba mimo výpočet) se hlásí stejně jako chyba výpočtu.
+    this.#pracovnik.onerror = (udalost) => {
+      const zprava: ZpravaZeZkousky = { typ: "chyba", kod: "vypocet-selhal", podrobnosti: udalost.message };
+      for (const posluchac of this.#posluchaci) posluchac(zprava);
+    };
   }
 
   posli(zprava: ZpravaProZkousku): void {
     this.#pracovnik.postMessage(zprava);
+  }
+
+  /** Ukončí pracovní vlákno i s rozpočítanou zkouškou; klient pak už nic nepřijme. */
+  ukonci(): void {
+    this.#posluchaci.clear();
+    this.#pracovnik.terminate();
   }
 
   /** Přihlásí posluchače; vrací funkci, která ho odhlásí. */
@@ -26,14 +37,14 @@ export class KlientZkousky {
   zjistiVerziFyziky(): Promise<number> {
     return new Promise((vyres, zamitni) => {
       const odhlas = this.poslouchej((zprava) => {
-        if (zprava.typ !== "pripraveno") return;
-        odhlas();
-        vyres(zprava.verzeFyziky);
+        if (zprava.typ === "pripraveno") {
+          odhlas();
+          vyres(zprava.verzeFyziky);
+        } else if (zprava.typ === "chyba") {
+          odhlas();
+          zamitni(new Error(zprava.podrobnosti ?? zprava.kod));
+        }
       });
-      this.#pracovnik.onerror = (udalost) => {
-        odhlas();
-        zamitni(new Error(udalost.message));
-      };
       this.posli({ typ: "ahoj" });
     });
   }
