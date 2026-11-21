@@ -37,13 +37,14 @@ Snímky obrazovky ukládá do `test/e2e/vystup/`.
 Hra je na stránce `/`: bez parametru ukáže přehled kampaně, s `?uroven=1-02` otevře úroveň.
 Zkušební výkres `?uroven=0-00` do kampaně nepatří a slouží testům výkresu.
 
-Vedle hry se sestavují tři pomocné stránky:
+Vedle hry se sestavují čtyři pomocné stránky:
 
 | Stránka | K čemu je |
 |---|---|
 | `/zkusebna.html` | Ověřovací případy jádra s porovnáním s teorií |
 | `/otisky.html` | Přepočítá regresní sadu v prohlížeči a porovná otisky; kontrola, že fyzika počítá všude stejně |
 | `/mereni.html` | Měření rychlosti výpočtu na daném počítači |
+| `/zvuky.html` | Každý zvuk hry jde pustit zvlášť; tabulka změřené hlasitosti, délky a barvy |
 
 ## Struktura
 
@@ -55,10 +56,11 @@ Vedle hry se sestavují tři pomocné stránky:
 | `src/zkusebna/` | Ověřovací případy jádra a stránka `zkusebna.html` | Jen `stranka.ts` a `pracovnik.ts` |
 | `src/editor/` | Stavební režim: úpravy návrhu, pravidla kreslení, výběr, historie | Ne (neví nic o plátně) |
 | `src/hra/` | Obrazovka úrovně, přehled kampaně, ukládání do paměti prohlížeče | Ano |
+| `src/zvuk/` | Zvuk: co má při přehrávání záznamu zaznít (`deje.ts`), syntezátor a zvukový kontext | `deje.ts` ne, zbytek ano |
 | `src/vykres/` | Kreslení výkresu, kamera, ovládání | Ano |
 | `src/ui/` | Texty, formátování, panely | Ano |
 | `urovne/` | Data úrovní a jejich referenční řešení | — |
-| `mereni/` | Měření výkonu, stránky `mereni.html` a `otisky.html` | Jen stránky a jejich pracovní vlákna |
+| `mereni/` | Měření výkonu, stránky `mereni.html`, `otisky.html` a `zvuky.html` | Jen stránky a jejich pracovní vlákna |
 | `test/` | Jednotkové testy a průchod hrou | — |
 
 Vrstvy bez prohlížeče hlídá `tsconfig.jadro.json`: typová kontrola v nich odmítne cokoli z DOM.

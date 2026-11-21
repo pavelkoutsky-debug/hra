@@ -32,11 +32,13 @@ import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
 import type { RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
 import { modelUcastnika } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
+import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
+import { Ozvuceni } from "../zvuk/ozvuceni";
 import { nasadaUrovne } from "../../urovne/index";
 import { ukazkaUrovne } from "../../urovne/ukazky";
 import { Ukazka } from "./ukazka";
 import { vypisMedaile, znackyMedaili } from "./medaile";
-import type { Uloziste } from "./uloziste";
+import { HLASITOSTI, type Uloziste } from "./uloziste";
 
 /** Volný okraj kolem výřezu při zobrazení celého výkresu, v pixelech. */
 const OKRAJ_VYKRESU = 28;
@@ -58,6 +60,8 @@ const ROZSAH_OSY = 6;
 const PASMO_SHODY = 0.08;
 /** Prodleva mezi úpravou návrhu a žádostí o rozbor, v milisekundách. */
 const PRODLEVA_ROZBORU = 200;
+/** Jak daleko do stran zvuk zní, když je jeho zdroj na kraji plátna (1 je úplně v jednom uchu). */
+const SIRKA_ZVUKU = 0.85;
 
 /** Jedna zkouška mostu: záznam, který plní pracovní vlákno, a nakonec výsledek. */
 interface Beh {
@@ -134,6 +138,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const obsahOkna = prvek("#okno-obsah", HTMLTextAreaElement);
   const oknoZadani = prvek("#okno-zadani", HTMLDialogElement);
   const prepinacCisel = prvek('[data-akce="cisla"]', HTMLButtonElement);
+  const tlacitkoZvuku = prvek('[data-akce="zvuk"]', HTMLButtonElement);
 
   // ---- Stav ----
 
@@ -169,6 +174,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let casovacHlaseni: number | undefined;
   /** Ukazovat u prutů čísla využití? */
   let cisla = uloziste.cislaVyuziti;
+  const ozvuceni = new Ozvuceni(uloziste.hlasitost);
+  ozvuceni.priZmeneStavu = () => obnovZvuk();
+  /** Poslech právě přehrávané zkoušky: říká, co má v kterém okamžiku záznamu zaznít. */
+  let poslech: Poslech | null = null;
 
   // Pomocné vlákno pro rozbory mostu při stavbě; zkoušky mají každá vlastní.
   const pomocny = new KlientZkousky();
@@ -683,6 +692,52 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     platno.prekresli();
   }
 
+  /** Promítne hlasitost do tlačítka v liště a do háčků pro testy. */
+  function obnovZvuk(): void {
+    const hlasitost = ozvuceni.hlasitost;
+    tlacitkoZvuku.textContent = t(Ozvuceni.dostupne ? `zvuk.${hlasitost}` : "zvuk.nedostupny");
+    tlacitkoZvuku.disabled = !Ozvuceni.dostupne;
+    tlacitkoZvuku.setAttribute("aria-pressed", String(hlasitost !== "vypnuto"));
+    document.body.dataset.zvuk = hlasitost;
+    document.body.dataset.zvukKontext = ozvuceni.stav;
+    obnovPoctyZvuku();
+  }
+
+  /** Kolik zvuků kterého druhu hra zahrála; háček pro testy. Zapisuje jen to, co se změnilo. */
+  const zapsanePocty = new Map<string, number>();
+  function obnovPoctyZvuku(): void {
+    for (const druh of DRUHY_ZVUKU) {
+      const pocet = ozvuceni.zaznelo.get(druh) ?? 0;
+      if (zapsanePocty.get(druh) === pocet) continue;
+      zapsanePocty.set(druh, pocet);
+      document.body.setAttribute(`data-zvuku-${druh}`, String(pocet));
+    }
+  }
+
+  /** Další hlasitost v řadě nahlas, potichu, vypnuto. Novou hlasitost předvede vrznutím. */
+  function prepniZvuk(): void {
+    if (!Ozvuceni.dostupne) return;
+    const dalsi = HLASITOSTI[(HLASITOSTI.indexOf(ozvuceni.hlasitost) + 1) % HLASITOSTI.length]!;
+    ozvuceni.nastavHlasitost(dalsi);
+    uloziste.hlasitost = dalsi;
+    ozvuceni.probud();
+    obnovZvuk();
+    if (dalsi === "vypnuto") return;
+    const ukazka: Zvuk = { druh: "vrzani", cas: 0, x: 0, y: 0, sila: 0.8, velikost: 0.4, material: "drevo", odstin: 0.31, puvod: -1 };
+    // Čerstvě vzniklý zvukový kontext se rozbíhá okamžik po gestu.
+    window.setTimeout(() => {
+      ozvuceni.zahraj([ukazka], () => 0);
+      obnovZvuk();
+    }, 150);
+  }
+
+  /** Odkud zní zvuk z daného místa světa: −1 vlevo až 1 vpravo podle polohy na plátně. */
+  function panorama(x: number, y: number): number {
+    const misto = svetNaObraz(kamera, platno.rozmer, { x, y });
+    const podil = (2 * misto.x) / platno.rozmer.sirka - 1;
+    return SIRKA_ZVUKU * Math.max(-1, Math.min(1, podil));
+  }
+
   function smazVybrane(): void {
     if (rezim === "stavba" && editor.smazVybrane()) skryjHlaseni();
   }
@@ -742,10 +797,14 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       brnknuti: brnknuti !== undefined,
     };
     beh = novy;
+    // Zkoušku pouští gesto hráče, takže smí vzniknout zvuk.
+    ozvuceni.probud();
+    poslech = new Poslech(uroven, editor.navrh, brnknuti?.stycnik ?? -1);
     try {
       klient = new KlientZkousky();
     } catch (chyba) {
       beh = null;
+      poslech = null;
       ukazHlaseni(t("zkouska.chyba", { duvod: chyba instanceof Error ? chyba.message : String(chyba) }), "varovani", false);
       return;
     }
@@ -778,6 +837,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     // Nedopočítaná zkouška nemá výsledek ani obálku; zahodí se.
     if (beh && !beh.vysledek) beh = null;
     if (beh) beh.oznaceny = null;
+    poslech = null;
+    ozvuceni.ztis();
     rezim = "stavba";
     prehravani = { ...prehravani, bezi: false };
     panelVysledku.hidden = true;
@@ -1311,6 +1372,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("krok-zpet", () => krokuj(-1));
   priKliknuti("krok-vpred", () => krokuj(1));
   priKliknuti("cisla", prepniCisla);
+  priKliknuti("zvuk", prepniZvuk);
   priKliknuti("zadani", otevriZadani);
   priKliknuti("upravit", zpetKeStavbe);
   priKliknuti("prehrat-znovu", () => {
@@ -1403,6 +1465,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       case "c":
         prepniCisla();
         break;
+      case "z":
+        prepniZvuk();
+        break;
       default: {
         const poradi = Number(klavesa) - 1;
         const id = Number.isInteger(poradi) ? uroven.povolenePrvky[poradi] : undefined;
@@ -1432,6 +1497,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         }
       }
       if (b.vysledek && !b.vysledekUkazan && prehravani.cas >= b.trvani - 1e-6) ukazVysledek(b, b.vysledek);
+      // Zvuk: co v právě přehraném úseku záznamu zaznělo. Skok po ose je potichu.
+      if (poslech) {
+        const zvuky = poslech.posun(b, prehravani.cas);
+        if (zvuky.length > 0) {
+          // Zpomalené přehrávání zní hlouběji a pomaleji, zrychlené naopak.
+          const tempo = Math.max(0.5, Math.min(1.5, Math.pow(prehravani.rychlost, 0.3)));
+          ozvuceni.zahraj(zvuky, (z) => panorama(z.x, z.y), tempo);
+          obnovPoctyZvuku();
+        }
+        ozvuceni.valeni(prehravani.bezi ? poslech.valeni : 0, panorama(poslech.valeniX, 0));
+      }
       // Okamžité kmitání mostovky v právě přehrávaném okamžiku.
       const meri = maLidi && !b.brnknuti && b.zaznam.stavV(prehravani.cas, snimek) !== null;
       const text = meri ? t("legenda.kmitani", { zrychleni: cislo(snimek.kmitani, 2) }) : "";
@@ -1467,6 +1543,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   naplnZadani();
   oknoZadani.addEventListener("close", () => ukazka?.zastav());
   prepinacCisel.setAttribute("aria-pressed", String(cisla));
+  obnovZvuk();
   document.body.dataset.rezim = rezim;
   document.body.dataset.zkouska = "";
   obnovMedaile();

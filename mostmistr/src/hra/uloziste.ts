@@ -26,6 +26,11 @@ export const KLIC_POSKOZENEHO = "mostmistr.ulozeni.poskozene";
 export const KLIC_ODEMCENI = "mostmistr.odemceno";
 /** Volba hráče: ukazovat u prutů čísla využití. */
 export const KLIC_CISEL = "mostmistr.cisla";
+/** Volba hráče: hlasitost zvuku. */
+export const KLIC_ZVUKU = "mostmistr.zvuk";
+
+export const HLASITOSTI = ["nahlas", "potichu", "vypnuto"] as const;
+export type Hlasitost = (typeof HLASITOSTI)[number];
 
 /**
  * Paměť prohlížeče, nebo null, když ji prohlížeč nedá (soukromé okno, zakázaná data webu).
@@ -112,6 +117,16 @@ export class Uloziste {
 
   set cislaVyuziti(ukazovat: boolean) {
     this.#pis(KLIC_CISEL, ukazovat ? "1" : "0");
+  }
+
+  /** Hlasitost zvuku. Dokud hráč nezvolí jinak, hraje hra nahlas. */
+  get hlasitost(): Hlasitost {
+    const zapis = this.#cti(KLIC_ZVUKU);
+    return HLASITOSTI.find((h) => h === zapis) ?? "nahlas";
+  }
+
+  set hlasitost(hlasitost: Hlasitost) {
+    this.#pis(KLIC_ZVUKU, hlasitost);
   }
 
   #zapis(): void {

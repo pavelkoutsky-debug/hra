@@ -389,7 +389,7 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 - **Výkresové konvence.** Kóty rozpětí a výšek, osy čerchovaně, terén v řezu se šrafováním, značky podpor jako ve statických schématech, rohové popisové pole s názvem úrovně, měřítkem, verzí hry a medailemi.
 - **Vozidla a lidé** jako čárové bokorysy v témže stylu. Chodci jsou panáčci, jejichž krok odpovídá skutečné fázi jejich zatížení.
 - **Zkouška** běží na stejném výkresu, jen „oživne“: pruty se obarví podle využití.
-- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Původně až v posledním milníku; na přání zadavatele předsunuto do samostatného milníku M3z hned po M3a.
+- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Původně až v posledním milníku; na přání zadavatele předsunuto do samostatného milníku M3z hned po M3a. *(M3z: hra nemá žádné nahrávky; zvuky se odvozují ze záznamu zkoušky, takže znějí i při zpomaleném přehrávání a krokování, a skok po časové ose je potichu. Dunění vlaku přijde s vlakem.)*
 
 **Ovládání editoru**
 
@@ -409,6 +409,7 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Brnknout do mostu | B a tažení styčníku dolů |
 | Závaží ve styčníku, síla tlumiče | výběr a tlačítka − a + v paletě |
 | Zapnout a vypnout čísla využití u prutů | C |
+| Hlasitost zvuku: nahlas, potichu, vypnuto | Z nebo tlačítko v liště |
 
 ---
 

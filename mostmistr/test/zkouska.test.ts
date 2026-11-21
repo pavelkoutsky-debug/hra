@@ -207,6 +207,20 @@ describe("most bez ztužení", () => {
     expect([...stavba.prut].some((p) => p < 0)).toBe(true);
   });
 
+  it("děj neskončí, dokud ti, kdo spadli, nedopadnou na dno údolí", () => {
+    // Údolí regresní úrovně je dvacet metrů hluboké: pád trvá dvě sekundy, déle než doběh.
+    const u = uroven([AUTO, CHODEC]);
+    const zkouska = new Zkouska(u, jenMostovka(), 7);
+    while (!zkouska.hotovo) zkouska.pokracuj(0.5);
+    const s = zkouska.simulace.soustava;
+    expect(zkouska.provoz.spadliDopadli(s)).toBe(true);
+    const posledniPad = Math.max(...udalosti.filter((x) => x.druh === "pad").map((x) => x.cas));
+    expect(vysledek.trvani).toBeGreaterThan(posledniPad + 2);
+    for (const ucastnik of zkouska.ucastnici) {
+      for (const i of ucastnik.kola) expect(s.y[i]!).toBeLessThan(-18);
+    }
+  });
+
   it("trosky a spadlí účastníci skončí na dně údolí, ne v nekonečnu", () => {
     const posledni = zaznam.snimky.at(-1)!;
     for (let i = 1; i < posledni.polohy.length; i += 2) {

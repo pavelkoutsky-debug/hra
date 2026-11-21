@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { ulozeniNaText, ulozeniZTextu } from "../src/data/ulozeni";
 import { Kreslic } from "../src/zkouska/regrese";
-import { KLIC_CISEL, KLIC_ODEMCENI, KLIC_POSKOZENEHO, KLIC_ULOZENI, Uloziste, type Sklad } from "../src/hra/uloziste";
+import { KLIC_CISEL, KLIC_ODEMCENI, KLIC_POSKOZENEHO, KLIC_ULOZENI, KLIC_ZVUKU, Uloziste, type Sklad } from "../src/hra/uloziste";
 
 class SkladVPameti implements Sklad {
   readonly data = new Map<string, string>();
@@ -97,6 +97,25 @@ describe("úložiště postupu", () => {
     expect(sklad.getItem(KLIC_CISEL)).toBe("0");
     expect(new Uloziste(sklad).cislaVyuziti).toBe(false);
     // Volba nesmí přepsat uložený postup.
+    expect(sklad.getItem(KLIC_ULOZENI)).toBeNull();
+  });
+
+  it("hlasitost je nahlas, dokud ji hráč nezmění, a ztlumení se pamatuje", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    expect(uloziste.hlasitost).toBe("nahlas");
+    uloziste.hlasitost = "vypnuto";
+    expect(sklad.getItem(KLIC_ZVUKU)).toBe("vypnuto");
+    expect(new Uloziste(sklad).hlasitost).toBe("vypnuto");
+    uloziste.hlasitost = "potichu";
+    expect(new Uloziste(sklad).hlasitost).toBe("potichu");
+    // Nesmysl v paměti se bere jako výchozí hlasitost; hra kvůli němu nespadne ani neoněmí.
+    sklad.setItem(KLIC_ZVUKU, "nejvic");
+    expect(new Uloziste(sklad).hlasitost).toBe("nahlas");
+    // Bez paměti prohlížeče hra hraje nahlas a volbu si jen nepamatuje.
+    const bezPameti = new Uloziste(null);
+    bezPameti.hlasitost = "vypnuto";
+    expect(bezPameti.hlasitost).toBe("nahlas");
     expect(sklad.getItem(KLIC_ULOZENI)).toBeNull();
   });
 

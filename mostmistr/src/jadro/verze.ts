@@ -9,5 +9,8 @@
  * - 2: štíhlejší průřezy dřeva po kalibraci první kapitoly (milník M2).
  * - 3: měří se kmitání mostovky pod lidmi; nepřijatelné kmitání je neúspěch (milník M3a).
  *      Otisky referenčních mostů se nezměnily, změnilo se hodnocení.
+ * - 4: zkouška nekončí, dokud ti, kdo spadli, nedopadnou na zem nebo do vody (milník M3z).
+ *      Mění se délka děje a konečný stav mostů, ze kterých někdo spadl; otisky referenčních
+ *      mostů se nezměnily.
  */
-export const VERZE_FYZIKY = 3;
+export const VERZE_FYZIKY = 4;

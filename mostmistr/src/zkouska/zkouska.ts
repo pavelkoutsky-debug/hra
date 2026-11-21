@@ -24,8 +24,10 @@ import { topologieSoustavy, type PopisKresleni, type Snimek, type Topologie } fr
 
 /** Počet snímků záznamu na sekundu děje. */
 export const SNIMKU_ZA_SEKUNDU = 60;
-/** Jak dlouho děj pokračuje poté, co poslední účastník dojel nebo spadl, v sekundách. */
+/** Jak dlouho děj pokračuje poté, co poslední účastník dojel nebo dopadl, v sekundách. */
 const DOBEH = 1.5;
+/** Nejdéle tolik sekund se čeká, než ti, kdo spadli, dopadnou na zem nebo do vody. */
+const NEJDELSI_PAD = 5;
 /** Délka zkoušky bez provozu: most jen stojí pod vlastní tíhou. */
 const TRVANI_BEZ_PROVOZU = 3;
 /** Jak dlouho se sleduje most rozkmitaný brnknutím, v sekundách. */
@@ -61,6 +63,8 @@ export class Zkouska {
   #sjeti = 0;
   #udalostiProvozu = 0;
   #konec = Infinity;
+  /** Kdy dojel nebo spadl poslední účastník provozu. */
+  #vsichniOd = Infinity;
   #zacala = false;
 
   /** Styčník, kterým se brnklo, a okamžiky, kdy jeho svislá rychlost změnila znaménko. */
@@ -243,7 +247,9 @@ export class Zkouska {
         davka.udalosti.push(provozni[this.#udalostiProvozu]!);
       }
       if (this.provoz.hotovo && this.#konec === Infinity && this.provoz.ucastnici.length > 0) {
-        this.#konec = sim.cas + DOBEH;
+        // Kdo spadl, má ještě dopadnout: děj nekončí s autem ve vzduchu.
+        if (this.#vsichniOd === Infinity) this.#vsichniOd = sim.cas;
+        if (this.provoz.spadliDopadli(s) || sim.cas >= this.#vsichniOd + NEJDELSI_PAD) this.#konec = sim.cas + DOBEH;
       }
 
       if (sim.udalosti.length > this.#poruseni || sim.sjeti.length > this.#sjeti) {
