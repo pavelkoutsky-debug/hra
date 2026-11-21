@@ -3,6 +3,7 @@
 
 import type { Bod } from "../data/geometrie";
 import { CEKA, PREJEL, type PopisUcastnika } from "../zkouska/provoz";
+import { KADENCE_BEHU } from "../zkouska/vozidla";
 import type { Snimek } from "../zkouska/zaznam";
 import { BARVY } from "./barvy";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
@@ -45,7 +46,16 @@ export function nakresliProvoz(
       nakresliCyklistu(ctx, kola.map((k) => naObraz(k!)), u.vyska * m, u.smer);
     } else {
       const faze = 2 * Math.PI * (u.kadence ?? 1.9) * Math.max(0, snimek.cas - u.start) + uhelFaze(u.faze);
-      nakresliChodce(ctx, naObraz(kola[0]!), u.vyska * m, u.smer, faze);
+      const bezi = u.druh === "bezec" || (u.druh === "utvar" && (u.kadence ?? 0) >= KADENCE_BEHU);
+      const postava = bezi ? nakresliBezce : nakresliChodce;
+      // Řada útvaru: lidé vedle sebe se v bokorysu kryjí; vzdálenější jsou o kousek vzadu a bledší.
+      const lidi = u.lidi ?? 1;
+      const teziste = naObraz(kola[0]!);
+      for (let i = lidi - 1; i >= 0; i--) {
+        ctx.globalAlpha = i === 0 ? 1 : 0.45;
+        postava(ctx, { x: teziste.x - u.smer * 0.24 * i * m, y: teziste.y - 0.05 * i * m }, u.vyska * m, u.smer, faze);
+      }
+      ctx.globalAlpha = 1;
     }
   });
   ctx.restore();
@@ -182,6 +192,50 @@ function nakresliChodce(ctx: Kontext, teziste: Bod, vyska: number, smer: number,
   for (const konec of [ruka(-kyv * 0.8), ruka(kyv * 0.8)]) {
     ctx.moveTo(ramena.x, ramena.y);
     ctx.lineTo(konec.x, konec.y);
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(hlava.x, hlava.y, 0.13 * j, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+}
+
+/**
+ * Běžec: trup nakloněný dopředu, nohy pokrčené v kolenou a s dlouhým krokem, ruce
+ * ohnuté v loktech. Krok odpovídá fázi doskoků.
+ */
+function nakresliBezce(ctx: Kontext, teziste: Bod, vyska: number, smer: number, faze: number): void {
+  const j = vyska;
+  const kyv = Math.sin(faze / 2);
+  const kycle: Bod = { x: teziste.x, y: teziste.y };
+  const ramena: Bod = { x: teziste.x + smer * 0.16 * j, y: teziste.y - 0.46 * j };
+  const hlava: Bod = { x: ramena.x + smer * 0.07 * j, y: ramena.y - 0.2 * j };
+  // Noha ze dvou dílů: stehno a bérec. Švihová noha má koleno vpředu a patu vzadu.
+  const noha = (vpred: number): [Bod, Bod] => {
+    const koleno: Bod = { x: kycle.x + smer * (0.1 + 0.36 * vpred) * j, y: kycle.y + (0.5 - 0.1 * Math.abs(vpred)) * j };
+    const pata: Bod = {
+      x: koleno.x + smer * (-0.12 + 0.2 * vpred - 0.3 * Math.max(0, -vpred)) * j,
+      y: koleno.y + (0.48 - 0.3 * Math.max(0, -vpred)) * j,
+    };
+    return [koleno, pata];
+  };
+  const ruka = (vpred: number): [Bod, Bod] => {
+    const loket: Bod = { x: ramena.x + smer * 0.2 * vpred * j, y: ramena.y + 0.26 * j };
+    const zapesti: Bod = { x: loket.x + smer * (0.2 + 0.08 * vpred) * j, y: loket.y - 0.06 * vpred * j - 0.04 * j };
+    return [loket, zapesti];
+  };
+  ctx.beginPath();
+  ctx.moveTo(kycle.x, kycle.y);
+  ctx.lineTo(ramena.x, ramena.y);
+  for (const [koleno, pata] of [noha(kyv), noha(-kyv)]) {
+    ctx.moveTo(kycle.x, kycle.y);
+    ctx.lineTo(koleno.x, koleno.y);
+    ctx.lineTo(pata.x, pata.y);
+  }
+  for (const [loket, zapesti] of [ruka(-kyv), ruka(kyv)]) {
+    ctx.moveTo(ramena.x, ramena.y);
+    ctx.lineTo(loket.x, loket.y);
+    ctx.lineTo(zapesti.x, zapesti.y);
   }
   ctx.stroke();
   ctx.beginPath();

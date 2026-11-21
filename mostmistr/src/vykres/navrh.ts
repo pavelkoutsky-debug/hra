@@ -8,6 +8,7 @@ import type { Tah } from "../editor/editor";
 import { delka as zapisDelky } from "../ui/formaty";
 import { BARVY, PISMO, cara } from "./barvy";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
+import { nakresliTlumic, nakresliZavazi } from "./konstrukce";
 import { barvaVyuziti } from "./skala";
 
 export interface StavNavrhu {
@@ -67,6 +68,18 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
       const pa = naObraz(a);
       const pb = naObraz(b);
       const tloustka = tloustkaPrutu(p.prvek, m);
+      if (KATALOG[p.prvek].druh === "tlumic") {
+        if (s.vybranePruty.has(p.id)) {
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.strokeStyle = "rgba(143, 208, 255, 0.55)";
+          ctx.lineWidth = 12;
+          ctx.stroke();
+        }
+        nakresliTlumic(ctx, pa, pb, m, spatnePruty.has(p.id) ? BARVY.varovani : BARVY.caraSilna);
+        return;
+      }
       ctx.beginPath();
       ctx.moveTo(pa.x, pa.y);
       ctx.lineTo(pb.x, pb.y);
@@ -92,6 +105,21 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
       }
     });
   }
+
+  // Závaží visí pod styčníkem; popisek říká kolik.
+  for (const st of s.navrh.stycniky) {
+    if (!st.zavazi) continue;
+    const p = naObraz(st);
+    nakresliZavazi(ctx, p, m);
+    const sirka = mezi(0.7 * m, 16, 44);
+    ctx.font = `10px ${PISMO}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.cara;
+    ctx.fillText(`${st.zavazi} kg`, p.x, p.y + 0.6 * sirka + 9);
+  }
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
 
   // Styčníky: kloub jako prázdné kolečko.
   const polomer = mezi(0.11 * m, 2.8, 5);

@@ -149,7 +149,7 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
     if (druh === "pist") throw new Error(`Prut ${prut.id}: píst jádro zatím neumí.`);
     if (druh === "pruzina" || druh === "tlumic") {
       popis.prvky.push({
-        ...popisPruziny(a, b, prut.tuhost ?? 0, prut.tlumeni ?? 0, HMOTNOST_PRUZINY),
+        ...popisPruziny(a, b, prut.tuhost ?? 0, prut.tlumeni ?? KATALOG[prut.prvek].tlumeni?.vychozi ?? 0, HMOTNOST_PRUZINY),
         prut: cislo,
       });
       utlumy.push(0);

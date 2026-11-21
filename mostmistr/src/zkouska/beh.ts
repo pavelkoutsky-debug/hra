@@ -1,6 +1,7 @@
 import { zkontrolujNavrh } from "../data/navrh";
 import { VERZE_FYZIKY } from "../jadro/verze";
-import type { ZpravaProZkousku, ZpravaZeZkousky } from "./protokol";
+import type { RozborMostu, ZpravaProZkousku, ZpravaZeZkousky } from "./protokol";
+import { rozeberMost } from "./rozbor";
 import { Zkouska } from "./zkouska";
 
 /**
@@ -36,6 +37,19 @@ export class BehZkousky {
       case "stop":
         this.#zkouska = null;
         return;
+      case "rozbor": {
+        // Rozbor běžící zkoušku neruší. Most, který porušuje pravidla úrovně nebo se nedá
+        // sestavit, rozbor nemá; rozpočet při tom nehraje roli.
+        let rozbor: RozborMostu | null = null;
+        try {
+          const prekazky = zkontrolujNavrh(zprava.navrh, zprava.uroven).filter((p) => p.druh !== "nad-rozpocet");
+          if (prekazky.length === 0) rozbor = rozeberMost(zprava.uroven, zprava.navrh);
+        } catch {
+          rozbor = null;
+        }
+        this.#posli({ typ: "rozbor", id: zprava.id, rozbor });
+        return;
+      }
     }
   }
 
@@ -55,7 +69,7 @@ export class BehZkousky {
       return;
     }
     try {
-      const zkouska = new Zkouska(vstup.uroven, vstup.navrh, vstup.nasada);
+      const zkouska = new Zkouska(vstup.uroven, vstup.navrh, vstup.nasada, vstup.brnknuti);
       this.#zkouska = zkouska;
       this.#posli({
         typ: "zacatek",

@@ -75,6 +75,9 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     mistrovska: null,
     povolenePrvky: [],
     povoleneSvary: true,
+    // Regresní mosty smějí všechno; pravidla úrovní se zkoušejí jinde.
+    nejvetsiZavazi: 1e9,
+    osaFrekvenci: true,
     jizdniRad: [],
   };
 }

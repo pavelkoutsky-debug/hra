@@ -2,7 +2,9 @@
 
 import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
-import { koruny, procenta } from "../ui/formaty";
+import { MEZE_KOMFORTU } from "../jadro/komfort";
+import { cislo, koruny, procenta } from "../ui/formaty";
+import { jeClovek } from "../zkouska/provoz";
 import { t, type KlicTextu } from "../ui/slovnik";
 
 const ZNAK_ZISKANE = "◆";
@@ -16,9 +18,13 @@ interface RadekMedaile {
 
 /** Medaile, které úroveň uděluje, s podmínkou slovy. */
 function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
-  const seznam: RadekMedaile[] = [
-    { nazev: "medaile.pruchod", podminka: t("medaile.pruchod.podminka"), ziskana: medaile.pruchod },
-  ];
+  // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá.
+  const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
+  const pruchod =
+    lide && uroven.osaFrekvenci
+      ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[2], 1) })
+      : t("medaile.pruchod.podminka");
+  const seznam: RadekMedaile[] = [{ nazev: "medaile.pruchod", podminka: pruchod, ziskana: medaile.pruchod }];
   if (uroven.inzenyrskyRozpocet !== null) {
     seznam.push({
       nazev: "medaile.rozpocet",
@@ -33,7 +39,9 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
       podminka:
         bonus.druh === "rezerva"
           ? t("medaile.mistrovska.rezerva", { limit: procenta(bonus.limit) })
-          : t("medaile.mistrovska.jina"),
+          : bonus.druh === "komfort-chodcu"
+            ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
+            : t("medaile.mistrovska.jina"),
       ziskana: medaile.mistrovska,
     });
   }

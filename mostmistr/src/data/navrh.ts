@@ -144,6 +144,8 @@ export type DruhProblemu =
   | "svar-nepovoleny"
   | "stycnik-v-terenu"
   | "prut-v-zakazane-zone"
+  | "zavazi-nepovolene"
+  | "tlumeni-mimo-rozsah"
   | "nad-rozpocet";
 
 /** Porušení pravidla úrovně. `stycnik` a `prut` jsou id z návrhu. */
@@ -174,6 +176,7 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (obsazeno.has(klic)) problemy.push({ druh: "stycniky-na-stejnem-miste", stycnik: s.id });
     else obsazeno.set(klic, s.id);
     if (s.svar && !uroven.povoleneSvary) problemy.push({ druh: "svar-nepovoleny", stycnik: s.id });
+    if ((s.zavazi ?? 0) > uroven.nejvetsiZavazi) problemy.push({ druh: "zavazi-nepovolene", stycnik: s.id });
     // Pod povrchem terénu se staví jen v kotvách a na základech.
     const vOpore = uroven.kotvy.some((k) => k.x === s.x && k.y === s.y) || uroven.zaklady.some((z) => z.x === s.x && z.y === s.y);
     if (!vOpore && s.y < vyskaTerenu(uroven, s.x) - 1e-9) problemy.push({ druh: "stycnik-v-terenu", stycnik: s.id });
@@ -194,6 +197,10 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (delka > polozka.nejvetsiDelka + 1e-9) problemy.push({ druh: "prut-dlouhy", prut: p.id });
     if (!uroven.povolenePrvky.includes(p.prvek)) problemy.push({ druh: "prvek-nepovoleny", prut: p.id });
     if (!polozka.hotovo) problemy.push({ druh: "prvek-neni-hotovy", prut: p.id });
+    const rozsah = polozka.tlumeni;
+    if (rozsah && p.tlumeni !== undefined && (p.tlumeni < rozsah.nejmensi || p.tlumeni > rozsah.nejvetsi)) {
+      problemy.push({ druh: "tlumeni-mimo-rozsah", prut: p.id });
+    }
     if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {
       problemy.push({ druh: "prut-v-zakazane-zone", prut: p.id });
     }

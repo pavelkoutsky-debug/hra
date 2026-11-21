@@ -1211,8 +1211,8 @@ body[data-rezim="stavba"] .uroven .legenda {
 }
 
 .okno__napoveda {
-  margin-bottom: 16px !important;
-  padding-top: 12px;
+  margin-bottom: 14px !important;
+  padding-top: 10px;
   border-top: 1px solid rgb(207 227 255 / 0.3);
   color: var(--popisek);
   font-size: 12px;
@@ -1220,6 +1220,237 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 @media (max-width: 640px) {
   .okno__sloupce {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Nastavení výběru v paletě: závaží a tlumič */
+
+.paleta__krokovac {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 4px;
+}
+
+.paleta__krokovac .paleta__tlacitko {
+  justify-content: center;
+  padding-inline: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.paleta__krokovac output {
+  color: var(--cara-silna);
+  text-align: center;
+}
+
+/* Osa frekvencí: vlastní frekvence mostu proti krokům lidí */
+
+.osa__frekvence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.frekvence {
+  position: relative;
+  flex: none;
+  width: 250px;
+  height: 30px;
+}
+
+.frekvence__stupnice {
+  position: absolute;
+  inset: 14px 0 auto;
+  height: 1px;
+  background: var(--cara);
+}
+
+.frekvence__dilek {
+  position: absolute;
+  top: 14px;
+  width: 1px;
+  height: 5px;
+  background: var(--cara);
+}
+
+.frekvence__dilek span {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--popisek);
+  font-size: 9px;
+}
+
+/* Krok lidí: svislá čára nad osou; dvojnásobek kroku tenčí a přerušovaný. */
+.frekvence__krok {
+  position: absolute;
+  top: 2px;
+  width: 0;
+  height: 12px;
+  border-left: 2px solid var(--voda, #8fd0ff);
+}
+
+.frekvence__krok--dvojnasobek {
+  border-left: 1px dashed var(--popisek);
+}
+
+/* Vlastní frekvence mostu: trojúhelník pod osou; obsazený most jen obrysem. */
+.frekvence__most {
+  position: absolute;
+  top: 15px;
+  width: 0;
+  height: 0;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top: 0;
+  border-bottom: 9px solid var(--cara-silna);
+}
+
+.frekvence__most--obsazeny {
+  opacity: 0.55;
+}
+
+.osa__frekvence[data-stav="shoda"] .frekvence__most {
+  border-bottom-color: var(--varovani);
+}
+
+.frekvence__popis {
+  color: var(--cara-silna);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.osa__frekvence[data-stav="shoda"] .frekvence__popis {
+  color: var(--varovani);
+}
+
+.legenda__kmitani:empty {
+  display: none;
+}
+
+.legenda__kmitani {
+  color: var(--cara-silna);
+}
+
+.vysledek [data-radek][hidden] {
+  display: none;
+}
+
+.osa__rad {
+  flex: 1 1 auto;
+}
+
+.osa__frekvence {
+  flex: none;
+}
+
+/* Ukázka v okně se zadáním: dva mosty vedle sebe */
+
+.okno--zadani {
+  width: min(1040px, 96vw);
+  max-height: 96vh;
+  overflow-y: auto;
+}
+
+/* Vlevo zadání s ukázkou, vpravo fakta o úrovni. */
+.okno__telo {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: 0 28px;
+  margin-bottom: 14px;
+}
+
+.okno__vedlejsi {
+  padding-left: 22px;
+  border-left: 1px solid rgb(207 227 255 / 0.3);
+}
+
+.okno__vedlejsi .medaile {
+  margin-top: 0;
+}
+
+@media (max-width: 860px) {
+  .okno__telo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .okno__vedlejsi {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+.ukazka {
+  margin-bottom: 12px;
+}
+
+.ukazka__strany {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.ukazka__strana {
+  margin: 0;
+  border: 1px solid rgb(207 227 255 / 0.55);
+  background: var(--pozadi);
+}
+
+.ukazka__strana canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
+.ukazka__strana figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+  padding: 5px 9px 6px;
+  border-top: 1px solid rgb(207 227 255 / 0.35);
+  background: var(--lista);
+  color: var(--cara-silna);
+  font-size: 12px;
+}
+
+.ukazka__strana output {
+  color: var(--popisek);
+  white-space: nowrap;
+}
+
+.ukazka__strana output[data-verdikt="obstal"] {
+  color: var(--cara-silna);
+}
+
+.ukazka__strana output[data-verdikt="neobstal"] {
+  color: var(--varovani);
+}
+
+.okno p.ukazka__popis {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.ukazka__poznamka {
+  color: var(--popisek);
+}
+
+.okno p.okno__skutecnost {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--popisek);
+  color: var(--cara);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .ukazka__strany {
     grid-template-columns: minmax(0, 1fr);
   }
 }

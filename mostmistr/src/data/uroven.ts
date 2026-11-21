@@ -15,10 +15,13 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 1;
+export const VERZE_UROVNE = 2;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
-const PREVODY_UROVNE: readonly Prevod[] = [];
+const PREVODY_UROVNE: readonly Prevod[] = [
+  // 1 → 2: přibylo největší závaží na styčník a osa frekvencí. Starší úrovně je neznaly.
+  (stara) => ({ ...stara, nejvetsiZavazi: 0, osaFrekvenci: false }),
+];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
 export type TypKotvy = (typeof TYPY_KOTEV)[number];
@@ -92,6 +95,10 @@ export interface Uroven {
   mistrovska: BonusUrovne | null;
   povolenePrvky: IdPrvku[];
   povoleneSvary: boolean;
+  /** Největší závaží, které lze zavěsit do jednoho styčníku, v kg; 0 = úroveň závaží nedovoluje. */
+  nejvetsiZavazi: number;
+  /** Ukazuje úroveň osu frekvencí (vlastní frekvence mostu proti krokům lidí) a brnknutí? */
+  osaFrekvenci: boolean;
   jizdniRad: PolozkaJizdnihoRadu[];
 }
 
@@ -114,6 +121,8 @@ const KLICE_UROVNE = [
   "mistrovska",
   "povolenePrvky",
   "povoleneSvary",
+  "nejvetsiZavazi",
+  "osaFrekvenci",
   "jizdniRad",
 ] as const;
 
@@ -218,6 +227,8 @@ export function nactiUroven(data: unknown): Uroven {
     }),
     povolenePrvky: polozky(o.povolenePrvky, `${c}.povolenePrvky`, (v, cesta) => jedenZ(v, cesta, ID_PRVKU)),
     povoleneSvary: logicka(o.povoleneSvary, `${c}.povoleneSvary`),
+    nejvetsiZavazi: cislo(o.nejvetsiZavazi, `${c}.nejvetsiZavazi`, { min: 0 }),
+    osaFrekvenci: logicka(o.osaFrekvenci, `${c}.osaFrekvenci`),
     jizdniRad: polozky(o.jizdniRad, `${c}.jizdniRad`, polozkaJizdnihoRadu),
   };
 

@@ -81,6 +81,7 @@ describe("záznam", () => {
     kola: new Float32Array(0),
     sily: new Float32Array(0),
     provoz: new Uint8Array(0),
+    kmitani: 0,
   });
   const zaznam = new Zaznam();
   zaznam.pridejTopologii(stavba(1));

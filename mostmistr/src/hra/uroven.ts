@@ -28,10 +28,13 @@ import { nakresliProvoz } from "../vykres/provoz";
 import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
 import { nakresliVykres } from "../vykres/vykres";
 import { KlientZkousky } from "../zkouska/klient";
-import type { PopisUcastnika } from "../zkouska/provoz";
-import type { Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
+import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
+import type { RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
+import { modelUcastnika } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { nasadaUrovne } from "../../urovne/index";
+import { ukazkaUrovne } from "../../urovne/ukazky";
+import { Ukazka } from "./ukazka";
 import { vypisMedaile, znackyMedaili } from "./medaile";
 import type { Uloziste } from "./uloziste";
 
@@ -46,6 +49,15 @@ const NEJVIC_VYPSANYCH_PORUSENI = 5;
 const DOBA_HLASENI = 6000;
 /** O kolik sekund děje posune záznam jeden krok krokování. */
 const KROK_ZAZNAMU = 0.02;
+/** Brnknutí: kolik newtonů přidá metr tažení myší a největší síla. */
+const SILA_NA_METR = 4000;
+const NEJVETSI_BRNKNUTI = 8000;
+const NEJMENSI_BRNKNUTI = 200;
+/** Rozsah osy frekvencí v Hz a jak blízko vlastní frekvenci je krok „u ní“ (poměrně). */
+const ROZSAH_OSY = 6;
+const PASMO_SHODY = 0.08;
+/** Prodleva mezi úpravou návrhu a žádostí o rozbor, v milisekundách. */
+const PRODLEVA_ROZBORU = 200;
 
 /** Jedna zkouška mostu: záznam, který plní pracovní vlákno, a nakonec výsledek. */
 interface Beh {
@@ -63,6 +75,8 @@ interface Beh {
   naKonecPoVypoctu: boolean;
   /** Prut, na který hráč při přehrávání klikl (pořadí v návrhu). */
   oznaceny: number | null;
+  /** Pokus s brnknutím, ne zkouška: nepočítá se do medailí ani do obálky. */
+  brnknuti: boolean;
 }
 
 function nazevZpusobu(zpusob: number): KlicTextu {
@@ -133,7 +147,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let kurzor: Bod | null = null;
 
   let rezim: "stavba" | "zkouska" = "stavba";
-  let nastroj: "kresleni" | "vyber" = "kresleni";
+  let nastroj: "kresleni" | "vyber" | "brnknuti" = "kresleni";
+  /** Rozdělané brnknutí: styčník (pořadí v návrhu), místo stisku a kurzoru v pixelech plátna. */
+  let brnk: { stycnik: number; od: Bod; k: Bod } | null = null;
+  /** Poslední rozbor mostu; undefined, dokud se počítá, null, když most rozebrat nejde. */
+  let rozbor: RozborMostu | null | undefined;
+  let idRozboru = 0;
+  let casovacRozboru: number | undefined;
+  const maLidi = uroven.jizdniRad.some((p) => jeClovek(p.druh));
+  /** Ukázka v okně se zadáním; běží, jen dokud je okno otevřené. */
+  let ukazka: Ukazka | null = null;
   /** Poslední zkouška; její obálka platí, dokud je `beh.navrh` právě upravovaný návrh. */
   let beh: Beh | null = null;
   let klient: KlientZkousky | null = null;
@@ -146,6 +169,14 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let casovacHlaseni: number | undefined;
   /** Ukazovat u prutů čísla využití? */
   let cisla = uloziste.cislaVyuziti;
+
+  // Pomocné vlákno pro rozbory mostu při stavbě; zkoušky mají každá vlastní.
+  const pomocny = new KlientZkousky();
+  pomocny.poslouchej((zprava) => {
+    if (zprava.typ !== "rozbor" || zprava.id !== idRozboru) return;
+    rozbor = zprava.rozbor;
+    obnovOsuFrekvenci();
+  });
 
   const ulozeny = uloziste.navrh(uroven.id);
   let naposledUlozeny: NavrhMostu | null = ulozeny ?? null;
@@ -164,7 +195,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   /** Platí obálka namáhání z poslední zkoušky pro návrh, který je právě na výkresu? */
   function platnaObalka(): VysledekZkousky | null {
-    return beh !== null && beh.vysledek !== null && beh.navrh === editor.navrh ? beh.vysledek : null;
+    return beh !== null && !beh.brnknuti && beh.vysledek !== null && beh.navrh === editor.navrh ? beh.vysledek : null;
   }
 
   function kresli(ctx: CanvasRenderingContext2D, rozmer: { sirka: number; vyska: number }): void {
@@ -201,6 +232,39 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       obalka: obalka?.map((o) => ({ vyuziti: o.vyuziti, tah: o.zpusob === ZPUSOB_TAH })) ?? null,
     });
     if (cisla && obalka && !editor.tah) nakresliCislaVyuziti(ctx, cislaZObalky(obalka.map((o) => o.vyuziti)));
+    if (brnk) nakresliBrnknuti(ctx, brnk);
+  }
+
+  /** Síla brnknutí v newtonech podle toho, jak daleko hráč styčník stáhl. */
+  function silaBrnknuti(b: { od: Bod; k: Bod }): number {
+    const metru = Math.max(0, b.k.y - b.od.y) / kamera.meritko;
+    return Math.min(NEJVETSI_BRNKNUTI, metru * SILA_NA_METR);
+  }
+
+  /** Šipka tahu od styčníku dolů s velikostí síly. */
+  function nakresliBrnknuti(ctx: CanvasRenderingContext2D, b: { stycnik: number; od: Bod; k: Bod }): void {
+    const st = editor.navrh.stycniky[b.stycnik];
+    if (!st) return;
+    const pata = bodNavrhu(st);
+    const delka = Math.max(0, b.k.y - b.od.y);
+    if (delka < 4) return;
+    const hrot = { x: pata.x, y: pata.y + delka };
+    ctx.save();
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(pata.x, pata.y);
+    ctx.lineTo(hrot.x, hrot.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hrot.x, hrot.y + 2);
+    ctx.lineTo(hrot.x - 6, hrot.y - 9);
+    ctx.lineTo(hrot.x + 6, hrot.y - 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   /** Poloha styčníku návrhu na plátně. */
@@ -371,7 +435,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const klic = `provoz.${polozka.druh}`;
     const nazev = jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
     const pocet = polozka.pocet ?? 1;
-    const kdo = pocet > 1 ? t("rad.vice", { pocet, kdo: nazev }) : nazev;
+    let kdo =
+      polozka.druh === "utvar"
+        ? t("provoz.utvar.popis", { pocet })
+        : pocet > 1
+          ? t("rad.vice", { pocet, kdo: nazev })
+          : nazev;
+    // Kde se hraje o rezonanci, patří ke každému člověku i frekvence jeho kroku.
+    const krok = jeClovek(polozka.druh) ? modelUcastnika(polozka.druh, polozka.kadence)?.buzeni?.frekvence : undefined;
+    if (uroven.osaFrekvenci && krok !== undefined) kdo = t("provoz.krok", { kdo, f: cislo(krok, 1) });
     const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
     if (vetou) {
       const odkud = t(polozka.smer === 1 ? "zadani.provoz.zleva" : "zadani.provoz.zprava");
@@ -422,8 +494,104 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (editor.navrh !== naposledUlozeny) {
       naposledUlozeny = editor.navrh;
       uloziste.ulozNavrh(editor.navrh);
+      naplanujRozbor();
     }
     obnovStavbu();
+  }
+
+  /** Po úpravě návrhu požádá s malou prodlevou o nový rozbor mostu (osa frekvencí). */
+  function naplanujRozbor(): void {
+    if (!uroven.osaFrekvenci) return;
+    window.clearTimeout(casovacRozboru);
+    rozbor = undefined;
+    idRozboru += 1;
+    const id = idRozboru;
+    const navrh = editor.navrh;
+    casovacRozboru = window.setTimeout(() => pomocny.posli({ typ: "rozbor", id, uroven, navrh }), PRODLEVA_ROZBORU);
+    obnovOsuFrekvenci();
+  }
+
+  /** Kroky lidí z jízdního řádu: frekvence v Hz a kdo tak jde; každá frekvence jednou. */
+  function krokyLidi(): { f: number; kdo: string }[] {
+    const kroky = new Map<number, string>();
+    for (const polozka of uroven.jizdniRad) {
+      if (!jeClovek(polozka.druh)) continue;
+      const f = modelUcastnika(polozka.druh, polozka.kadence)?.buzeni?.frekvence;
+      if (f === undefined || kroky.has(f)) continue;
+      const klic = `provoz.${polozka.druh}`;
+      kroky.set(f, jeKlicTextu(klic) ? t(klic) : t("provoz.jiny"));
+    }
+    return [...kroky].map(([f, kdo]) => ({ f, kdo })).sort((a, b) => a.f - b.f);
+  }
+
+  /** Překreslí osu frekvencí: stupnici, kroky lidí a vlastní frekvence mostu. */
+  function obnovOsuFrekvenci(): void {
+    const osa = udaj("osa-frekvenci");
+    osa.hidden = !uroven.osaFrekvenci;
+    if (!uroven.osaFrekvenci) return;
+    const znacky = prvek(".frekvence__znacky", HTMLElement);
+    const misto = (f: number): string => `${(100 * Math.min(1, f / ROZSAH_OSY)).toFixed(1)}%`;
+    const znacka = (trida: string, f: number, popis: string): HTMLElement => {
+      const uzel = document.createElement("span");
+      uzel.className = trida;
+      uzel.style.left = misto(f);
+      uzel.title = popis;
+      return uzel;
+    };
+    const uzly: HTMLElement[] = [];
+    for (let hz = 0; hz <= ROZSAH_OSY; hz++) {
+      const dilek = znacka("frekvence__dilek", hz, "");
+      const cislice = document.createElement("span");
+      cislice.textContent = String(hz);
+      dilek.append(cislice);
+      uzly.push(dilek);
+    }
+    const kroky = krokyLidi();
+    for (const krok of kroky) {
+      const popis = t("frekvence.znacka.krok", { kdo: krok.kdo, f: cislo(krok.f, 1) });
+      uzly.push(znacka("frekvence__krok", krok.f, popis));
+      if (2 * krok.f <= ROZSAH_OSY) uzly.push(znacka("frekvence__krok frekvence__krok--dvojnasobek", 2 * krok.f, popis));
+    }
+
+    let text = "";
+    let shoda = false;
+    if (rozbor === undefined) text = t("frekvence.pocitaSe");
+    else if (rozbor === null || !rozbor.stabilni || rozbor.frekvence.length === 0) text = t("frekvence.bezMostu");
+    else {
+      const prazdny = rozbor.frekvence[0]!;
+      const obsazeny = rozbor.frekvenceObsazeneho[0];
+      for (const f of rozbor.frekvence) {
+        if (f <= ROZSAH_OSY) uzly.push(znacka("frekvence__most", f, t("frekvence.znacka.most", { f: cislo(f, 2) })));
+      }
+      if (obsazeny !== undefined && obsazeny <= ROZSAH_OSY) {
+        uzly.push(
+          znacka("frekvence__most frekvence__most--obsazeny", obsazeny, t("frekvence.znacka.obsazeny", { f: cislo(obsazeny, 2) })),
+        );
+      }
+      text =
+        obsazeny !== undefined
+          ? t("frekvence.mostSLidmi", { prazdny: cislo(prazdny, 2), obsazeny: cislo(obsazeny, 2) })
+          : t("frekvence.most", { prazdny: cislo(prazdny, 2) });
+      // Krok nebo jeho dvojnásobek u první vlastní frekvence (mezi obsazeným a prázdným mostem).
+      const dolni = (obsazeny ?? prazdny) * (1 - PASMO_SHODY);
+      const horni = prazdny * (1 + PASMO_SHODY);
+      for (const krok of kroky) {
+        if (krok.f >= dolni && krok.f <= horni) {
+          text = t("frekvence.shoda", { krok: cislo(krok.f, 1) });
+          shoda = true;
+          break;
+        }
+        if (2 * krok.f >= dolni && 2 * krok.f <= horni) {
+          text = t("frekvence.shodaDvojnasobku", { krok: cislo(krok.f, 1) });
+          shoda = true;
+        }
+      }
+    }
+    znacky.replaceChildren(...uzly);
+    udaj("frekvence-popis").textContent = text;
+    osa.dataset.stav = shoda ? "shoda" : "";
+    if (rozbor && rozbor.frekvence.length > 0) osa.dataset.frekvence = rozbor.frekvence[0]!.toFixed(3);
+    else delete osa.dataset.frekvence;
   }
 
   /** Promítne návrh do lišty, palety a popisového pole a překreslí výkres. */
@@ -465,6 +633,27 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     };
     nastav("vyber", true);
     prvek('[data-akce="vyber"]', HTMLButtonElement).setAttribute("aria-pressed", String(nastroj === "vyber"));
+    const tlacitkoBrnknuti = prvek('[data-akce="brnknout"]', HTMLButtonElement);
+    tlacitkoBrnknuti.hidden = !uroven.osaFrekvenci;
+    tlacitkoBrnknuti.disabled = !stavi || navrh.pruty.length === 0;
+    tlacitkoBrnknuti.setAttribute("aria-pressed", String(nastroj === "brnknuti"));
+
+    // Nastavení toho, co je vybrané: závaží styčníků a síla tlumičů.
+    const zavazi = stavi && uroven.nejvetsiZavazi > 0 ? editor.zavaziVyberu : null;
+    prvek('[data-nastaveni="zavazi"]', HTMLElement).hidden = zavazi === null;
+    if (zavazi !== null) {
+      udaj("zavazi").textContent = t("paleta.zavazi.hodnota", { kg: cislo(zavazi, 0) });
+      prvek('[data-akce="zavazi-min"]', HTMLButtonElement).disabled = zavazi <= 0;
+      prvek('[data-akce="zavazi-plus"]', HTMLButtonElement).disabled = zavazi >= uroven.nejvetsiZavazi;
+    }
+    const tlumeni = stavi ? editor.tlumeniVyberu : null;
+    prvek('[data-nastaveni="tlumeni"]', HTMLElement).hidden = tlumeni === null;
+    if (tlumeni !== null) {
+      udaj("tlumeni").textContent = t("paleta.tlumeni.hodnota", { hodnota: cislo(tlumeni / 1000, 0) });
+      const rozsah = KATALOG.tlumic.tlumeni!;
+      prvek('[data-akce="tlumeni-min"]', HTMLButtonElement).disabled = tlumeni <= rozsah.nejmensi;
+      prvek('[data-akce="tlumeni-plus"]', HTMLButtonElement).disabled = tlumeni >= rozsah.nejvetsi;
+    }
     nastav("smazat", editor.neconiJeVybrano);
     nastav("zrcadlit", navrh.pruty.length > 0);
     nastav("zpet", editor.lzeZpet);
@@ -510,16 +699,26 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovStavbu();
   }
 
+  function prepniBrnknuti(): void {
+    if (rezim !== "stavba" || !uroven.osaFrekvenci || editor.navrh.pruty.length === 0) return;
+    nastroj = nastroj === "brnknuti" ? "kresleni" : "brnknuti";
+    editor.zrusVyber();
+    if (nastroj === "brnknuti") ukazHlaseni(t("brnknuti.navod"), "info", false);
+    else skryjHlaseni();
+    obnovStavbu();
+  }
+
   // ---- Zkouška ----
 
   function delkaDeje(b: Beh): number {
     return b.spocitanoVse ? b.trvani : Math.max(b.trvani, b.zaznam.konec);
   }
 
-  function spustZkousku(): void {
+  function spustZkousku(brnknuti?: { stycnik: number; sila: number }): void {
     if (rezim !== "stavba") return;
     editor.zrusTah();
-    const prekazka = prekazkyZkousky(editor.navrh, uroven)[0];
+    // Brnknout se dá i mostem dražším, než je rozpočet; zkoušet ne.
+    const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(brnknuti && p.druh === "nad-rozpocet"))[0];
     if (prekazka) {
       ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
       return;
@@ -540,6 +739,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       vysledekUkazan: false,
       naKonecPoVypoctu: false,
       oznaceny: null,
+      brnknuti: brnknuti !== undefined,
     };
     beh = novy;
     try {
@@ -552,7 +752,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     klient.poslouchej((zprava) => prijmi(novy, zprava));
     klient.posli({
       typ: "start",
-      vstup: { uroven, navrh: editor.navrh, nasada: nasadaUrovne(uroven), verzeFyziky: VERZE_FYZIKY },
+      vstup: {
+        uroven,
+        navrh: editor.navrh,
+        nasada: nasadaUrovne(uroven),
+        verzeFyziky: VERZE_FYZIKY,
+        ...(brnknuti ? { brnknuti } : {}),
+      },
     });
 
     rezim = "zkouska";
@@ -607,10 +813,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         b.spocitanoVse = true;
         klient?.ukonci();
         klient = null;
-        predchoziVysledek = posledniVysledek;
-        posledniVysledek = vysledek;
-        if (!vysledek.rozpad) {
-          rekord = uloziste.zapocitej(uroven.id, vysledek.medaile, vysledek.cena, VERZE_FYZIKY);
+        if (!b.brnknuti) {
+          predchoziVysledek = posledniVysledek;
+          posledniVysledek = vysledek;
+          if (!vysledek.rozpad) {
+            rekord = uloziste.zapocitej(uroven.id, vysledek.medaile, vysledek.cena, VERZE_FYZIKY);
+          }
         }
         if (prehravani.cas > b.trvani || b.naKonecPoVypoctu) prehravani = { ...prehravani, cas: b.trvani, bezi: false };
         document.body.dataset.zkouska = "hotovo";
@@ -627,6 +835,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         break;
       }
       case "pripraveno":
+      case "rozbor":
         break;
     }
   }
@@ -763,12 +972,23 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     b.vysledekUkazan = true;
     // Medaile se v popisovém poli objeví až s výsledkem, ne už během přehrávání.
     obnovMedaile();
-    const nadpis = vysledek.rozpad ? "vysledek.rozpad" : vysledek.pruchod ? "vysledek.obstal" : "vysledek.neobstal";
+    const nadpis = vysledek.rozpad
+      ? "vysledek.rozpad"
+      : vysledek.brnknuti
+        ? "vysledek.brnknuti"
+        : vysledek.pruchod
+          ? "vysledek.obstal"
+          : "vysledek.neobstal";
     udaj("vysledek-nadpis").textContent = t(nadpis);
-    panelVysledku.dataset.stav = vysledek.rozpad ? "rozpad" : vysledek.pruchod ? "obstal" : "neobstal";
+    panelVysledku.dataset.stav = vysledek.rozpad ? "rozpad" : vysledek.brnknuti ? "brnknuti" : vysledek.pruchod ? "obstal" : "neobstal";
+    udaj("vysledek-medaile").hidden = vysledek.brnknuti !== null;
 
     const vety: string[] = [];
     if (vysledek.rozpad) vety.push(t("vysledek.shrnuti.rozpad"));
+    else if (vysledek.brnknuti) {
+      const f = vysledek.brnknuti.frekvence;
+      vety.push(f === null ? t("vysledek.brnknuti.nic") : t("vysledek.brnknuti.frekvence", { f: cislo(f, 2) }));
+    }
     else if (vysledek.ucastniku === 0) vety.push(t("vysledek.shrnuti.bezProvozu"));
     else if (vysledek.prejelo === vysledek.ucastniku && vysledek.spadlo === 0) {
       vety.push(t("vysledek.shrnuti.vsichni", { pocet: vysledek.ucastniku }));
@@ -778,7 +998,31 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       );
     }
     if (vysledek.bezRovnovahy) vety.push(t("vysledek.bezRovnovahy"));
+    const komfort = vysledek.komfort;
+    if (komfort && komfort.trida === 4 && vysledek.spadlo === 0 && !vysledek.rozpad) vety.push(t("vysledek.shrnuti.kmitani"));
     udaj("vysledek-shrnuti").textContent = vety.join(" ");
+    if (vysledek.brnknuti) document.body.dataset.brnknuti = vysledek.brnknuti.frekvence?.toFixed(3) ?? "";
+
+    // Kmitání mostovky pod lidmi; řádek je jen v úrovních, kde se měří.
+    for (const uzel of panelVysledku.querySelectorAll<HTMLElement>('[data-radek="kmitani"]')) uzel.hidden = komfort === null;
+    if (komfort) {
+      const poleKmitani = udaj("vysledek-kmitani");
+      if (komfort.zrychleni > 0) {
+        const skok = document.createElement("button");
+        skok.type = "button";
+        skok.className = "vysledek__skok";
+        skok.textContent = t("vysledek.kmitaniHodnota", {
+          zrychleni: cislo(komfort.zrychleni, 2),
+          trida: t(`komfort.${komfort.trida}`),
+          cas: zapisCasu(komfort.cas),
+        });
+        skok.addEventListener("click", () => skocNa(komfort.cas));
+        poleKmitani.replaceChildren(skok);
+      } else {
+        poleKmitani.textContent = t("vysledek.kmitaniZadne");
+      }
+      poleKmitani.dataset.trida = String(komfort.trida);
+    }
 
     vypisMedaile(udaj("vysledek-medaile"), uroven, vysledek.medaile);
     udaj("vysledek-cena").replaceChildren(
@@ -853,7 +1097,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const odkaz = prvek('[data-akce="dalsi"]', HTMLAnchorElement);
     const dalsi = kampan[kampan.findIndex((u) => u.id === uroven.id) + 1];
     const projita = rekord?.medaile.pruchod === true;
-    odkaz.hidden = !(dalsi && projita && kampan.some((u) => u.id === uroven.id));
+    odkaz.hidden = !(dalsi && projita && !vysledek.brnknuti && kampan.some((u) => u.id === uroven.id));
     odkaz.classList.toggle("tlacitko--hlavni", vysledek.pruchod);
     if (dalsi) odkaz.href = `?uroven=${dalsi.id}`;
 
@@ -884,12 +1128,35 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       stavba.push(polozka(t("zadani.stavba.rozpocet", { castka: koruny(uroven.rozpocet) })));
     }
     udaj("zadani-stavba").replaceChildren(...stavba);
+
+    // Souvislost se skutečnými mosty a ukázka toho, co úroveň učí.
+    const skutecnost = `skutecnost.${uroven.id}`;
+    const poleSkutecnosti = udaj("zadani-skutecnost");
+    poleSkutecnosti.hidden = !jeKlicTextu(skutecnost);
+    if (jeKlicTextu(skutecnost)) poleSkutecnosti.textContent = t("zadani.skutecnost", { text: t(skutecnost) });
+    // Návod k ovládání patří jen k úplně první úrovni.
+    udaj("zadani-ovladani").hidden = uroven.id !== kampan[0]?.id;
+
+    const zadaniUkazky = ukazkaUrovne(uroven);
+    const oddil = udaj("ukazka");
+    oddil.hidden = zadaniUkazky === null;
+    if (zadaniUkazky) {
+      for (const cast of ["a", "b", "popis"] as const) {
+        const klicUkazky = `ukazka.${uroven.id}.${cast}`;
+        udaj(`ukazka-${cast}`).textContent = jeKlicTextu(klicUkazky) ? t(klicUkazky) : "";
+      }
+      ukazka = new Ukazka(oddil, zadaniUkazky);
+    }
   }
 
   function otevriZadani(): void {
     if (oknoZadani.open) return;
     vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
     oknoZadani.showModal();
+    // Okno se otevírá odshora, i když je vyšší než obrazovka; mezerník a Enter ho zavřou.
+    prvek('#okno-zadani button[value="zavrit"]', HTMLButtonElement).focus({ preventScroll: true });
+    oknoZadani.scrollTop = 0;
+    ukazka?.spust();
   }
 
   // ---- Okno s textem: export, import a diagnostika ----
@@ -969,6 +1236,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           klikniVeZkousce(misto);
           return;
         }
+        if (nastroj === "brnknuti") {
+          const id = editor.stycnikU(obrazNaSvet(kamera, platno.rozmer, misto));
+          const poradi = id === null ? -1 : editor.navrh.stycniky.findIndex((st) => st.id === id);
+          brnk = poradi >= 0 ? { stycnik: poradi, od: misto, k: misto } : null;
+          return;
+        }
         skryjHlaseni();
         editor.stiskni(obrazNaSvet(kamera, platno.rozmer, misto), {
           pridat: klavesy.shift,
@@ -978,12 +1251,26 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         obnovPohled();
       },
       tah: (misto) => {
+        if (brnk) {
+          brnk.k = misto;
+          ukazHlaseni(t("brnknuti.tah", { sila: cislo(silaBrnknuti(brnk) / 1000, 1) }), "info", false);
+          platno.prekresli();
+          return;
+        }
         if (rezim !== "stavba" || !editor.tah) return;
         editor.tahni(obrazNaSvet(kamera, platno.rozmer, misto));
         hlasTah();
         obnovPohled();
       },
       pusteni: () => {
+        if (brnk) {
+          const pokus = { stycnik: brnk.stycnik, sila: silaBrnknuti(brnk) };
+          brnk = null;
+          skryjHlaseni();
+          if (pokus.sila >= NEJMENSI_BRNKNUTI) spustZkousku(pokus);
+          else platno.prekresli();
+          return;
+        }
         if (rezim !== "stavba") return;
         const kreslil = editor.tah?.druh === "prut";
         editor.pust();
@@ -992,7 +1279,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         }
         obnovStavbu();
       },
-      zruseni: () => editor.zrusTah(),
+      zruseni: () => {
+        brnk = null;
+        editor.zrusTah();
+      },
     },
   });
 
@@ -1004,6 +1294,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("cely-vykres", ukazCelyVykres);
   priKliknuti("zkouska", () => (rezim === "stavba" ? spustZkousku() : zpetKeStavbe()));
   priKliknuti("vyber", prepniVyber);
+  priKliknuti("brnknout", prepniBrnknuti);
+  priKliknuti("zavazi-min", () => rezim === "stavba" && editor.zmenZavazi(-1));
+  priKliknuti("zavazi-plus", () => rezim === "stavba" && editor.zmenZavazi(1));
+  priKliknuti("tlumeni-min", () => rezim === "stavba" && editor.zmenTlumeni(-1));
+  priKliknuti("tlumeni-plus", () => rezim === "stavba" && editor.zmenTlumeni(1));
   priKliknuti("smazat", smazVybrane);
   priKliknuti("zrcadlit", zrcadli);
   priKliknuti("zpet", () => rezim === "stavba" && editor.zpet());
@@ -1088,6 +1383,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       case "v":
         prepniVyber();
         break;
+      case "b":
+        prepniBrnknuti();
+        break;
       case "p":
         prepniPrehravani();
         break;
@@ -1117,6 +1415,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   // ---- Přehrávání ----
 
+  const poleKmitani = udaj("kmitani");
   let predchoziSnimekObrazu: number | null = null;
   function snimekObrazu(ted: number): void {
     const uplynulo = predchoziSnimekObrazu === null ? 0 : Math.min(0.1, (ted - predchoziSnimekObrazu) / 1000);
@@ -1133,6 +1432,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         }
       }
       if (b.vysledek && !b.vysledekUkazan && prehravani.cas >= b.trvani - 1e-6) ukazVysledek(b, b.vysledek);
+      // Okamžité kmitání mostovky v právě přehrávaném okamžiku.
+      const meri = maLidi && !b.brnknuti && b.zaznam.stavV(prehravani.cas, snimek) !== null;
+      const text = meri ? t("legenda.kmitani", { zrychleni: cislo(snimek.kmitani, 2) }) : "";
+      if (poleKmitani.textContent !== text) poleKmitani.textContent = text;
+    } else if (poleKmitani.textContent !== "") {
+      poleKmitani.textContent = "";
     }
     requestAnimationFrame(snimekObrazu);
   }
@@ -1160,6 +1465,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   );
 
   naplnZadani();
+  oknoZadani.addEventListener("close", () => ukazka?.zastav());
   prepinacCisel.setAttribute("aria-pressed", String(cisla));
   document.body.dataset.rezim = rezim;
   document.body.dataset.zkouska = "";
@@ -1171,14 +1477,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   if (editor.navrh.pruty.length === 0) otevriZadani();
 
   // Dotaz na verzi fyziky zároveň ověří, že pracovní vlákno se simulací funguje.
-  const zkusebni = new KlientZkousky();
-  zkusebni
+  pomocny
     .zjistiVerziFyziky()
     .then((verze) => {
       udaj("fyzika").textContent = `v${verze}`;
     })
     .catch(() => {
       udaj("fyzika").textContent = t("pole.fyzikaNedostupna");
-    })
-    .finally(() => zkusebni.ukonci());
+    });
+  if (uroven.osaFrekvenci) naplanujRozbor();
 }

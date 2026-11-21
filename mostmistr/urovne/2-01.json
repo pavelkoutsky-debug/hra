@@ -1,0 +1,124 @@
+{
+  "verze": 2,
+  "id": "2-01",
+  "nazev": "Ocelová lávka",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 32,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -5
+    },
+    {
+      "x": 7,
+      "y": -7
+    },
+    {
+      "x": 17,
+      "y": -7
+    },
+    {
+      "x": 21,
+      "y": -5
+    },
+    {
+      "x": 24,
+      "y": 0
+    },
+    {
+      "x": 32,
+      "y": 0
+    }
+  ],
+  "hladina": -5.8,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 24,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 24,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 2.5,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "A",
+  "rozpocet": 350000,
+  "inzenyrskyRozpocet": 270000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 0.5
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "chodec",
+      "pocet": 3,
+      "kadence": 1.8
+    },
+    {
+      "cas": 2,
+      "trasa": "lavka",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 2,
+      "kadence": 2.0
+    },
+    {
+      "cas": 6,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "bezec",
+      "pocet": 1,
+      "kadence": 2.8
+    },
+    {
+      "cas": 10,
+      "trasa": "lavka",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 2,
+      "kadence": 1.7
+    }
+  ]
+}

@@ -2,11 +2,11 @@
 // Neví nic o plátně ani o prohlížeči; dostává body ve světových souřadnicích a hlásí změny.
 
 import type { Bod } from "../data/geometrie";
-import type { IdPrvku } from "../data/katalog";
+import { KATALOG, KROK_ZAVAZI, STUPNE_TLUMENI, type IdPrvku } from "../data/katalog";
 import type { DruhProblemu, NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPrutu, lzeZacit } from "./pravidla";
-import { posunStycnik, pridejPrut, smaz, stycnikV, zmenPrvek, zrcadli } from "./upravy";
+import { nastavTlumeni, nastavZavazi, posunStycnik, pridejPrut, smaz, stycnikV, zmenPrvek, zrcadli } from "./upravy";
 
 /** Jak daleko od styčníku nebo prutu se ještě počítá kliknutí na něj, v metrech. */
 const DOSAH_STYCNIKU = 0.38;
@@ -214,7 +214,11 @@ export class Editor {
     }
 
     if (tah.druh === "posun") {
-      if (tah.k.x === tah.od.x && tah.k.y === tah.od.y) return false;
+      if (tah.k.x === tah.od.x && tah.k.y === tah.od.y) {
+        // Kliknutí na styčník bez tažení ho vybere (kvůli závaží a mazání).
+        this.#vyberKliknutim(stisk);
+        return false;
+      }
       if (tah.duvod) {
         this.posledniDuvod = tah.duvod;
         this.#poZmene();
@@ -333,6 +337,60 @@ export class Editor {
     return true;
   }
 
+  /** Závaží vybraných styčníků v kg: největší z nich; null, když není vybraný žádný styčník. */
+  get zavaziVyberu(): number | null {
+    if (this.vybraneStycniky.size === 0) return null;
+    let nejvetsi = 0;
+    for (const s of this.#navrh.stycniky) {
+      if (this.vybraneStycniky.has(s.id)) nejvetsi = Math.max(nejvetsi, s.zavazi ?? 0);
+    }
+    return nejvetsi;
+  }
+
+  /**
+   * Přidá nebo ubere vybraným styčníkům jeden krok závaží (`smer` ±1); všechny dostanou
+   * stejnou hodnotu. Nad největší závaží, které úroveň dovolí, nejde.
+   */
+  zmenZavazi(smer: 1 | -1): boolean {
+    const dosavadni = this.zavaziVyberu;
+    if (dosavadni === null) return false;
+    const nove = Math.max(0, Math.min(this.uroven.nejvetsiZavazi, dosavadni + smer * KROK_ZAVAZI));
+    return this.#zmen(nastavZavazi(this.#navrh, this.vybraneStycniky, () => nove));
+  }
+
+  /** Vybrané tlumiče (id prutů). */
+  #vybraneTlumice(): Set<number> {
+    const tlumice = new Set<number>();
+    for (const p of this.#navrh.pruty) {
+      if (this.vybranePruty.has(p.id) && KATALOG[p.prvek].tlumeni) tlumice.add(p.id);
+    }
+    return tlumice;
+  }
+
+  /** Tlumení vybraných tlumičů v N·s/m: největší z nich; null, když není vybraný žádný tlumič. */
+  get tlumeniVyberu(): number | null {
+    let nejvetsi: number | null = null;
+    for (const p of this.#navrh.pruty) {
+      const rozsah = KATALOG[p.prvek].tlumeni;
+      if (!this.vybranePruty.has(p.id) || !rozsah) continue;
+      nejvetsi = Math.max(nejvetsi ?? 0, p.tlumeni ?? rozsah.vychozi);
+    }
+    return nejvetsi;
+  }
+
+  /** Přepne vybrané tlumiče o stupeň tlumení výš nebo níž; všechny dostanou stejnou hodnotu. */
+  zmenTlumeni(smer: 1 | -1): boolean {
+    const dosavadni = this.tlumeniVyberu;
+    if (dosavadni === null) return false;
+    // Nejbližší stupeň k dosavadní hodnotě a od něj o jeden dál.
+    let nejblizsi = 0;
+    STUPNE_TLUMENI.forEach((stupen, i) => {
+      if (Math.abs(stupen - dosavadni) < Math.abs(STUPNE_TLUMENI[nejblizsi]! - dosavadni)) nejblizsi = i;
+    });
+    const novy = STUPNE_TLUMENI[Math.max(0, Math.min(STUPNE_TLUMENI.length - 1, nejblizsi + smer))]!;
+    return this.#zmen(nastavTlumeni(this.#navrh, this.#vybraneTlumice(), () => novy));
+  }
+
   /** Doplní zrcadlový obraz mostu (nebo výběru) podle osy hlavní trasy. */
   zrcadli(): boolean {
     const trasa = this.uroven.trasy[0];
@@ -354,6 +412,31 @@ export class Editor {
         continue;
       }
       postupny = pridejPrut(postupny, a, b, p.prvek);
+      // Obraz přebírá nastavení předlohy: tlumení prutu a závaží v jeho koncích.
+      const idA = stycnikV(postupny, a)!.id;
+      const idB = stycnikV(postupny, b)!.id;
+      if (p.tlumeni !== undefined) {
+        const obraz = postupny.pruty.find((x) => (x.a === idA && x.b === idB) || (x.a === idB && x.b === idA));
+        const tlumeni = p.tlumeni;
+        if (obraz) postupny = nastavTlumeni(postupny, new Set([obraz.id]), () => tlumeni);
+      }
+      for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
+        const zavazi = vzor.zavazi;
+        if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
+      }
+    }
+    // Závaží se zrcadlí i tam, kde obraz prutu už stál (typicky ve styčnících mostovky).
+    const zrcadlene = new Set<number>();
+    for (const p of this.#navrh.pruty) {
+      if (this.vybranePruty.size > 0 && !this.vybranePruty.has(p.id)) continue;
+      zrcadlene.add(p.a);
+      zrcadlene.add(p.b);
+    }
+    for (const vzor of this.#navrh.stycniky) {
+      const zavazi = vzor.zavazi;
+      if (!zavazi || !zrcadlene.has(vzor.id)) continue;
+      const obraz = stycnikV(postupny, { x: 2 * osa - vzor.x, y: vzor.y });
+      if (obraz) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
     }
     this.posledniDuvod = duvod;
     if (!this.#zmen(postupny)) {

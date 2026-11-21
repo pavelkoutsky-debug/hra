@@ -163,11 +163,20 @@ export interface PolozkaKatalogu {
   /** Hodnoty jsou jen předběžné a upřesní se v milníku, kdy prvek přijde do hry. */
   predbezne?: boolean;
   /**
+   * Jen tlumič: rozsah, ve kterém hráč nastavuje součinitel tlumení (N·s/m), a hodnota,
+   * se kterou se tlumič položí. Rozsah je úmyslně omezený (koncepce, kap. 5).
+   */
+  tlumeni?: { nejmensi: number; nejvetsi: number; vychozi: number };
+
+  /**
    * Cena v korunách: nosné prvky se platí za metr délky, tlumič, pružina a píst za kus.
    * Ceny jsou herní, ne tržní; ladí se tak, aby rozhodování o materiálu dávalo smysl.
    */
   cena: { zaMetr: number } | { zaKus: number };
 }
+
+/** Hodnoty, mezi kterými hráč přepíná tlumení tlumiče, v N·s/m. */
+export const STUPNE_TLUMENI: readonly number[] = [5e3, 10e3, 20e3, 30e3, 50e3, 75e3, 100e3, 150e3, 200e3];
 
 /** Dvojice obdélníkových průřezů šířky b a výšky h. */
 function dvaObdelniky(b: number, h: number): Prurez {
@@ -289,7 +298,14 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     prurez: { A: 2, I: 2 / 12, As: (5 * 2) / 6, Av: (2 * 2) / 3, W: 2 / 6, Wpl: 2 / 4 },
     predbezne: true,
   },
-  tlumic: { druh: "tlumic", nejvetsiDelka: 6, hotovo: true, cena: { zaKus: 20000 } },
+  // Viskózní tlumič lávek: jednotky až stovky kN·s/m.
+  tlumic: {
+    druh: "tlumic",
+    nejvetsiDelka: 6,
+    hotovo: true,
+    cena: { zaKus: 20000 },
+    tlumeni: { nejmensi: 5000, nejvetsi: 200000, vychozi: 50000 },
+  },
   pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: true, cena: { zaKus: 8000 } },
   pist: { druh: "pist", nejvetsiDelka: 8, hotovo: false, cena: { zaKus: 60000 } },
 };
@@ -298,6 +314,8 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
 export const CENA_SVARU = 1500;
 /** Cena závaží za kilogram, v korunách. */
 export const CENA_ZAVAZI = 10;
+/** Po kolika kilogramech se závaží ve styčníku přidává a ubírá. */
+export const KROK_ZAVAZI = 100;
 
 /** Nejkratší prut, který lze postavit (rastr 1 m). */
 export const NEJMENSI_DELKA = 1;

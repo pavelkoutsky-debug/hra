@@ -21,12 +21,28 @@ import type { Zatizeni } from "../jadro/simulace";
 import { popisPruziny, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { pridejKontaktSTerenem, type Teren } from "../jadro/teren";
 import { prestavTrasu, type Trasa } from "../jadro/trasa";
-import { modelUcastnika } from "./vozidla";
+import { modelUcastnika, SIRKA_NA_OSOBU, vedleSebe } from "./vozidla";
 
 export const CEKA = 0;
 export const JEDE = 1;
 export const PREJEL = 2;
 export const SPADL = 3;
+
+/** Druhy provozu, které jsou lidé: jejich pohodlí se měří zrychlením mostovky. */
+const LIDE: ReadonlySet<string> = new Set([
+  "chodec",
+  "bezec",
+  "dav",
+  "utvar",
+  "bezecky-zavod",
+  "pruvod",
+  "skakajici-dav",
+]);
+
+/** Je daný druh provozu člověk (nebo skupina lidí)? */
+export function jeClovek(druh: string): boolean {
+  return LIDE.has(druh);
+}
 
 /** O kolik metrů pod úroveň trasy se účastník musí propadnout, aby se počítal za spadlého. */
 const HLOUBKA_PADU = 1.5;
@@ -59,9 +75,11 @@ export interface PopisUcastnika {
   karoserie: number[];
   /** Výška styčníku kola nad povrchem (poloměr kola, výška těžiště chodce), m. */
   vyska: number;
-  /** Kroková frekvence v Hz a výchozí fáze (cos, sin); jen u chodců. */
+  /** Kroková frekvence v Hz a výchozí fáze (cos, sin); jen u lidí. */
   kadence?: number;
   faze?: [number, number];
+  /** Kolik lidí jde v tomto členu vedle sebe (řada útvaru); bez údaje jeden. */
+  lidi?: number;
 }
 
 interface KontaktUcastnika {
@@ -108,13 +126,21 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
     const cisloTrasy = uroven.trasy.findIndex((t) => t.id === polozka.trasa);
     const trasa = uroven.trasy[cisloTrasy];
     if (!trasa) throw new Error(`Jízdní řád odkazuje na trasu „${polozka.trasa}“, která v úrovni není.`);
-    const model = modelUcastnika(polozka.druh, polozka.kadence);
-    if (!model) throw new Error(`Provoz druhu „${polozka.druh}“ hra zatím neumí.`);
-    const pocet = polozka.pocet ?? 1;
+    const jeden = modelUcastnika(polozka.druh, polozka.kadence);
+    if (!jeden) throw new Error(`Provoz druhu „${polozka.druh}“ hra zatím neumí.`);
+    const lidi = polozka.pocet ?? 1;
+    // Útvar jde v řadách přes celou šířku mostovky a všichni ve stejné fázi kroku;
+    // ostatní jdou po jednom a každý má fázi svou.
+    const utvar = polozka.druh === "utvar";
+    const vRade = utvar ? Math.max(1, Math.floor(uroven.sirkaMostovky / SIRKA_NA_OSOBU)) : 1;
+    const pocet = Math.ceil(lidi / vRade);
+    const spolecnaFaze = utvar && jeden.buzeni ? nahodnaFaze(nahodne) : null;
     // Před mostem je rozjezd dlouhý sekundu jízdy, aby bylo vidět, kdo přijíždí.
-    const nabeh = Math.max(2, model.rychlost);
+    const nabeh = Math.max(2, jeden.rychlost);
 
     for (let clen = 0; clen < pocet; clen++) {
+      const vTetoRade = Math.min(vRade, lidi - clen * vRade);
+      const model = vedleSebe(jeden, vTetoRade);
       const odCela = nabeh + clen * model.rozestup;
       const celo = polozka.smer === 1 ? trasa.zacatek.x - odCela : trasa.konec.x + odCela;
       const zem = polozka.smer === 1 ? trasa.zacatek.y : trasa.konec.y;
@@ -135,8 +161,9 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
       };
       if (model.buzeni) {
         ucastnik.kadence = model.buzeni.frekvence;
-        ucastnik.faze = nahodnaFaze(nahodne);
+        ucastnik.faze = spolecnaFaze ?? nahodnaFaze(nahodne);
       }
+      if (vTetoRade > 1) ucastnik.lidi = vTetoRade;
 
       for (const naprava of model.napravy) {
         const x = celo - polozka.smer * naprava.odstup;
@@ -223,6 +250,20 @@ export class Provoz implements Zatizeni {
     }
     // Nikdo ještě nejede; rychlost dostane každý až při vyjetí.
     for (const u of plan.ucastnici) for (const i of u.stycniky) s.vx[i] = 0;
+  }
+
+  /** Je právě na mostě (mezi konci své trasy) aspoň jeden člověk? */
+  lideNaMoste(s: Soustava): boolean {
+    const { ucastnici } = this.#plan;
+    for (let k = 0; k < ucastnici.length; k++) {
+      if (this.stavy[k] !== JEDE) continue;
+      const u = ucastnici[k]!;
+      if (!LIDE.has(u.druh)) continue;
+      const trasa = this.#uroven.trasy[u.trasa]!;
+      const x = s.x[u.kola[0]!]!;
+      if (x >= trasa.zacatek.x && x <= trasa.konec.x) return true;
+    }
+    return false;
   }
 
   /** Všichni účastníci dojeli nebo spadli. */

@@ -14,6 +14,8 @@ export interface StavVykresu {
   kurzor: Bod | null;
   /** Zmenšený náhled na kartu úrovně: bez popisků rastru, hladiny a základů. */
   nahled?: boolean;
+  /** Bez osy mostu a kóty rozpětí; v malé ukázce by zakrývaly most. */
+  bezKot?: boolean;
 }
 
 type Kontext = CanvasRenderingContext2D;
@@ -41,7 +43,7 @@ export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
   for (const trasa of s.uroven.trasy) nakresliTrasu(ctx, s, trasa);
 
   const hlavniTrasa = s.uroven.trasy[0];
-  if (hlavniTrasa) {
+  if (hlavniTrasa && !s.bezKot) {
     nakresliOsu(ctx, s, hlavniTrasa);
     nakresliKotuRozpeti(ctx, s, hlavniTrasa);
   }

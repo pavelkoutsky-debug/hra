@@ -1,0 +1,108 @@
+{
+  "verze": 2,
+  "id": "2-02",
+  "nazev": "Ranní rozcvička",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 36,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -5
+    },
+    {
+      "x": 7,
+      "y": -7
+    },
+    {
+      "x": 21,
+      "y": -7
+    },
+    {
+      "x": 25,
+      "y": -5
+    },
+    {
+      "x": 28,
+      "y": 0
+    },
+    {
+      "x": 36,
+      "y": 0
+    }
+  ],
+  "hladina": -5.8,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 28,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 28,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 2.5,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "A",
+  "rozpocet": 600000,
+  "inzenyrskyRozpocet": 335000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 1.0
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "utvar",
+      "pocet": 4,
+      "kadence": 3.0
+    },
+    {
+      "cas": 4,
+      "trasa": "lavka",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 2,
+      "kadence": 1.9
+    }
+  ]
+}
