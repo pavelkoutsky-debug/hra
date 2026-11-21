@@ -9,8 +9,10 @@ Poslední aktualizace: 21. 11. 2026
 | M0 Základy | Hotovo, sloučeno do `main`, nasazeno na Netlify (20. 11. 2026) |
 | M1a Průzkum (krok, tlumení, výkon) | Hotovo, sloučeno do `main`; kritérium splněno i na počítači zadavatele |
 | M1b Jádro | Hotovo, sloučeno do `main` (20. 11. 2026) |
-| M2 První hratelná verze | Hotovo, čeká na vyzkoušení zadavatelem a sloučení (pull request M2) |
-| M3a až M8 | Nezačato |
+| M2 První hratelná verze | Hotovo, zadavatel vyzkoušel a schválil sloučení do `main` (21. 11. 2026) |
+| M3a Rezonance | Rozpracováno |
+| M3z Zvuk (předsunuto z M8) | Nezačato; přijde hned po M3a |
+| M3b až M8 | Nezačato |
 
 ## M2 — výsledek
 
@@ -144,16 +146,13 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Na náhledu pull requestu M2 projít kapitolu 1: jde most postavit pohodlně, je jasné, proč něco nejde, vypadá zkouška a zřícení věrohodně?
-2. Říct, jestli obtížnost sedí: rozpočty a prahy mistrovské medaile jsou odvozené z referenčních mostů, ne z hraní člověkem.
-3. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
-4. Schválit sloučení M2 do `main`.
+Teď nic. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M3a, rezonance: běžec a pochodující útvar, lehká ocel, osa frekvencí, závaží, viskózní tlumič v editoru, měření komfortu, brnknutí, kapitola 2.
+M3a, rezonance: běžec a pochodující útvar, lehká ocel, osa frekvencí, závaží, viskózní tlumič v editoru, měření komfortu, brnknutí, kapitola 2. Po něm M3z, zvuk.
 
 ## Zpětná vazba zadavatele
 
@@ -166,8 +165,8 @@ M3a, rezonance: běžec a pochodující útvar, lehká ocel, osa frekvencí, zá
   1. Zadání úrovně jako vyskakovací okno, aby se hráč před stavbou zamyslel; instrukce mají zůstat i vlevo. **Hotovo.**
   2. Možnost zkoušku zpomalit a sledovat ji postupně. Rychlosti na časové ose už byly (¼×), ale přehlédl je. **Doplněno** ⅒×, krokování a popisek „Rychlost“; zmínka i v okně se zadáním.
   3. Zvýraznit zatížení prutů, případně malá procenta u prutů s možností vypnout. **Hotovo**: čísla využití, legenda, citlivější barevná škála (žlutá od 40 %, dřív od 50 %), záře u prutů nad 60 %.
-  4. Zvuky zatěžování a pohybu po mostě, od vrzání po praskání a zřícení. Sám řekl, že to může počkat. **Odloženo**; v plánu je to v M8, k předsunutí se zadavatel vyjádří.
-- K obtížnosti první kapitoly se zadavatel zatím nevyjádřil.
+  4. Zvuky zatěžování a pohybu po mostě, od vrzání po praskání a zřícení. Sám řekl, že to může počkat.
+- 21. 11. 2026, po úpravách: zadavatel rozhodl **M2 sloučit a pokračovat na M3a**. **Zvuky chce hned po M3a** jako samostatný milník (v koncepci M3z). **Obtížnost první kapitoly je akorát**; další kapitoly se mají ladit stejně, tedy z referenčních mostů.
 
 ## Verze fyziky
 

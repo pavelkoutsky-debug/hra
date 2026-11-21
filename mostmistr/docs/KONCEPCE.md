@@ -389,7 +389,7 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 - **Výkresové konvence.** Kóty rozpětí a výšek, osy čerchovaně, terén v řezu se šrafováním, značky podpor jako ve statických schématech, rohové popisové pole s názvem úrovně, měřítkem, verzí hry a medailemi.
 - **Vozidla a lidé** jako čárové bokorysy v témže stylu. Chodci jsou panáčci, jejichž krok odpovídá skutečné fázi jejich zatížení.
 - **Zkouška** běží na stejném výkresu, jen „oživne“: pruty se obarví podle využití.
-- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Až v posledním milníku.
+- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Původně až v posledním milníku; na přání zadavatele předsunuto do samostatného milníku M3z hned po M3a.
 
 **Ovládání editoru**
 
@@ -490,13 +490,14 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M1b Jádro** | Prvky, klouby a svary, lana, pružiny, tlumiče, závaží, integrátor, porušení s plasticitou, maticová statika a vlastní tvary, ověřovací a regresní sada | Testy z kapitoly 7.10 procházejí v tolerancích. Na Netlify je „zkušebna“ s ověřovacími případy a ukazatelem rychlosti na tvém počítači. |
 | **M2 První hratelná verze** | Editor, dřevo, mostovka, zkouška ve workeru, časová osa, barvy využití, obálka, osobní auto, chodec, kapitola 1, ukládání a export | Všechny úrovně projdou testem vyhratelnosti, test postaví most myší a vyhraje, uložení a načtení dá shodný otisk |
 | **M3a Rezonance** | Běžec, útvar, lehká ocel, osa frekvencí, závaží, viskózní tlumič, komfort, brnknutí, kapitola 2 | Automatický test: útvar na vlastní frekvenci mnohonásobně zvýší zrychlení a tlumič ho vrátí pod limit komfortu |
+| **M3z Zvuk** | Procedurálně generované zvuky: vrzání podle využití prutů, praskání a lámání při porušení, dopad a šplouchnutí, kroky a kola na mostovce; hlasitost a ztlumení. *(Předsunuto z M8 na přání zadavatele po prvním hraní M2.)* | Automatický test: každé porušení a pád vyvolá zvuk ve správném okamžiku záznamu, vrzání sílí s využitím, ztlumení se pamatuje a bez gesta hráče hra nevydá ani tón |
 | **M3b Dav a analýza** | Dav, běžecký závod, průvod, skákající dav, laděný tlumič, analytický panel, rezonanční křivka, budič, grafy, záznam porušení, porovnání pokusů, kapitola 5 | Laděný tlumič v testu rozdělí rezonanční špičku; úrovně projdou testem vyhratelnosti |
 | **M4a Těžká doprava** | Nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka, kapitola 3 | Dynamické zvýšení od nerovností odpovídá očekávanému rozsahu; úrovně projdou |
 | **M4b Velká rozpětí** | Lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby, kapitola 4 | Visutý a zavěšený referenční most unese kolonu kamionů; úrovně projdou |
 | **M5 Železnice** | Kolejiště, lokomotiva, vagóny, dvoupatrové mosty, kapitola 6 | Nákladní vlak přejede referenční most; úrovně projdou |
 | **M6 Pohyblivé mosty** | Písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 | Most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou |
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |
-| **M8 Doladění** | Zvuk, výkon, dotykové ovládání, angličtina | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
+| **M8 Doladění** | Výkon, dotykové ovládání, angličtina, doladění zvuku pro prvky a provoz z pozdějších kapitol | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
 
 Tuhé spoje a plasticitu umí jádro od M1b, hráči se zpřístupní v M4b.
 
