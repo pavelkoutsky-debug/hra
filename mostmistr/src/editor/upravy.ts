@@ -73,6 +73,42 @@ export function zmenPrvek(navrh: NavrhMostu, pruty: Iterable<number>, prvek: IdP
   return zmena ? { ...navrh, pruty: nove } : navrh;
 }
 
+/** Nastaví závaží daným styčníkům; `kg` dostane dosavadní hodnotu a vrátí novou (0 závaží odebere). */
+export function nastavZavazi(
+  navrh: NavrhMostu,
+  stycniky: ReadonlySet<number>,
+  kg: (dosavadni: number) => number,
+): NavrhMostu {
+  let zmena = false;
+  const nove = navrh.stycniky.map((s) => {
+    if (!stycniky.has(s.id)) return s;
+    const dosavadni = s.zavazi ?? 0;
+    const hodnota = Math.max(0, kg(dosavadni));
+    if (hodnota === dosavadni) return s;
+    zmena = true;
+    const { zavazi: _stare, ...bez } = s;
+    return hodnota > 0 ? { ...bez, zavazi: hodnota } : bez;
+  });
+  return zmena ? { ...navrh, stycniky: nove } : navrh;
+}
+
+/** Nastaví součinitel tlumení daným prutům; `hodnota` dostane dosavadní (nebo undefined) a vrátí novou. */
+export function nastavTlumeni(
+  navrh: NavrhMostu,
+  pruty: ReadonlySet<number>,
+  hodnota: (dosavadni: number | undefined) => number,
+): NavrhMostu {
+  let zmena = false;
+  const nove = navrh.pruty.map((p) => {
+    if (!pruty.has(p.id)) return p;
+    const nova = hodnota(p.tlumeni);
+    if (nova === p.tlumeni) return p;
+    zmena = true;
+    return { ...p, tlumeni: nova };
+  });
+  return zmena ? { ...navrh, pruty: nove } : navrh;
+}
+
 /**
  * Posune styčník na jiný bod rastru. Vrací null, když tam už jiný styčník je:
  * slučování styčníků tažením by snadno vyrobilo nechtěné pruty nulové délky.
@@ -101,6 +137,18 @@ export function zrcadli(navrh: NavrhMostu, osa: number, jen?: ReadonlySet<number
     const stavajiciB = stycnikV(vysledek, obrazB);
     if (stavajiciA && stavajiciB && prutMezi(vysledek, stavajiciA.id, stavajiciB.id)) continue;
     vysledek = pridejPrut(vysledek, obrazA, obrazB, p.prvek);
+    // Obraz má stejné nastavení jako předloha: tlumení prutu a závaží v jeho koncích.
+    const idA = stycnikV(vysledek, obrazA)!.id;
+    const idB = stycnikV(vysledek, obrazB)!.id;
+    if (p.tlumeni !== undefined) {
+      const obraz = prutMezi(vysledek, idA, idB)!;
+      const tlumeni = p.tlumeni;
+      vysledek = nastavTlumeni(vysledek, new Set([obraz.id]), () => tlumeni);
+    }
+    for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
+      const zavazi = vzor.zavazi;
+      if (zavazi) vysledek = nastavZavazi(vysledek, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
+    }
   }
   return vysledek;
 }

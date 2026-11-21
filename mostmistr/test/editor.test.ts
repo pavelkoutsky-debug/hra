@@ -1,10 +1,22 @@
 // Stavební režim bez prohlížeče: úpravy návrhu, pravidla kreslení, výběr a historie.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { KATALOG, STUPNE_TLUMENI } from "../src/data/katalog";
 import { zkontrolujNavrh } from "../src/data/navrh";
 import { nactiUroven } from "../src/data/uroven";
 import { Editor } from "../src/editor/editor";
 import { duvodProtiPrutu, lzeZacit } from "../src/editor/pravidla";
-import { bezOsamelychStycniku, posunStycnik, prazdnyNavrh, pridejPrut, smaz, zmenPrvek, zrcadli } from "../src/editor/upravy";
+import {
+  bezOsamelychStycniku,
+  nastavTlumeni,
+  nastavZavazi,
+  posunStycnik,
+  prazdnyNavrh,
+  pridejPrut,
+  smaz,
+  zmenPrvek,
+  zrcadli,
+} from "../src/editor/upravy";
 import potok from "../urovne/1-01.json";
 import auto from "../urovne/1-03.json";
 
@@ -269,5 +281,113 @@ describe("editor", () => {
     expect(e.tah).toBeNull();
     expect(e.pust()).toBe(false);
     expect(e.navrh.pruty).toHaveLength(0);
+  });
+});
+
+describe("závaží a tlumiče", () => {
+  const lavka = nactiUroven(JSON.parse(readFileSync(new URL("../urovne/2-04.json", import.meta.url), "utf-8")));
+
+  function sMostovkou(): Editor {
+    const editor = new Editor(lavka, prazdnyNavrh("2-04"));
+    for (let x = 0; x < 32; x += 4) {
+      editor.stiskni(B(x, 0));
+      editor.tahni(B(x + 4, 0));
+      editor.pust();
+    }
+    return editor;
+  }
+
+  it("úpravy: závaží se nastaví, nula ho odebere a původní návrh se nezmění", () => {
+    const navrh = pridejPrut(prazdnyNavrh("2-04"), B(0, 0), B(4, 0), "mostovka-drevo");
+    const tezsi = nastavZavazi(navrh, new Set([1]), (kg) => kg + 300);
+    expect(navrh.stycniky[1]).toEqual({ id: 1, x: 4, y: 0 });
+    expect(tezsi.stycniky[1]).toEqual({ id: 1, x: 4, y: 0, zavazi: 300 });
+    expect(nastavZavazi(tezsi, new Set([1]), () => 0).stycniky[1]).toEqual({ id: 1, x: 4, y: 0 });
+    expect(nastavZavazi(tezsi, new Set([1]), (kg) => kg)).toBe(tezsi);
+  });
+
+  it("úpravy: tlumení se zapíše k prutu", () => {
+    const navrh = pridejPrut(prazdnyNavrh("2-04"), B(8, 0), B(8, -4), "tlumic");
+    expect(nastavTlumeni(navrh, new Set([0]), () => 75_000).pruty[0]).toMatchObject({ prvek: "tlumic", tlumeni: 75_000 });
+  });
+
+  it("vybranému styčníku jde přidávat a ubírat závaží po krocích až do meze úrovně", () => {
+    const editor = sMostovkou();
+    expect(editor.zavaziVyberu).toBeNull();
+    expect(editor.zmenZavazi(1)).toBe(false);
+    // Nástroj výběru: kliknutí na styčník bez tažení ho vybere.
+    editor.stiskni(B(16, 0), { posouvat: true, bezKresleni: true });
+    editor.pust();
+    expect(editor.zavaziVyberu).toBe(0);
+    expect(editor.zmenZavazi(1)).toBe(true);
+    expect(editor.zmenZavazi(1)).toBe(true);
+    expect(editor.zavaziVyberu).toBe(200);
+    expect(editor.zmenZavazi(-1)).toBe(true);
+    expect(editor.zavaziVyberu).toBe(100);
+    for (let i = 0; i < 40; i++) editor.zmenZavazi(1);
+    expect(editor.zavaziVyberu).toBe(lavka.nejvetsiZavazi);
+    expect(zkontrolujNavrh(editor.navrh, lavka)).toEqual([]);
+    editor.zpet();
+    expect(editor.zavaziVyberu).toBeLessThan(lavka.nejvetsiZavazi);
+  });
+
+  it("závaží nad mez úrovně a tlumič mimo rozsah kontrola návrhu odmítne", () => {
+    const editor = sMostovkou();
+    const navrh = editor.navrh;
+    const pretizeny = nastavZavazi(navrh, new Set([navrh.stycniky[2]!.id]), () => lavka.nejvetsiZavazi + 100);
+    expect(zkontrolujNavrh(pretizeny, lavka).map((p) => p.druh)).toEqual(["zavazi-nepovolene"]);
+    const sTlumicem = pridejPrut(navrh, B(8, 0), B(8, -4), "tlumic");
+    const id = sTlumicem.pruty.at(-1)!.id;
+    expect(zkontrolujNavrh(sTlumicem, lavka)).toEqual([]);
+    expect(zkontrolujNavrh(nastavTlumeni(sTlumicem, new Set([id]), () => 1e7), lavka).map((p) => p.druh)).toEqual([
+      "tlumeni-mimo-rozsah",
+    ]);
+    // V první kapitole závaží není vůbec.
+    const potokSZavazim = nastavZavazi(pridejPrut(prazdnyNavrh("1-01"), B(0, 0), B(4, 0), "mostovka-drevo"), new Set([1]), () => 100);
+    expect(zkontrolujNavrh(potokSZavazim, uroven).map((p) => p.druh)).toContain("zavazi-nepovolene");
+  });
+
+  it("vybranému tlumiči jde přepínat sílu po stupních", () => {
+    const editor = sMostovkou();
+    editor.zvolPrvek("tlumic");
+    editor.stiskni(B(8, 0));
+    editor.tahni(B(8, -4));
+    expect(editor.pust()).toBe(true);
+    expect(editor.tlumeniVyberu).toBeNull();
+    editor.stiskni(B(8, -2), { bezKresleni: true });
+    editor.pust();
+    expect(editor.tlumeniVyberu).toBe(KATALOG.tlumic.tlumeni!.vychozi);
+    expect(editor.zmenTlumeni(1)).toBe(true);
+    expect(editor.tlumeniVyberu).toBe(75_000);
+    for (let i = 0; i < 20; i++) editor.zmenTlumeni(1);
+    expect(editor.tlumeniVyberu).toBe(STUPNE_TLUMENI.at(-1));
+    for (let i = 0; i < 20; i++) editor.zmenTlumeni(-1);
+    expect(editor.tlumeniVyberu).toBe(STUPNE_TLUMENI[0]);
+    expect(zkontrolujNavrh(editor.navrh, lavka)).toEqual([]);
+  });
+
+  it("zrcadlení přenese na druhou stranu i tlumič s nastavením a závaží", () => {
+    const editor = sMostovkou();
+    editor.zvolPrvek("tlumic");
+    editor.stiskni(B(8, 0));
+    editor.tahni(B(8, -4));
+    editor.pust();
+    editor.stiskni(B(8, -2), { bezKresleni: true });
+    editor.pust();
+    editor.zmenTlumeni(1);
+    editor.zrusVyber();
+    editor.stiskni(B(12, 0), { bezKresleni: true });
+    editor.pust();
+    editor.zmenZavazi(1);
+    editor.zrusVyber();
+    expect(editor.zrcadli()).toBe(true);
+    const navrh = editor.navrh;
+    const pravy = navrh.pruty.find((p) => {
+      const a = navrh.stycniky.find((s) => s.id === p.a)!;
+      return p.prvek === "tlumic" && a.x === 24;
+    });
+    expect(pravy).toMatchObject({ tlumeni: 75_000 });
+    expect(navrh.stycniky.find((s) => s.x === 20 && s.y === 0)).toMatchObject({ zavazi: 100 });
+    expect(zkontrolujNavrh(navrh, lavka)).toEqual([]);
   });
 });

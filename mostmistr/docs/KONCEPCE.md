@@ -124,7 +124,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 |---|---|
 | Napínák lana | Lanu se nastaví předpětí. Ladí se tím tvar a tuhost zavěšených a visutých mostů. |
 | Automatické dopnutí | Tlačítko, které lana napne tak, aby mostovka pod vlastní tíhou držela nakreslený tvar. Napínák pak slouží k ručnímu doladění. |
-| Viskózní tlumič | Prut, který klade odpor rychlosti. Tlumí kmitání. Rozsah nastavení je omezený. |
+| Viskózní tlumič | Prut, který klade odpor rychlosti. Tlumí kmitání. Rozsah nastavení je omezený. *(M3a: 5 až 200 kN·s/m v devíti stupních.)* |
 | Pružina | Prut s volitelnou tuhostí. |
 | Závaží | Hmota ve styčníku. Protizávaží zvedacích mostů a hmota laděných tlumičů. |
 | Laděný tlumič | Závaží + pružina + tlumič. Hráč ho ladí v hertzech na vlastní frekvenci mostu. |
@@ -282,7 +282,7 @@ Bez nerovností vozovky by vozidla most dynamicky téměř nezatížila: recenze
 
 - Chodec je hmota na pružině s tlumičem (lidské tělo) a k tomu budicí síla kroku složená z několika harmonických složek. Dav tak mostu přidává hmotu i tlumení.
 - Běh a skákání mají letovou fázi a větší dynamické účinky.
-- Při silném kmitání lidé zpomalí a ztratí krok, takže síla, kterou do mostu vnášejí, neroste donekonečna.
+- Při silném kmitání lidé zpomalí a ztratí krok, takže síla, kterou do mostu vnášejí, neroste donekonečna. *(V M3a zatím ne; přijde s davem v M3b.)*
 - **Dav se na kmitající most neladí.** U svislého kmitání to není spolehlivě doložené, takže synchronní zatížení dělají jen zdroje z kapitoly 6.
 - **Komfort** se hodnotí třídami podle zrychlení mostovky (do 0,5 m/s² výborný, do 1 střední, do 2,5 nízký, nad 2,5 nepřijatelný). Zrychlení se měří v pásmu 0,5–10 Hz a vyhlazené přes jednu sekundu, aby o výsledku nerozhodl jediný náraz.
 
@@ -406,6 +406,8 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Spustit a zastavit zkoušku | Mezerník |
 | Pozastavit přehrávání, skočit na konec | P, End |
 | Krokovat záznam zpět a vpřed | čárka, tečka |
+| Brnknout do mostu | B a tažení styčníku dolů |
+| Závaží ve styčníku, síla tlumiče | výběr a tlačítka − a + v paletě |
 | Zapnout a vypnout čísla využití u prutů | C |
 
 ---

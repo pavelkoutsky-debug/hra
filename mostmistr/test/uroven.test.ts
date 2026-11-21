@@ -160,3 +160,29 @@ describe("výška terénu", () => {
     expect(vyskaTerenu(u, 1000)).toBe(0);
   });
 });
+
+describe("verze formátu úrovně", () => {
+  it("soubor verze 1 se převede: závaží nedovoluje a osu frekvencí neukazuje", () => {
+    const stara = platna();
+    expect(stara.verze).toBe(1);
+    const u = nactiUroven(stara);
+    expect(u.verze).toBe(VERZE_UROVNE);
+    expect(u.nejvetsiZavazi).toBe(0);
+    expect(u.osaFrekvenci).toBe(false);
+  });
+
+  it("verze 2 nese největší závaží a osu frekvencí sama a bez nich neprojde", () => {
+    const nova = { ...platna(), verze: 2, nejvetsiZavazi: 1500, osaFrekvenci: true };
+    const u = nactiUroven(nova);
+    expect(u.nejvetsiZavazi).toBe(1500);
+    expect(u.osaFrekvenci).toBe(true);
+    ocekavejChybu({ ...platna(), verze: 2, osaFrekvenci: true }, "uroven.nejvetsiZavazi");
+    ocekavejChybu({ ...platna(), verze: 2, nejvetsiZavazi: -1, osaFrekvenci: true }, "uroven.nejvetsiZavazi");
+  });
+
+  it("úrovně druhé kapitoly jsou ve verzi 2 a ukazují osu frekvencí", () => {
+    const druha = nactiUrovne().filter((u) => u.id.startsWith("2-"));
+    expect(druha).toHaveLength(4);
+    expect(druha.every((u) => u.osaFrekvenci)).toBe(true);
+  });
+});

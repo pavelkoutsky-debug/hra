@@ -8,6 +8,7 @@ import {
   CARA_MOSTOVKA,
   CARA_PRUZINA,
   CARA_SKRYTA,
+  CARA_TLUMIC,
   STYCNIK_BEZNY,
   STYCNIK_ZAVAZI,
   type Snimek,
@@ -35,7 +36,7 @@ function tuhe(t: Topologie): Uint8Array {
   if (!pole) {
     pole = new Uint8Array(t.stycniku);
     for (let e = 0; e < t.prvekA.length; e++) {
-      if (t.cara[e] === CARA_LANO || t.cara[e] === CARA_PRUZINA) continue;
+      if (t.cara[e] === CARA_LANO || t.cara[e] === CARA_PRUZINA || t.cara[e] === CARA_TLUMIC) continue;
       if ((t.klouby[e]! & 1) === 0) pole[t.prvekA[e]!] = 1;
       if ((t.klouby[e]! & 2) === 0) pole[t.prvekB[e]!] = 1;
     }
@@ -81,6 +82,10 @@ export function nakresliKonstrukci(
       const b = bod(t.prvekB[e]!);
       if (cara === CARA_PRUZINA) {
         nakresliPruzinu(ctx, a, b, m);
+        continue;
+      }
+      if (cara === CARA_TLUMIC) {
+        nakresliTlumic(ctx, a, b, m, BARVY.cara);
         continue;
       }
       const vyuziti = s.vyuziti[e]!;
@@ -205,8 +210,55 @@ function nakresliPruzinu(ctx: CanvasRenderingContext2D, a: BodObrazu, b: BodObra
   ctx.stroke();
 }
 
+/**
+ * Viskózní tlumič: válec s pístnicí. Válec je u konce `a`, píst s tyčí u konce `b`;
+ * při pohybu konců se tyč do válce zasouvá.
+ */
+export function nakresliTlumic(ctx: CanvasRenderingContext2D, a: BodObrazu, b: BodObrazu, m: number, barva: string): void {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const delka = Math.hypot(dx, dy);
+  if (!(delka > 0)) return;
+  const ex = dx / delka;
+  const ey = dy / delka;
+  const pul = mezi(0.13 * m, 3.5, 7);
+  // Válec má pevnou délku podle klidové délky prutu; píst je v jeho polovině.
+  const zacatek = 0.22 * delka;
+  const valec = Math.min(0.42 * delka, 0.7 * delka - zacatek + 0.2 * delka);
+  const bod = (podel: number, napric: number): [number, number] => [
+    a.x + ex * podel - ey * napric,
+    a.y + ey * podel + ex * napric,
+  ];
+  ctx.save();
+  ctx.strokeStyle = barva;
+  ctx.fillStyle = BARVY.pozadi;
+  ctx.lineWidth = 1.6;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(...bod(zacatek, 0));
+  ctx.stroke();
+  // Válec otevřený směrem k pístnici.
+  ctx.beginPath();
+  ctx.moveTo(...bod(zacatek + valec, -pul));
+  ctx.lineTo(...bod(zacatek, -pul));
+  ctx.lineTo(...bod(zacatek, pul));
+  ctx.lineTo(...bod(zacatek + valec, pul));
+  ctx.fill();
+  ctx.stroke();
+  // Píst a pístnice.
+  const pist = zacatek + 0.55 * valec;
+  ctx.beginPath();
+  ctx.moveTo(...bod(pist, -0.7 * pul));
+  ctx.lineTo(...bod(pist, 0.7 * pul));
+  ctx.moveTo(...bod(pist, 0));
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Závaží: obdélník s vodorovnou čarou, zavěšený za střed horní hrany. */
-function nakresliZavazi(ctx: CanvasRenderingContext2D, p: BodObrazu, m: number): void {
+export function nakresliZavazi(ctx: CanvasRenderingContext2D, p: BodObrazu, m: number): void {
   const sirka = mezi(0.7 * m, 16, 44);
   const vyska = 0.6 * sirka;
   ctx.fillStyle = BARVY.pozadi;

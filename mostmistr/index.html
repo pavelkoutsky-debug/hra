@@ -72,6 +72,9 @@
           <button type="button" class="paleta__tlacitko" data-akce="zrcadlit">
             <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
           </button>
+          <button type="button" class="paleta__tlacitko" data-akce="brnknout" data-popis="paleta.brnknout.popis" aria-pressed="false" hidden>
+            <kbd>B</kbd><span data-text="paleta.brnknout"></span>
+          </button>
           <div class="paleta__dvojice">
             <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
               <kbd>Del</kbd><span data-text="paleta.smazat"></span>
@@ -85,6 +88,23 @@
             <button type="button" class="paleta__tlacitko" data-akce="znovu" data-popis="paleta.znovu.popis">
               <span data-text="paleta.znovu"></span>
             </button>
+          </div>
+
+          <div class="paleta__nastaveni" data-nastaveni="zavazi" hidden>
+            <h2 data-text="paleta.zavazi"></h2>
+            <div class="paleta__krokovac">
+              <button type="button" class="paleta__tlacitko" data-akce="zavazi-min" data-popis="paleta.zavazi.min">&minus;</button>
+              <output data-udaj="zavazi"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="zavazi-plus" data-popis="paleta.zavazi.plus">+</button>
+            </div>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="tlumeni" hidden>
+            <h2 data-text="paleta.tlumeni"></h2>
+            <div class="paleta__krokovac">
+              <button type="button" class="paleta__tlacitko" data-akce="tlumeni-min" data-popis="paleta.tlumeni.min">&minus;</button>
+              <output data-udaj="tlumeni"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="tlumeni-plus" data-popis="paleta.tlumeni.plus">+</button>
+            </div>
           </div>
 
           <h2 data-text="paleta.most"></h2>
@@ -119,6 +139,7 @@
             <button type="button" class="legenda__prepinac" data-akce="cisla" data-popis="legenda.cisla.popis" aria-pressed="true">
               <kbd>C</kbd><span data-text="legenda.cisla"></span>
             </button>
+            <output class="legenda__kmitani" data-udaj="kmitani" data-popis="legenda.kmitani.popis"></output>
           </div>
 
           <section class="vysledek" hidden>
@@ -133,6 +154,8 @@
               <dd data-udaj="vysledek-cena"></dd>
               <dt data-text="vysledek.vyuziti"></dt>
               <dd data-udaj="vysledek-vyuziti"></dd>
+              <dt data-text="vysledek.kmitani" data-radek="kmitani"></dt>
+              <dd data-udaj="vysledek-kmitani" data-radek="kmitani"></dd>
               <dt data-text="vysledek.poruseni"></dt>
               <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
             </dl>
@@ -188,6 +211,14 @@
           <div class="osa__rad" data-jen="stavba">
             <span class="osa__nadpis" data-text="rad.nadpis"></span>
             <span class="osa__polozky" data-udaj="jizdni-rad"></span>
+          </div>
+          <div class="osa__frekvence" data-jen="stavba" data-udaj="osa-frekvenci" hidden>
+            <span class="osa__nadpis" data-text="frekvence.nadpis"></span>
+            <div class="frekvence" role="img">
+              <div class="frekvence__stupnice"></div>
+              <div class="frekvence__znacky"></div>
+            </div>
+            <output class="frekvence__popis" data-udaj="frekvence-popis"></output>
           </div>
           <button type="button" class="tlacitko" data-akce="prehrat" data-jen="zkouska"></button>
           <button type="button" class="tlacitko" data-akce="na-konec" data-text="zkouska.naKonec" data-jen="zkouska"></button>

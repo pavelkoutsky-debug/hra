@@ -50,7 +50,7 @@ Vedle hry se sestavují tři pomocné stránky:
 | Složka | Obsah | Zná prohlížeč? |
 |---|---|---|
 | `src/jadro/` | Fyzika | Ne |
-| `src/zkouska/` | Rozhraní zkoušky, stavba mostu z návrhu, provoz a vozidla, zkouška úrovně, záznam, regresní sada | Jen `klient.ts` a `pracovnik.ts` |
+| `src/zkouska/` | Rozhraní zkoušky, stavba mostu z návrhu, provoz a vozidla, zkouška úrovně, rozbor vlastních frekvencí, záznam, regresní sada | Jen `klient.ts` a `pracovnik.ts` |
 | `src/data/` | Formáty úrovní, návrhů mostů a uloženého postupu, katalog prvků, ceny | Ne |
 | `src/zkusebna/` | Ověřovací případy jádra a stránka `zkusebna.html` | Jen `stranka.ts` a `pracovnik.ts` |
 | `src/editor/` | Stavební režim: úpravy návrhu, pravidla kreslení, výběr, historie | Ne (neví nic o plátně) |

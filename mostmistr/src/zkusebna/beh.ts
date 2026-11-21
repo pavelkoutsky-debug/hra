@@ -160,6 +160,7 @@ export class BehZkusebny {
       kola,
       sily: sipky,
       provoz: new Uint8Array(0),
+      kmitani: 0,
     };
   }
 }

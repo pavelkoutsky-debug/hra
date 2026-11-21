@@ -71,6 +71,70 @@ function chodec(kadence: number): ModelUcastnika {
   };
 }
 
+/** Kadence, od které se krok útvaru počítá jako běh, Hz. */
+export const KADENCE_BEHU = 2.4;
+const VYCHOZI_KADENCE_BEHU = 2.8;
+const HMOTA_BEZCE = 75;
+/** Šířka, kterou na mostovce zabere jeden člověk v útvaru, m. */
+export const SIRKA_NA_OSOBU = 0.75;
+
+/**
+ * Běžec: 75 kg, 3 m/s. Noha se mostovky dotýká zhruba polovinu kroku a mezi doskoky běžec
+ * letí; síla jednoho doskoku má tvar půlvlny sinusu. Její rozvoj do řady dává první
+ * harmonickou π/2 váhy a druhou −2/3 váhy (v kosinu); třetí je nulová. Řada zkrácená po druhé
+ * harmonické klesne během letu nejvýš o osminu váhy pod nulu; vyšší členy, které by to
+ * srovnaly, leží nad pásmem, na kterém u lávek záleží. Tělo jako u chodce: hmota na pružině
+ * s tlumičem, při běhu tužší (3 Hz).
+ */
+function bezec(kadence: number): ModelUcastnika {
+  const vaha = HMOTA_BEZCE * g;
+  return {
+    rychlost: 3,
+    delka: 0.6,
+    rozestup: 2.5,
+    napravy: [
+      { odstup: 0, odpruzena: HMOTA_BEZCE, neodpruzena: 0, kontakt: { ...pruzina(HMOTA_BEZCE, 3, 0.3), vyska: 1 } },
+    ],
+    buzeni: { frekvence: kadence, amplitudy: [(Math.PI / 2) * vaha, 0, 0, (-2 / 3) * vaha, 0, 0] },
+  };
+}
+
+/**
+ * Člen pochodujícího útvaru. Do kadence běhu pochoduje (kroková síla chodce, řady dva kroky
+ * za sebou), nad ní běží. Všichni jdou ve stejné fázi; to zařizuje plán provozu.
+ */
+function clenUtvaru(kadence: number): ModelUcastnika {
+  if (kadence >= KADENCE_BEHU) return bezec(kadence);
+  return { ...chodec(kadence), rozestup: 2 * DELKA_KROKU };
+}
+
+/**
+ * Sloučí `lidi` stejných lidí jdoucích vedle sebe do jednoho účastníka: hmota, tuhost,
+ * tlumení i síly se násobí. V bokorysu jsou na stejném místě a mostovku zatěžují společně.
+ */
+export function vedleSebe(model: ModelUcastnika, lidi: number): ModelUcastnika {
+  if (lidi === 1) return model;
+  const vysledek: ModelUcastnika = {
+    ...model,
+    napravy: model.napravy.map((n) => {
+      const naprava: Naprava = {
+        ...n,
+        odpruzena: n.odpruzena * lidi,
+        neodpruzena: n.neodpruzena * lidi,
+        kontakt: { ...n.kontakt, tuhost: n.kontakt.tuhost * lidi, tlumeni: n.kontakt.tlumeni * lidi },
+      };
+      if (n.perovani) {
+        naprava.perovani = { ...n.perovani, tuhost: n.perovani.tuhost * lidi, tlumeni: n.perovani.tlumeni * lidi };
+      }
+      return naprava;
+    }),
+  };
+  if (model.buzeni) {
+    vysledek.buzeni = { ...model.buzeni, amplitudy: model.buzeni.amplitudy.map((a) => a * lidi) };
+  }
+  return vysledek;
+}
+
 /**
  * Cyklista: 95 kg s kolem, 20 km/h. Jezdec na sedle a pneumatikách kmitá kolem 4 Hz;
  * hmota se dělí na zadní a přední kolo 55 : 45, rozvor 1,05 m.
@@ -120,6 +184,8 @@ function auto(): ModelUcastnika {
  */
 export function modelUcastnika(druh: IdProvozu, kadence?: number): ModelUcastnika | null {
   if (druh === "chodec") return chodec(kadence ?? VYCHOZI_KADENCE);
+  if (druh === "bezec") return bezec(kadence ?? VYCHOZI_KADENCE_BEHU);
+  if (druh === "utvar") return clenUtvaru(kadence ?? VYCHOZI_KADENCE);
   if (druh === "cyklista") return cyklista();
   if (druh === "auto") return auto();
   return null;

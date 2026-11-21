@@ -117,8 +117,8 @@ describe("přehled kampaně", () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
     expect(await stranka.title()).toBe("Mostmistr");
-    expect(await stranka.locator(".kapitola h1").innerText()).toBe("Kapitola 1 · Potok");
-    expect(await stranka.locator(".karta").count()).toBe(4);
+    expect(await stranka.locator(".kapitola h1").first().innerText()).toBe("Kapitola 1 · Potok");
+    expect(await stranka.locator('.karta[data-uroven^="1-"]').count()).toBe(4);
     expect(await stranka.locator('.karta[data-zamceno="false"]').count()).toBe(1);
     expect(await stranka.locator('.karta[data-uroven="1-02"]').innerText()).toContain("nejdřív projdi úroveň 1-01");
     await stranka.screenshot({ path: `${SLOZKA}/20-prehled.png` });
@@ -432,8 +432,8 @@ describe("další úrovně kapitoly", () => {
     await akce("na-konec").click();
     await stranka.locator(".vysledek").waitFor({ state: "visible" });
     expect(await udaj("vysledek-nadpis")).toBe("MOST OBSTÁL");
-    // Poslední úroveň kapitoly další nemá.
-    expect(await akce("dalsi").isVisible()).toBe(false);
+    // Za poslední úrovní první kapitoly následuje první úroveň druhé.
+    expect(await akce("dalsi").getAttribute("href")).toBe("?uroven=2-01");
   });
 
   it("most, který spadnout má, spadne i s autem a výsledek vypíše porušení", async () => {

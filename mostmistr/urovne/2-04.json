@@ -1,0 +1,127 @@
+{
+  "verze": 2,
+  "id": "2-04",
+  "nazev": "Přehlídka",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -11,
+    "xMax": 40,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -6
+    },
+    {
+      "x": 7,
+      "y": -8
+    },
+    {
+      "x": 25,
+      "y": -8
+    },
+    {
+      "x": 29,
+      "y": -6
+    },
+    {
+      "x": 32,
+      "y": 0
+    },
+    {
+      "x": 40,
+      "y": 0
+    }
+  ],
+  "hladina": -6.8,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 32,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 8,
+      "y": -4,
+      "typ": "pevna"
+    },
+    {
+      "x": 24,
+      "y": -4,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 32,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 2.5,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "A",
+  "rozpocet": 480000,
+  "inzenyrskyRozpocet": 390000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 1.2
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka",
+    "tlumic"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 2000,
+  "osaFrekvenci": true,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "utvar",
+      "pocet": 24,
+      "kadence": 1.7
+    },
+    {
+      "cas": 26,
+      "trasa": "lavka",
+      "smer": -1,
+      "druh": "utvar",
+      "pocet": 24,
+      "kadence": 2.0
+    },
+    {
+      "cas": 50,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "utvar",
+      "pocet": 24,
+      "kadence": 2.3
+    }
+  ]
+}

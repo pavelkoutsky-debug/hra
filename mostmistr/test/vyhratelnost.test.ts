@@ -24,8 +24,8 @@ function zkousej(uroven: Uroven, navrh: NavrhMostu): VysledekZkousky {
 const kampan = nactiKampan();
 
 describe("kampaň", () => {
-  it("má úrovně první kapitoly v pořadí a ke každé referenční řešení", () => {
-    expect(kampan.map((u) => u.id)).toEqual(["1-01", "1-02", "1-03", "1-04"]);
+  it("má úrovně obou kapitol v pořadí a ke každé referenční řešení", () => {
+    expect(kampan.map((u) => u.id)).toEqual(["1-01", "1-02", "1-03", "1-04", "2-01", "2-02", "2-03", "2-04"]);
     expect(Object.keys(RESENI).sort()).toEqual(kampan.map((u) => u.id).sort());
   });
 

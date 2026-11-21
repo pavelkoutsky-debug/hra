@@ -30,6 +30,8 @@ export const CARA_MOSTOVKA = 2;
 export const CARA_PRUZINA = 3;
 /** Prvek, který se nekreslí: pérování vozidla. */
 export const CARA_SKRYTA = 4;
+/** Viskózní tlumič: prut bez tuhosti, jen s tlumením. */
+export const CARA_TLUMIC = 5;
 
 export const STYCNIK_BEZNY = 0;
 /** Styčník, který se nekreslí: patří břemenu a kreslí se jako kolo. */
@@ -52,6 +54,8 @@ export interface Snimek {
   sily: Float32Array;
   /** Stav každého účastníka provozu (čeká, jede, přejel, spadl). */
   provoz: Uint8Array;
+  /** Okamžité zrychlení mostovky v m/s², jak ho měří hodnocení komfortu; 0, když se neměří. */
+  kmitani: number;
 }
 
 /** Porušení prutu, jak ho ukazuje časová osa. */
@@ -81,7 +85,7 @@ export function topologieSoustavy(s: Soustava, popis: PopisKresleni = {}): Topol
   const klouby = new Uint8Array(s.pocetPrvku);
   for (let e = 0; e < s.pocetPrvku; e++) {
     if (s.druh[e] === LANO) cara[e] = CARA_LANO;
-    else if (s.druh[e] === PRUZINA) cara[e] = CARA_PRUZINA;
+    else if (s.druh[e] === PRUZINA) cara[e] = s.EA[e] === 0 && s.tlumic[e] !== 0 ? CARA_TLUMIC : CARA_PRUZINA;
     else if (mostovka.has(s.prut[e]!)) cara[e] = CARA_MOSTOVKA;
     // Kloubový konec se pozná podle toho, že k němu prvek nemá ohybovou tuhost.
     const bezA = s.kAA[e] === 0;
@@ -173,6 +177,7 @@ export class Zaznam {
     cil.kola = prolozit(a.kola, b.kola, t, cil.kola);
     cil.sily = prolozit(a.sily, b.sily, t, cil.sily);
     cil.provoz = a.provoz;
+    cil.kmitani = a.kmitani + (b.kmitani - a.kmitani) * t;
     return this.topologie[a.topologie] ?? null;
   }
 }
@@ -195,5 +200,6 @@ export function prazdnySnimek(): Snimek {
     kola: new Float32Array(0),
     sily: new Float32Array(0),
     provoz: new Uint8Array(0),
+    kmitani: 0,
   };
 }

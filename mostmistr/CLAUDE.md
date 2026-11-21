@@ -31,6 +31,8 @@ Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po zm�
 - **Výchozí stav je rovnováha.** Před zkouškou se hledá `najdiRovnovahu`; konstrukce puštěná z nakreslené polohy by se rozezněla.
 - **Úrovně.** Každá úroveň kampaně má v `urovne/reseni.ts` most pro každou medaili a mosty, které spadnout mají; `test/vyhratelnost.test.ts` hlídá, že dopadnou, jak mají. Po každé změně fyziky, katalogu nebo úrovně ho pusť: i oprava, která vypadá jen vizuálně, umí změnit, které mosty projdou.
 - **Hra a zkouška.** Obrazovku úrovně řídí `src/hra/uroven.ts`. Každá zkouška dostane vlastní pracovní vlákno, které se po výsledku nebo zastavení ukončí; zprávy z opuštěné zkoušky tak nemůžou dorazit do nové. Výsledek a medaile se hráči ukazují až na konci přehrávání.
+- **Rozbor při stavbě.** Vlastní frekvence pro osu frekvencí počítá `src/zkouska/rozbor.ts` v pomocném pracovním vlákně na zprávu `rozbor`; odpověď nese `id` žádosti a zastaralé se zahazují. Hlavní vlákno fyziku nepočítá.
+- **Kmitání a komfort.** Zrychlení mostovky měří `src/jadro/komfort.ts`; nad 2,5 m/s² most neobstojí. Lidé na mostě ho sami tlumí, takže úrovně s rezonancí se ladí simulací, ne odhadem.
 - **Háčky pro testy v prohlížeči.** `body[data-rezim]` (prehled, stavba, zkouska), `body[data-zkouska]` (pocita, hotovo, chyba), `body[data-otisk]`, `body[data-pruty]` a `canvas[data-kamera]` (střed a měřítko pohledu; podle něj test spočítá, kam kliknout). Neměň je bez úpravy `test/e2e/hra.e2e.ts`.
 - **Texty.** Všechny texty pro hráče jdou přes `src/ui/slovnik.ts`.
 - **Barvy.** Žlutá je vyhrazená pro varování. Využití prutů má jednu škálu bílá → žlutá → červená (`src/vykres/skala.ts`; legenda v `src/styly.css` má stejné zastávky); tlak plná čára, tah dvojitá.
