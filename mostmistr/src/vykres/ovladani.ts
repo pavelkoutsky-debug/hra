@@ -9,6 +9,17 @@ export interface PosluchacOvladani {
   celyVykres(): void;
   /** Kurzor se pohnul nad plátnem; null, když ho opustil. */
   kurzor(bod: Bod | null): void;
+  /** Levé tlačítko: kreslení a výběr. Bez něj levé tlačítko nedělá nic. */
+  leve?: PosluchacLevehoTlacitka;
+}
+
+export interface PosluchacLevehoTlacitka {
+  stisk(bod: Bod, klavesy: { shift: boolean; alt: boolean }): void;
+  /** Pohyb se stisknutým tlačítkem. */
+  tah(bod: Bod): void;
+  pusteni(bod: Bod): void;
+  /** Tah přerušil systém (ztráta ukazatele); nic se nemá dokončit. */
+  zruseni(): void;
 }
 
 const KROK_KLAVESNICE = 60; // pixelů na stisk šipky
@@ -22,28 +33,37 @@ function pixelyKolecka(udalost: WheelEvent): number {
 }
 
 /**
- * Připojí ovládání výkresu: zoom kolečkem, posun pravým nebo prostředním tlačítkem
- * či levým s mezerníkem, klávesy šipek, plus, minus a Home.
- * Levé tlačítko bez mezerníku zůstává volné pro kreslení prutů.
+ * Připojí ovládání výkresu: zoom kolečkem, posun pravým nebo prostředním tlačítkem,
+ * klávesy šipek, plus, minus a Home. Levé tlačítko patří kreslení a hlásí se posluchači
+ * `leve`. Mezerník je vyhrazený pro spuštění zkoušky, proto výkres neposouvá.
  */
 export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOvladani): void {
-  let mezernik = false;
   let tazeni: { ukazatel: number; x: number; y: number } | null = null;
+  /** Ukazatel, který právě drží levé tlačítko. */
+  let leve: number | null = null;
 
   const mistoNaPlatne = (udalost: MouseEvent): Bod => {
     const obrys = canvas.getBoundingClientRect();
     return { x: udalost.clientX - obrys.left, y: udalost.clientY - obrys.top };
   };
   const nastavKurzor = (): void => {
-    canvas.style.cursor = tazeni ? "grabbing" : mezernik ? "grab" : "crosshair";
+    canvas.style.cursor = tazeni ? "grabbing" : "crosshair";
   };
 
   canvas.addEventListener("contextmenu", (udalost) => udalost.preventDefault());
 
   canvas.addEventListener("pointerdown", (udalost) => {
     canvas.focus({ preventScroll: true });
-    const posouva = udalost.button === 1 || udalost.button === 2 || (udalost.button === 0 && mezernik);
-    if (!posouva) return;
+    if (udalost.button === 0) {
+      if (!posluchac.leve || tazeni || leve !== null) return;
+      udalost.preventDefault();
+      leve = udalost.pointerId;
+      canvas.setPointerCapture(udalost.pointerId);
+      posluchac.leve.stisk(mistoNaPlatne(udalost), { shift: udalost.shiftKey, alt: udalost.altKey });
+      return;
+    }
+    if (udalost.button !== 1 && udalost.button !== 2) return;
+    if (leve !== null) return;
     udalost.preventDefault();
     tazeni = { ukazatel: udalost.pointerId, x: udalost.clientX, y: udalost.clientY };
     canvas.setPointerCapture(udalost.pointerId);
@@ -56,19 +76,38 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
       tazeni.x = udalost.clientX;
       tazeni.y = udalost.clientY;
     }
-    posluchac.kurzor(mistoNaPlatne(udalost));
+    const misto = mistoNaPlatne(udalost);
+    if (leve === udalost.pointerId) posluchac.leve?.tah(misto);
+    posluchac.kurzor(misto);
   });
 
-  const ukonciTazeni = (udalost: PointerEvent): void => {
-    if (!tazeni || udalost.pointerId !== tazeni.ukazatel) return;
-    tazeni = null;
+  const uvolni = (udalost: PointerEvent): void => {
     if (canvas.hasPointerCapture(udalost.pointerId)) canvas.releasePointerCapture(udalost.pointerId);
-    nastavKurzor();
   };
-  canvas.addEventListener("pointerup", ukonciTazeni);
-  canvas.addEventListener("pointercancel", ukonciTazeni);
+  canvas.addEventListener("pointerup", (udalost) => {
+    if (leve === udalost.pointerId && udalost.button === 0) {
+      leve = null;
+      uvolni(udalost);
+      posluchac.leve?.pusteni(mistoNaPlatne(udalost));
+      return;
+    }
+    if (tazeni && udalost.pointerId === tazeni.ukazatel && udalost.button !== 0) {
+      tazeni = null;
+      uvolni(udalost);
+      nastavKurzor();
+    }
+  });
+  canvas.addEventListener("pointercancel", (udalost) => {
+    if (leve === udalost.pointerId) {
+      leve = null;
+      posluchac.leve?.zruseni();
+    }
+    if (tazeni && udalost.pointerId === tazeni.ukazatel) tazeni = null;
+    uvolni(udalost);
+    nastavKurzor();
+  });
   canvas.addEventListener("pointerleave", () => {
-    if (!tazeni) posluchac.kurzor(null);
+    if (!tazeni && leve === null) posluchac.kurzor(null);
   });
 
   canvas.addEventListener(
@@ -83,15 +122,9 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
   );
 
   window.addEventListener("keydown", (udalost) => {
-    if (udalost.target instanceof HTMLElement && udalost.target.closest("input, textarea, select")) return;
+    if (udalost.target instanceof HTMLElement && udalost.target.closest("input, textarea, select, dialog")) return;
     if (udalost.ctrlKey || udalost.metaKey || udalost.altKey) return;
     switch (udalost.key) {
-      case " ":
-        // Na tlačítku mezerník mačká tlačítko; posun výkresu si ho bere jen jinde.
-        if (udalost.target instanceof HTMLButtonElement) return;
-        mezernik = true;
-        nastavKurzor();
-        break;
       case "ArrowLeft":
         posluchac.posun(KROK_KLAVESNICE, 0);
         break;
@@ -118,16 +151,6 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
         return;
     }
     udalost.preventDefault();
-  });
-
-  window.addEventListener("keyup", (udalost) => {
-    if (udalost.key !== " ") return;
-    mezernik = false;
-    nastavKurzor();
-  });
-  window.addEventListener("blur", () => {
-    mezernik = false;
-    nastavKurzor();
   });
 
   nastavKurzor();

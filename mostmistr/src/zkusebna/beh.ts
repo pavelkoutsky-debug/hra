@@ -152,6 +152,14 @@ export class BehZkusebny {
       sipky[4 * i + 2] = sila.fx;
       sipky[4 * i + 3] = sila.fy;
     });
-    return { cas: simulace.cas, topologie: this.#topologii - 1, polohy, vyuziti, kola, sily: sipky };
+    return {
+      cas: simulace.cas,
+      topologie: this.#topologii - 1,
+      polohy,
+      vyuziti,
+      kola,
+      sily: sipky,
+      provoz: new Uint8Array(0),
+    };
   }
 }

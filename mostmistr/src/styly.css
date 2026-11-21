@@ -20,6 +20,17 @@ body {
   margin: 0;
 }
 
+/* Atribut hidden musí vyhrát i nad prvky, kterým styl nastavuje display. */
+[hidden] {
+  display: none !important;
+}
+
+/* Části stránky, které patří jen ke stavbě nebo jen ke zkoušce. */
+body[data-rezim="stavba"] [data-jen="zkouska"],
+body[data-rezim="zkouska"] [data-jen="stavba"] {
+  display: none !important;
+}
+
 body {
   background: var(--pozadi);
   color: var(--cara);
@@ -31,6 +42,7 @@ body {
 
 .hra {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   height: 100vh;
   height: 100dvh;
@@ -42,7 +54,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
   min-height: 46px;
+  overflow: hidden;
   padding: 6px 12px 6px 18px;
   background: var(--lista);
   border-bottom: 1px solid rgb(207 227 255 / 0.6);
@@ -53,10 +67,13 @@ body {
   font-size: 18px;
   font-weight: bold;
   letter-spacing: 3px;
+  text-decoration: none;
   text-transform: uppercase;
 }
 
 .lista__uroven {
+  flex: 0 1 auto;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -67,8 +84,10 @@ body {
 }
 
 .tlacitko {
+  flex: none;
   min-height: 28px;
   padding: 3px 12px;
+  white-space: nowrap;
   border: 1px solid var(--cara);
   border-radius: 2px;
   background: transparent;
@@ -97,12 +116,30 @@ a.tlacitko {
   line-height: 1;
 }
 
-.tlacitko:hover {
+.tlacitko--hlavni {
+  background: var(--cara-silna);
+  border-color: var(--cara-silna);
+  color: var(--lista);
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.tlacitko--hlavni[aria-pressed="true"] {
+  background: transparent;
+  color: var(--cara-silna);
+}
+
+.tlacitko:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tlacitko:hover:not(:disabled) {
   background: var(--zvyrazneni);
   color: var(--cara-silna);
 }
 
-.tlacitko:active {
+.tlacitko:active:not(:disabled) {
   background: var(--cara);
   color: var(--lista);
 }
@@ -155,10 +192,14 @@ a.tlacitko {
 }
 
 .vykres__napoveda {
-  left: 50%;
-  transform: translateX(-50%);
+  left: 10px;
   color: var(--popisek);
   font-size: 11px;
+}
+
+/* Souřadnice kurzoru leží nad nápovědou. */
+.uroven .vykres__souradnice {
+  bottom: 38px;
 }
 
 .vykres__chyba {
@@ -179,9 +220,9 @@ a.tlacitko {
   bottom: 10px;
   /* Čáry mezi buňkami tvoří mezery mřížky, kterými prosvítá barva čáry. */
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(6, 1fr);
   gap: 1px;
-  width: 250px;
+  width: 318px;
   margin: 0;
   background: var(--cara);
   border: 1.5px solid var(--cara);
@@ -189,6 +230,7 @@ a.tlacitko {
 }
 
 .pole__bunka {
+  grid-column: span 2;
   min-width: 0;
   padding: 3px 8px 4px;
   background: var(--pozadi);
@@ -196,6 +238,16 @@ a.tlacitko {
 
 .pole__bunka--siroka {
   grid-column: 1 / -1;
+}
+
+/* Poslední řádek má jen dvě buňky: verzi a datum. */
+.pole__bunka:nth-last-child(-n + 2) {
+  grid-column: span 3;
+}
+
+.pole__medaile {
+  color: var(--cara-silna);
+  letter-spacing: 1px;
 }
 
 .pole dt {
@@ -218,9 +270,13 @@ a.tlacitko {
 }
 
 /* Na úzkém okně by se nápověda překrývala s popisovým polem. */
-@media (max-width: 1100px) {
+@media (max-width: 1240px) {
   .vykres__napoveda {
     display: none;
+  }
+
+  .uroven .vykres__souradnice {
+    bottom: 10px;
   }
 }
 
@@ -427,7 +483,7 @@ a.tlacitko {
 .legenda__skala {
   width: 110px;
   height: 9px;
-  background: linear-gradient(to right, #ffffff 0%, #ffd166 50%, #ff9a4d 80%, #ff4d3d 100%);
+  background: linear-gradient(to right, #ffffff 0%, #ffd166 40%, #ff9a4d 75%, #ff4d3d 100%);
 }
 
 .legenda__cara {
@@ -459,5 +515,711 @@ a.tlacitko {
     max-height: 40vh;
     border-left: 0;
     border-top: 1px solid rgb(207 227 255 / 0.6);
+  }
+}
+
+/* Hra: rozpočet v liště */
+
+.rozpocet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.rozpocet__popis {
+  color: var(--popisek);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.rozpocet__pruh {
+  position: relative;
+  width: 150px;
+  height: 10px;
+  border: 1px solid var(--cara);
+}
+
+.rozpocet__plneni {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--cara);
+}
+
+/* Ryska inženýrského rozpočtu přesahuje pruh, aby byla vidět i přes jeho výplň. */
+.rozpocet__ryska {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--cara-silna);
+  box-shadow: 0 0 0 1px var(--lista);
+}
+
+.rozpocet__ryska span {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--popisek);
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.rozpocet__castka {
+  color: var(--cara-silna);
+}
+
+.rozpocet[data-stav="nad"] .rozpocet__plneni {
+  background: var(--varovani);
+}
+
+.rozpocet[data-stav="nad"] .rozpocet__castka {
+  color: var(--varovani);
+}
+
+/* Hra: rozvržení úrovně */
+
+.uroven {
+  display: grid;
+  grid-template-columns: 214px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.uroven .paleta {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+}
+
+.uroven .vykres {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.uroven .osa {
+  grid-row: 2;
+  grid-column: 2;
+  min-height: 46px;
+}
+
+.paleta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  padding: 10px 10px 14px;
+  background: rgb(11 47 92 / 0.92);
+  border-right: 1px solid rgb(207 227 255 / 0.6);
+}
+
+.paleta h2 {
+  margin: 10px 0 2px;
+  color: var(--popisek);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.paleta h2:first-child {
+  margin-top: 0;
+}
+
+.paleta__prvky {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.paleta__dvojice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.paleta__tlacitko {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 1px solid rgb(207 227 255 / 0.55);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cara);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.paleta__tlacitko:hover:not(:disabled) {
+  background: var(--zvyrazneni);
+  color: var(--cara-silna);
+}
+
+.paleta__tlacitko:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.paleta__tlacitko[aria-pressed="true"] {
+  background: var(--zvyrazneni);
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.paleta kbd {
+  min-width: 18px;
+  padding: 0 3px;
+  border: 1px solid rgb(207 227 255 / 0.5);
+  border-radius: 2px;
+  color: var(--popisek);
+  font: inherit;
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.paleta__tlacitko--prvek {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  padding-block: 5px;
+}
+
+.paleta__ukazka {
+  grid-column: 2;
+  width: 100%;
+  background: var(--cara-silna);
+  border-radius: 3px;
+}
+
+.paleta__cena {
+  grid-column: 2;
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+.paleta__zadani {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* Medaile: seznam s podmínkami */
+
+.medaile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.medaile li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  column-gap: 6px;
+}
+
+.medaile__znak {
+  grid-row: span 2;
+  color: var(--popisek);
+}
+
+.medaile [data-ziskana="true"] .medaile__znak,
+.medaile [data-ziskana="true"] .medaile__nazev {
+  color: var(--cara-silna);
+}
+
+.medaile__podminka {
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+/* Hlášení nad výkresem */
+
+.vykres__hlaseni {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  max-width: min(560px, calc(100% - 20px));
+  margin: 0;
+  padding: 5px 10px;
+  background: rgb(11 47 92 / 0.92);
+  border: 1px solid rgb(207 227 255 / 0.6);
+  color: var(--cara-silna);
+  pointer-events: none;
+}
+
+.vykres__hlaseni:empty {
+  display: none;
+}
+
+.vykres__hlaseni[data-druh="varovani"] {
+  border-color: var(--varovani);
+  color: var(--varovani);
+}
+
+/* Výsledek zkoušky: široký blok nahoře, aby most pod ním zůstal vidět */
+
+.vysledek {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 20px;
+  width: min(600px, calc(100% - 20px));
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: rgb(11 47 92 / 0.95);
+  border: 1.5px solid var(--cara);
+}
+
+.vysledek__hlavicka,
+.vysledek__tlacitka {
+  grid-column: 1 / -1;
+}
+
+.vysledek h2 {
+  margin: 0 0 4px;
+  color: var(--cara-silna);
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.vysledek[data-stav="neobstal"] h2,
+.vysledek[data-stav="rozpad"] h2 {
+  color: var(--varovani);
+}
+
+.vysledek p {
+  margin: 0;
+}
+
+.vysledek .medaile {
+  margin: 0;
+}
+
+.vysledek__cisla {
+  margin: 0;
+}
+
+.vysledek__cisla dt {
+  margin-top: 6px;
+  color: var(--popisek);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.vysledek__cisla dt:first-child {
+  margin-top: 0;
+}
+
+.vysledek__cisla dd {
+  margin: 0;
+  color: var(--cara-silna);
+}
+
+.vysledek__rozdil {
+  display: block;
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+.vysledek__skok {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.vysledek__skok:hover {
+  text-decoration-style: solid;
+}
+
+.vysledek__tlacitka {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.vysledek__otisk {
+  float: right;
+  margin: 4px 0 0 12px;
+  color: var(--popisek);
+  font-size: 10px;
+}
+
+@media (max-width: 1000px) {
+  .vysledek {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Časová osa hry */
+
+.osa__rad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.osa__nadpis {
+  color: var(--popisek);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.osa__polozky {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.osa .lista__skupina {
+  flex: none;
+}
+
+.osa__polozka {
+  padding: 2px 8px;
+  border: 1px solid rgb(207 227 255 / 0.45);
+  white-space: nowrap;
+}
+
+.osa__znacka--vyjezd {
+  top: auto;
+  bottom: -7px;
+  height: 6px;
+  background: var(--cara);
+}
+
+.osa__znacka--pad {
+  width: 4px;
+  margin-left: -2px;
+}
+
+/* Okno s textem */
+
+.okno {
+  width: min(640px, 92vw);
+  padding: 16px 18px;
+  border: 1.5px solid var(--cara);
+  background: var(--lista);
+  color: var(--cara);
+  font: inherit;
+}
+
+.okno::backdrop {
+  background: rgb(4 20 46 / 0.6);
+}
+
+.okno h2 {
+  margin: 0 0 6px;
+  color: var(--cara-silna);
+  font-size: 15px;
+  font-weight: normal;
+}
+
+.okno p {
+  margin: 0 0 8px;
+}
+
+.okno textarea {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.okno__hlaseni {
+  min-height: 1.35em;
+  margin-top: 8px !important;
+  color: var(--varovani);
+}
+
+.okno__tlacitka {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Přehled kampaně */
+
+.prehled {
+  overflow-y: auto;
+  padding: 22px 28px 28px;
+}
+
+.prehled__hlaseni {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--varovani);
+  color: var(--cara-silna);
+}
+
+.kapitola h1 {
+  margin: 0;
+  color: var(--cara-silna);
+  font-size: 20px;
+  font-weight: normal;
+  letter-spacing: 1px;
+}
+
+.kapitola__tema {
+  margin: 2px 0 14px;
+  color: var(--popisek);
+}
+
+.kapitola__urovne {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  max-width: 1280px;
+  margin: 0 0 26px;
+  padding: 0;
+  list-style: none;
+}
+
+.karta__obal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1.5px solid var(--cara);
+  background: var(--lista);
+  color: var(--cara);
+  text-decoration: none;
+}
+
+a.karta__obal:hover {
+  border-color: var(--cara-silna);
+  outline: 2px solid var(--cara-silna);
+}
+
+.karta[data-zamceno="true"] .karta__obal {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.karta__nahled {
+  display: block;
+  width: 100%;
+  aspect-ratio: 280 / 170;
+  border-bottom: 1px solid var(--cara);
+}
+
+.karta__hlavicka {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px 0;
+}
+
+.karta__id {
+  color: var(--popisek);
+}
+
+.karta__nazev {
+  color: var(--cara-silna);
+  font-size: 15px;
+}
+
+.karta__stav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 4px 12px 10px;
+  color: var(--popisek);
+  font-size: 12px;
+}
+
+.karta__medaile {
+  color: var(--cara-silna);
+  letter-spacing: 1px;
+}
+
+.prehled__volba {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--popisek);
+  cursor: pointer;
+}
+
+.prehled__volba input {
+  accent-color: var(--cara-silna);
+}
+
+.prehled__verze {
+  margin: 10px 0 0;
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+/* Na úzkém okně se schová to, bez čeho se dá hrát. */
+@media (max-width: 1180px) {
+  .rozpocet__popis,
+  .lista .lista__uroven {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .uroven {
+    grid-template-columns: 168px minmax(0, 1fr);
+  }
+
+  .rozpocet__pruh {
+    width: 80px;
+  }
+
+  .pole {
+    display: none;
+  }
+}
+
+/* Legenda využití ve hře: je vidět, jen když jsou pruty obarvené využitím. */
+
+.uroven .legenda {
+  bottom: 38px;
+  pointer-events: auto;
+}
+
+body:not([data-vyuziti="true"]) .uroven .legenda {
+  display: none;
+}
+
+/* Při stavbě leží legenda nad souřadnicemi kurzoru. */
+body[data-rezim="stavba"] .uroven .legenda {
+  bottom: 66px;
+}
+
+.legenda__prepinac {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px 1px 4px;
+  border: 1px solid rgb(207 227 255 / 0.55);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--popisek);
+  font: inherit;
+  cursor: pointer;
+}
+
+.legenda__prepinac[aria-pressed="true"] {
+  background: var(--zvyrazneni);
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.legenda__prepinac kbd {
+  padding: 0 3px;
+  border: 1px solid rgb(207 227 255 / 0.5);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 10px;
+}
+
+@media (max-width: 1240px) {
+  .uroven .legenda {
+    bottom: 10px;
+  }
+
+  body[data-rezim="stavba"] .uroven .legenda {
+    bottom: 38px;
+  }
+}
+
+/* Okno se zadáním úrovně */
+
+.okno--zadani {
+  width: min(680px, 92vw);
+  padding: 22px 26px;
+}
+
+.okno__nadtitul {
+  margin: 0 0 2px !important;
+  color: var(--popisek);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.okno--zadani h2 {
+  margin-bottom: 12px;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.okno__zadani {
+  margin-bottom: 16px !important;
+  color: var(--cara-silna);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.okno__sloupce {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 26px;
+  margin-bottom: 14px;
+}
+
+.okno h3 {
+  margin: 0 0 6px;
+  color: var(--popisek);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.okno__seznam {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.okno__seznam li {
+  padding: 2px 0;
+}
+
+.okno__napoveda {
+  margin-bottom: 16px !important;
+  padding-top: 12px;
+  border-top: 1px solid rgb(207 227 255 / 0.3);
+  color: var(--popisek);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .okno__sloupce {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

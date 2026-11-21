@@ -7,6 +7,7 @@ import {
   CARA_LANO,
   CARA_MOSTOVKA,
   CARA_PRUZINA,
+  CARA_SKRYTA,
   STYCNIK_BEZNY,
   STYCNIK_ZAVAZI,
   type Snimek,
@@ -19,6 +20,8 @@ import { nakresliZnackuPodpory } from "./vykres";
 
 /** Pod tímto využitím se prut kreslí jako nenamáhaný: bíle a plnou čarou. */
 const PRAH_VYUZITI = 0.02;
+/** Od tohoto využití prut podkresluje záře v barvě využití; sílí až k mezi únosnosti. */
+const PRAH_ZARE = 0.6;
 
 function mezi(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
@@ -58,6 +61,8 @@ export function nakresliKonstrukci(
   t: Topologie,
   s: Snimek,
   polomerKola: number,
+  /** Tloušťka čáry prvku v pixelech; bez ní (nebo když vrátí undefined) se použije výchozí. */
+  tloustkaPrvku?: (prvek: number) => number | undefined,
 ): void {
   const m = kamera.meritko;
   const bod = (i: number): { x: number; y: number } =>
@@ -71,7 +76,7 @@ export function nakresliKonstrukci(
   for (const jenMostovka of [true, false]) {
     for (let e = 0; e < t.prvekA.length; e++) {
       const cara = t.cara[e]!;
-      if ((cara === CARA_MOSTOVKA) !== jenMostovka) continue;
+      if (cara === CARA_SKRYTA || (cara === CARA_MOSTOVKA) !== jenMostovka) continue;
       const a = bod(t.prvekA[e]!);
       const b = bod(t.prvekB[e]!);
       if (cara === CARA_PRUZINA) {
@@ -80,12 +85,20 @@ export function nakresliKonstrukci(
       }
       const vyuziti = s.vyuziti[e]!;
       const tloustka =
-        cara === CARA_MOSTOVKA ? mezi(0.22 * m, 4.5, 9) : cara === CARA_LANO ? 1.6 : mezi(0.13 * m, 3, 6);
+        tloustkaPrvku?.(e) ??
+        (cara === CARA_MOSTOVKA ? mezi(0.22 * m, 4.5, 9) : cara === CARA_LANO ? 1.6 : mezi(0.13 * m, 3, 6));
 
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
       ctx.strokeStyle = barvaVyuziti(vyuziti);
+      const sila = Math.abs(vyuziti);
+      if (sila > PRAH_ZARE) {
+        ctx.globalAlpha = 0.5 * Math.min(1, (sila - PRAH_ZARE) / (1 - PRAH_ZARE));
+        ctx.lineWidth = tloustka + 10;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       ctx.lineWidth = tloustka;
       ctx.stroke();
 

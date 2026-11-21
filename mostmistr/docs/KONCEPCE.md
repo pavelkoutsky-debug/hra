@@ -96,7 +96,7 @@ Jde o **původní hru v žánru stavění mostů**: vlastní název, úrovně, g
 |---|---|
 | Průchod | Všichni přešli a přejeli, nikdo nespadl. Na úrovních s chodci navíc kmitání nesmí být nepřijatelné. |
 | Rozpočet | Úspěšná zkouška s cenou pod „inženýrským rozpočtem“. Ten je na ukazateli rozpočtu vyznačen ryskou. |
-| Mistrovská | Úspěšná zkouška a bonus úrovně: rezerva únosnosti (největší využití pod 80 %), komfort chodců, nebo komfort cestujících v autobusu či vlaku. |
+| Mistrovská | Úspěšná zkouška a bonus úrovně: rezerva únosnosti (největší využití pod prahem úrovně), komfort chodců, nebo komfort cestujících v autobusu či vlaku. *(Upřesněno v M2: práh rezervy je údaj úrovně odvozený z referenčního mostu; v první kapitole 8 až 25 %, protože dřevo má proti chodcům a jednomu autu velkou rezervu.)* |
 
 Medaile za rozpočet a mistrovskou lze získat různými návrhy. Nejlevnější most nemusí být zároveň nejpohodlnější.
 
@@ -104,7 +104,7 @@ Medaile za rozpočet a mistrovskou lze získat různými návrhy. Nejlevnější
 
 ## 5. Stavební prvky
 
-Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s rezervou. Čísla v tabulce jsou výchozí návrh a v milníku M1 je ověřím proti normám; ceny a průřezy se doladí při kalibraci úrovní.
+Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s rezervou. Čísla v tabulce jsou výchozí návrh a v milníku M1 je ověřím proti normám; ceny a průřezy se doladí při kalibraci úrovní. *(M2: průřezy dřeva zeštíhleny na lehký trám 2× 60 × 120 mm, těžký 2× 120 × 240 mm a mostovku z fošen 80 mm; ceny jsou v `src/data/katalog.ts`.)*
 
 **Nosné prvky**
 
@@ -137,7 +137,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Kloub (výchozí, zdarma) | Pruty se ve styčníku volně natáčejí. Konstrukce musí být ztužená trojúhelníky. |
 | Svar (tuhý spoj) | Nastavuje se na styčník a platí se za každý připojený prut. Přenáší ohybový moment. Při přetížení v něm vznikne plastický kloub. |
 | Dělicí zámek | Styčník, který se při zvedání mostu rozpojí a po sklopení zase zamkne. |
-| Pevná kotva, posuvné ložisko, vetknutí | Dané úrovní. V analytickém panelu ukazují reakce. |
+| Pevná kotva, posuvné ložisko, vetknutí | Dané úrovní. V analytickém panelu ukazují reakce. Posuvné ložisko má úložnou délku 0,5 m: konec mostu, který se posune dál, z něj sjede a spadne. *(Doplněno v M2.)* |
 
 **Pravidla stavby**
 
@@ -346,7 +346,7 @@ Pevný krok, pevné pořadí výpočtu a pevné násady pro náhodný dav a nero
 
 **Výchozí zobrazení**
 
-- Barva prutu podle využití: jedna škála bílá → žlutá → červená pro tah i tlak. Tlak je plná čára, tah dvojitá.
+- Barva prutu podle využití: jedna škála bílá → žlutá → červená pro tah i tlak. Tlak je plná čára, tah dvojitá. *(M2, na přání zadavatele: u prutů jsou navíc čísla využití v procentech, která jdou vypnout, a pruty nad 60 % podkresluje záře.)*
 - Žlutá je vyhrazená pro varování. Podpory, tlumiče a ovládací prvky ji nepoužívají.
 - Rozpočet s ryskou inženýrského rozpočtu, tlačítko zkoušky, časová osa.
 
@@ -389,21 +389,24 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 - **Výkresové konvence.** Kóty rozpětí a výšek, osy čerchovaně, terén v řezu se šrafováním, značky podpor jako ve statických schématech, rohové popisové pole s názvem úrovně, měřítkem, verzí hry a medailemi.
 - **Vozidla a lidé** jako čárové bokorysy v témže stylu. Chodci jsou panáčci, jejichž krok odpovídá skutečné fázi jejich zatížení.
 - **Zkouška** běží na stejném výkresu, jen „oživne“: pruty se obarví podle využití.
-- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Až v posledním milníku.
+- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Původně až v posledním milníku; na přání zadavatele předsunuto do samostatného milníku M3z hned po M3a.
 
 **Ovládání editoru**
 
 | Akce | Ovládání |
 |---|---|
 | Nakreslit prut | Tažení myší ze styčníku |
-| Posunout styčník | Tažení styčníku v režimu výběru |
+| Posunout styčník | Tažení styčníku v režimu výběru (klávesa V) nebo s klávesou Alt |
 | Vybrat oblast | Tažení obdélníku |
-| Změnit materiál hotového prutu | Výběr a klávesa materiálu |
+| Změnit materiál hotového prutu | Výběr a klávesa materiálu (číslice podle pořadí v paletě) |
 | Smazat | Delete |
 | Zrcadlit podle osy mostu | M |
 | Zpět a znovu | Ctrl+Z, Ctrl+Y |
 | Zoom a posun | Kolečko, pravé tlačítko |
 | Spustit a zastavit zkoušku | Mezerník |
+| Pozastavit přehrávání, skočit na konec | P, End |
+| Krokovat záznam zpět a vpřed | čárka, tečka |
+| Zapnout a vypnout čísla využití u prutů | C |
 
 ---
 
@@ -487,13 +490,14 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M1b Jádro** | Prvky, klouby a svary, lana, pružiny, tlumiče, závaží, integrátor, porušení s plasticitou, maticová statika a vlastní tvary, ověřovací a regresní sada | Testy z kapitoly 7.10 procházejí v tolerancích. Na Netlify je „zkušebna“ s ověřovacími případy a ukazatelem rychlosti na tvém počítači. |
 | **M2 První hratelná verze** | Editor, dřevo, mostovka, zkouška ve workeru, časová osa, barvy využití, obálka, osobní auto, chodec, kapitola 1, ukládání a export | Všechny úrovně projdou testem vyhratelnosti, test postaví most myší a vyhraje, uložení a načtení dá shodný otisk |
 | **M3a Rezonance** | Běžec, útvar, lehká ocel, osa frekvencí, závaží, viskózní tlumič, komfort, brnknutí, kapitola 2 | Automatický test: útvar na vlastní frekvenci mnohonásobně zvýší zrychlení a tlumič ho vrátí pod limit komfortu |
+| **M3z Zvuk** | Procedurálně generované zvuky: vrzání podle využití prutů, praskání a lámání při porušení, dopad a šplouchnutí, kroky a kola na mostovce; hlasitost a ztlumení. *(Předsunuto z M8 na přání zadavatele po prvním hraní M2.)* | Automatický test: každé porušení a pád vyvolá zvuk ve správném okamžiku záznamu, vrzání sílí s využitím, ztlumení se pamatuje a bez gesta hráče hra nevydá ani tón |
 | **M3b Dav a analýza** | Dav, běžecký závod, průvod, skákající dav, laděný tlumič, analytický panel, rezonanční křivka, budič, grafy, záznam porušení, porovnání pokusů, kapitola 5 | Laděný tlumič v testu rozdělí rezonanční špičku; úrovně projdou testem vyhratelnosti |
 | **M4a Těžká doprava** | Nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka, kapitola 3 | Dynamické zvýšení od nerovností odpovídá očekávanému rozsahu; úrovně projdou |
 | **M4b Velká rozpětí** | Lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby, kapitola 4 | Visutý a zavěšený referenční most unese kolonu kamionů; úrovně projdou |
 | **M5 Železnice** | Kolejiště, lokomotiva, vagóny, dvoupatrové mosty, kapitola 6 | Nákladní vlak přejede referenční most; úrovně projdou |
 | **M6 Pohyblivé mosty** | Písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 | Most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou |
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |
-| **M8 Doladění** | Zvuk, výkon, dotykové ovládání, angličtina | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
+| **M8 Doladění** | Výkon, dotykové ovládání, angličtina, doladění zvuku pro prvky a provoz z pozdějších kapitol | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
 
 Tuhé spoje a plasticitu umí jádro od M1b, hráči se zpřístupní v M4b.
 

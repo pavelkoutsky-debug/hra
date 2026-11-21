@@ -21,10 +21,11 @@ import { silyStupnu, volneStupne } from "../src/jadro/stupne";
 import { odpojKonec, rozdelPrvek } from "../src/jadro/topologie";
 import { pridejSiluNaPrvek } from "../src/jadro/zatizeni";
 import { popisPrutu } from "../src/zkouska/stavba";
+import { DREVENY_TRAM, OCELOVY_NOSNIK } from "./pomucky-jadra";
 
 type Prut = Omit<PopisPrvku, "a" | "b">;
-const OCEL: Prut = popisPrutu("ocel-lehka", 3);
-const DREVO: Prut = popisPrutu("drevo-lehke", 3);
+const OCEL: Prut = OCELOVY_NOSNIK;
+const DREVO: Prut = DREVENY_TRAM;
 const LANO_PRUT: Prut = popisPrutu("lano", 3);
 
 const celkovaHmota = (s: Soustava): number => {

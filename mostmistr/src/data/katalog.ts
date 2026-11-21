@@ -12,6 +12,10 @@
 // - Každý nakreslený prut představuje dvojici stejných profilů: levou a pravou stranu
 //   mostu promítnutou do roviny výkresu. Průřezy níže už dvojici zahrnují.
 //
+// Průřezy dřeva jsou od M2 zvolené pro hru (koncepce, kap. 5: průřezy se ladí při kalibraci
+// úrovní): s původními masivními trámy využil provoz první kapitoly jen pár procent
+// únosnosti a nic se nikdy nezlomilo. Materiál a jeho pevnosti zůstaly.
+//
 // Stav ověření (20. 11. 2026). Zdrojové normy se z vývojového prostředí otevřít
 // nepodařilo; „potvrzeno“ znamená shodu s veřejně dostupnými tabulkami nalezenými
 // vyhledáváním, „z paměti“ znamená bez nezávislého potvrzení.
@@ -158,6 +162,11 @@ export interface PolozkaKatalogu {
   naMetrSirky?: boolean;
   /** Hodnoty jsou jen předběžné a upřesní se v milníku, kdy prvek přijde do hry. */
   predbezne?: boolean;
+  /**
+   * Cena v korunách: nosné prvky se platí za metr délky, tlumič, pružina a píst za kus.
+   * Ceny jsou herní, ne tržní; ladí se tak, aby rozhodování o materiálu dávalo smysl.
+   */
+  cena: { zaMetr: number } | { zaKus: number };
 }
 
 /** Dvojice obdélníkových průřezů šířky b a výšky h. */
@@ -179,13 +188,14 @@ function deskaNaMetr(t: number): Prurez {
 
 // Délky nosných prvků jsou z koncepce (kap. 5); u tlumiče, pružiny a pístu jsou předběžné.
 export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
-  // Dřevěná deska tloušťky 140 mm.
+  // Dřevěná mostovka z fošen tloušťky 80 mm. Osobní auto unese s rezervou, těžký náklad ne.
   "mostovka-drevo": {
     druh: "mostovka",
     nejvetsiDelka: 4,
     hotovo: true,
+    cena: { zaMetr: 2500 },
     material: "drevo",
-    prurez: deskaNaMetr(0.14),
+    prurez: deskaNaMetr(0.08),
     naMetrSirky: true,
   },
   // Železobetonová deska tloušťky 250 mm; spřažení s ocelovými trámy zatím zanedbáno.
@@ -193,6 +203,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     druh: "mostovka",
     nejvetsiDelka: 6,
     hotovo: false,
+    cena: { zaMetr: 9000 },
     material: "zelezobeton",
     prurez: deskaNaMetr(0.25),
     naMetrSirky: true,
@@ -203,19 +214,35 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     druh: "mostovka",
     nejvetsiDelka: 6,
     hotovo: false,
+    cena: { zaMetr: 12000 },
     material: "ocel",
     prurez: { A: 2 * 76.7e-4, I: 2 * 3038e-8, As: 2 * 30e-4, W: 2 * 333.6e-6, Wpl: 2 * 400e-6, hmotnostNaMetr: 370 },
     predbezne: true,
   },
-  // 2× lepené dřevo 140 × 280 mm.
-  "drevo-lehke": { druh: "prut", nejvetsiDelka: 6, hotovo: true, material: "drevo", prurez: dvaObdelniky(0.14, 0.28) },
-  // 2× lepené dřevo 200 × 480 mm.
-  "drevo-tezke": { druh: "prut", nejvetsiDelka: 6, hotovo: true, material: "drevo", prurez: dvaObdelniky(0.2, 0.48) },
+  // 2× lepené dřevo 60 × 120 mm: lehký trám, který se v tlaku brzy vzpírá.
+  "drevo-lehke": {
+    druh: "prut",
+    nejvetsiDelka: 6,
+    hotovo: true,
+    cena: { zaMetr: 1200 },
+    material: "drevo",
+    prurez: dvaObdelniky(0.06, 0.12),
+  },
+  // 2× lepené dřevo 120 × 240 mm: čtyřikrát víc dřeva, šestnáctkrát větší odolnost ve vzpěru.
+  "drevo-tezke": {
+    druh: "prut",
+    nejvetsiDelka: 6,
+    hotovo: true,
+    cena: { zaMetr: 2800 },
+    material: "drevo",
+    prurez: dvaObdelniky(0.12, 0.24),
+  },
   // 2× HEB 200.
   "ocel-lehka": {
     druh: "prut",
     nejvetsiDelka: 12,
     hotovo: true,
+    cena: { zaMetr: 4500 },
     material: "ocel",
     prurez: {
       A: 2 * 78.1e-4,
@@ -231,6 +258,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     druh: "prut",
     nejvetsiDelka: 12,
     hotovo: true,
+    cena: { zaMetr: 9500 },
     material: "ocel",
     prurez: {
       A: 2 * 197.8e-4,
@@ -246,6 +274,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     druh: "lano",
     nejvetsiDelka: 60,
     hotovo: false,
+    cena: { zaMetr: 1800 },
     material: "lano",
     prurez: { A: 2 * 942e-6, I: 0, As: 0, W: 0, Wpl: 0 },
     predbezne: true,
@@ -255,14 +284,20 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     druh: "pilir",
     nejvetsiDelka: 12,
     hotovo: false,
+    cena: { zaMetr: 15000 },
     material: "zelezobeton",
     prurez: { A: 2, I: 2 / 12, As: (5 * 2) / 6, Av: (2 * 2) / 3, W: 2 / 6, Wpl: 2 / 4 },
     predbezne: true,
   },
-  tlumic: { druh: "tlumic", nejvetsiDelka: 6, hotovo: true },
-  pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: true },
-  pist: { druh: "pist", nejvetsiDelka: 8, hotovo: false },
+  tlumic: { druh: "tlumic", nejvetsiDelka: 6, hotovo: true, cena: { zaKus: 20000 } },
+  pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: true, cena: { zaKus: 8000 } },
+  pist: { druh: "pist", nejvetsiDelka: 8, hotovo: false, cena: { zaKus: 60000 } },
 };
+
+/** Cena svaru za každý prut připojený do svařeného styčníku, v korunách. */
+export const CENA_SVARU = 1500;
+/** Cena závaží za kilogram, v korunách. */
+export const CENA_ZAVAZI = 10;
 
 /** Nejkratší prut, který lze postavit (rastr 1 m). */
 export const NEJMENSI_DELKA = 1;

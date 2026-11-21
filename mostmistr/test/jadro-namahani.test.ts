@@ -13,9 +13,10 @@ import { spoctiVnitrniSily } from "../src/jadro/sily";
 import { sestavSoustavu, type PopisPrvku, type Soustava } from "../src/jadro/soustava";
 import { pridejSiluNaPrvek } from "../src/jadro/zatizeni";
 import { popisPrutu } from "../src/zkouska/stavba";
+import { DREVENY_TRAM } from "./pomucky-jadra";
 
 type Prut = Omit<PopisPrvku, "a" | "b">;
-const TRAM: Prut = popisPrutu("drevo-lehke", 3);
+const TRAM: Prut = DREVENY_TRAM;
 const U = TRAM.unosnost!;
 
 /** Jeden prut délky L s konci v zadané poloze; styčníky jsou držené, deformace se vnucuje posunem. */

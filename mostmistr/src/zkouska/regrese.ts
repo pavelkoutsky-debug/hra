@@ -9,91 +9,28 @@
 // funkce, mocniny ani `Math.hypot`; geometrie stojí na celých metrech jako ve hře.
 
 import type { IdPrvku } from "../data/katalog";
-import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu } from "../data/navrh";
+import { Kreslic } from "../data/kreslic";
+import type { NavrhMostu } from "../data/navrh";
 import { VERZE_UROVNE, type Kotva, type Uroven } from "../data/uroven";
 import { vytvorBremena, zatizeniBremeny, type Bremena, type PopisBremene } from "../jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
+import { nahoda, nahodnaFaze } from "../jadro/nahoda";
 import { najdiRovnovahu, vlastniTvarySoustavy } from "../jadro/matice";
 import { Simulace, type NastaveniSimulace } from "../jadro/simulace";
 import { sestavSoustavu, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
 import { vytvorTrasu } from "../jadro/trasa";
+import { otiskSimulace } from "./otisk";
 import { sestavMost, type StavbaMostu } from "./stavba";
 
 const g = TIHOVE_ZRYCHLENI;
 
-// ---------------------------------------------------------------------------------------
-// Otisk
-
-/** Kontrolní součet FNV-1a přes bajty čísel, ve dvou nezávislých 32bitových větvích. */
-export class Otisk {
-  #a = 0x811c9dc5;
-  #b = 0x01000193;
-  readonly #cislo = new Float64Array(1);
-  readonly #bajty = new Uint8Array(this.#cislo.buffer);
-
-  pridej(hodnota: number): void {
-    // Záporná nula se od kladné liší jen znaménkovým bitem a na výsledek výpočtu vliv nemá.
-    this.#cislo[0] = hodnota === 0 ? 0 : hodnota;
-    for (let i = 0; i < 8; i++) {
-      const bajt = this.#bajty[i]!;
-      this.#a = Math.imul(this.#a ^ bajt, 0x01000193);
-      this.#b = Math.imul(this.#b ^ (bajt + i), 0x85ebca6b);
-    }
-  }
-
-  pridejPole(pole: Float64Array, pocet: number): void {
-    for (let i = 0; i < pocet; i++) this.pridej(pole[i]!);
-  }
-
-  get hodnota(): string {
-    const hex = (n: number): string => (n >>> 0).toString(16).padStart(8, "0");
-    return hex(this.#a) + hex(this.#b);
-  }
-}
-
-/** Otisk okamžitého stavu simulace. */
-export function otiskSimulace(sim: Simulace): string {
-  const s = sim.soustava;
-  const otisk = new Otisk();
-  otisk.pridej(s.pocetStycniku);
-  otisk.pridej(s.pocetPrvku);
-  otisk.pridej(sim.kroku);
-  otisk.pridej(sim.udalosti.length);
-  for (const pole of [s.x, s.y, s.cosN, s.sinN, s.vx, s.vy, s.omega]) otisk.pridejPole(pole, s.pocetStycniku);
-  otisk.pridejPole(s.plastA, s.pocetPrvku);
-  otisk.pridejPole(s.plastB, s.pocetPrvku);
-  otisk.pridejPole(s.plastDelka, s.pocetPrvku);
-  return otisk.hodnota;
-}
+export { Kreslic } from "../data/kreslic";
+export { Otisk, otiskSimulace } from "./otisk";
+export { nahoda } from "../jadro/nahoda";
 
 // ---------------------------------------------------------------------------------------
 // Stavebnice scénářů
-
-/** Generátor náhodných čísel 0 až 1 (Mulberry32); jen celočíselné operace a jedno dělení. */
-export function nahoda(nasada: number): () => number {
-  let stav = nasada >>> 0;
-  return () => {
-    stav = (stav + 0x6d2b79f5) >>> 0;
-    let t = stav;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** Náhodná fáze jako jednotkový vektor: bod uvnitř kruhu promítnutý na kružnici. */
-function nahodnaFaze(nahodne: () => number): [number, number] {
-  for (;;) {
-    const x = 2 * nahodne() - 1;
-    const y = 2 * nahodne() - 1;
-    const d = x * x + y * y;
-    if (d > 0.01 && d <= 1) {
-      const delka = Math.sqrt(d);
-      return [x / delka, y / delka];
-    }
-  }
-}
 
 interface ZadaniUrovne {
   rozpeti: number;
@@ -140,41 +77,6 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     povoleneSvary: true,
     jizdniRad: [],
   };
-}
-
-/** Pomocník pro psaní návrhů: styčníky podle souřadnic, pruty podle koncových bodů. */
-export class Kreslic {
-  readonly stycniky: StycnikNavrhu[] = [];
-  readonly pruty: PrutNavrhu[] = [];
-  readonly #podleMista = new Map<string, number>();
-
-  /** Id styčníku v daném místě; když tam žádný není, založí ho. */
-  bod(x: number, y: number, vlastnosti: Partial<StycnikNavrhu> = {}): number {
-    const klic = `${x},${y}`;
-    let id = this.#podleMista.get(klic);
-    if (id === undefined) {
-      id = this.stycniky.length;
-      this.stycniky.push({ id, x, y });
-      this.#podleMista.set(klic, id);
-    }
-    Object.assign(this.stycniky[id]!, vlastnosti);
-    return id;
-  }
-
-  prut(prvek: IdPrvku, a: [number, number], b: [number, number], vlastnosti: Partial<PrutNavrhu> = {}): number {
-    const id = this.pruty.length;
-    this.pruty.push({ id, a: this.bod(a[0], a[1]), b: this.bod(b[0], b[1]), prvek, ...vlastnosti });
-    return id;
-  }
-
-  /** Označí všechny dosud založené styčníky jako svařené. */
-  svarVse(): void {
-    for (const st of this.stycniky) st.svar = true;
-  }
-
-  navrh(): NavrhMostu {
-    return { verze: VERZE_NAVRHU, uroven: "9-99", stycniky: this.stycniky, pruty: this.pruty };
-  }
 }
 
 /** Mostovka z polí dané délky od x = 0 do x = rozpětí. */
@@ -313,7 +215,7 @@ function tramovyMost(svar: boolean): NavrhMostu {
 
 function drevenaPrihrada(): NavrhMostu {
   const k = new Kreslic();
-  prihrada(k, 24, 4, 4, "drevo-tezke", "drevo-lehke");
+  prihrada(k, 24, 4, 4, "drevo-tezke", "drevo-tezke");
   return k.navrh();
 }
 
@@ -382,7 +284,7 @@ function zavesenyMost(): NavrhMostu {
 function mostSPilirem(): NavrhMostu {
   const k = new Kreslic();
   mostovka(k, 24, 4);
-  for (let x = 0; x < 24; x += 4) k.prut("drevo-tezke", [x, 0], [x + 4, 0]);
+  for (let x = 0; x < 24; x += 4) k.prut("ocel-lehka", [x, 0], [x + 4, 0]);
   k.prut("pilir", [12, -8], [12, 0]);
   k.svarVse();
   return k.navrh();
@@ -485,8 +387,8 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 24 }),
       navrh: drevenaPrihrada(),
       vozy: [
-        { x: -1, rychlost: 10, hmota: 3000 },
-        { x: -5, rychlost: 10, hmota: 5000 },
+        { x: -1, rychlost: 10, hmota: 1500 },
+        { x: -5, rychlost: 10, hmota: 2500 },
       ],
     }),
   },
@@ -497,9 +399,9 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 32 }),
       navrh: ocelovaPrihrada(32, false),
       vozy: [
-        { x: -1, rychlost: 11, hmota: 9000 },
-        { x: -4.6, rychlost: 11, hmota: 9000 },
-        { x: -6, rychlost: 11, hmota: 8000 },
+        { x: -1, rychlost: 11, hmota: 3000 },
+        { x: -4.6, rychlost: 11, hmota: 3000 },
+        { x: -6, rychlost: 11, hmota: 2500 },
       ],
     }),
   },
@@ -510,9 +412,9 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 32 }),
       navrh: ocelovaPrihrada(32, true),
       vozy: [
-        { x: -1, rychlost: 11, hmota: 9000 },
-        { x: -4.6, rychlost: 11, hmota: 9000 },
-        { x: -6, rychlost: 11, hmota: 8000 },
+        { x: -1, rychlost: 11, hmota: 3000 },
+        { x: -4.6, rychlost: 11, hmota: 3000 },
+        { x: -6, rychlost: 11, hmota: 2500 },
       ],
     }),
   },
@@ -524,7 +426,7 @@ export const SCENARE: readonly Scenar[] = [
       navrh: drevenaPrihrada(),
       vozy: [
         { x: -2, rychlost: 9, hmota: 1500 },
-        { x: 27, rychlost: -12, hmota: 3500, frekvence: 1.2 },
+        { x: 27, rychlost: -12, hmota: 2500, frekvence: 1.2 },
       ],
     }),
   },
@@ -604,8 +506,8 @@ export const SCENARE: readonly Scenar[] = [
       uroven: urovenRegrese({ rozpeti: 24, zaklady: [{ x: 12, y: -8 }] }),
       navrh: mostSPilirem(),
       vozy: [
-        { x: -1, rychlost: 10, hmota: 4000 },
-        { x: -5.5, rychlost: 10, hmota: 8000 },
+        { x: -1, rychlost: 10, hmota: 2000 },
+        { x: -5.5, rychlost: 10, hmota: 4000 },
       ],
     }),
   },

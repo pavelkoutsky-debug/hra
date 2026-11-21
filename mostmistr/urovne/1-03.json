@@ -1,0 +1,117 @@
+{
+  "verze": 1,
+  "id": "1-03",
+  "nazev": "První auto",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 24,
+    "yMax": 10
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 1,
+      "y": -6
+    },
+    {
+      "x": 3,
+      "y": -8
+    },
+    {
+      "x": 13,
+      "y": -8
+    },
+    {
+      "x": 15,
+      "y": -6
+    },
+    {
+      "x": 16,
+      "y": 0
+    },
+    {
+      "x": 24,
+      "y": 0
+    }
+  ],
+  "hladina": -6.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 16,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "cesta",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 16,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 100,
+  "nerovnost": "A",
+  "rozpocet": 110000,
+  "inzenyrskyRozpocet": 80000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.25
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "drevo-lehke",
+    "drevo-tezke"
+  ],
+  "povoleneSvary": false,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "auto"
+    },
+    {
+      "cas": 1,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "chodec",
+      "pocet": 1,
+      "kadence": 1.9
+    },
+    {
+      "cas": 4,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "auto"
+    },
+    {
+      "cas": 5,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "cyklista"
+    }
+  ]
+}

@@ -12,6 +12,8 @@ export interface Topologie {
   stycniku: number;
   prvekA: Int32Array;
   prvekB: Int32Array;
+  /** Číslo prutu, ke kterému prvek patří (ve zkoušce pořadí prutu v návrhu); −1, když k žádnému. */
+  prut: Int32Array;
   /** Druh čáry prvku; viz konstanty CARA_*. */
   cara: Uint8Array;
   /** Bit 0: kloub na konci a, bit 1: kloub na konci b. */
@@ -26,6 +28,8 @@ export const CARA_PRUT = 0;
 export const CARA_LANO = 1;
 export const CARA_MOSTOVKA = 2;
 export const CARA_PRUZINA = 3;
+/** Prvek, který se nekreslí: pérování vozidla. */
+export const CARA_SKRYTA = 4;
 
 export const STYCNIK_BEZNY = 0;
 /** Styčník, který se nekreslí: patří břemenu a kreslí se jako kolo. */
@@ -46,6 +50,8 @@ export interface Snimek {
   kola: Float32Array;
   /** Vnější síly k zakreslení: působiště a složky, x0, y0, Fx0, Fy0, … (m, N). */
   sily: Float32Array;
+  /** Stav každého účastníka provozu (čeká, jede, přejel, spadl). */
+  provoz: Uint8Array;
 }
 
 /** Porušení prutu, jak ho ukazuje časová osa. */
@@ -85,6 +91,19 @@ export function topologieSoustavy(s: Soustava, popis: PopisKresleni = {}): Topol
   const znacky = new Uint8Array(s.pocetStycniku);
   for (const i of popis.skryte ?? []) znacky[i] = STYCNIK_SKRYTY;
   for (const i of popis.zavazi ?? []) znacky[i] = STYCNIK_ZAVAZI;
+  // Styčník, do kterého po porušení nevede žádný prut a nic neváží, se nekreslí.
+  const pripojeny = new Uint8Array(s.pocetStycniku);
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    pripojeny[s.prvekA[e]!] = 1;
+    pripojeny[s.prvekB[e]!] = 1;
+  }
+  for (let i = 0; i < s.pocetStycniku; i++) {
+    if (pripojeny[i] === 0 && !(s.hmota[i]! > 0) && (s.podpora[i]! & 3) === 0) znacky[i] = STYCNIK_SKRYTY;
+  }
+  // Prvek mezi dvěma skrytými styčníky patří účastníkovi provozu (pérování).
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    if (znacky[s.prvekA[e]!] === STYCNIK_SKRYTY && znacky[s.prvekB[e]!] === STYCNIK_SKRYTY) cara[e] = CARA_SKRYTA;
+  }
   const podpory = new Uint8Array(s.pocetStycniku);
   for (let i = 0; i < s.pocetStycniku; i++) {
     if (znacky[i] !== STYCNIK_BEZNY) continue; // vedení břemen a závaží není podpora mostu
@@ -96,6 +115,7 @@ export function topologieSoustavy(s: Soustava, popis: PopisKresleni = {}): Topol
     stycniku: s.pocetStycniku,
     prvekA: s.prvekA.slice(0, s.pocetPrvku),
     prvekB: s.prvekB.slice(0, s.pocetPrvku),
+    prut: s.prut.slice(0, s.pocetPrvku),
     cara,
     klouby,
     podpory,
@@ -152,6 +172,7 @@ export class Zaznam {
     cil.vyuziti = prolozit(a.vyuziti, b.vyuziti, t, cil.vyuziti);
     cil.kola = prolozit(a.kola, b.kola, t, cil.kola);
     cil.sily = prolozit(a.sily, b.sily, t, cil.sily);
+    cil.provoz = a.provoz;
     return this.topologie[a.topologie] ?? null;
   }
 }
@@ -173,5 +194,6 @@ export function prazdnySnimek(): Snimek {
     vyuziti: new Float32Array(0),
     kola: new Float32Array(0),
     sily: new Float32Array(0),
+    provoz: new Uint8Array(0),
   };
 }

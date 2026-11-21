@@ -12,6 +12,8 @@ export interface StavVykresu {
   rozmer: Rozmer;
   /** Bod rastru pod kurzorem, nebo null, když kurzor není nad výkresem. */
   kurzor: Bod | null;
+  /** Zmenšený náhled na kartu úrovně: bez popisků rastru, hladiny a základů. */
+  nahled?: boolean;
 }
 
 type Kontext = CanvasRenderingContext2D;
@@ -46,7 +48,7 @@ export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
   for (const kotva of s.uroven.kotvy) nakresliKotvu(ctx, s, kotva);
 
   nakresliOkrajVykresu(ctx, s);
-  nakresliPopiskyRastru(ctx, s.kamera, s.rozmer);
+  if (!s.nahled) nakresliPopiskyRastru(ctx, s.kamera, s.rozmer);
   if (s.kurzor) nakresliKurzor(ctx, s, s.kurzor);
   ctx.restore();
 }
@@ -179,7 +181,7 @@ function nakresliTeren(ctx: Kontext, s: StavVykresu): void {
   // Stojí u levého břehu, kde nepřekáží stavbě uprostřed rozpětí.
   const hladina = s.uroven.hladina;
   const breh = levyBrehHladiny(s.uroven);
-  if (hladina !== null && breh !== null && m >= 6) {
+  if (hladina !== null && breh !== null && m >= 6 && !s.nahled) {
     const misto = svetNaObraz(s.kamera, s.rozmer, { x: breh, y: hladina });
     ctx.font = `11px ${PISMO}`;
     ctx.textAlign = "left";
@@ -263,7 +265,7 @@ function nakresliZaklad(ctx: Kontext, s: StavVykresu, zaklad: Bod): void {
   ctx.fillRect(p.x - r, p.y - r, 2 * r, 2 * r);
   ctx.strokeRect(ostre(p.x - r), ostre(p.y - r), Math.round(2 * r), Math.round(2 * r));
 
-  if (m >= 14) {
+  if (m >= 14 && !s.nahled) {
     // Popisek leží v šrafované zemině, proto má vlastní podklad.
     const napis = t("vykres.zaklad");
     ctx.font = `11px ${PISMO}`;
