@@ -25,6 +25,7 @@ import { nakresliNavrh, tloustkaPrutu } from "../vykres/navrh";
 import { pripojOvladani } from "../vykres/ovladani";
 import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
+import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
 import { nakresliVykres } from "../vykres/vykres";
 import { KlientZkousky } from "../zkouska/klient";
 import type { PopisUcastnika } from "../zkouska/provoz";
@@ -43,6 +44,8 @@ const DOSAH_KLIKNUTI = 9;
 const NEJVIC_VYPSANYCH_PORUSENI = 5;
 /** Po jaké době zmizí hlášení, které na nic nečeká, v milisekundách. */
 const DOBA_HLASENI = 6000;
+/** O kolik sekund děje posune záznam jeden krok krokování. */
+const KROK_ZAZNAMU = 0.02;
 
 /** Jedna zkouška mostu: záznam, který plní pracovní vlákno, a nakonec výsledek. */
 interface Beh {
@@ -115,6 +118,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const rozpocet = prvek(".rozpocet", HTMLElement);
   const okno = prvek("#okno", HTMLDialogElement);
   const obsahOkna = prvek("#okno-obsah", HTMLTextAreaElement);
+  const oknoZadani = prvek("#okno-zadani", HTMLDialogElement);
+  const prepinacCisel = prvek('[data-akce="cisla"]', HTMLButtonElement);
 
   // ---- Stav ----
 
@@ -139,6 +144,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const snimek: Snimek = prazdnySnimek();
   let rekord: Rekord | undefined = uloziste.rekord(uroven.id);
   let casovacHlaseni: number | undefined;
+  /** Ukazovat u prutů čísla využití? */
+  let cisla = uloziste.cislaVyuziti;
 
   const ulozeny = uloziste.navrh(uroven.id);
   let naposledUlozeny: NavrhMostu | null = ulozeny ?? null;
@@ -172,6 +179,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           const prut = pruty[stavba.prut[e]!];
           return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
         });
+        // Čísla patří ke konstrukci; auta a chodci je při průjezdu na chvíli zakryjí.
+        if (cisla) nakresliCislaVyuziti(ctx, cislaZeSnimku(stavba, pruty));
         nakresliProvoz(ctx, kamera, rozmer, beh.ucastnici, snimek);
         return;
       }
@@ -181,6 +190,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     // Stavba, nebo zkouška, ze které ještě nedorazil první snímek.
     const stavi = rezim === "stavba";
     const svet = stavi && mistoKurzoru ? obrazNaSvet(kamera, rozmer, mistoKurzoru) : null;
+    const obalka = platnaObalka()?.obalka ?? null;
     nakresliNavrh(ctx, kamera, rozmer, {
       navrh: editor.navrh,
       vybranePruty: editor.vybranePruty,
@@ -188,8 +198,52 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       tah: stavi ? editor.tah : null,
       zacatek: svet && nastroj === "kresleni" ? editor.mistoZacatku(svet) : null,
       problemy: prekazkyZkousky(editor.navrh, uroven),
-      obalka: platnaObalka()?.obalka.map((o) => o.vyuziti) ?? null,
+      obalka: obalka?.map((o) => ({ vyuziti: o.vyuziti, tah: o.zpusob === ZPUSOB_TAH })) ?? null,
     });
+    if (cisla && obalka && !editor.tah) nakresliCislaVyuziti(ctx, cislaZObalky(obalka.map((o) => o.vyuziti)));
+  }
+
+  /** Poloha styčníku návrhu na plátně. */
+  function bodNavrhu(stycnik: { x: number; y: number }): Bod {
+    return svetNaObraz(kamera, platno.rozmer, stycnik);
+  }
+
+  /** Čísla využití pro stavbu: největší využití každého prutu z poslední zkoušky. */
+  function cislaZObalky(vyuziti: readonly number[]): CisloVyuziti[] {
+    const navrh = editor.navrh;
+    const podleId = new Map(navrh.stycniky.map((st) => [st.id, st]));
+    const polozky: CisloVyuziti[] = [];
+    navrh.pruty.forEach((prut, poradi) => {
+      const a = podleId.get(prut.a);
+      const b = podleId.get(prut.b);
+      if (a && b) polozky.push({ a: bodNavrhu(a), b: bodNavrhu(b), vyuziti: vyuziti[poradi] ?? 0 });
+    });
+    return polozky;
+  }
+
+  /**
+   * Čísla využití pro přehrávání: u každého prutu návrhu největší okamžité využití jeho
+   * prvků. Číslo sedí mezi koncovými styčníky prutu, takže po prutu neposkakuje, i když je
+   * uvnitř rozdělený na víc dílů.
+   */
+  function cislaZeSnimku(stavba: Topologie, pruty: readonly { a: number; b: number }[]): CisloVyuziti[] {
+    const nejvetsi = new Float32Array(pruty.length);
+    for (let e = 0; e < stavba.prvekA.length; e++) {
+      const prut = stavba.prut[e]!;
+      if (prut < 0 || prut >= pruty.length || stavba.cara[e] === CARA_SKRYTA) continue;
+      const vyuziti = Math.abs(snimek.vyuziti[e] ?? 0);
+      if (vyuziti > nejvetsi[prut]!) nejvetsi[prut] = vyuziti;
+    }
+    // Styčníky návrhu jsou v soustavě první a ve stejném pořadí.
+    const poradiStycniku = new Map(beh?.navrh.stycniky.map((st, i) => [st.id, i]) ?? []);
+    const polozky: CisloVyuziti[] = [];
+    pruty.forEach((prut, poradi) => {
+      const a = poradiStycniku.get(prut.a);
+      const b = poradiStycniku.get(prut.b);
+      if (a === undefined || b === undefined) return;
+      polozky.push({ a: bodSnimku(a), b: bodSnimku(b), vyuziti: nejvetsi[poradi]! });
+    });
+    return polozky;
   }
 
   /** Podloží prut světlou září, aby šel při přehrávání najít. */
@@ -301,6 +355,31 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     });
   }
 
+  /** Cena prvku slovy: za metr nebo za kus, s největší délkou. */
+  function zapisCenyPrvku(id: IdPrvku): string {
+    const polozka = KATALOG[id];
+    return "zaMetr" in polozka.cena
+      ? t("paleta.cenaZaMetr", { cena: koruny(polozka.cena.zaMetr), delka: cislo(polozka.nejvetsiDelka, 0) })
+      : t("paleta.cenaZaKus", { cena: koruny(polozka.cena.zaKus), delka: cislo(polozka.nejvetsiDelka, 0) });
+  }
+
+  /**
+   * Položka jízdního řádu slovy: krátce pro lištu („0 s → 2× chodec“), nebo celou větou
+   * pro okno se zadáním („2× chodec zleva, vyráží v čase 0 s“).
+   */
+  function zapisJizdy(polozka: Uroven["jizdniRad"][number], vetou = false): string {
+    const klic = `provoz.${polozka.druh}`;
+    const nazev = jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
+    const pocet = polozka.pocet ?? 1;
+    const kdo = pocet > 1 ? t("rad.vice", { pocet, kdo: nazev }) : nazev;
+    const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
+    if (vetou) {
+      const odkud = t(polozka.smer === 1 ? "zadani.provoz.zleva" : "zadani.provoz.zprava");
+      return t("zadani.provoz.polozka", { kdo, odkud, cas });
+    }
+    return t("rad.polozka", { cas, smer: polozka.smer === 1 ? "→" : "←", kdo });
+  }
+
   // ---- Stavba ----
 
   function vytvorPaletu(): void {
@@ -319,10 +398,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         nazev.textContent = nazevPrvku(id);
         const cena = document.createElement("span");
         cena.className = "paleta__cena";
-        cena.textContent =
-          "zaMetr" in polozka.cena
-            ? t("paleta.cenaZaMetr", { cena: koruny(polozka.cena.zaMetr), delka: cislo(polozka.nejvetsiDelka, 0) })
-            : t("paleta.cenaZaKus", { cena: koruny(polozka.cena.zaKus), delka: cislo(polozka.nejvetsiDelka, 0) });
+        cena.textContent = zapisCenyPrvku(id);
         const ukazka = document.createElement("span");
         ukazka.className = "paleta__ukazka";
         ukazka.style.height = `${Math.round(tloustkaPrutu(id, 30))}px`;
@@ -406,7 +482,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     }
 
     document.body.dataset.pruty = String(navrh.pruty.length);
+    // Legenda využití je vidět, jen když jsou pruty obarvené: při zkoušce a s platnou obálkou.
+    document.body.dataset.vyuziti = String(!stavi || obalka !== null);
     obnovPohled();
+  }
+
+  function prepniCisla(): void {
+    cisla = !cisla;
+    uloziste.cislaVyuziti = cisla;
+    prepinacCisel.setAttribute("aria-pressed", String(cisla));
+    platno.prekresli();
   }
 
   function smazVybrane(): void {
@@ -601,6 +686,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovOsu();
   }
 
+  /** Posune záznam o jeden krok vpřed nebo zpět a přehrávání zastaví. */
+  function krokuj(smer: 1 | -1): void {
+    skocNa(prehravani.cas + smer * KROK_ZAZNAMU);
+  }
+
   function skocNaKonec(): void {
     if (rezim !== "zkouska" || !beh) return;
     if (beh.spocitanoVse) skocNa(beh.trvani);
@@ -771,6 +861,37 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     panelVysledku.hidden = false;
   }
 
+  // ---- Okno se zadáním úrovně ----
+
+  function naplnZadani(): void {
+    udaj("zadani-list").textContent = t("zadani.uroven", { id: uroven.id });
+    udaj("zadani-nazev").textContent = uroven.nazev;
+    const klic = `zadani.${uroven.id}`;
+    udaj("zadani-text").textContent = jeKlicTextu(klic) ? t(klic) : "";
+
+    const polozka = (text: string): HTMLLIElement => {
+      const uzel = document.createElement("li");
+      uzel.textContent = text;
+      return uzel;
+    };
+    const provoz = uroven.jizdniRad.map((p) => polozka(zapisJizdy(p, true)));
+    udaj("zadani-provoz").replaceChildren(...(provoz.length > 0 ? provoz : [polozka(t("zadani.provoz.zadny"))]));
+
+    const stavba = uroven.povolenePrvky
+      .filter((id) => KATALOG[id].hotovo)
+      .map((id) => polozka(t("zadani.stavba.prvek", { prvek: nazevPrvku(id), cena: zapisCenyPrvku(id) })));
+    if (uroven.rozpocet !== null) {
+      stavba.push(polozka(t("zadani.stavba.rozpocet", { castka: koruny(uroven.rozpocet) })));
+    }
+    udaj("zadani-stavba").replaceChildren(...stavba);
+  }
+
+  function otevriZadani(): void {
+    if (oknoZadani.open) return;
+    vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
+    oknoZadani.showModal();
+  }
+
   // ---- Okno s textem: export, import a diagnostika ----
 
   function otevriOkno(druh: "export" | "import" | "diagnostika", text: string): void {
@@ -892,6 +1013,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("import", () => rezim === "stavba" && otevriOkno("import", ""));
   priKliknuti("prehrat", prepniPrehravani);
   priKliknuti("na-konec", skocNaKonec);
+  priKliknuti("krok-zpet", () => krokuj(-1));
+  priKliknuti("krok-vpred", () => krokuj(1));
+  priKliknuti("cisla", prepniCisla);
+  priKliknuti("zadani", otevriZadani);
   priKliknuti("upravit", zpetKeStavbe);
   priKliknuti("prehrat-znovu", () => {
     if (!beh) return;
@@ -916,13 +1041,14 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   // Po kliknutí myší na tlačítko se pozornost vrací na výkres, aby mezerník dál pouštěl
   // zkoušku a nemačkal znovu poslední tlačítko.
+  const otevreneOkno = (): boolean => okno.open || oknoZadani.open;
   prvek("#obrazovka-uroven", HTMLElement).addEventListener("click", (udalost) => {
-    if (udalost.detail === 0 || okno.open) return;
+    if (udalost.detail === 0 || otevreneOkno()) return;
     if (udalost.target instanceof Element && udalost.target.closest("button")) canvas.focus({ preventScroll: true });
   });
 
   window.addEventListener("keydown", (udalost) => {
-    if (okno.open || jePsaciPole(udalost.target)) return;
+    if (otevreneOkno() || jePsaciPole(udalost.target)) return;
     const stavi = rezim === "stavba";
     const klavesa = udalost.key.length === 1 ? udalost.key.toLowerCase() : udalost.key;
 
@@ -967,6 +1093,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         break;
       case "End":
         skocNaKonec();
+        break;
+      case ",":
+        if (stavi) return;
+        krokuj(-1);
+        break;
+      case ".":
+        if (stavi) return;
+        krokuj(1);
+        break;
+      case "c":
+        prepniCisla();
         break;
       default: {
         const poradi = Number(klavesa) - 1;
@@ -1015,26 +1152,23 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   udaj("jizdni-rad").replaceChildren(
     ...uroven.jizdniRad.map((polozka) => {
-      const klic = `provoz.${polozka.druh}`;
-      const nazev = jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
-      const pocet = polozka.pocet ?? 1;
       const uzel = document.createElement("span");
       uzel.className = "osa__polozka";
-      uzel.textContent = t("rad.polozka", {
-        cas: cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1),
-        smer: polozka.smer === 1 ? "→" : "←",
-        kdo: pocet > 1 ? t("rad.vice", { pocet, kdo: nazev }) : nazev,
-      });
+      uzel.textContent = zapisJizdy(polozka);
       return uzel;
     }),
   );
 
+  naplnZadani();
+  prepinacCisel.setAttribute("aria-pressed", String(cisla));
   document.body.dataset.rezim = rezim;
   document.body.dataset.zkouska = "";
   obnovMedaile();
   obnovStavbu();
   obnovOsu();
   ukazCelyVykres();
+  // Před stavbou si má hráč přečíst, co ho čeká; k rozestavěnému mostu se zadání nevnucuje.
+  if (editor.navrh.pruty.length === 0) otevriZadani();
 
   // Dotaz na verzi fyziky zároveň ověří, že pracovní vlákno se simulací funguje.
   const zkusebni = new KlientZkousky();

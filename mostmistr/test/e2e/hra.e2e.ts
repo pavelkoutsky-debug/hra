@@ -71,10 +71,24 @@ async function nastavCas(sekundy: number): Promise<void> {
   await stranka.evaluate(() => new Promise<void>((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo()))));
 }
 
+/** Zavře okno se zadáním, pokud je otevřené (úroveň bez mostu jím vítá). */
+async function zavriZadani(): Promise<void> {
+  const tlacitko = stranka.locator('#okno-zadani[open] button[value="zavrit"]');
+  if ((await tlacitko.count()) > 0) await tlacitko.click();
+}
+
 async function otevriUroven(id: string): Promise<void> {
   await stranka.goto(`${adresa}?uroven=${id}`);
   await stranka.locator("#obrazovka-uroven canvas").waitFor();
   await expect.poll(() => udaj("fyzika"), { timeout: 5000 }).toMatch(/^v\d+$/);
+  await zavriZadani();
+}
+
+/** Čas děje z ukazatele vedle časové osy, v sekundách. */
+async function casDeje(): Promise<number> {
+  const nalez = /^(\d+,\d) s/.exec(await udaj("cas"));
+  if (!nalez) throw new Error("Nečekaný zápis času.");
+  return Number(nalez[1]!.replace(",", "."));
 }
 
 beforeAll(async () => {
@@ -116,9 +130,30 @@ describe("přehled kampaně", () => {
     await stranka.goto(adresa);
   });
 
-  it("kliknutí na kartu otevře úroveň", async () => {
+  it("kliknutí na kartu otevře úroveň a ta přivítá oknem se zadáním", async () => {
     await stranka.locator('.karta[data-uroven="1-01"] a').click();
     await stranka.locator("#obrazovka-uroven canvas").waitFor();
+    const okno = stranka.locator("#okno-zadani");
+    await okno.waitFor({ state: "visible" });
+    expect(await udaj("zadani-list")).toBe("ÚROVEŇ 1-01");
+    expect(await udaj("zadani-nazev")).toBe("Lávka přes potok");
+    expect(await udaj("zadani-text")).toContain("Přes potok mají přejít tři chodci");
+    expect(await udaj("zadani-provoz")).toContain("2× chodec");
+    expect(await udaj("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
+    expect(await stranka.locator('[data-udaj="zadani-medaile"] li').count()).toBe(3);
+    await stranka.screenshot({ path: `${SLOZKA}/21a-zadani.png` });
+
+    // Dokud je okno otevřené, mezerník zkoušku nepouští.
+    await stranka.keyboard.press("Space");
+    expect(await telo("rezim")).toBe("stavba");
+    expect(await okno.isVisible()).toBe(false); // mezerník zmáčkl tlačítko „Jdu stavět“
+
+    // Zadání zůstává vlevo a okno jde otevřít znovu.
+    expect(await udaj("zadani")).toContain("Přes potok mají přejít tři chodci");
+    await akce("zadani").click();
+    await okno.waitFor({ state: "visible" });
+    await stranka.keyboard.press("Escape");
+    expect(await okno.isVisible()).toBe(false);
     expect(await udaj("nazev")).toBe("Lávka přes potok");
     expect(await stranka.locator(".paleta__prvky button").count()).toBe(2);
     expect(await udaj("rozpocet")).toBe("0 Kč / 45 000 Kč");
@@ -240,6 +275,56 @@ describe("zkouška a vyhodnocení", () => {
     await stranka.screenshot({ path: `${SLOZKA}/25-vysledek.png` });
   });
 
+  it("přehrávání jde zpomalit na desetinu a krokovat po setinách sekundy", async () => {
+    await akce("prehrat-znovu").click();
+    await stranka.locator('[data-rychlost="0.1"]').click();
+    expect(await stranka.locator('[data-rychlost="0.1"]').getAttribute("aria-pressed")).toBe("true");
+    expect(await stranka.locator('[data-rychlost="1"]').getAttribute("aria-pressed")).toBe("false");
+    await stranka.waitForTimeout(600);
+    // Šest desetin sekundy skutečného času je při desetinové rychlosti pár setin děje.
+    await akce("prehrat").click();
+    expect(await casDeje()).toBeLessThan(0.3);
+
+    await nastavCas(3);
+    await akce("krok-vpred").click();
+    await akce("krok-vpred").click();
+    await stranka.keyboard.press(".");
+    await stranka.keyboard.press(".");
+    await stranka.keyboard.press(".");
+    expect(await casDeje()).toBeCloseTo(3.1, 5);
+    await stranka.keyboard.press(",");
+    await akce("krok-zpet").click();
+    await akce("krok-zpet").click();
+    await akce("krok-zpet").click();
+    await akce("krok-zpet").click();
+    expect(await casDeje()).toBeCloseTo(3.0, 5);
+    await stranka.locator('[data-rychlost="1"]').click();
+    await akce("na-konec").click();
+    await stranka.locator(".vysledek").waitFor({ state: "visible" });
+  });
+
+  it("legenda využití je při zkoušce vidět a čísla u prutů jdou vypnout", async () => {
+    expect(await stranka.locator(".uroven .legenda").isVisible()).toBe(true);
+    const prepinac = akce("cisla");
+    expect(await prepinac.getAttribute("aria-pressed")).toBe("true");
+
+    /** Kolik pixelů plátna má barvu pozadí; rámečky čísel jich pár přikryjí a pár přidají. */
+    const otiskPlatna = (): Promise<string> =>
+      stranka.evaluate(() => {
+        const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas")!;
+        return platno.toDataURL().slice(-64);
+      });
+    await nastavCas(5.7);
+    const sCisly = await otiskPlatna();
+    await stranka.screenshot({ path: `${SLOZKA}/24a-cisla-vyuziti.png` });
+    await stranka.keyboard.press("c");
+    expect(await prepinac.getAttribute("aria-pressed")).toBe("false");
+    await stranka.evaluate(() => new Promise<void>((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo()))));
+    expect(await otiskPlatna()).not.toBe(sCisly);
+    await prepinac.click();
+    expect(await prepinac.getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("odkaz na největší využití skočí na časové ose do toho okamžiku", async () => {
     await stranka.locator('[data-udaj="vysledek-vyuziti"] button').click();
     const zapis = await udaj("cas");
@@ -273,6 +358,8 @@ describe("zkouška a vyhodnocení", () => {
   it("po novém načtení stránky je most zpátky a zkouška dá stejný otisk", async () => {
     await stranka.reload();
     await stranka.locator("#obrazovka-uroven canvas").waitFor();
+    // K rozestavěnému mostu se zadání nevnucuje.
+    expect(await stranka.locator("#okno-zadani").isVisible()).toBe(false);
     expect(await pocetPrutu()).toBe(5);
     expect(await udaj("cena")).toBe("33 133 Kč");
     const znovu = await vyzkousej();

@@ -346,7 +346,7 @@ Pevný krok, pevné pořadí výpočtu a pevné násady pro náhodný dav a nero
 
 **Výchozí zobrazení**
 
-- Barva prutu podle využití: jedna škála bílá → žlutá → červená pro tah i tlak. Tlak je plná čára, tah dvojitá.
+- Barva prutu podle využití: jedna škála bílá → žlutá → červená pro tah i tlak. Tlak je plná čára, tah dvojitá. *(M2, na přání zadavatele: u prutů jsou navíc čísla využití v procentech, která jdou vypnout, a pruty nad 60 % podkresluje záře.)*
 - Žlutá je vyhrazená pro varování. Podpory, tlumiče a ovládací prvky ji nepoužívají.
 - Rozpočet s ryskou inženýrského rozpočtu, tlačítko zkoušky, časová osa.
 
@@ -405,6 +405,8 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Zoom a posun | Kolečko, pravé tlačítko |
 | Spustit a zastavit zkoušku | Mezerník |
 | Pozastavit přehrávání, skočit na konec | P, End |
+| Krokovat záznam zpět a vpřed | čárka, tečka |
+| Zapnout a vypnout čísla využití u prutů | C |
 
 ---
 

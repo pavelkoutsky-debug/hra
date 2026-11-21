@@ -33,7 +33,7 @@ Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po zm�
 - **Hra a zkouška.** Obrazovku úrovně řídí `src/hra/uroven.ts`. Každá zkouška dostane vlastní pracovní vlákno, které se po výsledku nebo zastavení ukončí; zprávy z opuštěné zkoušky tak nemůžou dorazit do nové. Výsledek a medaile se hráči ukazují až na konci přehrávání.
 - **Háčky pro testy v prohlížeči.** `body[data-rezim]` (prehled, stavba, zkouska), `body[data-zkouska]` (pocita, hotovo, chyba), `body[data-otisk]`, `body[data-pruty]` a `canvas[data-kamera]` (střed a měřítko pohledu; podle něj test spočítá, kam kliknout). Neměň je bez úpravy `test/e2e/hra.e2e.ts`.
 - **Texty.** Všechny texty pro hráče jdou přes `src/ui/slovnik.ts`.
-- **Barvy.** Žlutá je vyhrazená pro varování. Využití prutů má jednu škálu bílá → žlutá → červená; tlak plná čára, tah dvojitá.
+- **Barvy.** Žlutá je vyhrazená pro varování. Využití prutů má jednu škálu bílá → žlutá → červená (`src/vykres/skala.ts`; legenda v `src/styly.css` má stejné zastávky); tlak plná čára, tah dvojitá.
 - **Kořen repozitáře neměň.** Je v něm jiný, nesouvisející projekt.
 - **Poctivé zástupné kusy.** Co ještě není hotové, to hra odmítne nebo neukáže. Nepředstírej výsledek, který nikdo nespočítal.
 

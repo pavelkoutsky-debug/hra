@@ -483,7 +483,7 @@ a.tlacitko {
 .legenda__skala {
   width: 110px;
   height: 9px;
-  background: linear-gradient(to right, #ffffff 0%, #ffd166 50%, #ff9a4d 80%, #ff4d3d 100%);
+  background: linear-gradient(to right, #ffffff 0%, #ffd166 40%, #ff9a4d 75%, #ff4d3d 100%);
 }
 
 .legenda__cara {
@@ -1100,5 +1100,126 @@ a.karta__obal:hover {
 
   .pole {
     display: none;
+  }
+}
+
+/* Legenda využití ve hře: je vidět, jen když jsou pruty obarvené využitím. */
+
+.uroven .legenda {
+  bottom: 38px;
+  pointer-events: auto;
+}
+
+body:not([data-vyuziti="true"]) .uroven .legenda {
+  display: none;
+}
+
+/* Při stavbě leží legenda nad souřadnicemi kurzoru. */
+body[data-rezim="stavba"] .uroven .legenda {
+  bottom: 66px;
+}
+
+.legenda__prepinac {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px 1px 4px;
+  border: 1px solid rgb(207 227 255 / 0.55);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--popisek);
+  font: inherit;
+  cursor: pointer;
+}
+
+.legenda__prepinac[aria-pressed="true"] {
+  background: var(--zvyrazneni);
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.legenda__prepinac kbd {
+  padding: 0 3px;
+  border: 1px solid rgb(207 227 255 / 0.5);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 10px;
+}
+
+@media (max-width: 1240px) {
+  .uroven .legenda {
+    bottom: 10px;
+  }
+
+  body[data-rezim="stavba"] .uroven .legenda {
+    bottom: 38px;
+  }
+}
+
+/* Okno se zadáním úrovně */
+
+.okno--zadani {
+  width: min(680px, 92vw);
+  padding: 22px 26px;
+}
+
+.okno__nadtitul {
+  margin: 0 0 2px !important;
+  color: var(--popisek);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.okno--zadani h2 {
+  margin-bottom: 12px;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.okno__zadani {
+  margin-bottom: 16px !important;
+  color: var(--cara-silna);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.okno__sloupce {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 26px;
+  margin-bottom: 14px;
+}
+
+.okno h3 {
+  margin: 0 0 6px;
+  color: var(--popisek);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.okno__seznam {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.okno__seznam li {
+  padding: 2px 0;
+}
+
+.okno__napoveda {
+  margin-bottom: 16px !important;
+  padding-top: 12px;
+  border-top: 1px solid rgb(207 227 255 / 0.3);
+  color: var(--popisek);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .okno__sloupce {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

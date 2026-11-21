@@ -19,8 +19,11 @@ export interface StavNavrhu {
   zacatek: Bod | null;
   /** Problémy návrhu; dotčené pruty a styčníky se zvýrazní varovnou barvou. */
   problemy: readonly ProblemNavrhu[];
-  /** Největší využití každého prutu z poslední zkoušky (pořadí jako v návrhu), nebo null. */
-  obalka: readonly number[] | null;
+  /**
+   * Největší využití každého prutu z poslední zkoušky (pořadí jako v návrhu) a to, zda
+   * rozhodoval tah; null, když obálka není.
+   */
+  obalka: readonly { vyuziti: number; tah: boolean }[] | null;
 }
 
 function mezi(v: number, min: number, max: number): number {
@@ -73,14 +76,20 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
         ctx.lineWidth = tloustka + 8;
         ctx.stroke();
       }
-      const vyuziti = s.obalka?.[poradi];
+      const obalka = s.obalka?.[poradi];
       ctx.strokeStyle = spatnePruty.has(p.id)
         ? BARVY.varovani
-        : vyuziti !== undefined
-          ? barvaVyuziti(vyuziti)
+        : obalka !== undefined
+          ? barvaVyuziti(obalka.vyuziti)
           : BARVY.caraSilna;
       ctx.lineWidth = tloustka;
       ctx.stroke();
+      // Tah: proužek v barvě pozadí středem čáry, stejně jako při zkoušce.
+      if (obalka?.tah && obalka.vyuziti > 0.02 && KATALOG[p.prvek].druh !== "lano") {
+        ctx.strokeStyle = BARVY.pozadi;
+        ctx.lineWidth = Math.max(1.2, tloustka * 0.3);
+        ctx.stroke();
+      }
     });
   }
 

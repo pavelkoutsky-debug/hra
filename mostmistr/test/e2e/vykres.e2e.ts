@@ -59,6 +59,8 @@ beforeAll(async () => {
   });
   await stranka.goto(`${adresa}?uroven=0-00`);
   await stranka.locator("canvas").waitFor();
+  // Prázdná úroveň vítá oknem se zadáním; výkres je pod ním.
+  await stranka.locator('#okno-zadani button[value="zavrit"]').click();
   await pockejNaSnimek();
 });
 

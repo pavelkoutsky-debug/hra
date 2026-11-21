@@ -20,6 +20,8 @@ import { nakresliZnackuPodpory } from "./vykres";
 
 /** Pod tímto využitím se prut kreslí jako nenamáhaný: bíle a plnou čarou. */
 const PRAH_VYUZITI = 0.02;
+/** Od tohoto využití prut podkresluje záře v barvě využití; sílí až k mezi únosnosti. */
+const PRAH_ZARE = 0.6;
 
 function mezi(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
@@ -90,6 +92,13 @@ export function nakresliKonstrukci(
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
       ctx.strokeStyle = barvaVyuziti(vyuziti);
+      const sila = Math.abs(vyuziti);
+      if (sila > PRAH_ZARE) {
+        ctx.globalAlpha = 0.5 * Math.min(1, (sila - PRAH_ZARE) / (1 - PRAH_ZARE));
+        ctx.lineWidth = tloustka + 10;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       ctx.lineWidth = tloustka;
       ctx.stroke();
 

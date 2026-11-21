@@ -24,6 +24,8 @@ export const KLIC_ULOZENI = "mostmistr.ulozeni";
 export const KLIC_POSKOZENEHO = "mostmistr.ulozeni.poskozene";
 /** Ladicí volba pro testování: všechny úrovně odemčené. */
 export const KLIC_ODEMCENI = "mostmistr.odemceno";
+/** Volba hráče: ukazovat u prutů čísla využití. */
+export const KLIC_CISEL = "mostmistr.cisla";
 
 /**
  * Paměť prohlížeče, nebo null, když ji prohlížeč nedá (soukromé okno, zakázaná data webu).
@@ -101,6 +103,15 @@ export class Uloziste {
 
   set odemcenoVse(odemceno: boolean) {
     this.#pis(KLIC_ODEMCENI, odemceno ? "1" : "0");
+  }
+
+  /** Mají se u prutů ukazovat čísla využití? Dokud hráč nezvolí jinak, ano. */
+  get cislaVyuziti(): boolean {
+    return this.#cti(KLIC_CISEL) !== "0";
+  }
+
+  set cislaVyuziti(ukazovat: boolean) {
+    this.#pis(KLIC_CISEL, ukazovat ? "1" : "0");
   }
 
   #zapis(): void {

@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { ulozeniNaText, ulozeniZTextu } from "../src/data/ulozeni";
 import { Kreslic } from "../src/zkouska/regrese";
-import { KLIC_ODEMCENI, KLIC_POSKOZENEHO, KLIC_ULOZENI, Uloziste, type Sklad } from "../src/hra/uloziste";
+import { KLIC_CISEL, KLIC_ODEMCENI, KLIC_POSKOZENEHO, KLIC_ULOZENI, Uloziste, type Sklad } from "../src/hra/uloziste";
 
 class SkladVPameti implements Sklad {
   readonly data = new Map<string, string>();
@@ -87,6 +87,17 @@ describe("úložiště postupu", () => {
     const uloziste = new Uloziste(plny);
     expect(() => uloziste.ulozNavrh(most())).not.toThrow();
     expect(uloziste.navrh("1-01")).toEqual(most());
+  });
+
+  it("čísla využití jsou zapnutá, dokud je hráč nevypne, a volba se pamatuje", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    expect(uloziste.cislaVyuziti).toBe(true);
+    uloziste.cislaVyuziti = false;
+    expect(sklad.getItem(KLIC_CISEL)).toBe("0");
+    expect(new Uloziste(sklad).cislaVyuziti).toBe(false);
+    // Volba nesmí přepsat uložený postup.
+    expect(sklad.getItem(KLIC_ULOZENI)).toBeNull();
   });
 
   it("ladicí odemčení všech úrovní se pamatuje zvlášť", () => {
