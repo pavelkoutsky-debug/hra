@@ -33,6 +33,8 @@ import type { RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../
 import { modelUcastnika } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { nasadaUrovne } from "../../urovne/index";
+import { ukazkaUrovne } from "../../urovne/ukazky";
+import { Ukazka } from "./ukazka";
 import { vypisMedaile, znackyMedaili } from "./medaile";
 import type { Uloziste } from "./uloziste";
 
@@ -153,6 +155,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let idRozboru = 0;
   let casovacRozboru: number | undefined;
   const maLidi = uroven.jizdniRad.some((p) => jeClovek(p.druh));
+  /** Ukázka v okně se zadáním; běží, jen dokud je okno otevřené. */
+  let ukazka: Ukazka | null = null;
   /** Poslední zkouška; její obálka platí, dokud je `beh.navrh` právě upravovaný návrh. */
   let beh: Beh | null = null;
   let klient: KlientZkousky | null = null;
@@ -1124,12 +1128,35 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       stavba.push(polozka(t("zadani.stavba.rozpocet", { castka: koruny(uroven.rozpocet) })));
     }
     udaj("zadani-stavba").replaceChildren(...stavba);
+
+    // Souvislost se skutečnými mosty a ukázka toho, co úroveň učí.
+    const skutecnost = `skutecnost.${uroven.id}`;
+    const poleSkutecnosti = udaj("zadani-skutecnost");
+    poleSkutecnosti.hidden = !jeKlicTextu(skutecnost);
+    if (jeKlicTextu(skutecnost)) poleSkutecnosti.textContent = t("zadani.skutecnost", { text: t(skutecnost) });
+    // Návod k ovládání patří jen k úplně první úrovni.
+    udaj("zadani-ovladani").hidden = uroven.id !== kampan[0]?.id;
+
+    const zadaniUkazky = ukazkaUrovne(uroven);
+    const oddil = udaj("ukazka");
+    oddil.hidden = zadaniUkazky === null;
+    if (zadaniUkazky) {
+      for (const cast of ["a", "b", "popis"] as const) {
+        const klicUkazky = `ukazka.${uroven.id}.${cast}`;
+        udaj(`ukazka-${cast}`).textContent = jeKlicTextu(klicUkazky) ? t(klicUkazky) : "";
+      }
+      ukazka = new Ukazka(oddil, zadaniUkazky);
+    }
   }
 
   function otevriZadani(): void {
     if (oknoZadani.open) return;
     vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
     oknoZadani.showModal();
+    // Okno se otevírá odshora, i když je vyšší než obrazovka; mezerník a Enter ho zavřou.
+    prvek('#okno-zadani button[value="zavrit"]', HTMLButtonElement).focus({ preventScroll: true });
+    oknoZadani.scrollTop = 0;
+    ukazka?.spust();
   }
 
   // ---- Okno s textem: export, import a diagnostika ----
@@ -1438,6 +1465,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   );
 
   naplnZadani();
+  oknoZadani.addEventListener("close", () => ukazka?.zastav());
   prepinacCisel.setAttribute("aria-pressed", String(cisla));
   document.body.dataset.rezim = rezim;
   document.body.dataset.zkouska = "";

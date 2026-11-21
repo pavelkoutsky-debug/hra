@@ -188,6 +188,40 @@ const CS = {
   "zadani.ovladani":
     "Prut nakreslíš tažením myší z kotvy nebo ze styčníku. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",
   "zadani.zacit": "Jdu stavět",
+  "zadani.skutecnost": "Ve skutečnosti: {text}",
+
+  // Ukázky v okně se zadáním
+  "ukazka.nadpis": "Ukázka",
+  "ukazka.pocitaSe": "počítá se…",
+  "ukazka.nejde": "ukázku se nepodařilo spočítat",
+  "ukazka.kmitani": "kmitání {zrychleni} m/s²",
+  "ukazka.obstal": "obstál",
+  "ukazka.neobstal": "neobstál",
+  "ukazka.nejvic": "kmitání až {zrychleni} m/s²",
+  "ukazka.spadlo": "spadli {spadlo} z {pocet}",
+  "ukazka.zvetseni": "Pohyb mostu je {nasobek}× zvětšený, aby byl vidět.",
+  "ukazka.1-01.a": "Jen mostovka",
+  "ukazka.1-01.b": "Mostovka s trojúhelníkem",
+  "ukazka.1-01.popis": "Dva díly mostovky spojené kloubem se uprostřed zalomí. Trojúhelník z trámů kloub podepře a nedovolí mu klesnout.",
+  "ukazka.2-02.a": "Běh v rytmu mostu (3,4 Hz)",
+  "ukazka.2-02.b": "Stejný most, pomalejší běh (2,5 Hz)",
+  "ukazka.2-02.popis": "Oba mosty i běžci jsou stejní, liší se jen rytmus. Když doskoky přicházejí právě tak rychle, jak most sám kmitá, každý další ho rozhoupe o kousek víc. Tomu se říká rezonance.",
+  "ukazka.2-03.a": "Bez závaží",
+  "ukazka.2-03.b": "Šest tun závaží v mostovce",
+  "ukazka.2-03.popis": "Těžší most kmitá pomaleji. Závaží stáhne jeho vlastní frekvenci pod krok útvaru a pochod ho přestane rozhoupávat.",
+  "ukazka.2-04.a": "Bez tlumičů",
+  "ukazka.2-04.b": "Dva tlumiče do kotev",
+  "ukazka.2-04.popis": "Tlumič je píst ve válci s olejem: pomalému pohybu nebrání, rychlému klade odpor. Most nepodpírá, ale při každém kmitu mu vezme kus energie, takže se nerozhoupe ani v rezonanci.",
+  "skutecnost.1-01":
+    "trojúhelník je jediný tvar z kloubově spojených prutů, který nejde zmáčknout, aniž by se některý prut natáhl nebo zkrátil. Proto jsou z trojúhelníků příhradové mosty, jeřáby i stožáry vysokého napětí.",
+  "skutecnost.2-01":
+    "u lávek se vlastní frekvence počítá dřív než únosnost. Lidé chodí zhruba dvěma kroky za sekundu a běhají třemi, a lehký štíhlý most, který kmitá stejně rychle, se pod nimi rozhoupe, i když by unesl mnohonásobek jejich váhy.",
+  "skutecnost.2-02":
+    "na rezonanci záleží i u houpačky: stačí do ní strkat málo, ale ve správném rytmu. Lávky se proto navrhují tak, aby jejich vlastní frekvence ležela mimo rytmus chůze a běhu i mimo jeho dvojnásobek.",
+  "skutecnost.2-03":
+    "v dubnu 1831 se pod vojáky pochodujícími ve stejném kroku zřítil řetězový most v Broughtonu u Manchesteru. Praskl v něm šroub, který by časem povolil i tak, ale rytmus pochodu to uspíšil. Britská armáda od té doby na mostech velí „zrušit krok“.",
+  "skutecnost.2-04":
+    "londýnská lávka Millennium Bridge se v červnu 2000 pod davem rozhoupala tak, že ji pár dní po otevření zavřeli. Kmitala do stran, ne nahoru a dolů, ale lék byl stejný: 37 viskózních tlumičů a k nim 52 laděných závaží. Od února 2002 je klidná.",
   "paleta.vyber": "Výběr a posun",
   "paleta.smazat": "Smazat",
   "paleta.zrcadlit": "Zrcadlit",

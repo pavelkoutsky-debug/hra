@@ -141,6 +141,16 @@ describe("přehled kampaně", () => {
     expect(await udaj("zadani-provoz")).toContain("2× chodec");
     expect(await udaj("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
     expect(await stranka.locator('[data-udaj="zadani-medaile"] li').count()).toBe(3);
+    // Ukázka: mostovka sama spadne, s trojúhelníkem obstojí. Obě strany se doopravdy spočítají.
+    const ukazka = stranka.locator('[data-udaj="ukazka"]');
+    await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 30_000 });
+    expect(await udaj("ukazka-a")).toBe("Jen mostovka");
+    expect(await ukazka.locator('[data-strana="a"]').getAttribute("data-pruchod")).toBe("false");
+    expect(await ukazka.locator('[data-strana="b"]').getAttribute("data-pruchod")).toBe("true");
+    expect(await udaj("zadani-skutecnost")).toContain("jeřáby i stožáry");
+    // Okno se vejde na obrazovku a začíná odshora.
+    expect(await stranka.locator("#okno-zadani").evaluate((okno) => okno.scrollTop)).toBe(0);
+    expect(await stranka.locator('[data-udaj="zadani-nazev"]').isVisible()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/21a-zadani.png` });
 
     // Dokud je okno otevřené, mezerník zkoušku nepouští.

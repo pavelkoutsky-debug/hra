@@ -1211,8 +1211,8 @@ body[data-rezim="stavba"] .uroven .legenda {
 }
 
 .okno__napoveda {
-  margin-bottom: 16px !important;
-  padding-top: 12px;
+  margin-bottom: 14px !important;
+  padding-top: 10px;
   border-top: 1px solid rgb(207 227 255 / 0.3);
   color: var(--popisek);
   font-size: 12px;
@@ -1347,4 +1347,110 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 .osa__frekvence {
   flex: none;
+}
+
+/* Ukázka v okně se zadáním: dva mosty vedle sebe */
+
+.okno--zadani {
+  width: min(1040px, 96vw);
+  max-height: 96vh;
+  overflow-y: auto;
+}
+
+/* Vlevo zadání s ukázkou, vpravo fakta o úrovni. */
+.okno__telo {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: 0 28px;
+  margin-bottom: 14px;
+}
+
+.okno__vedlejsi {
+  padding-left: 22px;
+  border-left: 1px solid rgb(207 227 255 / 0.3);
+}
+
+.okno__vedlejsi .medaile {
+  margin-top: 0;
+}
+
+@media (max-width: 860px) {
+  .okno__telo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .okno__vedlejsi {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+.ukazka {
+  margin-bottom: 12px;
+}
+
+.ukazka__strany {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.ukazka__strana {
+  margin: 0;
+  border: 1px solid rgb(207 227 255 / 0.55);
+  background: var(--pozadi);
+}
+
+.ukazka__strana canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
+.ukazka__strana figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+  padding: 5px 9px 6px;
+  border-top: 1px solid rgb(207 227 255 / 0.35);
+  background: var(--lista);
+  color: var(--cara-silna);
+  font-size: 12px;
+}
+
+.ukazka__strana output {
+  color: var(--popisek);
+  white-space: nowrap;
+}
+
+.ukazka__strana output[data-verdikt="obstal"] {
+  color: var(--cara-silna);
+}
+
+.ukazka__strana output[data-verdikt="neobstal"] {
+  color: var(--varovani);
+}
+
+.okno p.ukazka__popis {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.ukazka__poznamka {
+  color: var(--popisek);
+}
+
+.okno p.okno__skutecnost {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--popisek);
+  color: var(--cara);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .ukazka__strany {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

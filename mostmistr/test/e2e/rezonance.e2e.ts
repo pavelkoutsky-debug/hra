@@ -125,6 +125,26 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await udaj("zadani-provoz")).toContain("útvar 24 lidí, krok 1,7 Hz");
     expect(await udaj("zadani-medaile")).toContain("nerozkmitá nad 2,5 m/s²");
     expect(await udaj("zadani-medaile")).toContain("kmitání mostovky nejvýš 1,2 m/s²");
+
+    // Ukázka: stejná lávka bez tlumičů a s nimi. Vlevo se rozkmitá přes mez, vpravo ne.
+    const ukazka = stranka.locator('[data-udaj="ukazka"]');
+    await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 60_000 });
+    const bez = ukazka.locator('[data-strana="a"]');
+    const s = ukazka.locator('[data-strana="b"]');
+    expect(await udaj("ukazka-a")).toBe("Bez tlumičů");
+    expect(await udaj("ukazka-b")).toBe("Dva tlumiče do kotev");
+    expect(await bez.getAttribute("data-pruchod")).toBe("false");
+    expect(await s.getAttribute("data-pruchod")).toBe("true");
+    expect(Number(await bez.getAttribute("data-kmitani"))).toBeGreaterThan(2.5);
+    expect(Number(await s.getAttribute("data-kmitani"))).toBeLessThan(2.5);
+    // Pohyb mostu je zvětšený a okno to říká.
+    expect(Number(await ukazka.getAttribute("data-zvetseni"))).toBeGreaterThanOrEqual(10);
+    expect(await ukazka.locator("[data-poznamka]").innerText()).toMatch(/^Pohyb mostu je \d+× zvětšený/);
+    expect(await udaj("ukazka-popis")).toContain("píst ve válci s olejem");
+    expect(await udaj("zadani-skutecnost")).toContain("Millennium Bridge");
+    // Během přehrávání ukazuje každá strana okamžité kmitání.
+    await expect.poll(() => bez.locator("[data-stav]").innerText(), { timeout: 15_000 }).toMatch(/kmitání \d,\d m\/s²/);
+    await stranka.waitForTimeout(9000);
     await stranka.screenshot({ path: `${SLOZKA}/41-zadani-prehlidka.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await stranka.locator(".paleta__prvky button").allInnerTexts()).toHaveLength(3);
@@ -241,6 +261,14 @@ describe("kmitání mostovky rozhoduje", () => {
     expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count()).toBe(2);
     expect(await udaj("vysledek-kmitani")).toMatch(/· (střední|nízký) komfort ·/);
     await stranka.screenshot({ path: `${SLOZKA}/48-vysledek-s-kmitanim.png` });
+  });
+
+  it("úroveň bez ukázky má aspoň souvislost se skutečností", async () => {
+    await stranka.goto(`${adresa}?uroven=2-01`);
+    await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
+    expect(await stranka.locator('[data-udaj="ukazka"]').isVisible()).toBe(false);
+    expect(await udaj("zadani-skutecnost")).toContain("vlastní frekvence počítá dřív než únosnost");
+    await stranka.locator('#okno-zadani button[value="zavrit"]').click();
   });
 
   it("běžci v taktu: úroveň 2-02 s referenčním mostem", async () => {
