@@ -1,6 +1,7 @@
 // Přehled kampaně: kapitoly, karty úrovní s náhledem výkresu, medailemi a zámky.
 
 import { BEZ_MEDAILI } from "../data/ulozeni";
+import type { Denik } from "../denik/denik";
 import type { Uroven } from "../data/uroven";
 import { prvek, udaj } from "../ui/dom";
 import { koruny } from "../ui/formaty";
@@ -10,6 +11,8 @@ import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
 import { znackyMedaili } from "./medaile";
 import type { Uloziste } from "./uloziste";
+import { pripojVazbu } from "./vazba";
+import { pripojZaznam } from "./zaznam";
 
 const SIRKA_NAHLEDU = 280;
 const VYSKA_NAHLEDU = 170;
@@ -106,7 +109,7 @@ function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Ul
 }
 
 /** Spustí přehled kampaně. `hlaseni` je zpráva, kterou má přehled ukázat nahoře (neznámá úroveň). */
-export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, hlaseni = ""): void {
+export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, denik: Denik, hlaseni = ""): void {
   prvek("#obrazovka-prehled", HTMLElement).hidden = false;
   const kapitoly = prvek(".prehled__kapitoly", HTMLElement);
   const volba = prvek("#odemknout-vse", HTMLInputElement);
@@ -155,4 +158,14 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, hlas
   udaj("prehled-verze").textContent = `${t("hra.nazev")} ${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
   vykresli();
   document.body.dataset.rezim = "prehled";
+
+  // Zpětná vazba a deník hraní: v přehledu není most, který by šel přiložit.
+  pripojVazbu(denik, { uroven: () => undefined, navrh: () => undefined });
+  pripojZaznam(denik);
+  const rekordy = kampan.map((u) => uloziste.rekord(u.id)?.medaile);
+  denik.zapis("prehled.otevren", {
+    proslych: rekordy.filter((m) => m?.pruchod).length,
+    medaili: rekordy.reduce((soucet, m) => soucet + (m ? Number(m.pruchod) + Number(m.rozpocet) + Number(m.mistrovska) : 0), 0),
+    odemcenoVse: uloziste.odemcenoVse,
+  });
 }

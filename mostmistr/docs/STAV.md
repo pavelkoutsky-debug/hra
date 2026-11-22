@@ -14,10 +14,92 @@ Poslední aktualizace: 22. 11. 2026
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
 | M4a Těžká doprava | Hotovo, sloučeno do `main` (22. 11. 2026) |
-| M4b Velká rozpětí | Hotovo, běží nezávislé recenze; pak sloučit |
-| M4c Zpětná vazba a deník hraní | Nezačato (přidáno na přání zadavatele 22. 11. 2026) |
+| M4b Velká rozpětí | Hotovo, po třech nezávislých recenzích sloučeno do `main` (22. 11. 2026) |
+| M4c Zpětná vazba a deník hraní | Hotovo (přidáno na přání zadavatele 22. 11. 2026); čeká na nastavení hesla správce v Netlify |
 | M5 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
+
+## M4c — výsledek
+
+Zpětná vazba hráčů a deník hraní. Popis pro zadavatele, včetně toho, co nastavit v Netlify, je v `docs/ZPETNA-VAZBA.md`.
+
+**Ve hře**
+
+- Tlačítko **Napiš nám** v přehledu kampaně, v liště úrovně (v úzkém okně jen dole v paletě) a v panelu výsledku otevře okno: druh zprávy (něco nefunguje, obtížnost, nápad, pochvala, jiné), text s počitadlem znaků, jak hra baví (1 až 5), nepovinný e-mail a přílohy (most z výkresu a posledních nejvýš 150 kroků).
+- **Deník hraní** (`src/denik/`): otevření a opuštění úrovně s časem, každý nakreslený prut (prvek, odkud kam, počet dílů), ostatní úpravy mostu, nástroje, každá zkouška s celým mostem a výsledkem (průchod, medaile, cena, využití, první porušení, kmitání, doba výpočtu), zkouška, kterou hra nepustila, a proč, dopnutí lan, zavření zadání, ovládání a chyby prohlížeče. Anonymně: náhodné číslo hráče v prohlížeči, žádné jméno ani adresa.
+- **Zapnuto, jde vypnout** (rozhodnutí zadavatele): první návštěva upozorní, že hra anonymní záznam odesílá autorům a že jde vypnout; vypínač je v přehledu a v okně zpětné vazby a po vypnutí hra potvrdí, že se už nic neodesílá. S vypnutým záznamem se neposílá nic; zpětná vazba ano, je to výslovná zpráva. Adresa s `?zaznam=vypnout` záznam v prohlížeči potichu vypne (pro zkoušení autorů; nesou ji odkazy ze stránky správce).
+- Odesílá se po dávkách (40 událostí nebo 20 s, po výsledku zkoušky a při opuštění stránky přes `sendBeacon`). Po třech nezdarech si deník dá pět minut přestávku; bez serveru (místní spuštění) tedy hře nic nechybí.
+
+**Na serveru** (`src/server/`, funkce v `netlify/functions/`)
+
+- `POST /api/denik` a `POST /api/vazba` přijímají jen žádosti ze stejného webu, kontrolují tvar a velikost dat (dávka do 96 kB, zpětná vazba do 400 kB) a ukládají do Netlify Blobs. Formulář má skryté pole jako past na roboty.
+- `/api/sprava` vydává data jen s heslem správce (proměnná prostředí `MM_SPRAVCE_HESLO`, aspoň 8 znaků; bez ní odpovídá 503). Umí seznam a detail zpětné vazby, změnu stavu řešení s poznámkou, dny a sezení deníku, souhrn za den nebo období, vývoz dne po částech a mazání.
+- **Souhrn** se počítá z „výtahů“ dnů (`src/denik/souhrn.ts`): co se o kterém hráči ve které úrovni ví. Výtahy jdou slučovat, takže souhrn za měsíc nečte znovu všechny dávky. Klíč dávky začíná časem příjmu, nové dávky tedy přibývají na konec; výtah dne si pamatuje klíč poslední započtené dávky a další žádost čte jen to nové. Platí to i pro dnešek; den s víc než 400 dávkami se dopočítá na víc žádostí a po půlnoci (UTC) se jednou přepočítá celý.
+- Obsluha pracuje se standardními `Request` a `Response` a s úložištěm za rozhraním `SkladZaznamu`, takže stejný kód běží ve funkcích i v testech.
+
+**Stránka správce** (`/sprava.html`): zpětná vazba se stavy nová → řeší se → vyřešeno / zamítnuto, s poznámkou, přiloženým mostem nakresleným na výkresu úrovně, kroky před odesláním a skokem na sezení hráče v deníku; deník po dnech s tabulkou po úrovních (hráči, průchody, zkoušky a minuty do průchodu, medaile, cena průchodu proti rozpočtům, použité prvky, důvody pádů) a sezení krok za krokem.
+
+**Jak je to ověřeno**
+
+- `test/denik.test.ts`: sbírání a odesílání ve hře, kontrola příchozích dat, příjem, správa s heslem, souhrny a jejich slučování, mazání a skutečná knihovna Netlify Blobs proti jejímu místnímu serveru.
+- `test/e2e/denik.e2e.ts`: hra v prohlížeči proti skutečné serverové obsluze zapojené do náhledového serveru: upozornění, stavba myší a zkouška, obsah deníku, zpětná vazba s mostem, vypnutý záznam, stránka správce od špatného hesla po smazání dne.
+
+### Nezávislé recenze M4c (22. 11. 2026)
+
+Dvě recenze nad hotovým milníkem: recenze kódu se zaměřením na bezpečnost a soukromí a vyzkoušení v prohlížeči očima hráče i zadavatele (stránka správce). Recenze kódu nenašla žádnou cestu, jak číst nebo mazat data bez hesla, ani způsob, jak dostat cizí skript na stránku správce.
+
+**Zapracováno z recenze kódu**
+
+- *Vypnutý záznam se po návratu tlačítkem Zpět ignoroval a dávky se přepisovaly.* Stránka vrácená z paměti prohlížeče se teď načte znovu, vypínač se čte z paměti před každým odesláním a platí hned ve všech panelech, čísla dávek se berou z paměti panelu a server nic nepřepíše (klíč dávky má náhodný dovětek).
+- *Vypnutí posílalo i to, co čekalo ve frontě.* Teď odejde jen zpráva o vypnutí.
+- *Bez paměti prohlížeče se záznam s každou stránkou znovu zapnul.* Volby se drží aspoň v paměti panelu; bez jakékoli paměti se deník nevede.
+- *Veřejné adresy šly zneužít k zahlcení a k zamčení správy.* Omezení počtu žádostí u funkcí, strop zpráv na den, žádost bez hlavičky Origin se odmítá, seznam zpětné vazby se čte z malých záznamů a po stránkách, přihlášení správce nezávisí na načtení dat.
+- *Vymyšlená dávka kazila statistiky.* Souhrn bere jen známé prvky a způsoby porušení a časy a ceny v rozumných mezích; texty a čísla v událostech mají meze už při příjmu.
+- *Souhrn řadil sezení hráče podle čísla, ne podle času.* Sezení nese čas začátku, podle kterého se řadí i klíče v úložišti.
+- *Při výpadku se ztrácely části dělené dávky a deník to po třech nezdarech vzdal natrvalo.* Nedoručené části se vracejí do fronty; po třech nezdarech pět minut přestávka; žádost odmítnutou natrvalo neopakuje.
+- *Náhledy a ostrý web sdílely data.* Mají každý své úložiště a druh nasazení se bere z kontextu funkce (proměnná `CONTEXT` za běhu funkce není).
+- Drobnosti: upozornění na záznam i v paletě úrovně (hráč s rozestavěným mostem zadání nevidí), Enter v poli e-mailu zprávu odešle, prázdný jazyk prohlížeče nevadí, chyby prohlížeče se nezapisují donekonečna, čas v úrovni běží jen s viditelnou stránkou, heslo správce jen bez diakritiky (hlavička žádosti jiné nesnese), vývoz a souhrn po menších částech.
+
+**Nezapracováno z recenze kódu (a proč)**
+
+- **Deník je anonymní jen do chvíle, kdy hráč napíše kontakt.** Zpětná vazba nese číslo hráče, aby šlo dohledat, co před zprávou dělal; je to záměr a okno zpětné vazby to hráči říká.
+- **Souhlas předem.** Hra ukládá číslo hráče a vede statistiku s upozorněním a vypínačem, ne se souhlasem předem (tak to zadavatel 22. 11. zvolil). Pro zveřejnění širšímu publiku je to k rozhodnutí; viz `docs/ZPETNA-VAZBA.md`.
+- **Heslo správce je jedno pro všechna nasazení.** Kdo by nasadil vlastní kód jako náhled, dostal by se k němu; Netlify cizí náhledy drží ke schválení. Popsáno v `docs/ZPETNA-VAZBA.md`.
+- **Nad 200 různých textů chyb za den** nedává sloučení výtahů přesně totéž co výpočet najednou. Strop chrání před zahlcením; běžný den k němu nedojde.
+- **Nečinnost hráče u viditelné stránky** se do času v úrovni počítá.
+
+**Zapracováno z vyzkoušení v prohlížeči**
+
+- *Souhrn dneška byl oříznutý na prvních 400 dávek.* Dávky se ukládají pod klíčem, který začíná časem příjmu, a výtah dne se dopočítává průběžně i pro den, který ještě běží (viz výše). Seznam sezení dne ukazuje, kdy dávky přišly.
+- *Upozornění neříkalo, že záznam někam odchází.* Nový text: hra záznam odesílá autorům, co v něm je a že jde vypnout. Po vypnutí zůstane potvrzení, že se už nic neodesílá.
+- *Okno zpětné vazby:* poděkování bez čísla zprávy a ne ve varovné barvě, počitadlo znaků, přílohy předem odškrtnuté u hráče s vypnutým záznamem, popis příloh říká, odkud kroky jsou, odeslání má časový limit 20 s a při nezdaru hra řekne, jak dlouho text vydrží.
+- *Stránka správce:* detail zprávy drží u horního okraje okna (dřív zůstával nahoře mimo obraz), dlouhé slovo ve zprávě se zalomí, správné tvary počtů, srozumitelnější názvy sloupců, dny označené jako UTC, skok ze zprávy na sezení hráče, hra se ze správy otevírá v novém panelu a s vypnutým záznamem.
+- *„Záznam si vypnulo“ počítalo i hráče, kteří ho zase zapnuli.* Počítá se poslední stav.
+- *První klik mimo kreslení zapsal do deníku změnu stavby, která se nestala;* zkouška odmítnutá kvůli rozpočtu v deníku chyběla. Obojí opraveno.
+- *Věta „most nemá klidovou polohu“ se ukazovala i u mostu, který prošel.* Teď jen u neúspěchu.
+- *Lišta úrovně byla v úzkém okně přeplněná.* „Napiš nám“ je i dole v paletě a pod 1 180 px šířky zůstane jen tam; na telefonu zmizí z lišty přehledu nápis Kampaň.
+
+**Kontrola nového ukládání deníku** (třetí nezávislý pohled, jen na přestavbu úložiště a souhrnu)
+
+Náhodné zkoušky s tisícem dávek přes půlnoc, se souběžnými žádostmi správce a s mazáním po částech daly vždy stejný souhrn jako výpočet najednou; chybu, která by dávku na serveru započetla dvakrát nebo ji vynechala, kontrola nenašla. Zapracováno:
+
+- *Dvě dávky téže stránky se mohly cestou předběhnout* (výsledek zkoušky odešel, zatímco předchozí dávka ještě letěla) a souhrn je pak četl v opačném pořadí. Hra posílá dávky po jedné a souhrn si dávky jednoho sezení srovná podle čísla dávky.
+- *Dávka, kterou server uložil, ale odpověď se ke hře nedostala, se započetla dvakrát.* Hra ji posílá znovu beze změny pod stejným číslem a souhrn stejnou dávku podruhé přeskočí.
+- *Záznamy uložené starším tvarem klíče* (jen v úložišti náhledů) zdržovaly souhrn dneška; souhrn, seznam sezení a vývoz je vynechávají, smazání dne je odstraní.
+- *Potvrzení „záznam je vypnutý“ zůstalo viset, když hráč záznam zapnul jinde;* parametr `?zaznam=vypnout` zůstával v adrese a šířil by se se zkopírovaným odkazem. Opraveno; zpětná vazba má na odeslání minutu (s přiloženým mostem je větší).
+
+Zůstává: srovnání pořadí a přeskočení dvojí dávky fungují jen mezi dávkami, které souhrn čte najednou (nejvýš 400 za sebou). Dvojice rozdělená touto hranicí se započte, jak přišla; je to vzácné a týká se jednoho hráče.
+
+**Nezapracováno z vyzkoušení (a proč)**
+
+- **Obrazovka úrovně na šířku telefonu** se nedá pohodlně ovládat. Hra je stavěná pro počítač a tablet; telefon patří do M8 (doladění).
+- **Filtr souhrnu podle verze hry** a **upozornění na neuloženou poznámku správce** by se hodily, ale nejsou nutné pro první sběr dat; zapsáno pro M8.
+- **Události se ztratí, když prohlížeč spadne nebo ho systém ukončí** dřív, než stihne odeslat poslední dávku (nejvýš 20 s hraní). Prohlížeč pro to spolehlivý prostředek nedává.
+
+**Co ověřeno není**
+
+- Funkce na Netlify: z vývojového prostředí se zavolat nedají. První skutečné ověření je náhled pull requestu; správu jde vyzkoušet až po nastavení hesla. Zvlášť: zda Netlify přijme zapsané omezení počtu žádostí, zda funkce pozná druh nasazení a zda kontrola hlavičky Origin sedí s adresou, pod kterou funkce žádost vidí (kdyby ne, deník by končil chybou 403 a na stránce správce by žádný nebyl).
+- Zátěž: jak rychle Netlify Blobs čte stovky dávek najednou. Souhrn je proto stavěný tak, aby se dal dopočítat na víc žádostí.
 
 ## M4b — výsledek
 
@@ -511,14 +593,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Teď nic; milníky se dělají a slučují za sebou bez čekání. Po M4c bude potřeba v Netlify nastavit heslo správce (proměnná prostředí), aby šla zpětná vazba číst.
+1. **Nastavit heslo správce v Netlify** (proměnná prostředí `MM_SPRAVCE_HESLO`, rozsah Functions, pak nové nasazení); postup je v `docs/ZPETNA-VAZBA.md`. Bez něj se zpětná vazba i deník ukládají, ale nejdou číst. Po nastavení otevřít `/sprava.html` a říct, jestli se přihlášení a první data ukázala.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M4c (zpětná vazba hráčů a deník hraní na Netlify), M5 Železnice, M6 Pohyblivé mosty, M7 Režimy, M8 Doladění; každý s interními testy a nezávislou recenzí. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M5 Železnice (na začátku oprava vlastní tíhy svařených prutů, viz recenze M4b), M6 Pohyblivé mosty, M7 Režimy, M8 Doladění; každý s interními testy a nezávislou recenzí. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 

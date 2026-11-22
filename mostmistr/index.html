@@ -16,14 +16,24 @@
         <span class="lista__nazev" data-text="hra.nazev"></span>
         <span class="lista__oddil" data-text="prehled.nadpis"></span>
         <span class="lista__mezera"></span>
+        <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/zkusebna.html" data-text="lista.zkusebna"></a>
       </header>
       <main class="prehled">
         <p class="prehled__hlaseni" data-udaj="prehled-hlaseni" role="alert" hidden></p>
+        <div class="zaznam" data-udaj="zaznam-upozorneni" role="note" hidden>
+          <span data-text="denik.upozorneni"></span>
+          <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
+          <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
+        </div>
         <div class="prehled__kapitoly"></div>
         <label class="prehled__volba">
           <input type="checkbox" id="odemknout-vse" />
           <span data-text="prehled.odemknout"></span>
+        </label>
+        <label class="prehled__volba">
+          <input type="checkbox" id="zaznam-hrani" />
+          <span data-text="denik.volba"></span>
         </label>
         <p class="prehled__verze" data-udaj="prehled-verze"></p>
       </main>
@@ -55,6 +65,7 @@
 
         <span class="lista__mezera"></span>
         <button type="button" class="tlacitko" data-akce="zvuk" data-popis="zvuk.popis" aria-pressed="true"></button>
+        <button type="button" class="tlacitko lista__vazba" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/" data-text="lista.kampan"></a>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
@@ -63,6 +74,11 @@
 
       <div class="uroven">
         <aside class="paleta">
+          <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
+            <span data-text="denik.upozorneni"></span>
+            <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
+            <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
+          </div>
           <h2 data-text="paleta.prvky"></h2>
           <div class="paleta__prvky"></div>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek paleta__tlacitko--akce" data-akce="dopnout" data-popis="paleta.dopnout.popis" hidden>
@@ -177,6 +193,9 @@
             <span data-text="paleta.zadaniOkno"></span>
           </button>
           <ul class="medaile" data-udaj="podminky"></ul>
+          <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
+            <span data-text="vazba.tlacitko"></span>
+          </button>
         </aside>
 
         <main class="vykres">
@@ -268,6 +287,7 @@
               <button type="button" class="tlacitko" data-akce="prehrat-poruseni" data-text="vysledek.prehratPoruseni" hidden></button>
               <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
               <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika"></button>
+              <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.zVysledku"></button>
             </div>
           </section>
 
@@ -364,6 +384,51 @@
       </form>
     </dialog>
 
+    <dialog class="okno okno--vazba" id="okno-vazba">
+      <form method="dialog">
+        <h2 data-text="vazba.nadpis"></h2>
+        <p data-text="vazba.uvod"></p>
+        <fieldset class="vazba__druhy">
+          <legend data-text="vazba.druh"></legend>
+          <label><input type="radio" name="vazba-druh" value="chyba" checked /> <span data-text="vazba.druh.chyba"></span></label>
+          <label><input type="radio" name="vazba-druh" value="obtiznost" /> <span data-text="vazba.druh.obtiznost"></span></label>
+          <label><input type="radio" name="vazba-druh" value="napad" /> <span data-text="vazba.druh.napad"></span></label>
+          <label><input type="radio" name="vazba-druh" value="pochvala" /> <span data-text="vazba.druh.pochvala"></span></label>
+          <label><input type="radio" name="vazba-druh" value="jine" /> <span data-text="vazba.druh.jine"></span></label>
+        </fieldset>
+        <label class="vazba__popisek" for="vazba-text" data-text="vazba.text"></label>
+        <textarea id="vazba-text" rows="6" autocomplete="off"></textarea>
+        <p class="vazba__pocet" data-udaj="vazba-pocet"></p>
+        <div class="vazba__hodnoceni">
+          <span data-text="vazba.hodnoceni"></span>
+          <span class="vazba__kraj" data-text="vazba.hodnoceni.malo"></span>
+          <button type="button" class="tlacitko tlacitko--znak" data-hodnoceni="1" aria-pressed="false">1</button>
+          <button type="button" class="tlacitko tlacitko--znak" data-hodnoceni="2" aria-pressed="false">2</button>
+          <button type="button" class="tlacitko tlacitko--znak" data-hodnoceni="3" aria-pressed="false">3</button>
+          <button type="button" class="tlacitko tlacitko--znak" data-hodnoceni="4" aria-pressed="false">4</button>
+          <button type="button" class="tlacitko tlacitko--znak" data-hodnoceni="5" aria-pressed="false">5</button>
+          <span class="vazba__kraj" data-text="vazba.hodnoceni.moc"></span>
+        </div>
+        <label class="vazba__volba">
+          <input type="checkbox" id="vazba-prilohy" checked />
+          <span data-udaj="vazba-prilohy"></span>
+        </label>
+        <label class="vazba__popisek" for="vazba-kontakt" data-text="vazba.kontakt"></label>
+        <input id="vazba-kontakt" type="email" maxlength="200" autocomplete="email" />
+        <p class="vazba__poznamka" data-text="vazba.kontakt.poznamka"></p>
+        <input id="vazba-web" class="vazba__past" type="text" name="potvrzeni-zpravy" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <p class="vazba__zaznam">
+          <span data-udaj="vazba-zaznam"></span>
+          <button type="button" class="tlacitko" data-akce="vazba-zaznam"></button>
+        </p>
+        <p class="okno__hlaseni" data-udaj="vazba-hlaseni" role="status"></p>
+        <div class="okno__tlacitka">
+          <button type="submit" class="tlacitko tlacitko--hlavni" value="odeslat" data-akce="vazba-odeslat" data-text="vazba.odeslat"></button>
+          <button class="tlacitko" value="zavrit" formnovalidate data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="okno okno--zadani" id="okno-zadani">
       <form method="dialog">
         <p class="okno__nadtitul" data-udaj="zadani-list"></p>
@@ -395,6 +460,11 @@
             <h3 data-text="zadani.medaile"></h3>
             <ul class="medaile" data-udaj="zadani-medaile"></ul>
           </div>
+        </div>
+        <div class="zaznam zaznam--vOkne" data-udaj="zaznam-upozorneni" role="note" hidden>
+          <span data-text="denik.upozorneni"></span>
+          <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
+          <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <p class="okno__napoveda" data-udaj="zadani-ovladani" data-text="zadani.ovladani"></p>
         <div class="okno__tlacitka">
