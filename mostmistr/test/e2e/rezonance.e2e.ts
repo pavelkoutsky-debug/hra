@@ -112,9 +112,10 @@ describe("přehled s druhou kapitolou", () => {
       "Kapitola 1 · Potok",
       "Kapitola 2 · Lávka",
       "Kapitola 3 · Okresní silnice",
+      "Kapitola 4 · Údolí",
       "Kapitola 5 · Lávka ve městě",
     ]);
-    expect(await stranka.locator(".karta").count()).toBe(16);
+    expect(await stranka.locator(".karta").count()).toBe(20);
     expect(await stranka.locator('.karta[data-uroven="2-01"]').getAttribute("data-zamceno")).toBe("true");
     await stranka.locator("#odemknout-vse").check();
     expect(await stranka.locator('.karta[data-uroven="2-04"]').getAttribute("data-zamceno")).toBe("false");

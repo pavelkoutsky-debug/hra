@@ -45,6 +45,33 @@ function tuhe(t: Topologie): Uint8Array {
   return pole;
 }
 
+/**
+ * Styčníky uvnitř lana: vedou do nich jen díly jednoho a téhož lana (skryté dělení, případně
+ * volný konec přetrženého lana). Nekreslí se, lano má vypadat jako lano, ne jako řetěz.
+ */
+const uvnitrLana = new WeakMap<Topologie, Uint8Array>();
+
+function vLane(t: Topologie): Uint8Array {
+  let pole = uvnitrLana.get(t);
+  if (!pole) {
+    // 0 nic do styčníku nevede, 1 jen díly jednoho lana, 2 cokoli jiného.
+    pole = new Uint8Array(t.stycniku);
+    const lano = new Int32Array(t.stycniku).fill(-2);
+    for (let e = 0; e < t.prvekA.length; e++) {
+      if (t.cara[e] === CARA_SKRYTA) continue;
+      for (const i of [t.prvekA[e]!, t.prvekB[e]!]) {
+        if (t.cara[e] !== CARA_LANO || (lano[i] !== -2 && lano[i] !== t.prut[e])) pole[i] = 2;
+        else if (pole[i] !== 2) {
+          pole[i] = 1;
+          lano[i] = t.prut[e]!;
+        }
+      }
+    }
+    uvnitrLana.set(t, pole);
+  }
+  return pole;
+}
+
 function typPodpory(bity: number): TypKotvy | null {
   if ((bity & 3) === 0) return null;
   if ((bity & 4) !== 0) return "vetknuti";
@@ -118,6 +145,7 @@ export function nakresliKonstrukci(
 
   // Styčníky: kloub jako prázdné kolečko, tuhý spoj jako malá plná značka.
   const tuhy = tuhe(t);
+  const lanove = vLane(t);
   const polomer = mezi(0.11 * m, 2.8, 5);
   ctx.lineWidth = 1.6;
   ctx.strokeStyle = BARVY.caraSilna;
@@ -127,6 +155,8 @@ export function nakresliKonstrukci(
       if (znacka === STYCNIK_ZAVAZI) nakresliZavazi(ctx, bod(i), m);
       continue;
     }
+    // Podepřený konec lana (kotva v zemi) se kreslí, i když do něj vede jen lano.
+    if (lanove[i] === 1 && (t.podpory[i]! & 3) === 0) continue;
     const p = bod(i);
     ctx.beginPath();
     if (tuhy[i]) {

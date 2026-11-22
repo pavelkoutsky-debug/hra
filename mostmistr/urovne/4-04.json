@@ -67,11 +67,11 @@
   ],
   "zaklady": [
     {
-      "x": -2,
+      "x": -4,
       "y": 0
     },
     {
-      "x": 74,
+      "x": 76,
       "y": 0
     }
   ],
@@ -97,7 +97,7 @@
   "inzenyrskyRozpocet": 2100000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.48
+    "limit": 0.56
   },
   "povolenePrvky": [
     "mostovka-ocelobeton",

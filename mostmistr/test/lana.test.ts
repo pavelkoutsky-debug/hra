@@ -313,13 +313,13 @@ describe("automatické dopnutí lan", () => {
     const s = sestavSoustavu(sestavMost(visuta, dopnuty).popis);
     expect(najdiKlid(s, volneStupne(s), TIHOVE_ZRYCHLENI)).toBe(true);
     dopnuty.stycniky.forEach((st, i) => {
-      if (st.y === 16 && (st.x === -2 || st.x === 74)) expect(Math.abs(s.x[i]! - st.x)).toBeLessThan(0.005);
+      if (st.y === 16 && (st.x === -4 || st.x === 76)) expect(Math.abs(s.x[i]! - st.x)).toBeLessThan(0.005);
     });
     // Skutečný tah v nosném laně odpovídá vzorci pro parabolu H = q·L²/(8·f) aspoň řádově:
-    // mostovka s vybavením váží 4 240 kg/m, rozpětí lana 76 m, průvěs kolem 12 m.
+    // mostovka s vybavením váží 4 240 kg/m, rozpětí lana 80 m, průvěs kolem 12 m.
     const tahy = rozeberMost(visuta, dopnuty).tahyLan;
     const nosna = dopnuty.pruty.flatMap((p, i) => (p.prvek === "lano-nosne" ? [tahy[i]!] : []));
-    const vodorovny = (4240 * TIHOVE_ZRYCHLENI * 76 * 76) / (8 * 12);
+    const vodorovny = (4240 * TIHOVE_ZRYCHLENI * 80 * 80) / (8 * 12);
     expect(Math.min(...nosna)).toBeGreaterThan(0.8 * vodorovny);
     expect(Math.max(...nosna)).toBeLessThan(1.8 * vodorovny);
   }, 60_000);

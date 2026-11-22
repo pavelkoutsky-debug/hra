@@ -699,6 +699,12 @@ a.tlacitko {
   padding-block: 5px;
 }
 
+/* Akce, která patří k prvkům (dopnutí lan): stojí hned pod paletou. */
+.paleta__tlacitko--akce {
+  flex-shrink: 0;
+  width: 100%;
+}
+
 .paleta__ukazka {
   grid-column: 2;
   width: 100%;

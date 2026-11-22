@@ -14,9 +14,78 @@ Poslední aktualizace: 22. 11. 2026
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
 | M4a Těžká doprava | Hotovo, sloučeno do `main` (22. 11. 2026) |
-| M4b Velká rozpětí | Rozpracováno |
+| M4b Velká rozpětí | Hotovo, čeká na vyzkoušení zadavatelem (pull request) |
 | M5 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
+
+## M4b — výsledek
+
+Čtvrtá kapitola: údolí. Pilíře, svary, lana s napínáky, zavěšený a visutý most; tahač s návěsem a nadměrný náklad.
+
+**Lana a napínák** (`src/data/katalog.ts`, `src/zkouska/stavba.ts`)
+
+- **Lano** (2× spirálové lano ⌀ 40 mm, pevnost 2,6 MN, 1 800 Kč/m, do 60 m) umí jen táhnout. Nově je i **nosné lano** se čtyřnásobným průřezem (2× ⌀ 80 mm, 10,6 MN, 6 000 Kč/m): hlavní lano visutého mostu obyčejné lano neunese. V koncepci původně nebylo.
+- **Napínák mění délku lana.** V paletě je jako přídavek (klik na Napínák lana, pak na lano) a nastavení se ukáže i hned po nakreslení lana. Točí se po milimetrech (se Shiftem po centimetru) a ukazuje „dotaženo o 47 mm“ nebo „povoleno o 7 mm“ a k tomu tah, který lano nese pod vlastní tíhou mostu (z rozboru v pomocném vlákně). V návrhu se ukládá jako předpětí, tedy podíl pevnosti, kterým by lano táhlo, kdyby se jeho konce nehnuly; smí být záporné (lano delší než nakreslené) i větší než 1. Nové lano je dotažené na 5 %, aby neviselo.
+- *Odchylka od koncepce:* koncepce mluví o předpětí lana. Závěsy visutého mostu se ale musí přizpůsobit tvaru nosného lana o desítky centimetrů oběma směry, což jako „podíl pevnosti“ nedává smysl. Hráč proto vidí délku a skutečný tah; předpětí zůstalo jen ve formátu návrhu.
+
+**Automatické dopnutí lan** (`src/zkouska/dopnuti.ts`; tlačítko Dopnout lana v paletě, klávesa N)
+
+- Najde nastavení napínáků, se kterým mostovka pod vlastní tíhou drží nakreslený tvar, pylony se nenaklánějí a žádné lano nevisí (nejméně 5 % pevnosti). Tlumená Gaussova–Newtonova metoda nad maticovou statikou: vliv dotažení každého lana se spočítá z tečné matice tuhosti v klidové poloze, oprava metodou nejmenších čtverců, most se znovu ustálí a tak dokola. Lana, která by oprava povolila, se drží podmínkou.
+- Počítá se v pomocném vlákně (zpráva `dopnuti`), výsledek je jeden krok historie a jde vzít zpět. Zavěšený most dopne za 0,3 s (mostovka z 62 mm na 0,5 mm), visutý za 0,7 s (z 80 cm na 0,5 mm). Špatně nakreslené nosné lano (do „V“, „schody“) zvládne na pár centimetrů, ale trvá to až deset sekund; hra pak poradí nakreslit lano jako oblouk.
+- **Nosné lano visutého mostu se pod tíhou vyrovná do oblouku samo** a napínákem se s tím nic nenadělá; dopnutí proto mění hlavně délky závěsů. Bez něj mostovka visutého mostu klesne až o 80 cm a podvalník po ní neprojede.
+
+**Ustálení časovou simulací** (`src/jadro/ustaleni.ts`, koncepce 7.8): povolené lano nemá v nakreslené poloze příčnou tuhost a přímý výpočet rovnováhy na něm selže. Most se pak nechá pod tíhou usednout s kinetickým tlumením a výsledek se doladí přímým výpočtem. Používá to zkouška, rozbor i dopnutí (`najdiKlid`).
+
+**Pilíř** (železobeton 1 × 2 m, 15 000 Kč/m, do 12 m): smí stát jen na základu vyznačeném v úrovni nebo na jiném pilíři (pravidlo `pilir-mimo-zaklad`). Je monolit: do styčníků je vetknutý po celé výšce, takže několik dílů nad sebou tvoří jeden sloup; ostatní pruty na něm leží kloubově, dokud styčník není svařený. Výborně snáší tlak, v ohybu se křehce zlomí.
+
+**Svar** (1 500 Kč za každý prut ve styčníku): přídavek v paletě; klik na styčník ho svaří nebo svar zruší, s vybranými styčníky je svaří najednou (klávesa S). Svařený styčník přenáší ohyb. Na výkresu je plný čtvereček.
+
+**Plastické klouby**: záznam zkoušky nese místa, kde se tvárný prut trvale ohnul, a kolik mezního natočení už je pryč; při přehrávání je označí prstenec od žluté po červenou.
+
+**Nadměrný náklad** (`src/zkouska/vozidla.ts`): 120 t, 10 km/h, těžký tahač a podvalník s osmi řadami kol po 11,25 t; žádná řada nenese víc než 11,5 t.
+
+**Kapitola 4 – Údolí** (využití nejvíc namáhaného prutu):
+
+| Úroveň | Rozpětí | Provoz | Čemu učí | Průchod / rozpočet / mistrovská | Co neprojde |
+|---|---|---|---|---|---|
+| 4-01 Tři pole | 54 m, dva základy v řece | 2 tahače s návěsem, nákladní auto, 2 auta | pilíře zkrátí rozpětí | 38 / 46 / 29 % | tytéž příhrady bez pilířů; mostovka na pilířích bez příhrad |
+| 4-02 Bez jediné vzpěry | 48 m, tři základy, nad vozovkou se nestaví | kolona 3 nákladních aut, autobus, tahač | svar: spojitý nosník a rám | 80 / 80 / 55 % | bez svarů; svary jen nad pilíři; bez středního pilíře (plastické klouby) |
+| 4-03 Na lanech | 60 m, základ uprostřed | kolona 4 nákladních aut, autobus, tahač | zavěšený most, kotevní lana, dopnutí | 42 / 58 / 32 % | bez lan; bez kotevních lan (pylon se zlomí); pylon 8 m |
+| 4-04 Náklad století | 72 m, pylony na březích, kotvy v zemi | podvalník 120 t, 2 nákladní auta | visutý most, nosné lano, dopnutí | 58 / 66 / 54 % | nedopnutá lana (prověsí se); obyčejné lano místo nosného; bez kotevních lan |
+
+V 4-01 dostane rozpočtovou medaili most se šikmými vzpěrami z půlky pilířů. V 4-03 a 4-04 rozhoduje výška pylonu: nižší je levnější a víc namáhaný, vyšší naopak.
+
+Každá úroveň má ukázku a odstavec „Ve skutečnosti“ (viadukt Millau, první svařovaný silniční most v Maurzycích, zavěšený most ve Strömsundu, most 1915 Çanakkale). Zdroje jsou v popisu pull requestu.
+
+**Jak je splněno kritérium milníku**
+
+- *Visutý a zavěšený referenční most unese kolonu kamionů* (`test/lana.test.ts`): kolona čtyř nákladních aut přejede oba referenční mosty bez porušení, využití pod 70 %.
+- *Úrovně projdou testem vyhratelnosti*: všech dvacet úrovní, každá medaile i mosty, které neprojít mají.
+- Dopnutí: referenční mosty kampaně jsou dopnuté (mostovka pod vlastní tíhou do 2 mm od výkresu), výsledek dopnutí odpovídá tomu, co most opravdu dělá, a tah v nosném laně sedí se vzorcem pro parabolu.
+- Testy: 804 jednotkových, 136 kontrol v prohlížeči (z toho 11 nových v `test/e2e/udoli.e2e.ts` a 4 nové ukázky).
+
+**Co se při kalibraci ukázalo**
+
+- **Zavěšený most bez kotevních lan nevydrží ani jedno nákladní auto.** Lana z pole táhnou hlavu pylonu k zatížené straně a betonový pylon se v ohybu zlomí. Kotevní lana do opěr to vyřeší; je z toho ukázka úrovně 4-03.
+- **Svařená mostovka visutému mostu škodí.** Nosné lano se pod podvalníkem přetvoří o desítky centimetrů a tuhá mostovka se s ním musí ohnout; kloubová to udělá bez namáhání. Skutečné visuté mosty mají ztužující nosník dimenzovaný právě na tohle.
+- **Pylon visutého mostu nesmí stát ve styčníku mostovky.** Vodorovné síly z mostovky by ho ohýbaly. Základy pylonů jsou proto čtyři metry za opěrami.
+- **Mostovka se pod podvalníkem smí prohnout nejvýš o 1,5 m**; víc se počítá jako pád (pravidlo existuje od M2). U nedopnutého visutého mostu rozhoduje právě to, nic se nezlomí.
+
+**Oprava jádra.** Díly svislého lana, které po zřícení dopadly na stejné místo terénu, měly nulovou délku a výpočet se na dělení nulou rozpadl. Takový díl teď bere směr z výchozí polohy (lano v tom stavu nic nenese); totéž tlumič.
+
+**Formát návrhu má verzi 3**: předpětí lana smí být záporné i větší než 1. Starší návrhy se načtou beze změny.
+
+**Verze fyziky zůstává 5.** Výsledky dosavadních úrovní i otisky regresní sady jsou stejné. Lana a pilíře hráč dosud použít nemohl, takže jejich změny (ustálení, vetknutý pilíř) žádný uložený rekord neovlivní.
+
+**Drobnosti**
+
+- Ukázka v okně se zadáním se zvětší tak, aby se do ní vešly oba mosty celé (pylony, kotevní lana).
+- Při přehrávání se nekreslí skryté dělicí styčníky lan; lano vypadá jako lano, ne jako řetěz.
+
+**Co ověřeno není**
+
+- Jak se lana a dopnutí ovládají rukou: testy v prohlížeči kreslí a klikají, ale pohodlí neposoudí.
+- Dopnutí mostů, které nejsou zavěšené ani visuté (lana jako táhla příhrady, vzpínadla): mělo by fungovat stejně, zkoušené je jen na referenčních mostech a několika vadných.
 
 ## M3b — výsledek
 
@@ -415,14 +484,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Teď nic; M4b se rozpracovává.
+1. Vyzkoušet náhled M4b (čtvrtá kapitola) a rozhodnout o sloučení.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M4b Velká rozpětí: lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby a kapitola 4 s tahačem s návěsem. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+Po schválení M4b následuje M5 podle koncepce (kap. 12). Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
