@@ -19,6 +19,34 @@ Poslední aktualizace: 22. 11. 2026
 | M5 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
+## M5 — rozpracováno (plán)
+
+Pracuje se v místním pracovním stromu `/home/user/hra-m5` (větev `m5-priprava`, zatím neodeslaná), aby se práce nemíchala s opravami z recenzí M4c. Po sloučení M4c se větev sloučí do `claude/nice-galileo-lnfnk2`.
+
+**Krok 1: vlastní tíha prutů s tuhými konci (nález A3 z kontroly fyziky M4b).** Tíha prutu se dnes dává jen do styčníků (polovina na každý konec). U prutu, který má aspoň jeden konec tuhý, k tomu patří i momenty vetknutí a přesun příčné síly; bez nich vycházejí podporové momenty spojité mostovky o 6 % menší. Jádro to pro břemena kol už umí (`pridejZatizeniPrvku` v `src/jadro/zatizeni.ts`, pole `zatMomentA/B`); pro rovnoměrnou tíhu `W = −hmotnost prutu · g · e_x` (příčná složka, `n = (−e_y, e_x)`) vychází integrací téhož vzorce oprava proti polovinám:
+
+| `kloub` prvku | změna příčné síly v a / v b | moment v a | moment v b |
+|---|---|---|---|
+| 0 (oba konce tuhé) | 0 / 0 | +W·L/12 | −W·L/12 |
+| 1 (kloub v a) | −W/(2(4+Φ)) / +W/(2(4+Φ)) | 0 | −W·L/(2(4+Φ)) |
+| 2 (kloub v b) | +W/(2(4+Φ)) / −W/(2(4+Φ)) | +W·L/(2(4+Φ)) | 0 |
+| 3 (oba klouby) | beze změny | 0 | 0 |
+
+Tíha vstupuje na třech místech a oprava musí do všech: `spoctiSily` (`src/jadro/integrator.ts`), zbytek sil v `najdiRovnovahu` (`src/jadro/matice.ts`, i pro stupně natočení) a posudek (`vyhodnotNamahani` a `vnitrniSily` v `src/jadro/namahani.ts`: skutečný koncový moment = pružný − moment vetknutí od břemen − moment vetknutí od tíhy; parabola v poli tam už je). Nová pole soustavy (`tihaMomentA/B`) patří i do seznamu v `src/jadro/topologie.ts`. Ověření: momenty rámu 4-02 proti rámové teorii (−740,6 / −509,5 / −493,7 kNm nad pilíři, +378,2 a +246,9 kNm v polích), průhyb prostého nosníku ze dvou dílů 5wL⁴/384EI. Mění výsledky všech mostů: **verze fyziky 6**, nové otisky (`npm run otisky`), znovu test vyhratelnosti a otisky v testech prohlížeče.
+
+**Krok 2: železnice podle koncepce (kap. 5, 6, 10, 12).** Kolejiště jako nový prvek mostovky (pojízdné jen pro kolejová vozidla, do 6 m), lokomotiva a vozy (skříň, podvozky, dvojkolí; nákladní a osobní), více mostovek v jedné úrovni (silnice a kolej v různých výškách: dvoupatrové mosty), rázy náprav a pohodlí cestujících ve vlaku, kapitola 6 „Trať“ s referenčními mosty, ukázkami a odstavci „Ve skutečnosti“ (fakta ověřit vyhledáním), jednoduchý pracovní zvuk vlaku. Kritérium: nákladní vlak přejede referenční most; úrovně projdou testem vyhratelnosti.
+
+Stav kroku 1: **hotovo** v `m5-priprava` (commity „vlastní tíha prutů s tuhými konci“): oprava je gradient polohové energie průhybu (`pridejTihuPrvku`, `energieTihyPrvku` v `src/jadro/zatizeni.ts`), utržené kusy se vynechávají, verze fyziky 6, otisky zapsané znovu, rám 4-02 sedí s teorií do 1 % (`test/vlastni-tiha.test.ts`). Cestou nalezena a opravena příčina vzácného rozpadu výpočtu (tlumič kontaktu kola a utržený díl mostovky; `NEJVYSSI_RYCHLOST_POVRCHU` v `src/jadro/bremena.ts`).
+
+Rozhodnutí pro krok 2 (ještě neprovedeno):
+
+- **Kolejiště** (`kolejiste` v katalogu, zatím `hotovo: false`): kolej na mostnicích a dvou podélnících IPE 500 (I = 2 × 48 200 cm⁴, W = 2 × 1 928 cm³, Wpl = 2 × 2 194 cm³, kolem 480 kg/m s kolejnicemi a mostnicemi), jedna kolej, bez násobení šířkou, do 6 m. Pojízdné jen pro kolejová vozidla: trasa úrovně dostane druh (`silnice` / `kolej`) a k trase patří jen mostovka správného druhu. Formát úrovně v5.
+- **Vlak** je položka jízdního řádu s lokomotivou a seznamem vozů za ní (řady skupiny mají každá svůj model, jako průvod s kapelou). Lokomotiva 88 t (4 × 22 t, podvozky s rozvorem 2,8 m), ložený nákladní vůz 90 t (4 × 22,5 t, rozvor podvozku 1,8 m), prázdný 22 t, osobní vůz 45 t (4 × 11,25 t, rozvor 2,5 m, měkké sekundární vypružení kolem 1 Hz). Dvojkolí je neodpružená hmota 1,5–2 t; kontakt kolo–kolej s tuhostí koleje kolem 120 MN/m na dvojkolí. Když to model náprav dovolí, dvoustupňové vypružení (dvojkolí – podvozek – skříň).
+- **Rázy náprav**: nová třída nerovnosti pro kolej se styky po 25 m (trojúhelníkový propad kolem 3 mm na délce 1 m), jen aritmetikou.
+- **Kapitola 6 „Trať“**, čtyři úrovně: první železniční most (lokomotiva a dva vozy, krátké rozpětí), osobní vlak a pohodlí cestujících, dlouhý ložený nákladní vlak přes více polí (vlak delší než most), dvoupatrový most (silnice a kolej v různých výškách). Fakta do odstavců „Ve skutečnosti“ ověřit vyhledáním.
+
+**Krok 3:** interní testy, nezávislé recenze (kód, hraní kapitoly 6, kontrola fyziky vlaku a opravy tíhy), zapracování, pull request, sloučení.
+
 ## M4c — výsledek
 
 Zpětná vazba hráčů a deník hraní. Popis pro zadavatele, včetně toho, co nastavit v Netlify, je v `docs/ZPETNA-VAZBA.md`.

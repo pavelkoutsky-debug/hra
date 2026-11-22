@@ -119,6 +119,7 @@ describe("kontrola návrhu proti úrovni", () => {
     expect(hotove).toEqual([
       "mostovka-drevo",
       "mostovka-ocelobeton",
+      "kolejiste",
       "drevo-lehke",
       "drevo-tezke",
       "ocel-lehka",

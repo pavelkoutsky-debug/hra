@@ -6,7 +6,7 @@
 // uvnitř prvku se pak dopočítá zpětně: k momentům z deformace styčníků se přičte
 // řešení nosníku se zadrženými konci.
 
-import type { Soustava } from "./soustava";
+import { NOSNIK, type Soustava } from "./soustava";
 
 /** Místa uvnitř prvku, kde se posuzuje ohybový moment: čtvrtina, střed, tři čtvrtiny. */
 export const MISTA_POSUDKU: readonly number[] = [0.25, 0.5, 0.75];
@@ -87,6 +87,129 @@ export function pridejSiluNaPrvek(s: Soustava, e: number, xi: number, Fx: number
     const vliv = misto <= xi ? misto * eta : xi * (1 - misto);
     s.zatMomentPole[3 * e + k] = s.zatMomentPole[3 * e + k]! - pricna * delka * vliv;
   }
+}
+
+/**
+ * Vlastní tíha prvků tak, jak působí doopravdy: rovnoměrně po délce. Integrátor dává tíhu
+ * prvku po polovinách do jeho koncových styčníků. U prvku, který má aspoň jeden konec tuhý,
+ * k tomu patří ještě momenty vetknutí a při jednom kloubu i přesun části příčné síly
+ * z kloubového konce na tuhý; bez nich vycházejí podporové momenty spojitého nosníku menší
+ * (při poli děleném na čtyři díly o 6 %) a průhyb prostého nosníku ze dvou dílů o pětinu.
+ *
+ * Oprava je záporný gradient polohové energie, kterou nese průhyb prvku mezi styčníky:
+ *   V = G · (d_x / L) · (c_a·Q_a + c_b·Q_b),
+ * kde G je tíha prvku, d_x vodorovný průmět spojnice, L její délka a Q_i = L·ψ_i je natočení
+ * konce vůči spojnici (viz `spoctiVnitrniSily`). Součinitele plynou z tvarových funkcí:
+ *   oba konce tuhé:  c_a = 1/12, c_b = −1/12   (momenty vetknutí ±W·L/12)
+ *   kloub na konci a: c_a = 0, c_b = −1/(2·(4 + Φ))  (W·L/8 při Φ = 0 a přesun síly W/8)
+ *   kloub na konci b: c_a = 1/(2·(4 + Φ)), c_b = 0
+ * Je to integrál `pridejSiluNaPrvek` přes délku prvku pro rovnoměrné zatížení, zmenšený
+ * o poloviny, které už ve styčnících jsou. Protože síly plynou z energie, výpočet ji
+ * nepřidává ani neubírá ani při velkých pootočeních.
+ */
+function soucinitele(ulozeni: number, fi: number, cil: Float64Array): void {
+  if (ulozeni === 0) {
+    cil[0] = 1 / 12;
+    cil[1] = -1 / 12;
+  } else if (ulozeni === 1) {
+    cil[0] = 0;
+    cil[1] = -1 / (2 * (4 + fi));
+  } else {
+    cil[0] = 1 / (2 * (4 + fi));
+    cil[1] = 0;
+  }
+}
+
+const SOUCINITELE = new Float64Array(2);
+
+/**
+ * Přičte ke styčníkům opravu vlastní tíhy prvků s tuhými konci (viz výše) a zapíše ji stejně
+ * jako břemena, takže posudek namáhání i plastické klouby počítají se skutečnými koncovými
+ * momenty. Volá se po `spoctiVnitrniSily` a před břemeny.
+ */
+export function pridejTihuPrvku(s: Soustava, tiha: number): void {
+  if (tiha === 0) return;
+  const { x, y, cosN, sinN, prvekA, prvekB, druh, kloub, fi, hmotnostNaMetr, klidovaDelka, osaX0, osaY0 } = s;
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    // Utržené kusy se nechávají být: jádro je změkčuje (viz `Simulace.poZmeneStavby`) a
+    // ohyb trosek vlastní tíhou nikoho nezajímá.
+    if (druh[e] !== NOSNIK || s.utrzeny[e] === 1) continue;
+    const ulozeni = kloub[e]!;
+    if (ulozeni === 3) continue;
+    const G = hmotnostNaMetr[e]! * klidovaDelka[e]! * tiha;
+    if (G === 0) continue;
+    const a = prvekA[e]!;
+    const b = prvekB[e]!;
+    const dx = x[b]! - x[a]!;
+    const dy = y[b]! - y[a]!;
+    const delka = Math.sqrt(dx * dx + dy * dy);
+    if (!(delka > 0)) continue;
+    soucinitele(ulozeni, fi[e]!, SOUCINITELE);
+    const cA = SOUCINITELE[0]!;
+    const cB = SOUCINITELE[1]!;
+    const ox = osaX0[e]!;
+    const oy = osaY0[e]!;
+    // u = L·cos α, v = L·sin α: spojnice v souřadnicích výchozí osy prvku.
+    const u = ox * dx + oy * dy;
+    const v = ox * dy - oy * dx;
+    const S = cA * (sinN[a]! * u - cosN[a]! * v) + cB * (sinN[b]! * u - cosN[b]! * v);
+    const Sx = cA * (sinN[a]! * ox + cosN[a]! * oy) + cB * (sinN[b]! * ox + cosN[b]! * oy);
+    const Sy = cA * (sinN[a]! * oy - cosN[a]! * ox) + cB * (sinN[b]! * oy - cosN[b]! * ox);
+    const L3 = delka * delka * delka;
+    // Derivace energie podle průmětů spojnice; síla na konec b je záporná, na konec a kladná.
+    const podleX = G * (S / delka + (dx * Sx) / delka - (dx * dx * S) / L3);
+    const podleY = G * ((dx * Sy) / delka - (dx * dy * S) / L3);
+    const momentA = -((G * dx) / delka) * cA * (cosN[a]! * u + sinN[a]! * v);
+    const momentB = -((G * dx) / delka) * cB * (cosN[b]! * u + sinN[b]! * v);
+
+    s.fx[a] = s.fx[a]! + podleX;
+    s.fy[a] = s.fy[a]! + podleY;
+    s.fx[b] = s.fx[b]! - podleX;
+    s.fy[b] = s.fy[b]! - podleY;
+    s.moment[a] = s.moment[a]! + momentA;
+    s.moment[b] = s.moment[b]! + momentB;
+
+    if (s.jeZatizen[e] === 0) {
+      s.jeZatizen[e] = 1;
+      s.zatizenePrvky[s.pocetZatizenych] = e;
+      s.pocetZatizenych += 1;
+    }
+    // Příčné složky sil (ve směru n = (−e_y, e_x)) pro posouzení smyku.
+    const ex = dx / delka;
+    const ey = dy / delka;
+    const pricnaA = -podleX * ey + podleY * ex;
+    s.zatSilaA[e] = s.zatSilaA[e]! + pricnaA;
+    s.zatSilaB[e] = s.zatSilaB[e]! - pricnaA;
+    s.zatMomentA[e] = s.zatMomentA[e]! + momentA;
+    s.zatMomentB[e] = s.zatMomentB[e]! + momentB;
+  }
+}
+
+/**
+ * Polohová energie, kterou nese průhyb prvků mezi styčníky: doplněk k energii hmot ve
+ * styčnících pro tíhu rozloženou po délce (viz `pridejTihuPrvku`). Slouží kontrole
+ * zachování energie.
+ */
+export function energieTihyPrvku(s: Soustava, tiha: number): number {
+  if (tiha === 0) return 0;
+  let energie = 0;
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    if (s.druh[e] !== NOSNIK || s.utrzeny[e] === 1) continue;
+    const ulozeni = s.kloub[e]!;
+    if (ulozeni === 3) continue;
+    const a = s.prvekA[e]!;
+    const b = s.prvekB[e]!;
+    const dx = s.x[b]! - s.x[a]!;
+    const dy = s.y[b]! - s.y[a]!;
+    const delka = Math.sqrt(dx * dx + dy * dy);
+    if (!(delka > 0)) continue;
+    soucinitele(ulozeni, s.fi[e]!, SOUCINITELE);
+    const u = s.osaX0[e]! * dx + s.osaY0[e]! * dy;
+    const v = s.osaX0[e]! * dy - s.osaY0[e]! * dx;
+    const S = SOUCINITELE[0]! * (s.sinN[a]! * u - s.cosN[a]! * v) + SOUCINITELE[1]! * (s.sinN[b]! * u - s.cosN[b]! * v);
+    energie += (s.hmotnostNaMetr[e]! * s.klidovaDelka[e]! * tiha * dx * S) / delka;
+  }
+  return energie;
 }
 
 /**

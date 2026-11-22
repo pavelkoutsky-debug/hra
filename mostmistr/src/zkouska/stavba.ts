@@ -1,6 +1,6 @@
 // Převod prvků katalogu na popis, kterému rozumí fyzikální jádro.
 
-import { KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku, type VlastnostiPrutu } from "../data/katalog";
+import { KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu, type IdPrvku, type VlastnostiPrutu } from "../data/katalog";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import type { NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
@@ -164,7 +164,7 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
 
     const vlastnosti = vlastnostiNeboChyba(prut.prvek, uroven.sirkaMostovky);
     const jeMostovka = druh === "mostovka";
-    const zaklad = popisZVlastnosti(vlastnosti, druh === "lano", jeMostovka ? uroven.hmotnostVybaveni : 0);
+    const zaklad = popisZVlastnosti(vlastnosti, druh === "lano", neseVybaveni(prut.prvek) ? uroven.hmotnostVybaveni : 0);
     if (jeMostovka) mostovka.push(cislo);
 
     const dilu =

@@ -6,6 +6,9 @@
 // kmitá nad svou nápravou samostatně. Odpovídá to vozidlu, jehož houpání a kývání mají
 // stejnou frekvenci, což osobní auta splňují dobře.
 //
+// Kolejová vozidla mají mezi dvojkolím a skříní ještě rám podvozku: dvojkolí – prvotní
+// vypružení – rám – druhotné vypružení – skříň. Nákladní vůz druhotné vypružení nemá.
+//
 // Hodnoty jsou typické, ne změřené na konkrétním voze; u každé je uvedeno, z čeho vychází.
 
 import type { IdProvozu } from "../data/katalog";
@@ -17,8 +20,17 @@ export interface Naprava {
   odpruzena: number;
   /** Hmota kol a nápravy pod pérováním, kg. Nula znamená bez pérování: hmota sedí přímo na kontaktu. */
   neodpruzena: number;
-  /** Pérování mezi nápravou a karoserií: tuhost N/m, tlumení N·s/m a výška karoserie nad osou kola, m. */
+  /**
+   * Pérování pod karoserií: tuhost N/m, tlumení N·s/m a výška karoserie nad tím, na čem
+   * sedí (osa kola, u kolejového vozidla s podvozkem jeho rám), m.
+   */
   perovani?: { tuhost: number; tlumeni: number; vyska: number };
+  /**
+   * Rám podvozku kolejového vozidla mezi dvojkolím a skříní: hmota rámu připadající na
+   * dvojkolí (kg), prvotní vypružení mezi dvojkolím a rámem (N/m, N·s/m) a výška rámu nad
+   * osou kola, m. `perovani` je pak druhotné vypružení mezi rámem a skříní.
+   */
+  podvozek?: { hmota: number; tuhost: number; tlumeni: number; vyska: number };
   /** Kontakt s mostovkou: tuhost N/m, tlumení N·s/m a výška styčníku nad povrchem bez zatížení, m. */
   kontakt: { tuhost: number; tlumeni: number; vyska: number };
 }
@@ -370,6 +382,135 @@ function nadmerny(): ModelUcastnika {
   ]);
 }
 
+/** Dvojkolí kolejového vozidla: co nese a jak je vypružené. */
+interface Dvojkoli {
+  /** Vzdálenost za čelem vozidla (rovinou nárazníků), m. */
+  odstup: number;
+  /** Hmota, kterou dvojkolí přenáší do koleje (včetně sebe), kg. */
+  zatizeni: number;
+  /** Hmota dvojkolí s ložisky, u lokomotivy i s částí pohonu, kg. */
+  dvojkoli: number;
+  /** Prvotní vypružení: frekvence (Hz), se kterou na něm kmitá vše nad dvojkolím, a poměrný útlum. */
+  prvotni: { frekvence: number; utlum: number };
+  /** Rám podvozku připadající na dvojkolí, kg; jen s druhotným vypružením. */
+  ram?: number;
+  /** Druhotné vypružení: frekvence skříně na něm (Hz) a poměrný útlum. */
+  druhotne?: { frekvence: number; utlum: number };
+}
+
+/**
+ * Uložení koleje pod jedním dvojkolím: kolejnice na podložkách a dřevěných mostnicích.
+ * Tuhost koleje pod kolem bývá 30 až 80 MN/m, pod dvojkolím tedy kolem 120 MN/m; dvojkolí
+ * na ní poskakuje kolem 40 Hz.
+ */
+const ULOZENI_KOLEJE = { tuhost: 120e6, tlumeni: 60e3 };
+/** Výška rámu podvozku nad osou dvojkolí a skříně nad rámem (nebo nad osou), m. */
+const VYSKA_RAMU = 0.3;
+const VYSKA_SKRINE = 0.9;
+/** Rychlost vlaku, když ji úroveň neurčí: 60 km/h. */
+const RYCHLOST_VLAKU = 60 / 3.6;
+
+/** Složí kolejové vozidlo z dvojkolí; `polomer` je poloměr kola a `delka` délka přes nárazníky, m. */
+function kolejoveVozidlo(delka: number, polomer: number, teziste: number, dvojkoli: readonly Dvojkoli[]): ModelUcastnika {
+  return {
+    rychlost: RYCHLOST_VLAKU,
+    delka,
+    // Vozy vlaku jsou spřažené nárazník na nárazník.
+    rozestup: delka,
+    teziste,
+    napravy: dvojkoli.map((d): Naprava => {
+      const kontakt = { ...ULOZENI_KOLEJE, vyska: polomer };
+      const nadDvojkolim = d.zatizeni - d.dvojkoli;
+      if (!d.druhotne || !d.ram) {
+        return {
+          odstup: d.odstup,
+          odpruzena: nadDvojkolim,
+          neodpruzena: d.dvojkoli,
+          perovani: { ...pruzina(nadDvojkolim, d.prvotni.frekvence, d.prvotni.utlum), vyska: VYSKA_SKRINE },
+          kontakt,
+        };
+      }
+      const skrin = nadDvojkolim - d.ram;
+      return {
+        odstup: d.odstup,
+        odpruzena: skrin,
+        neodpruzena: d.dvojkoli,
+        podvozek: { hmota: d.ram, ...pruzina(nadDvojkolim, d.prvotni.frekvence, d.prvotni.utlum), vyska: VYSKA_RAMU },
+        perovani: { ...pruzina(skrin, d.druhotne.frekvence, d.druhotne.utlum), vyska: VYSKA_SKRINE - VYSKA_RAMU },
+        kontakt,
+      };
+    }),
+  };
+}
+
+/**
+ * Čtyřnápravová elektrická lokomotiva: 88 t (4 × 22 t), délka přes nárazníky 16,8 m, dva
+ * podvozky s rozvorem 2,8 m, otočné čepy 8,3 m od sebe, kola průměru 1 250 mm. Dvojkolí
+ * s převodovkou a částí motoru váží 3,5 t, rám podvozku s motory 11 t (5,5 t na dvojkolí),
+ * skříň 52 t. Skříň se na druhotném vypružení houpe kolem 1,6 Hz; prvotní vypružení má
+ * tuhost kolem 4 MN/m na dvojkolí, takže vše nad dvojkolím by na něm samotném kmitalo 2,4 Hz.
+ */
+function lokomotiva(): ModelUcastnika {
+  return kolejoveVozidlo(
+    16.8,
+    0.625,
+    1.6,
+    [2.85, 5.65, 11.15, 13.95].map(
+      (odstup): Dvojkoli => ({
+        odstup,
+        zatizeni: 22_000,
+        dvojkoli: 3500,
+        ram: 5500,
+        prvotni: { frekvence: 2.4, utlum: 0.15 },
+        druhotne: { frekvence: 1.6, utlum: 0.2 },
+      }),
+    ),
+  );
+}
+
+/**
+ * Čtyřnápravový otevřený nákladní vůz: délka přes nárazníky 14,04 m, dva podvozky s rozvorem
+ * 1,8 m, otočné čepy 9 m od sebe, kola průměru 920 mm, dvojkolí 1,5 t. Podvozek má jen
+ * prvotní vypružení s třecím tlumením. Ložený vůz (90 t, 22,5 t na nápravu) na něm sedí
+ * o 35 mm a houpe se kolem 2,6 Hz; prázdný (22 t) sedí jen na vnějších pružinách, které se
+ * stlačí o centimetr, a houpe se kolem 5 Hz.
+ */
+function nakladniVuz(hmotnost: number, frekvence: number, teziste: number): ModelUcastnika {
+  return kolejoveVozidlo(
+    14.04,
+    0.46,
+    teziste,
+    [1.62, 3.42, 10.62, 12.42].map(
+      (odstup): Dvojkoli => ({ odstup, zatizeni: hmotnost / 4, dvojkoli: 1500, prvotni: { frekvence, utlum: 0.12 } }),
+    ),
+  );
+}
+
+/**
+ * Osobní vůz s cestujícími: 45 t (4 × 11,25 t), délka přes nárazníky 26,4 m, dva podvozky
+ * s rozvorem 2,5 m, otočné čepy 19 m od sebe, kola průměru 920 mm. Dvojkolí 1,5 t, rám
+ * podvozku 2,6 t (1,3 t na dvojkolí), skříň 34 t. Skříň se na měkkém druhotném vypružení
+ * houpe kolem 1,1 Hz; prvotní vypružení má tuhost 2,4 MN/m na dvojkolí, takže vše nad
+ * dvojkolím by na něm samotném kmitalo 2,5 Hz (rám podvozku mezi oběma pružinami kolem 7 Hz).
+ */
+function osobniVuz(): ModelUcastnika {
+  return kolejoveVozidlo(
+    26.4,
+    0.46,
+    1.6,
+    [2.45, 4.95, 21.45, 23.95].map(
+      (odstup): Dvojkoli => ({
+        odstup,
+        zatizeni: 11_250,
+        dvojkoli: 1500,
+        ram: 1300,
+        prvotni: { frekvence: 2.5, utlum: 0.15 },
+        druhotne: { frekvence: 1.1, utlum: 0.2 },
+      }),
+    ),
+  );
+}
+
 /** Druhy provozu, které jsou silniční vozidla s karoserií na pérování. */
 const VOZIDLA: ReadonlySet<IdProvozu> = new Set<IdProvozu>([
   "auto",
@@ -383,6 +524,11 @@ const VOZIDLA: ReadonlySet<IdProvozu> = new Set<IdProvozu>([
 /** Je daný druh provozu silniční vozidlo s karoserií (ne chodec ani cyklista)? */
 export function jeVozidlo(druh: IdProvozu): boolean {
   return VOZIDLA.has(druh);
+}
+
+/** Umí daný druh provozu na mostě zabrzdit, postát a rozjet se? Silniční vozidla a vlak. */
+export function umiBrzdit(druh: IdProvozu): boolean {
+  return VOZIDLA.has(druh) || druh === "lokomotiva";
 }
 
 /**
@@ -404,6 +550,10 @@ export function modelUcastnika(druh: IdProvozu, kadence?: number): ModelUcastnik
   if (druh === "nakladni") return nakladni();
   if (druh === "souprava") return souprava();
   if (druh === "nadmerny") return nadmerny();
+  if (druh === "lokomotiva") return lokomotiva();
+  if (druh === "vuz-nakladni") return nakladniVuz(90_000, 2.6, 1.9);
+  if (druh === "vuz-prazdny") return nakladniVuz(22_000, 5, 1.2);
+  if (druh === "vuz-osobni") return osobniVuz();
   return null;
 }
 
@@ -424,6 +574,6 @@ export function rytmusLidi(druh: IdProvozu, kadence?: number): { f: number; rozp
 /** Celková hmotnost účastníka v kilogramech. */
 export function hmotnostUcastnika(model: ModelUcastnika): number {
   let hmotnost = 0;
-  for (const n of model.napravy) hmotnost += n.odpruzena + n.neodpruzena;
+  for (const n of model.napravy) hmotnost += n.odpruzena + n.neodpruzena + (n.podvozek?.hmota ?? 0);
   return hmotnost;
 }

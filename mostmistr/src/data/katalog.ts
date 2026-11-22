@@ -27,6 +27,8 @@
 // - Beton C30/37 podle EN 1992-1-1 (f_cm 38 MPa, f_ctm 2,9 MPa, E_cm 33 GPa): potvrzeno.
 // - Spirálové lano (E 150 GPa, pevnost drátů 1 570 MPa, výplň průřezu 0,75): z paměti.
 // - Ocel S355 (E 210 GPa, G 81 GPa, jmenovitá mez kluzu 355 MPa): z paměti, běžně známé hodnoty.
+// - IPE 600 (plocha, moment setrvačnosti, průřezové moduly, hmotnost; 22. 11. 2026): potvrzeno.
+//   Hmotnost kolejnice 60E1 a mostnic: z paměti.
 
 export const ID_MATERIALU = ["ocel", "drevo", "zelezobeton", "ocelobeton", "lano"] as const;
 export type IdMaterialu = (typeof ID_MATERIALU)[number];
@@ -243,15 +245,27 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     prurez: { A: 340e-4, I: 24700e-8, As: 283e-4, Av: 17e-4, W: 766e-6, Wpl: 793e-6, hmotnostNaMetr: 520 },
     naMetrSirky: true,
   },
-  // Dvě kolejnice 60E1; podélníky a mostnice zatím zanedbány.
+  // Kolej na mostnicích: dvě kolejnice 60E1 na dřevěných mostnicích po 0,6 m a pod nimi dva
+  // podélníky IPE 600 (156 cm², 92 080 cm⁴, W 3 069 cm³, Wpl 3 512 cm³, smyková plocha
+  // 83,8 cm², 122 kg/m). Nesou jen podélníky; kolejnice a mostnice váží:
+  // 2 × 122 + 2 × 60,2 (kolejnice) + 185 (dubové mostnice 240 × 240 × 2 400 mm) + 11 (upevnění)
+  // = 560 kg na metr koleje. Podélník dlouhý 6 m se pod podvozkem loženého vozu prohne o 5 mm
+  // (1/1 200 rozpětí), jak se u železničních mostů žádá. Je to jedna kolej: průřez se šířkou
+  // mostovky nenásobí a hmotnost vybavení úrovně (zábradlí, vozovka) se k němu nepřidává.
   kolejiste: {
     druh: "mostovka",
     nejvetsiDelka: 6,
-    hotovo: false,
-    cena: { zaMetr: 12000 },
+    hotovo: true,
+    cena: { zaMetr: 16000 },
     material: "ocel",
-    prurez: { A: 2 * 76.7e-4, I: 2 * 3038e-8, As: 2 * 30e-4, W: 2 * 333.6e-6, Wpl: 2 * 400e-6, hmotnostNaMetr: 370 },
-    predbezne: true,
+    prurez: {
+      A: 2 * 156e-4,
+      I: 2 * 92080e-8,
+      As: 2 * 83.78e-4,
+      W: 2 * 3069e-6,
+      Wpl: 2 * 3512e-6,
+      hmotnostNaMetr: 560,
+    },
   },
   // 2× lepené dřevo 60 × 120 mm: lehký trám, který se v tlaku brzy vzpírá.
   "drevo-lehke": {
@@ -341,6 +355,14 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
   pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: true, cena: { zaKus: 8000 } },
   pist: { druh: "pist", nejvetsiDelka: 8, hotovo: false, cena: { zaKus: 60000 } },
 };
+
+/**
+ * Nese prvek vybavení mostovky z úrovně (zábradlí, vozovkové vrstvy)? Silniční mostovka a
+ * lávka ano; kolejiště má kolejnice a mostnice ve své hmotnosti.
+ */
+export function neseVybaveni(id: IdPrvku): boolean {
+  return KATALOG[id].druh === "mostovka" && id !== "kolejiste";
+}
 
 /** Cena svaru za každý prut připojený do svařeného styčníku, v korunách. */
 export const CENA_SVARU = 1500;
@@ -500,8 +522,18 @@ export const ID_PROVOZU = [
   "nadmerny",
   "lokomotiva",
   "vuz-nakladni",
+  "vuz-prazdny",
   "vuz-osobni",
   "lod",
 ] as const;
 
 export type IdProvozu = (typeof ID_PROVOZU)[number];
+
+/** Vozy, které smí táhnout lokomotiva: ložený a prázdný nákladní vůz a osobní vůz. */
+export const ID_VOZU = ["vuz-nakladni", "vuz-prazdny", "vuz-osobni"] as const satisfies readonly IdProvozu[];
+export type IdVozu = (typeof ID_VOZU)[number];
+
+/** Jezdí daný druh provozu po kolejích (lokomotiva a vozy)? */
+export function jeKolejove(druh: IdProvozu): boolean {
+  return druh === "lokomotiva" || (ID_VOZU as readonly IdProvozu[]).includes(druh);
+}

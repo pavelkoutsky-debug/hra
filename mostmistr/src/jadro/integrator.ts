@@ -2,6 +2,7 @@ import { spoctiVnitrniSily } from "./sily";
 import type { Soustava } from "./soustava";
 import { pridejTlumice } from "./tlumice";
 import { pridejModalniTlumeni, type ModalniTlumeni } from "./tlumeni";
+import { energieTihyPrvku, pridejTihuPrvku } from "./zatizeni";
 
 /** Tíhové zrychlení v m/s². */
 export const TIHOVE_ZRYCHLENI = 9.80665;
@@ -37,6 +38,8 @@ export function spoctiSily(s: Soustava, tiha: number, alfa: number, modalni?: Mo
     fy[i] = fy[i]! - m * tiha - alfa * m * vy[i]!;
     moment[i] = moment[i]! - alfa * setrvacnost[i]! * omega[i]!;
   }
+  // Tíha prutů s tuhými konci působí po délce, ne jen ve styčnících.
+  pridejTihuPrvku(s, tiha);
 }
 
 /**
@@ -107,5 +110,7 @@ export function polohovaEnergie(s: Soustava, tiha: number): number {
   for (let i = 0; i < s.pocetStycniku; i++) {
     if (s.invHmotaY[i] !== 0) energie += s.hmota[i]! * tiha * s.y[i]!;
   }
+  // Tíha prutů s tuhými konci působí po délce: část polohové energie nese jejich průhyb.
+  energie += energieTihyPrvku(s, tiha);
   return energie;
 }

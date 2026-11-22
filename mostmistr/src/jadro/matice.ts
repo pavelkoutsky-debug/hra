@@ -8,6 +8,7 @@
 import { spoctiVnitrniSily } from "./sily";
 import { LANO, type Soustava } from "./soustava";
 import { hmotyStupnu, obnovPolohu, posunStupne, silyStupnu, ulozPolohu } from "./stupne";
+import { pridejTihuPrvku } from "./zatizeni";
 
 /** Krok numerické derivace sil: metry u posunů, radiány u natočení. */
 const KROK_DERIVACE = 1e-6;
@@ -426,6 +427,8 @@ export function najdiRovnovahu(
   let meritko = 0;
   for (let iterace = 0; iterace < 50; iterace++) {
     spoctiVnitrniSily(s);
+    // Tíha po polovinách do styčníků se přičítá níž; tady její oprava u prutů s tuhými konci.
+    pridejTihuPrvku(s, tiha);
     silyStupnu(s, stupne, zbytek);
     let norma = 0;
     let zatizeni = 0;
