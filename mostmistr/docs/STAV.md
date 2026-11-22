@@ -13,7 +13,7 @@ Poslední aktualizace: 22. 11. 2026
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
-| M4a Těžká doprava | Rozpracováno (zatím jen průzkum kódu a návrh postupu, žádný kód) |
+| M4a Těžká doprava | Rozpracováno: modely vozidel (dodávka, autobus, nákladní auto, souprava); zbytek viz „Další krok“ |
 | M4b až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
@@ -341,7 +341,7 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Schválit sloučení úpravy palety (laděný tlumič mezi prvky, skupina Pokusy).
+1. Teď nic; M4a se rozpracovává.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
@@ -370,7 +370,7 @@ M4a Těžká doprava: nákladní vozidla, autobus, souprava, obousměrný provoz
 
 - 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“; zadavatel opravu nechal sloučit hned.
 
-- 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“.
+- 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“; zadavatel úpravu nechal sloučit hned.
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 

@@ -410,6 +410,10 @@ const CS = {
   "provoz.skakajici-dav": "skákající dav",
   "provoz.cyklista": "cyklista",
   "provoz.auto": "osobní auto",
+  "provoz.dodavka": "dodávka",
+  "provoz.autobus": "autobus",
+  "provoz.nakladni": "nákladní auto",
+  "provoz.souprava": "tahač s návěsem",
   "provoz.jiny": "provoz",
 
   // Medaile

@@ -1,4 +1,5 @@
-// Kreslení účastníků provozu jako čárových bokorysů: osobní auto, cyklista a chodec.
+// Kreslení účastníků provozu jako čárových bokorysů: auta, dodávka, autobus, nákladní vozy,
+// cyklista a chodec.
 // Polohy bere ze snímku záznamu (styčníky kol a karoserie), krok chodce z času děje.
 
 import type { Bod } from "../data/geometrie";
@@ -42,6 +43,10 @@ export function nakresliProvoz(
       const karoserie = u.karoserie.map(bod);
       if (karoserie.some((k) => k === null)) return;
       nakresliAuto(ctx, kola.map((k) => naObraz(k!)), karoserie.map((k) => naObraz(k!)), u.vyska * m, u.smer);
+    } else if (u.druh === "dodavka" || u.druh === "autobus" || u.druh === "nakladni" || u.druh === "souprava") {
+      const karoserie = u.karoserie.map(bod);
+      if (karoserie.some((k) => k === null)) return;
+      nakresliVuz(ctx, u.druh, kola.map((k) => naObraz(k!)), karoserie.map((k) => naObraz(k!)), m, u.vyska * m);
     } else if (u.druh === "cyklista") {
       nakresliCyklistu(ctx, kola.map((k) => naObraz(k!)), u.vyska * m, u.smer);
     } else {
@@ -143,6 +148,110 @@ function nakresliAuto(ctx: Kontext, kola: Bod[], karoserie: Bod[], r: number, sm
   ctx.stroke();
   for (const k of kola) kolo(ctx, k, r);
   void smer;
+}
+
+/**
+ * Soustava souřadnic karoserie: počátek v `pocatek`, osa míří od bodu `zadni` k bodu `predni`
+ * a kolmice nahoru. Vrací funkci, která metry podél osy a nad ní převede na body obrazu.
+ */
+function ramVozu(pocatek: Bod, predni: Bod, zadni: Bod, m: number): (podel: number, vys: number) => [number, number] {
+  const dx = predni.x - zadni.x;
+  const dy = predni.y - zadni.y;
+  const delka = Math.hypot(dx, dy) || 1;
+  const ex = dx / delka;
+  const ey = dy / delka;
+  // Kolmice nahoru (na obrazovce míří y dolů), ať vůz jede kterýmkoli směrem.
+  let nx = ey;
+  let ny = -ex;
+  if (ny > 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return (podel, vys) => [pocatek.x + (ex * podel + nx * vys) * m, pocatek.y + (ey * podel + ny * vys) * m];
+}
+
+type Bod2 = [number, number];
+
+function obrys(ctx: Kontext, body: readonly Bod2[]): void {
+  ctx.beginPath();
+  body.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
+function cary(ctx: Kontext, usecky: readonly (readonly [Bod2, Bod2])[]): void {
+  ctx.beginPath();
+  for (const [a, b] of usecky) {
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+  }
+  ctx.stroke();
+}
+
+/** Kabina nákladního vozu a tahače: čelo `celo` metrů před přední nápravou, zadní stěna `zad` za ní. */
+function nakresliKabinu(ctx: Kontext, p: (podel: number, vys: number) => Bod2, celo: number, zad: number): void {
+  obrys(ctx, [p(celo, 0.05), p(celo, 1.2), p(celo - 0.15, 1.95), p(zad, 1.95), p(zad, 0.05)]);
+  obrys(ctx, [p(celo - 0.1, 1.15), p(celo - 0.22, 1.8), p(zad + 0.75, 1.8), p(zad + 0.75, 1.15)]);
+}
+
+/**
+ * Užitkové vozidlo. Rozměry jsou v metrech vůči přední nápravě (dopředu kladně) a vůči
+ * spojnici styčníků karoserie; ty odpovídají modelům ve `vozidla.ts`. Vůz se kreslí
+ * v soustavě svých styčníků, takže se s nimi naklání, a návěs má svou vlastní, spojenou
+ * s tahačem na točně.
+ */
+function nakresliVuz(
+  ctx: Kontext,
+  druh: "dodavka" | "autobus" | "nakladni" | "souprava",
+  kola: Bod[],
+  karoserie: Bod[],
+  m: number,
+  r: number,
+): void {
+  const predni = karoserie[0]!;
+  const p = ramVozu(predni, predni, karoserie[1]!, m);
+  if (druh === "dodavka") {
+    obrys(ctx, [p(-5, -0.44), p(-5, 1.66), p(-0.1, 1.66), p(0.55, 0.5), p(0.95, 0.3), p(1, -0.44)]);
+    obrys(ctx, [p(-0.15, 1.5), p(0.42, 0.55), p(-0.85, 0.55), p(-0.85, 1.5)]);
+    cary(ctx, [[p(-1, -0.44), p(-1, 1.66)]]);
+  } else if (druh === "autobus") {
+    obrys(ctx, [p(-9.3, -0.7), p(-9.3, 1.9), p(-9.1, 2), p(2.45, 2), p(2.7, 1.2), p(2.7, -0.7)]);
+    // Pás oken s příčkami a čelní sklo.
+    const usecky: [Bod2, Bod2][] = [
+      [p(-9, 1.55), p(2.38, 1.55)],
+      [p(-9, 0.4), p(2.6, 0.4)],
+      [p(2.38, 1.55), p(2.6, 0.4)],
+    ];
+    for (let x = -9; x < 2.3; x += 1.42) usecky.push([p(x, 0.4), p(x, 1.55)]);
+    cary(ctx, usecky);
+  } else if (druh === "nakladni") {
+    obrys(ctx, [p(-7.8, -0.25), p(-7.8, 0.05), p(1.4, 0.05), p(1.4, -0.25)]);
+    nakresliKabinu(ctx, p, 1.4, -0.6);
+    obrys(ctx, [p(-7.75, 0.15), p(-7.75, 2.25), p(-0.85, 2.25), p(-0.85, 0.15)]);
+    cary(ctx, [-6.03, -4.3, -2.58].map((x): [Bod2, Bod2] => [p(x, 0.15), p(x, 2.25)]));
+  } else {
+    // Tahač: rám a kabina. Návěs leží vpředu na točně nad hnací nápravou a vzadu na třech nápravách.
+    obrys(ctx, [p(-4.6, -0.25), p(-4.6, 0.05), p(1.4, 0.05), p(1.4, -0.25)]);
+    nakresliKabinu(ctx, p, 1.4, -0.9);
+    const [tx, ty] = p(-3.2, 0.35);
+    const tocna: Bod = { x: tx, y: ty };
+    const zadni = karoserie.slice(2);
+    if (zadni.length > 0) {
+      const stred: Bod = { x: 0, y: 0 };
+      for (const k of zadni) {
+        stred.x += k.x / zadni.length;
+        stred.y += k.y / zadni.length;
+      }
+      // Střed náprav návěsu zvednutý na výšku točny, aby ložná plocha vedla od točny k němu.
+      const [zx, zy] = ramVozu(stred, predni, karoserie[1]!, m)(0, 0.35);
+      const n = ramVozu(tocna, tocna, { x: zx, y: zy }, m);
+      obrys(ctx, [n(-5, -0.3), n(-5, 0.1), n(-11.6, 0.1), n(-11.6, -0.3)]);
+      obrys(ctx, [n(1.9, 0.1), n(1.9, 2.55), n(-11.9, 2.55), n(-11.9, 0.1)]);
+      cary(ctx, [-1.55, -5, -8.45].map((x): [Bod2, Bod2] => [n(x, 0.1), n(x, 2.55)]));
+    }
+  }
+  for (const k of kola) kolo(ctx, k, r);
 }
 
 /** Cyklista: dvě kola, rám a jezdec nakloněný dopředu. */

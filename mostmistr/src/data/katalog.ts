@@ -28,7 +28,7 @@
 // - Spirálové lano (E 150 GPa, pevnost drátů 1 570 MPa, výplň průřezu 0,75): z paměti.
 // - Ocel S355 (E 210 GPa, G 81 GPa, jmenovitá mez kluzu 355 MPa): z paměti, běžně známé hodnoty.
 
-export const ID_MATERIALU = ["ocel", "drevo", "zelezobeton", "lano"] as const;
+export const ID_MATERIALU = ["ocel", "drevo", "zelezobeton", "ocelobeton", "lano"] as const;
 export type IdMaterialu = (typeof ID_MATERIALU)[number];
 
 export interface Material {
@@ -96,6 +96,23 @@ export const MATERIALY: Readonly<Record<IdMaterialu, Material>> = {
     hustota: 2500,
     mez: { tah: 5.5e6, tlak: 38e6, ohyb: 28e6, smyk: 3e6 },
     tvarny: false,
+    utlum: 0.01,
+  },
+  // Spřažený ocelobetonový průřez přepočtený na ocel (poměr modulů 210 : 33): železobetonová
+  // deska na ocelových nosnících. Napětí jsou náhradní hodnoty vztažené k přepočtenému
+  // průřezu mostovky, zvolené tak, aby únosnosti vyšly jako u skutečného průřezu (modelový
+  // předpoklad, ne hodnoty z normy): v tahu nese jen ocel (nosníky a výztuž desky, dohromady
+  // 46 cm² na metr šířky při 400 MPa), v tlaku hlavně beton (0,2 m² při 38 MPa), v ohybu táhne
+  // nosník a tlačí deska. Poruší se tvárně, ale vydrží menší natočení než samotná ocel.
+  ocelobeton: {
+    E: 210e9,
+    G: 81e9,
+    hustota: 7850,
+    mez: { tah: 54e6, tlak: 250e6, ohyb: 400e6, smyk: 400e6 / Math.sqrt(3) },
+    tvarny: true,
+    pevnostVTahu: 68e6,
+    mezniNatoceni: 0.04,
+    mezniProtazeni: 0.02,
     utlum: 0.01,
   },
   // Spirálové ocelové lano; hodnoty vztažené ke kovovému průřezu.
@@ -207,16 +224,23 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     prurez: deskaNaMetr(0.08),
     naMetrSirky: true,
   },
-  // Železobetonová deska tloušťky 250 mm; spřažení s ocelovými trámy zatím zanedbáno.
+  // Spřažená ocelobetonová mostovka: železobetonová deska 200 mm na ocelových nosnících
+  // IPE 240 po 1,5 m (39,1 cm², 3 892 cm⁴, 30,7 kg/m). Hodnoty na metr šířky, přepočtené na ocel:
+  // - plocha 0,2/6,36 + 26,1 cm² = 340 cm²; těžiště 117 mm pod horním povrchem desky,
+  // - moment setrvačnosti 24 700 cm⁴ (deska 10 500 + 900, nosníky 2 600 + 10 800 Steinerem),
+  // - plastický moment 317 kNm: nosníky v tahu 1,04 MN na rameni 0,304 m; při náhradní mezi
+  //   400 MPa tomu odpovídá plastický modul 793 cm³,
+  // - smyk nesou stojiny nosníků a deska (17 cm² při 231 MPa, tedy 393 kN),
+  // - hmotnost 0,2 m × 2 500 kg/m³ + 30,7/1,5 = 520 kg na metr čtvereční.
+  // Proti dřevěné mostovce je šestkrát těžší, devětkrát únosnější v ohybu a stokrát tužší.
   "mostovka-ocelobeton": {
     druh: "mostovka",
     nejvetsiDelka: 6,
-    hotovo: false,
-    cena: { zaMetr: 9000 },
-    material: "zelezobeton",
-    prurez: deskaNaMetr(0.25),
+    hotovo: true,
+    cena: { zaMetr: 12000 },
+    material: "ocelobeton",
+    prurez: { A: 340e-4, I: 24700e-8, As: 283e-4, Av: 17e-4, W: 766e-6, Wpl: 793e-6, hmotnostNaMetr: 520 },
     naMetrSirky: true,
-    predbezne: true,
   },
   // Dvě kolejnice 60E1; podélníky a mostnice zatím zanedbány.
   kolejiste: {
