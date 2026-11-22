@@ -1,6 +1,6 @@
 # Mostmistr — stav vývoje
 
-Poslední aktualizace: 21. 11. 2026
+Poslední aktualizace: 22. 11. 2026
 
 ## Milníky
 
@@ -11,12 +11,15 @@ Poslední aktualizace: 21. 11. 2026
 | M1b Jádro | Hotovo, sloučeno do `main` (20. 11. 2026) |
 | M2 První hratelná verze | Hotovo, zadavatel vyzkoušel a schválil sloučení do `main` (21. 11. 2026) |
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
-| M3z Zvuk (předsunuto z M8) | Hotovo, čeká na poslech zadavatelem a sloučení (pull request M3z) |
+| M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze** (pull request M3z). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b až M8 | Nezačato |
+| M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
 ## M3z — výsledek
 
 Hra dostala zvuk. Nemá žádné nahrávky: všechno se skládá za běhu z šumu a jednoduchých tónů.
+
+**Zvuky jsou pracovní.** Zadavatel je nechává ve hře jako prozatímní a rozhodl, že se **předělají pomocí ElevenLabs, až budou hotové ostatní fáze projektu** (milník M9 v koncepci). Do té doby se syntezátor neladí: nové prvky a nový provoz dostanou jen jednoduchý pracovní zvuk, aby hra nebyla němá. Rozdělení na „co má zaznít“ (`deje.ts`) a „jak to zní“ (`syntezator.ts`) výměnu usnadní: nahradí se jen druhá vrstva, okamžiky a síly zvuků i jejich testy zůstanou.
 
 **Co je slyšet**
 
@@ -232,15 +235,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Na náhledu pull requestu M3z si hru pustit se zvukem: úroveň 1-03 nebo 1-04 s mostem, který spadne, a úroveň 2-03 s pochodem. Sedí hlasitost zvuků vůči sobě? Není vrzání otravné?
-2. Na stránce `/zvuky.html` si pustit jednotlivé zvuky a říct, které nesedí a čím.
-3. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
+1. Rozhodnout, jestli se má pull request M3z s pracovními zvuky sloučit do `main` a jestli mají být pracovní zvuky ve výchozím stavu zapnuté.
+2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-Počkat na poslech zadavatele a doladit zvuky podle jeho připomínek. Pak M3b: dav, ztráta kroku při silném kmitání, laděný tlumič a analytický panel.
+M3b: dav, ztráta kroku při silném kmitání, laděný tlumič a analytický panel. Zvuky se teď neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
@@ -255,6 +257,8 @@ Počkat na poslech zadavatele a doladit zvuky podle jeho připomínek. Pak M3b: 
   3. Zvýraznit zatížení prutů, případně malá procenta u prutů s možností vypnout. **Hotovo**: čísla využití, legenda, citlivější barevná škála (žlutá od 40 %, dřív od 50 %), záře u prutů nad 60 %.
   4. Zvuky zatěžování a pohybu po mostě, od vrzání po praskání a zřícení. Sám řekl, že to může počkat.
 - 21. 11. 2026, po úpravách: zadavatel rozhodl **M2 sloučit a pokračovat na M3a**. **Zvuky chce hned po M3a** jako samostatný milník (v koncepci M3z). **Obtížnost první kapitoly je akorát**; další kapitoly se mají ladit stejně, tedy z referenčních mostů.
+
+- 22. 11. 2026, k náhledu M3z: „Nechme tyhle zvuky zatím jako pracovní“ a **zvuky se budou ještě předělávat pomocí ElevenLabs, ale až po dokončení ostatních fází projektu**. Zapsáno jako milník M9 v koncepci. Pozn.: v dialogu s otázkou nešly odkazy zkopírovat ani otevřít; odkazy na náhled proto vždy posílat přímo do textu odpovědi.
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 
