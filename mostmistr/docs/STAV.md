@@ -19,6 +19,25 @@ Poslední aktualizace: 22. 11. 2026
 | M5 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
+## M5 — rozpracováno (plán)
+
+Pracuje se v místním pracovním stromu `/home/user/hra-m5` (větev `m5-priprava`, zatím neodeslaná), aby se práce nemíchala s opravami z recenzí M4c. Po sloučení M4c se větev sloučí do `claude/nice-galileo-lnfnk2`.
+
+**Krok 1: vlastní tíha prutů s tuhými konci (nález A3 z kontroly fyziky M4b).** Tíha prutu se dnes dává jen do styčníků (polovina na každý konec). U prutu, který má aspoň jeden konec tuhý, k tomu patří i momenty vetknutí a přesun příčné síly; bez nich vycházejí podporové momenty spojité mostovky o 6 % menší. Jádro to pro břemena kol už umí (`pridejZatizeniPrvku` v `src/jadro/zatizeni.ts`, pole `zatMomentA/B`); pro rovnoměrnou tíhu `W = −hmotnost prutu · g · e_x` (příčná složka, `n = (−e_y, e_x)`) vychází integrací téhož vzorce oprava proti polovinám:
+
+| `kloub` prvku | změna příčné síly v a / v b | moment v a | moment v b |
+|---|---|---|---|
+| 0 (oba konce tuhé) | 0 / 0 | +W·L/12 | −W·L/12 |
+| 1 (kloub v a) | −W/(2(4+Φ)) / +W/(2(4+Φ)) | 0 | −W·L/(2(4+Φ)) |
+| 2 (kloub v b) | +W/(2(4+Φ)) / −W/(2(4+Φ)) | +W·L/(2(4+Φ)) | 0 |
+| 3 (oba klouby) | beze změny | 0 | 0 |
+
+Tíha vstupuje na třech místech a oprava musí do všech: `spoctiSily` (`src/jadro/integrator.ts`), zbytek sil v `najdiRovnovahu` (`src/jadro/matice.ts`, i pro stupně natočení) a posudek (`vyhodnotNamahani` a `vnitrniSily` v `src/jadro/namahani.ts`: skutečný koncový moment = pružný − moment vetknutí od břemen − moment vetknutí od tíhy; parabola v poli tam už je). Nová pole soustavy (`tihaMomentA/B`) patří i do seznamu v `src/jadro/topologie.ts`. Ověření: momenty rámu 4-02 proti rámové teorii (−740,6 / −509,5 / −493,7 kNm nad pilíři, +378,2 a +246,9 kNm v polích), průhyb prostého nosníku ze dvou dílů 5wL⁴/384EI. Mění výsledky všech mostů: **verze fyziky 6**, nové otisky (`npm run otisky`), znovu test vyhratelnosti a otisky v testech prohlížeče.
+
+**Krok 2: železnice podle koncepce (kap. 5, 6, 10, 12).** Kolejiště jako nový prvek mostovky (pojízdné jen pro kolejová vozidla, do 6 m), lokomotiva a vozy (skříň, podvozky, dvojkolí; nákladní a osobní), více mostovek v jedné úrovni (silnice a kolej v různých výškách: dvoupatrové mosty), rázy náprav a pohodlí cestujících ve vlaku, kapitola 6 „Trať“ s referenčními mosty, ukázkami a odstavci „Ve skutečnosti“ (fakta ověřit vyhledáním), jednoduchý pracovní zvuk vlaku. Kritérium: nákladní vlak přejede referenční most; úrovně projdou testem vyhratelnosti.
+
+**Krok 3:** interní testy, nezávislé recenze (kód, hraní kapitoly 6, kontrola fyziky vlaku a opravy tíhy), zapracování, pull request, sloučení.
+
 ## M4c — výsledek
 
 Zpětná vazba hráčů a deník hraní. Popis pro zadavatele, včetně toho, co nastavit v Netlify, je v `docs/ZPETNA-VAZBA.md`.
