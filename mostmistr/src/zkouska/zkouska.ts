@@ -10,7 +10,7 @@ import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { tridaKomfortu, vytvorMereniKomfortu, zmerKomfort, type MereniKomfortu } from "../jadro/komfort";
 import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu } from "../jadro/matice";
-import { ZPUSOB_TAH, ZPUSOB_ZADNY } from "../jadro/namahani";
+import { rozhodujiciVelicina, vnitrniSily, ZPUSOB_TAH, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { Simulace, type Zatizeni } from "../jadro/simulace";
 import { sestavSoustavu, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
@@ -19,7 +19,7 @@ import { vytvorTrasu } from "../jadro/trasa";
 import { otiskSimulace } from "./otisk";
 import { jeClovek, naplanujProvoz, pridejOdporVody, Provoz, type PopisUcastnika } from "./provoz";
 import { frekvenceBudice, jeStaly, vyhodnotBudic } from "./budic";
-import type { BudicZkousky, KomfortZkousky, ObalkaPrutu, Udalost, VysledekZkousky } from "./protokol";
+import type { BudicZkousky, KomfortZkousky, ObalkaPrutu, ReakcePodpory, Udalost, VysledekZkousky } from "./protokol";
 import { sestavMost } from "./stavba";
 import { topologieSoustavy, type PopisKresleni, type Snimek, type Topologie } from "./zaznam";
 
@@ -60,6 +60,7 @@ export class Zkouska {
   readonly #navrh: NavrhMostu;
   readonly #kresleni: PopisKresleni;
   readonly #obalka: ObalkaPrutu[];
+  readonly #reakce: ReakcePodpory[];
   /** Měření kmitání mostovky; null v úrovni, kde přes most nejdou lidé. */
   readonly #komfort: MereniKomfortu | null;
   #dalsiSnimek = 0;
@@ -179,7 +180,11 @@ export class Zkouska {
     this.#zavaziTlumicu = stavba.tlumice.map((t) => t.zavazi);
     zavazi.push(...this.#zavaziTlumicu);
     this.#kresleni = { mostovka: this.trasyMostovky, skryte, zavazi };
-    this.#obalka = navrh.pruty.map(() => ({ vyuziti: 0, zpusob: ZPUSOB_ZADNY, cas: 0 }));
+    this.#obalka = navrh.pruty.map(() => ({ vyuziti: 0, zpusob: ZPUSOB_ZADNY, cas: 0, osova: 0, moment: 0, velicina: 0, unosnost: 0 }));
+    this.#reakce = [];
+    for (let i = 0; i < stavba.stycnikuNavrhu; i++) {
+      if ((s.podpora[i]! & 3) !== 0) this.#reakce.push({ stycnik: i, svisla: 0, nadzvednuti: 0, vodorovna: 0 });
+    }
     const bezProvozu = this.#budic
       ? this.#budic.trvani + DOBEH_BUDICE
       : brnknuti
@@ -347,12 +352,23 @@ export class Zkouska {
         for (; this.#poruseni < sim.udalosti.length; this.#poruseni++) {
           const u = sim.udalosti[this.#poruseni]!;
           if (u.prut < 0) continue;
-          davka.udalosti.push({ cas: u.cas, druh: "poruseni", prut: u.prut, zpusob: u.zpusob, nasledek: u.nasledek, mira: u.mira });
+          davka.udalosti.push({
+            cas: u.cas,
+            druh: "poruseni",
+            prut: u.prut,
+            zpusob: u.zpusob,
+            nasledek: u.nasledek,
+            mira: u.mira,
+            velicina: u.velicina,
+            unosnost: u.unosnost,
+          });
           const obalka = this.#obalka[u.prut];
           if (obalka && u.mira > obalka.vyuziti) {
             obalka.vyuziti = u.mira;
             obalka.zpusob = u.zpusob;
             obalka.cas = u.cas;
+            obalka.velicina = u.velicina;
+            obalka.unosnost = u.unosnost;
           }
         }
         davka.topologie.push(this.#novaTopologie());
@@ -378,6 +394,28 @@ export class Zkouska {
         obalka.vyuziti = vyuziti;
         obalka.zpusob = s.zpusob[e]!;
         obalka.cas = cas;
+        const sily = vnitrniSily(s, e, TIHOVE_ZRYCHLENI);
+        const rozhoduje = rozhodujiciVelicina(s, e, obalka.zpusob, sily);
+        obalka.osova = sily.osova;
+        obalka.moment = sily.moment;
+        obalka.velicina = rozhoduje.velicina;
+        obalka.unosnost = rozhoduje.unosnost;
+      }
+    }
+    // Reakce v podporách: síla, která na zadržený posun styčníku zbývá, je to, co musí
+    // podpora přenést. Po porušení už most na podporách neleží tak, jak byl navržen.
+    if (!this.simulace.porusena) {
+      for (const r of this.#reakce) {
+        const i = r.stycnik;
+        if ((s.podpora[i]! & 2) !== 0) {
+          const svisla = -s.fy[i]!;
+          if (svisla > r.svisla) r.svisla = svisla;
+          if (svisla < r.nadzvednuti) r.nadzvednuti = svisla;
+        }
+        if ((s.podpora[i]! & 1) !== 0) {
+          const vodorovna = s.fx[i]! < 0 ? -s.fx[i]! : s.fx[i]!;
+          if (vodorovna > r.vodorovna) r.vodorovna = vodorovna;
+        }
       }
     }
   }
@@ -444,6 +482,7 @@ export class Zkouska {
       budic: vysledekBudice,
       medaile,
       obalka: this.#obalka.map((o) => ({ ...o })),
+      reakce: this.#reakce.map((r) => ({ ...r })),
       bezRovnovahy: this.bezRovnovahy,
       rozpad,
       trvani: this.simulace.cas,

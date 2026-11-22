@@ -1310,6 +1310,33 @@ body[data-rezim="stavba"] .uroven .legenda {
   width: 190px;
 }
 
+.analyza__cast--prubeh {
+  flex: 1 1 170px;
+  max-width: 260px;
+}
+
+.analyza__cast--prubeh .analyza__graf {
+  height: 84px;
+}
+
+.analyza__cast--udaje {
+  flex: 0 0 215px;
+}
+
+.analyza__cast--reakce {
+  flex: 0 0 140px;
+}
+
+.vysledek__prvni {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--varovani);
+}
+
+.vysledek__prvni[hidden] {
+  display: none;
+}
+
 .analyza__graf {
   display: block;
   width: 100%;

@@ -191,6 +191,27 @@
               <h3 data-text="analyza.tvary"></h3>
               <div class="analyza__tvary" data-udaj="tvary"></div>
             </div>
+            <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-pruhyb">
+              <h3 data-text="analyza.pruhyb"></h3>
+              <canvas class="analyza__graf" data-udaj="graf-pruhyb"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-kmitani">
+              <h3 data-text="analyza.kmitaniGraf"></h3>
+              <canvas class="analyza__graf" data-udaj="graf-kmitani"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-prut">
+              <h3 data-udaj="graf-prut-nadpis"></h3>
+              <canvas class="analyza__graf" data-udaj="graf-prut"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--udaje" data-cast="prut">
+              <h3 data-text="analyza.prut"></h3>
+              <dl class="analyza__tabulka" data-udaj="prut-udaje"></dl>
+              <p class="analyza__popis" data-udaj="prut-napoveda"></p>
+            </div>
+            <div class="analyza__cast analyza__cast--reakce" data-cast="reakce">
+              <h3 data-text="analyza.reakce"></h3>
+              <dl class="analyza__tabulka" data-udaj="reakce"></dl>
+            </div>
             <p class="analyza__popis" data-udaj="analyza-prazdna" data-text="analyza.prazdna" hidden></p>
           </section>
 
@@ -211,9 +232,11 @@
               <dt data-text="vysledek.poruseni"></dt>
               <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
             </dl>
+            <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
             <div class="vysledek__tlacitka">
               <a class="tlacitko tlacitko--hlavni" data-akce="dalsi" data-text="vysledek.dalsi" hidden></a>
               <button type="button" class="tlacitko" data-akce="upravit" data-text="vysledek.upravit"></button>
+              <button type="button" class="tlacitko" data-akce="prehrat-poruseni" data-text="vysledek.prehratPoruseni" hidden></button>
               <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
               <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika"></button>
             </div>

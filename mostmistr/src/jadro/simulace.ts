@@ -4,7 +4,7 @@
 import { krok, spoctiSily, type NastaveniKroku } from "./integrator";
 import { uvolniSjeta, type Loziska } from "./loziska";
 import { nejvyssiFrekvence, vlastniTvarySoustavy } from "./matice";
-import { vyhodnotNamahani } from "./namahani";
+import { rozhodujiciVelicina, vnitrniSily, vyhodnotNamahani } from "./namahani";
 import { najdiPoruseni, provedPoruseni, type Poruseni } from "./poruseni";
 import { nastavTuhostPrvku, prepoctiHmoty, type Soustava } from "./soustava";
 import { betaProUtlum, frekvenceProKrok, UTLUM_NEJVYSSI_FREKVENCE, zvolKrok } from "./stabilita";
@@ -94,10 +94,13 @@ export interface UdalostSjeti {
   stycnik: number;
 }
 
-/** Porušení i s časem, kdy nastalo. */
+/** Porušení i s časem, kdy nastalo, a s tím, co prut v tu chvíli nesl. */
 export interface UdalostPoruseni extends Poruseni {
   cas: number;
   krok: number;
+  /** Veličina, která rozhodla (N u tahu, tlaku, vzpěru a smyku, N·m u ohybu), a únosnost prutu v ní. */
+  velicina: number;
+  unosnost: number;
 }
 
 export class Simulace {
@@ -198,8 +201,11 @@ export class Simulace {
     for (let i = 0; i < NEJVIC_PORUSENI_NAJEDNOU; i++) {
       const poruseni = najdiPoruseni(s);
       if (!poruseni) break;
+      // Co prut nesl, se musí přečíst dřív, než se rozlomí.
+      const sily = vnitrniSily(s, poruseni.prvek, this.#nastaveni.tiha);
+      const { velicina, unosnost } = rozhodujiciVelicina(s, poruseni.prvek, poruseni.zpusob, sily);
       provedPoruseni(s, poruseni);
-      this.udalosti.push({ ...poruseni, cas: this.#cas, krok: this.#kroku });
+      this.udalosti.push({ ...poruseni, cas: this.#cas, krok: this.#kroku, velicina, unosnost });
       zmeneno = true;
     }
     const loziska = this.#nastaveni.loziska;

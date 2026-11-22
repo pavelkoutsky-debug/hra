@@ -27,7 +27,7 @@ import { pripojOvladani } from "../vykres/ovladani";
 import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
 import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
-import { nakresliKrivku, stropGrafu, vrcholyKrivky, type BodKrivky } from "../vykres/grafy";
+import { nakresliKrivku, nakresliPrubeh, stropGrafu, vrcholyKrivky, type BodKrivky } from "../vykres/grafy";
 import { nakresliVykres } from "../vykres/vykres";
 import { frekvenceBudice, jeStaly } from "../zkouska/budic";
 import { KlientZkousky } from "../zkouska/klient";
@@ -94,6 +94,23 @@ interface Beh {
   pokus: boolean;
   /** Budič, kterým se most při pokusu rozkmitával; null u zkoušky a u brnknutí. */
   budic: BudicZkousky | null;
+}
+
+/** Průběhy veličin v čase, jak je sbírá analytický panel ze záznamu zkoušky. */
+interface Rady {
+  beh: Beh;
+  /** Kolik snímků záznamu je už zpracováno. */
+  zpracovano: number;
+  casy: number[];
+  /** Svislý posun styčníku mostovky nejblíž středu rozpětí proti začátku zkoušky, mm. */
+  pruhyb: number[];
+  stycnik: number;
+  vychozi: number;
+  /** Okamžité zrychlení mostovky, m/s². */
+  kmitani: number[];
+  /** Prut, jehož využití se sleduje (pořadí v návrhu), a jeho využití v procentech. */
+  prut: number | null;
+  vyuziti: number[];
 }
 
 function nazevZpusobu(zpusob: number): KlicTextu {
@@ -204,6 +221,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let stropKrivky = 0;
   /** Který tvar kmitání se právě na výkresu předvádí (pořadí v rozboru); null žádný. */
   let tvarKmitani: number | null = null;
+  /** Průběhy veličin právě zkoušeného mostu pro grafy analytického panelu. */
+  let rady: Rady | null = null;
+  /** Co grafy naposledy ukazovaly; nové kreslení je potřeba, jen když se to změní. */
+  let nakreslenePrubehy = "";
+  /** Zpomalené přehrání porušení: kdy skončí a na jakou rychlost se pak přehrávání vrátí. */
+  let zpomaleni: { do: number; rychlost: number } | null = null;
 
   // Pomocné vlákno pro rozbory mostu při stavbě; zkoušky mají každá vlastní.
   const pomocny = new KlientZkousky();
@@ -801,21 +824,219 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovAnalyzu();
   }
 
+  /** Přizpůsobí plátno grafu jeho velikosti na stránce a hustotě obrazovky; null, když není vidět. */
+  function pripravGraf(canvas: HTMLCanvasElement): { ctx: CanvasRenderingContext2D; sirka: number; vyska: number } | null {
+    const hustota = window.devicePixelRatio || 1;
+    const obrys = canvas.getBoundingClientRect();
+    if (obrys.width < 2 || obrys.height < 2) return null;
+    const sirka = Math.round(obrys.width * hustota);
+    const vyska = Math.round(obrys.height * hustota);
+    if (canvas.width !== sirka) canvas.width = sirka;
+    if (canvas.height !== vyska) canvas.height = vyska;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
+    return { ctx, sirka: obrys.width, vyska: obrys.height };
+  }
+
+  /** Styčník mostovky hlavní trasy nejblíž středu rozpětí (pořadí v návrhu); −1, když mostovka není. */
+  function stycnikUprostred(navrh: NavrhMostu): number {
+    const trasa = uroven.trasy[0];
+    if (!trasa) return -1;
+    const stred = (trasa.zacatek.x + trasa.konec.x) / 2;
+    const naMostovce = new Set<number>();
+    for (const p of navrh.pruty) {
+      if (KATALOG[p.prvek].druh !== "mostovka") continue;
+      naMostovce.add(p.a);
+      naMostovce.add(p.b);
+    }
+    let nejblizsi = -1;
+    navrh.stycniky.forEach((st, i) => {
+      if (!naMostovce.has(st.id)) return;
+      if (nejblizsi < 0 || Math.abs(st.x - stred) < Math.abs(navrh.stycniky[nejblizsi]!.x - stred)) nejblizsi = i;
+    });
+    return nejblizsi;
+  }
+
+  /** Největší využití prutu návrhu v jednom snímku záznamu, v procentech. */
+  function vyuzitiVeSnimku(b: Beh, s: Snimek, prut: number): number {
+    const stavba = b.zaznam.topologie[s.topologie];
+    if (!stavba) return 0;
+    let nejvic = 0;
+    for (let e = 0; e < stavba.prut.length; e++) {
+      if (stavba.prut[e] !== prut) continue;
+      const v = Math.abs(s.vyuziti[e] ?? 0);
+      if (v > nejvic) nejvic = v;
+    }
+    return 100 * nejvic;
+  }
+
+  /** Doplní průběhy o snímky, které do záznamu přibyly; po změně vybraného prutu přepočítá jeho řadu. */
+  function doplnRady(b: Beh): Rady {
+    if (!rady || rady.beh !== b) {
+      rady = { beh: b, zpracovano: 0, casy: [], pruhyb: [], stycnik: stycnikUprostred(b.navrh), vychozi: 0, kmitani: [], prut: b.oznaceny, vyuziti: [] };
+    }
+    const r = rady;
+    const snimky = b.zaznam.snimky;
+    if (r.prut !== b.oznaceny) {
+      r.prut = b.oznaceny;
+      r.vyuziti = [];
+      const prut = r.prut;
+      if (prut !== null) for (let i = 0; i < r.zpracovano; i++) r.vyuziti.push(vyuzitiVeSnimku(b, snimky[i]!, prut));
+    }
+    for (; r.zpracovano < snimky.length; r.zpracovano++) {
+      const s = snimky[r.zpracovano]!;
+      const y = r.stycnik >= 0 ? (s.polohy[2 * r.stycnik + 1] ?? 0) : 0;
+      if (r.zpracovano === 0) r.vychozi = y;
+      r.casy.push(s.cas);
+      r.pruhyb.push(1000 * (y - r.vychozi));
+      r.kmitani.push(s.kmitani);
+      if (r.prut !== null) r.vyuziti.push(vyuzitiVeSnimku(b, s, r.prut));
+    }
+    return r;
+  }
+
+  /** Překreslí grafy průběhů, když přibyla data, posunul se čas nebo se změnil vybraný prut. */
+  function nakresliPrubehy(b: Beh): void {
+    const r = doplnRady(b);
+    const podpis = `${r.zpracovano}|${prehravani.cas.toFixed(3)}|${r.prut}`;
+    if (podpis === nakreslenePrubehy) return;
+    nakreslenePrubehy = podpis;
+    const trvani = delkaDeje(b);
+    const rozsah = (hodnoty: readonly number[]): [number, number] => {
+      let nejmin = 0;
+      let nejvic = 0;
+      for (const h of hodnoty) {
+        if (h < nejmin) nejmin = h;
+        if (h > nejvic) nejvic = h;
+      }
+      return [nejmin, nejvic];
+    };
+    const kresli = (jmeno: string, hodnoty: readonly number[], dno: number, strop: number, mez?: number): void => {
+      const graf = pripravGraf(prvek(`[data-udaj="${jmeno}"]`, HTMLCanvasElement));
+      if (!graf) return;
+      nakresliPrubeh(graf.ctx, graf.sirka, graf.vyska, {
+        casy: r.casy,
+        hodnoty,
+        trvani,
+        dno,
+        strop,
+        cas: prehravani.cas,
+        ...(mez === undefined ? {} : { mez }),
+      });
+    };
+    const [dolu, nahoru] = rozsah(r.pruhyb);
+    kresli("graf-pruhyb", r.pruhyb, dolu < 0 ? -stropGrafu(-dolu) : 0, nahoru > 0 ? stropGrafu(nahoru) : dolu < 0 ? 0 : 1);
+    // U lidí se v grafu kmitání vyznačí mez, nad kterou most neobstojí.
+    const mezKmitani = b.budic ? undefined : MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!;
+    kresli("graf-kmitani", r.kmitani, 0, stropGrafu(Math.max(rozsah(r.kmitani)[1], mezKmitani ?? 0.5)), mezKmitani);
+    kresli("graf-prut", r.vyuziti, 0, stropGrafu(Math.max(100, rozsah(r.vyuziti)[1])), 100);
+    document.body.dataset.prubehu = String(r.zpracovano);
+  }
+
+  /** Zapíše, co prut nesl a kolik unese; když samotná veličina mez nepřekročila, přidá celkové využití. */
+  function zapisNamahani(zpusob: number, velicina: number, unosnost: number, mira: number): string {
+    const klic: KlicTextu =
+      zpusob === ZPUSOB_OHYB ? "namahani.ohyb" : zpusob === ZPUSOB_SMYK ? "namahani.smyk" : zpusob === ZPUSOB_TAH ? "namahani.tah" : "namahani.tlak";
+    const co = t(klic, { velicina: cislo(velicina / 1000, 1), unosnost: cislo(unosnost / 1000, 1) });
+    return velicina < 0.97 * unosnost * Math.min(1, mira) ? t("namahani.soubeh", { co, mira: procenta(mira) }) : co;
+  }
+
+  /** Údaje o prutu, na který hráč při zkoušce klikl, a reakce v podporách. */
+  function obnovUdajePrutu(): void {
+    const radek = (nazev: string, hodnota: string): HTMLElement[] => {
+      const dt = document.createElement("dt");
+      dt.textContent = nazev;
+      const dd = document.createElement("dd");
+      dd.textContent = hodnota;
+      return [dt, dd];
+    };
+    const b = beh;
+    const prut = b?.oznaceny ?? null;
+    const udaje = udaj("prut-udaje");
+    const napoveda = udaj("prut-napoveda");
+    udaj("graf-prut-nadpis").textContent = prut === null ? t("analyza.vyuzitiBezPrutu") : t("analyza.vyuzitiPrutu", { prut: prut + 1 });
+    document.body.dataset.vybranyPrut = prut === null ? "" : String(prut);
+    if (!b || prut === null) {
+      udaje.replaceChildren();
+      napoveda.textContent = t("analyza.prut.zadny");
+    } else {
+      const prvekPrutu = b.navrh.pruty[prut]?.prvek;
+      const jmeno = prvekPrutu ? nazevPrvku(prvekPrutu).toLocaleLowerCase("cs") : "";
+      const radky = radek(t("analyza.prut.kdo"), t("analyza.prut.kdoHodnota", { prut: prut + 1, prvek: jmeno }));
+      const o = b.vysledek?.obalka[prut];
+      if (!o) napoveda.textContent = t("analyza.prut.pocitaSe");
+      else if (o.zpusob === ZPUSOB_ZADNY || !(o.vyuziti > 0)) napoveda.textContent = t("analyza.prut.bezNamahani");
+      else {
+        napoveda.textContent = "";
+        radky.push(
+          ...radek(t("analyza.prut.vyuziti"), t("analyza.prut.vyuzitiHodnota", { vyuziti: procenta(o.vyuziti), cas: zapisCasu(o.cas) })),
+          ...radek(t("analyza.prut.rozhoduje"), t(nazevZpusobu(o.zpusob))),
+          ...radek(
+            t(
+              o.zpusob === ZPUSOB_OHYB
+                ? "analyza.prut.velicina.ohyb"
+                : o.zpusob === ZPUSOB_SMYK
+                  ? "analyza.prut.velicina.smyk"
+                  : o.zpusob === ZPUSOB_TAH
+                    ? "analyza.prut.velicina.tah"
+                    : "analyza.prut.velicina.tlak",
+            ),
+            t("analyza.prut.zCeho", {
+              velicina: cislo(o.velicina / 1000, 1),
+              unosnost: cislo(o.unosnost / 1000, 1),
+              jednotka: o.zpusob === ZPUSOB_OHYB ? "kNm" : "kN",
+            }),
+          ),
+          ...radek(t("analyza.prut.osova"), t(o.osova >= 0 ? "analyza.prut.tah" : "analyza.prut.tlak", { sila: cislo(Math.abs(o.osova) / 1000, 1) })),
+          ...radek(t("analyza.prut.moment"), t("analyza.prut.momentHodnota", { moment: cislo(o.moment / 1000, 2) })),
+        );
+      }
+      udaje.replaceChildren(...radky);
+    }
+
+    // Reakce v podporách jsou známé až po dopočítání zkoušky.
+    const reakce = b?.vysledek?.reakce ?? [];
+    prvek('[data-cast="reakce"]', HTMLElement).hidden = reakce.length === 0;
+    udaj("reakce").replaceChildren(
+      ...reakce.flatMap((r) => {
+        const st = b!.navrh.stycniky[r.stycnik];
+        const casti = [t("analyza.reakce.svisla", { sila: cislo(r.svisla / 1000, 1) })];
+        if (r.vodorovna > 50) casti.push(t("analyza.reakce.vodorovna", { sila: cislo(r.vodorovna / 1000, 1) }));
+        if (r.nadzvednuti < -50) casti.push(t("analyza.reakce.nadzvednuti", { sila: cislo(-r.nadzvednuti / 1000, 1) }));
+        return radek(t("analyza.reakce.kde", { x: cislo(st?.x ?? 0, 0) }), casti.join(" · "));
+      }),
+    );
+  }
+
   /** Naplní analytický panel tím, co se v právě zobrazeném režimu dá říct. */
   function obnovAnalyzu(): void {
     const stavi = rezim === "stavba";
-    // Při stavbě má panel co ukázat jen tam, kde se hraje o kmitání.
-    const kDispozici = uroven.osaFrekvenci;
+    // Při stavbě má panel co ukázat jen tam, kde se hraje o kmitání; při zkoušce vždy.
+    const kDispozici = stavi ? uroven.osaFrekvenci : true;
     tlacitkoAnalyzy.hidden = !kDispozici;
-    const otevrena = analyzaOtevrena && kDispozici && stavi;
+    const otevrena = analyzaOtevrena && kDispozici;
     tlacitkoAnalyzy.setAttribute("aria-pressed", String(otevrena));
     panelAnalyzy.hidden = !otevrena;
     document.body.dataset.analyza = otevrena ? "otevrena" : "zavrena";
-    if (!otevrena) {
-      if (tvarKmitani !== null) {
-        tvarKmitani = null;
-        platno.prekresli();
-      }
+    if ((!otevrena || !stavi) && tvarKmitani !== null) {
+      tvarKmitani = null;
+      platno.prekresli();
+    }
+    if (!otevrena) return;
+
+    // Části panelu podle režimu: při stavbě rozbor mostu, při zkoušce průběhy a síly.
+    for (const cast of ["krivka", "krivka-popis", "tvary"]) {
+      if (!stavi) prvek(`[data-cast="${cast}"]`, HTMLElement).hidden = true;
+    }
+    for (const cast of ["graf-pruhyb", "graf-kmitani", "graf-prut", "prut", "reakce"]) {
+      prvek(`[data-cast="${cast}"]`, HTMLElement).hidden = stavi;
+    }
+    if (!stavi) {
+      udaj("analyza-prazdna").hidden = true;
+      prvek('[data-cast="graf-kmitani"]', HTMLElement).hidden = !(beh && (beh.budic !== null || (maLidi && !beh.pokus)));
+      obnovUdajePrutu();
+      nakreslenePrubehy = "";
       return;
     }
 
@@ -836,16 +1057,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       for (const bod of [...(mereni?.cara ?? []), ...(mereni?.body ?? [])]) nejvic = Math.max(nejvic, bod.a);
       stropKrivky = Math.max(stropKrivky, stropGrafu(nejvic));
       platnoKrivky.dataset.zmereno = String((mereni?.cara.length ?? 0) + (mereni?.body.length ?? 0));
-      const hustota = window.devicePixelRatio || 1;
-      const obrys = platnoKrivky.getBoundingClientRect();
-      const sirka = Math.max(1, obrys.width);
-      const vyska = Math.max(1, obrys.height);
-      platnoKrivky.width = Math.round(sirka * hustota);
-      platnoKrivky.height = Math.round(vyska * hustota);
-      const ctx = platnoKrivky.getContext("2d");
-      if (ctx) {
-        ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
-        nakresliKrivku(ctx, sirka, vyska, {
+      const graf = pripravGraf(platnoKrivky);
+      if (graf) {
+        nakresliKrivku(graf.ctx, graf.sirka, graf.vyska, {
           ...krivka,
           kroky: krokyLidi(),
           rozsah: ROZSAH_OSY,
@@ -1056,6 +1270,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     });
 
     rezim = "zkouska";
+    zpomaleni = null;
+    rady = null;
     prehravani = { cas: 0, bezi: true, rychlost: prehravani.rychlost };
     panelVysledku.hidden = true;
     document.body.dataset.rezim = rezim;
@@ -1075,7 +1291,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     poslech = null;
     ozvuceni.ztis();
     rezim = "stavba";
-    prehravani = { ...prehravani, bezi: false };
+    prehravani = { ...prehravani, bezi: false, rychlost: zpomaleni?.rychlost ?? prehravani.rychlost };
+    zpomaleni = null;
     panelVysledku.hidden = true;
     document.body.dataset.rezim = rezim;
     skryjHlaseni();
@@ -1121,6 +1338,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         document.body.dataset.otisk = vysledek.otisk;
         obnovZnacky();
         obnovOsu();
+        // Síly ve vybraném prutu a reakce v podporách jsou známé až teď.
+        obnovAnalyzu();
         break;
       }
       case "chyba": {
@@ -1226,6 +1445,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (!beh) return;
     const prut = prutPodMistem(misto);
     beh.oznaceny = prut;
+    obnovAnalyzu();
     if (prut === null) {
       skryjHlaseni();
       platno.prekresli();
@@ -1263,6 +1483,43 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   }
 
   const bezNull = <T,>(polozky: (T | null)[]): T[] => polozky.filter((p): p is T => p !== null);
+
+  /** První porušení prutu nebo sjetí z podpory při zkoušce; null, když most vydržel celý. */
+  function prvniPoruseni(b: Beh): Extract<Udalost, { druh: "poruseni" | "sjeti" }> | null {
+    let prvni: Extract<Udalost, { druh: "poruseni" | "sjeti" }> | null = null;
+    for (const u of b.udalosti) {
+      if ((u.druh === "poruseni" || u.druh === "sjeti") && (prvni === null || u.cas < prvni.cas)) prvni = u;
+    }
+    return prvni;
+  }
+
+  /** Věta o porušení s čísly: který prut, čím selhal, co nesl a kolik unese. */
+  function vetaOPoruseni(b: Beh, u: Extract<Udalost, { druh: "poruseni" | "sjeti" }>): string {
+    if (u.druh === "sjeti") return t("vysledek.prvni.sjeti");
+    const prvekPrutu = b.navrh.pruty[u.prut]?.prvek;
+    return t("vysledek.prvni", {
+      prut: u.prut + 1,
+      prvek: prvekPrutu ? nazevPrvku(prvekPrutu).toLocaleLowerCase("cs") : "",
+      zpusob: t(nazevZpusobu(u.zpusob)),
+      co: zapisNamahani(u.zpusob, u.velicina, u.unosnost, u.mira),
+    });
+  }
+
+  /** Skočí kousek před první porušení, označí prut, který selhal, a přehraje zlom zpomaleně. */
+  function prehrajPrvniPoruseni(): void {
+    const b = beh;
+    const prvni = b ? prvniPoruseni(b) : null;
+    if (!b || !prvni || rezim !== "zkouska") return;
+    panelVysledku.hidden = true;
+    b.vysledekUkazan = false;
+    b.oznaceny = prvni.druh === "poruseni" ? prvni.prut : null;
+    zpomaleni = { do: prvni.cas + 1.2, rychlost: zpomaleni?.rychlost ?? prehravani.rychlost };
+    prehravani = { cas: Math.max(0, prvni.cas - 0.6), bezi: true, rychlost: 0.1 };
+    ukazHlaseni(vetaOPoruseni(b, prvni), "varovani", false);
+    document.body.dataset.zaznamPoruseni = prvni.cas.toFixed(3);
+    obnovOsu();
+    obnovAnalyzu();
+  }
 
   function ukazVysledek(b: Beh, vysledek: VysledekZkousky): void {
     b.vysledekUkazan = true;
@@ -1338,7 +1595,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           cas: zapisCasu(komfort.cas),
         });
         skok.addEventListener("click", () => skocNa(komfort.cas));
-        poleKmitani.replaceChildren(skok);
+        const zapisZrychleni = (hodnota: number): string => `${cislo(hodnota, 2)} m/s²`;
+        poleKmitani.replaceChildren(...bezNull([skok, rozdil(komfort.zrychleni, predchoziVysledek?.komfort?.zrychleni, zapisZrychleni)]));
       } else {
         poleKmitani.textContent = t("vysledek.kmitaniZadne");
       }
@@ -1413,6 +1671,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     }
     if (zbytek.textContent) radky.push(zbytek);
     udaj("vysledek-poruseni").replaceChildren(...radky);
+
+    // Záznam porušení: co selhalo jako první a proč, s možností přehrát si to zpomaleně.
+    const prvni = prvniPoruseni(b);
+    const polePrvniho = udaj("vysledek-prvni");
+    polePrvniho.hidden = prvni === null;
+    polePrvniho.textContent = prvni ? vetaOPoruseni(b, prvni) : "";
+    prvek('[data-akce="prehrat-poruseni"]', HTMLElement).hidden = prvni === null;
 
     // Další úroveň se nabídne, jakmile je tahle jednou projitá.
     const odkaz = prvek('[data-akce="dalsi"]', HTMLAnchorElement);
@@ -1669,6 +1934,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   });
   priKliknuti("zadani", otevriZadani);
   priKliknuti("upravit", zpetKeStavbe);
+  priKliknuti("prehrat-poruseni", prehrajPrvniPoruseni);
   priKliknuti("prehrat-znovu", () => {
     if (!beh) return;
     panelVysledku.hidden = true;
@@ -1685,6 +1951,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   for (const tlacitko of tlacitkaRychlosti) {
     tlacitko.addEventListener("click", () => {
       prehravani = { ...prehravani, rychlost: Number(tlacitko.dataset.rychlost) };
+      zpomaleni = null;
       obnovOsu();
     });
   }
@@ -1800,6 +2067,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         }
       }
       if (b.vysledek && !b.vysledekUkazan && prehravani.cas >= b.trvani - 1e-6) ukazVysledek(b, b.vysledek);
+      // Zpomalené přehrání porušení se po zlomu vrátí k rychlosti, jakou mělo přehrávání předtím.
+      if (zpomaleni && prehravani.cas >= zpomaleni.do) {
+        prehravani = { ...prehravani, rychlost: zpomaleni.rychlost };
+        zpomaleni = null;
+        obnovOsu();
+      }
+      if (!panelAnalyzy.hidden) nakresliPrubehy(b);
       // Zvuk: co v právě přehraném úseku záznamu zaznělo. Skok po ose je potichu.
       if (poslech) {
         const zvuky = poslech.posun(b, prehravani.cas);

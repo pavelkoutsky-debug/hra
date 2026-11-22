@@ -72,6 +72,12 @@ export type Udalost = { cas: number } & (
       nasledek: number;
       /** Využití v okamžiku porušení; 1 je mez únosnosti. */
       mira: number;
+      /**
+       * Co prut v tu chvíli nesl a kolik unese: osová nebo posouvající síla v N, u ohybu
+       * moment v N·m; únosnost ve stejných jednotkách.
+       */
+      velicina: number;
+      unosnost: number;
     }
   /** Konec mostu sjel z posuvné podpory; `stycnik` je pořadí styčníku v návrhu. */
   | { druh: "sjeti"; stycnik: number }
@@ -89,6 +95,23 @@ export interface ObalkaPrutu {
   zpusob: number;
   /** Kdy nastalo, v sekundách. */
   cas: number;
+  /** Osová síla v tu chvíli v N (tah kladný) a největší ohybový moment v N·m. */
+  osova: number;
+  moment: number;
+  /** Veličina, která rozhodovala (síla v N nebo moment v N·m), a únosnost prutu v ní. */
+  velicina: number;
+  unosnost: number;
+}
+
+/** Největší síly, kterými most za zkoušku tlačil na jednu podporu. */
+export interface ReakcePodpory {
+  /** Pořadí styčníku v návrhu. */
+  stycnik: number;
+  /** Největší svislá síla, kterou podpora most nesla, v N (kladná nahoru), a největší tah dolů (záporný). */
+  svisla: number;
+  nadzvednuti: number;
+  /** Největší vodorovná síla v N (velikost). */
+  vodorovna: number;
 }
 
 /** Kmitání mostovky pod lidmi. */
@@ -129,6 +152,8 @@ export interface VysledekZkousky {
   medaile: Medaile;
   /** Obálka namáhání; pořadí odpovídá prutům návrhu. */
   obalka: ObalkaPrutu[];
+  /** Reakce v podporách: pro každý podepřený styčník návrhu největší síly za zkoušku. */
+  reakce: ReakcePodpory[];
   /** Most neměl pod vlastní tíhou klidovou polohu (chybí mu ztužení) a zkouška začala z nakreslené. */
   bezRovnovahy: boolean;
   /** Výpočet se rozpadl; výsledek neplatí. */
