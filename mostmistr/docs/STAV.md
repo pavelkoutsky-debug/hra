@@ -12,8 +12,9 @@ Poslední aktualizace: 22. 11. 2026
 | M2 První hratelná verze | Hotovo, zadavatel vyzkoušel a schválil sloučení do `main` (21. 11. 2026) |
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
-| M3b Dav a analýza | Hotovo, čeká na vyzkoušení zadavatelem (pull request M3b) |
-| M4a až M8 | Nezačato |
+| M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026). Oprava ukázky 5-04 je v samostatném pull requestu |
+| M4a Těžká doprava | Rozpracováno (zatím jen průzkum kódu a návrh postupu, žádný kód) |
+| M4b až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
 ## M3b — výsledek
@@ -73,7 +74,7 @@ V přehledu kampaně je pátá kapitola hned za druhou; třetí a čtvrtá (siln
 
 - *Laděný tlumič rozdělí rezonanční špičku* (`test/ladeny-tlumic.test.ts`): na spočítané křivce jsou místo jedné špičky dvě nižší po stranách původní; totéž potvrzuje časová simulace s budičem. V prohlížeči to hlídá `test/e2e/mesto.e2e.ts`: po zavěšení tlumiče klesne nejvyšší špička pod polovinu a přibude vrchol.
 - *Úrovně projdou testem vyhratelnosti* (`test/vyhratelnost.test.ts`): všech dvanáct úrovní, každá medaile i mosty, které neprojít mají.
-- Testy: 649 jednotkových, 99 kontrol v prohlížeči.
+- Testy na konci M3b: 649 jednotkových, 99 kontrol v prohlížeči.
 
 **Formáty.** Úroveň má verzi 3 (`nejvetsiTlumic`, `rezonancniKrivka`, `budic`, `nejhorsiKomfort`, u položky jízdního řádu `trvani`), návrh verzi 2 (laděný tlumič ve styčníku). Starší soubory se načítají přes převod.
 
@@ -89,6 +90,21 @@ V přehledu kampaně je pátá kapitola hned za druhou; třetí a čtvrtá (siln
 - Jak se s panelem a budičem pracuje člověku, který je vidí poprvé. Testy ověřují, že fungují, ne že jsou srozumitelné.
 - Obtížnost páté kapitoly: je nastavená z referenčních mostů stejně jako dřív, ale úrovně s tlumičem jsou první, kde hráč ladí dvě čísla najednou.
 - Jiné prohlížeče než Chromium.
+
+## Oprava po M3b: ukázka úrovně 5-04
+
+**Co se stalo.** Pravý most ukázky 5-04 (tři laděné tlumiče) stál 724 647 Kč při rozpočtu úrovně 720 000 Kč. Zkouška v pracovním vlákně takový most odmítne jako neplatný vstup, takže ukázka skončila hlášením „ukázku se nepodařilo spočítat“ a levá strana zůstala na „počítá se…“.
+
+**Proč to testy nechytily.** Jednotkový test ukázek pouštěl zkoušku přímo, mimo kontrolu návrhu, a rozpočet výslovně nehlídal. V prohlížeči se zkoušely jen ukázky 2-04, 5-01 a 5-02.
+
+**Oprava**
+
+- Ukázka předvádí princip, ne hospodaření: `ukazkaUrovne` vrací obě strany s úrovní bez rozpočtu, takže dražší most projde kontrolou. Ostatní pravidla úrovně (povolené prvky, zóny, meze tlumičů) platí dál.
+- Jednotkový test ukázek teď jde stejnou cestou jako hra (zpráva `start` přes `BehZkousky` včetně kontroly návrhu).
+- Test v prohlížeči otevře **všech osm úrovní s ukázkou** a počká, až se každá rozehraje.
+- Stejná kontrola odhalila druhou, dosud skrytou chybu: brnknutí a budič měly jít pustit i na mostě dražším než rozpočet (hra to tak říká a tlačítka to dovolí), ale pracovní vlákno pokus odmítlo. Opraveno v `BehZkousky`, s testem.
+
+**Poučení.** Když test z nějakého pravidla dělá výjimku, musí stejnou výjimku dělat i hra; jinak test hlídá něco jiného, než co uvidí hráč. A co se kreslí v prohlížeči, to se má v prohlížeči i zkoušet pro každou úroveň, ne pro vzorek.
 
 ## M3z — výsledek
 
@@ -310,14 +326,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Vyzkoušet náhled M3b (pátá kapitola, laděný tlumič, analytický panel, budič) a rozhodnout o sloučení do `main`.
+1. Schválit sloučení opravy ukázky 5-04 (viz „Oprava po M3b“).
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M4a Těžká doprava (po schválení M3b): nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka a kapitola 3. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M4a Těžká doprava: nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka a kapitola 3. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
@@ -336,6 +352,8 @@ M4a Těžká doprava (po schválení M3b): nákladní vozidla, autobus, souprava
 - 22. 11. 2026, k náhledu M3z: „Nechme tyhle zvuky zatím jako pracovní“ a **zvuky se budou ještě předělávat pomocí ElevenLabs, ale až po dokončení ostatních fází projektu**. Zapsáno jako milník M9 v koncepci. Pozn.: v dialogu s otázkou nešly odkazy zkopírovat ani otevřít; odkazy na náhled proto vždy posílat přímo do textu odpovědi.
 
 - 22. 11. 2026: zadavatel rozhodl **M3z sloučit a pokračovat na M3b**; pracovní zvuky mají být ve výchozím stavu **zapnuté potichu**.
+
+- 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“.
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 
