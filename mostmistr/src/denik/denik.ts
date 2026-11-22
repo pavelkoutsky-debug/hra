@@ -94,6 +94,14 @@ export class Denik {
   #prestavkaDo = 0;
   /** Čas zápisu nejstarší události ve frontě; null, když je fronta prázdná. */
   #cekaOd: number | null = null;
+  /**
+   * Dávka, na kterou server neodpověděl: příště odejde znovu beze změny a pod stejným číslem.
+   * Server ji totiž uložit mohl (ztratila se jen odpověď) a souhrn tak pozná, že ji má dvakrát.
+   */
+  #nedorucena: { poradi: number; udalosti: UdalostDeniku[] } | null = null;
+  /** Právě se odesílá a čeká na odpověď serveru; další odeslání počká, až tohle doběhne. */
+  #odesilaSe = false;
+  #odeslatZnovu = false;
   /** Kolik dávek deník v této stránce úspěšně odeslal. */
   odeslano = 0;
 
@@ -139,6 +147,7 @@ export class Denik {
     // Co čekalo ve frontě, se zahodí. Odejde jen zpráva o vypnutí samotná, ať je vidět,
     // kolik hráčů záznam vypíná; pak už nic.
     this.#fronta = [];
+    this.#nedorucena = null;
     this.#cekaOd = null;
     const vypnuti: UdalostDeniku = { t: this.#cas(), druh: "denik.vypnut" };
     this.#zapamatuj(vypnuti);
@@ -154,6 +163,7 @@ export class Denik {
     const zapnuto = this.#cti(this.#volby, KLIC_ZAZNAMU) !== "0";
     if (!zapnuto && this.#zapnuto) {
       this.#fronta = [];
+      this.#nedorucena = null;
       this.#cekaOd = null;
     }
     this.#zapnuto = zapnuto;
@@ -221,22 +231,47 @@ export class Denik {
 
   /** Odešle všechno, co čeká. Při zavírání stránky (`naOdchodu`) nečeká na odpověď. */
   async odesli(naOdchodu = false): Promise<void> {
-    if (!this.nactiVolbu() || this.vzdano || this.#fronta.length === 0) return;
-    const casti = this.#rozdel(this.#fronta);
-    this.#fronta = [];
-    this.#cekaOd = null;
-    for (let i = 0; i < casti.length; i++) {
-      // Hráč mohl záznam vypnout, zatímco se čekalo na odpověď: zbytek už neodejde.
-      if (!this.#zapnuto) return;
-      const vysledek = await this.#odesliDavku(casti[i]!, naOdchodu);
-      if (vysledek !== "nedostupne") continue;
-      // Server je nedostupný: tahle část i všechny další se vrátí do fronty a zkusí se
-      // příště (s novým číslem dávky).
-      if (this.#zapnuto) {
-        this.#fronta = [...casti.slice(i).flat(), ...this.#fronta].slice(-NEJDELSI_FRONTA);
-        this.#cekaOd ??= this.#p.ted();
-      }
+    // Dávky jedné stránky jdou na server po jedné: dvě žádosti naráz by se mohly předběhnout
+    // a souhrn by pak četl události v jiném pořadí, než se staly. Odchod ze stránky čekat nemůže.
+    if (this.#odesilaSe && !naOdchodu) {
+      this.#odeslatZnovu = true;
       return;
+    }
+    if (!this.nactiVolbu() || this.vzdano || (this.#fronta.length === 0 && this.#nedorucena === null)) return;
+    const davky: { poradi?: number; udalosti: UdalostDeniku[] }[] = this.#rozdel(this.#fronta).map((udalosti) => ({ udalosti }));
+    if (this.#nedorucena) davky.unshift(this.#nedorucena);
+    this.#fronta = [];
+    this.#nedorucena = null;
+    this.#cekaOd = null;
+    if (!naOdchodu) {
+      this.#odesilaSe = true;
+      this.#odeslatZnovu = false;
+    }
+    let doslo = true;
+    try {
+      for (let i = 0; i < davky.length && doslo; i++) {
+        // Hráč mohl záznam vypnout, zatímco se čekalo na odpověď: zbytek už neodejde.
+        if (!this.#zapnuto) return;
+        const davka = davky[i]!;
+        const { vysledek, poradi } = await this.#odesliDavku(davka.udalosti, naOdchodu, davka.poradi);
+        if (vysledek !== "nedostupne") continue;
+        doslo = false;
+        // Server neodpověděl. Tahle dávka počká a odejde znovu tak, jak je; co se ještě
+        // neposílalo, se vrátí do fronty.
+        if (this.#zapnuto) {
+          this.#nedorucena = { poradi, udalosti: davka.udalosti };
+          const zbytek = davky.slice(i + 1).flatMap((d) => d.udalosti);
+          this.#fronta = [...zbytek, ...this.#fronta].slice(-NEJDELSI_FRONTA);
+          this.#cekaOd ??= this.#p.ted();
+        }
+      }
+    } finally {
+      if (!naOdchodu) this.#odesilaSe = false;
+    }
+    // Mezitím přibylo, co mělo odejít hned (výsledek zkoušky, plná fronta).
+    if (this.#odeslatZnovu && !naOdchodu) {
+      this.#odeslatZnovu = false;
+      if (doslo && this.#fronta.length > 0) await this.odesli();
     }
   }
 
@@ -278,14 +313,23 @@ export class Denik {
     return Math.max(0, Math.floor(Number(this.#cti(this.#p.sezeni, KLIC_PORADI)) || 0));
   }
 
-  /** Odešle jednu dávku a zaznamená, jak to dopadlo. */
-  async #odesliDavku(udalosti: UdalostDeniku[], naOdchodu: boolean): Promise<VysledekOdeslani> {
+  /**
+   * Odešle jednu dávku a zaznamená, jak to dopadlo. `opakovane` je číslo dávky, která se
+   * posílá znovu; nová dávka dostane číslo další v řadě. Vrací i číslo, pod kterým šla.
+   */
+  async #odesliDavku(
+    udalosti: UdalostDeniku[],
+    naOdchodu: boolean,
+    opakovane?: number,
+  ): Promise<{ vysledek: VysledekOdeslani; poradi: number }> {
     // Číslo dávky je větší z toho, co si pamatuje stránka a co je v paměti panelu: jiná
     // stránka téhož sezení (návrat tlačítkem Zpět) mezitím mohla čísla spotřebovat.
-    const poradi = Math.max(this.#poradi, this.#ulozenePoradi());
-    if (poradi >= NEJVIC_DAVEK_SEZENI) return "odmitnuto";
-    this.#poradi = poradi + 1;
-    this.#pis(this.#p.sezeni, KLIC_PORADI, String(this.#poradi));
+    const poradi = opakovane ?? Math.max(this.#poradi, this.#ulozenePoradi());
+    if (poradi >= NEJVIC_DAVEK_SEZENI) return { vysledek: "odmitnuto", poradi };
+    if (opakovane === undefined) {
+      this.#poradi = poradi + 1;
+      this.#pis(this.#p.sezeni, KLIC_PORADI, String(this.#poradi));
+    }
     const davka: DavkaDeniku = { hlavicka: this.hlavicka, poradi, udalosti };
     let vysledek: VysledekOdeslani;
     try {
@@ -303,7 +347,7 @@ export class Denik {
         this.#prestavkaDo = this.#p.ted() + PRESTAVKA_PO_NEZDARECH;
       }
     }
-    return vysledek;
+    return { vysledek, poradi };
   }
 
   /** Rozdělí události na dávky, které se vejdou do meze velikosti. */

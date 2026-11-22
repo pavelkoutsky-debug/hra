@@ -64,8 +64,11 @@ export const NEJVIC_DAVEK_VE_VYVOZU = 200;
 export const NEJVIC_VAZEB_DENNE = 300;
 /** Jak dlouho po půlnoci (UTC) se den ještě nepokládá za uzavřený, ms: dávka z 23:59 se může opozdit. */
 const ODKLAD_UZAVERKY = 10 * 60 * 1000;
-/** Jak stará musí dnešní dávka být, aby se započetla do uloženého výtahu dne, ms. */
-const USAZENI = 15 * 1000;
+/**
+ * Jak stará musí dnešní dávka být, aby se započetla do uloženého výtahu dne, ms. Úložiště
+ * zápis při potížích opakuje i několik sekund, takže mladší dávka se ještě může zařadit před jinou.
+ */
+const USAZENI = 60 * 1000;
 /** Nejvíc zpětných vazeb na jedné stránce seznamu. */
 export const NEJVIC_VAZEB_V_SEZNAMU = 200;
 /** Kolik záznamů se z úložiště čte souběžně. */
@@ -378,9 +381,13 @@ function jeDavka(h: unknown): h is DavkaDeniku & { prijato: string; prostredi: s
   return typeof h === "object" && h !== null && Array.isArray((h as DavkaDeniku).udalosti) && typeof (h as DavkaDeniku).hlavicka === "object";
 }
 
-/** Klíče dávek deníku jednoho dne v pořadí, v jakém dávky přišly. */
-async function kliceDne(sklad: SkladZaznamu, den: string): Promise<string[]> {
-  return (await sklad.klice(`denik/${den}/`)).sort();
+/**
+ * Klíče dávek deníku jednoho dne v pořadí, v jakém dávky přišly. Cizí záznamy ve složce dne
+ * (dávky uložené starším tvarem klíče) se vynechají; `vse` je vrátí také, kvůli mazání.
+ */
+async function kliceDne(sklad: SkladZaznamu, den: string, vse = false): Promise<string[]> {
+  const klice = (await sklad.klice(`denik/${den}/`)).sort();
+  return vse ? klice : klice.filter((klic) => zKliceDavky(klic) !== null);
 }
 
 const klicVytahu = (den: string): string => `vytah/${den}.json`;
@@ -388,7 +395,7 @@ const klicVytahu = (den: string): string => `vytah/${den}.json`;
 /**
  * Výtah jednoho dne. Server si ho ukládá i s klíčem poslední započtené dávky a příště přečte
  * jen dávky za ním, nejvýš tolik, kolik zbývá v `rozpocet`. Do dneška dávky ještě přibývají:
- * ukládá se jen to, co přišlo před chvílí (`USAZENI`), a nejnovější dávky se k odpovědi
+ * do uloženého výtahu se počítají jen dávky starší než `USAZENI` a ty novější se k odpovědi
  * dopočítají pokaždé znovu. Po uzávěrce dne se výtah jednou spočítá od začátku, protože
  * opožděná dávka mohla zapadnout před už započtené. `ulozeny` je to, co o dni server ví.
  */
@@ -532,7 +539,7 @@ export async function spravuj(zadost: Request, p: ProstrediServeru): Promise<Res
       return odpoved(200, { smazano: 1, zbyva: 0 });
     }
     if (typeof co.den === "string" && DEN.test(co.den)) {
-      const klice = await kliceDne(sklad, co.den);
+      const klice = await kliceDne(sklad, co.den, true);
       const ted = klice.slice(0, NEJVIC_DAVEK_NAJEDNOU);
       await provedVse(ted, (klic) => sklad.smaz(klic));
       // Výtah dne už neplatí; smaže se hned, ať se z něj nepočítá souhrn smazaného dne.

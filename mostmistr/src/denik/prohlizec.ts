@@ -21,13 +21,17 @@ function nahodneCislo(): string {
   return Array.from(bajty, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Jak dlouho se nejdéle čeká na odpověď serveru, ms; pak se žádost vzdá. */
+/**
+ * Jak dlouho se nejdéle čeká na odpověď serveru, ms; pak se žádost vzdá. Zpětná vazba
+ * s přiloženým mostem je větší a na pomalém připojení se déle nahrává.
+ */
 const NEJDELSI_ODPOVED = 20_000;
+const NEJDELSI_ODPOVED_VAZBY = 60_000;
 
-/** Pošle JSON na adresu téhož webu. Když server do `NEJDELSI_ODPOVED` neodpoví, žádost zruší a vyhodí chybu. */
-async function posliJson(adresa: string, telo: string): Promise<Response> {
+/** Pošle JSON na adresu téhož webu. Když server do `limit` ms neodpoví, žádost zruší a vyhodí chybu. */
+async function posliJson(adresa: string, telo: string, limit = NEJDELSI_ODPOVED): Promise<Response> {
   const zruseni = new AbortController();
-  const budik = window.setTimeout(() => zruseni.abort(), NEJDELSI_ODPOVED);
+  const budik = window.setTimeout(() => zruseni.abort(), limit);
   try {
     return await fetch(adresa, {
       method: "POST",
@@ -45,7 +49,7 @@ async function posliJson(adresa: string, telo: string): Promise<Response> {
 /** Odešle zpětnou vazbu a vrátí její číslo; null, když ji server nepřijal. */
 export async function odesliVazbu(adresa: string, telo: string): Promise<{ id: string } | null> {
   try {
-    const odpoved = await posliJson(adresa, telo);
+    const odpoved = await posliJson(adresa, telo, NEJDELSI_ODPOVED_VAZBY);
     if (!odpoved.ok) return null;
     const data = (await odpoved.json()) as { id?: unknown };
     return typeof data.id === "string" ? { id: data.id } : null;
@@ -106,6 +110,15 @@ export function denikHry(): Denik {
       (trvala ?? sezeni)?.setItem(KLIC_ZAZNAMU, "0");
     } catch {
       // Paměť je plná nebo zakázaná: deník se pak bez ní stejně nevede.
+    }
+    // Parametr z adresy zmizí: kdo by si adresu zkopíroval a poslal dál, nevypne tím záznam
+    // dalším lidem, a obnovení stránky ho nevypne znovu tomu, kdo si ho mezitím zapnul.
+    try {
+      const adresa = new URL(window.location.href);
+      adresa.searchParams.delete("zaznam");
+      window.history.replaceState(window.history.state, "", adresa);
+    } catch {
+      // Bez přepsání adresy se nic nestane; záznam je vypnutý tak jako tak.
     }
   }
   const novy = new Denik({
@@ -194,5 +207,7 @@ export function denikHry(): Denik {
 export function nastavZaznam(zapnuto: boolean): void {
   const d = denikHry();
   d.zapnuto = zapnuto;
-  document.body.dataset.denik = zapnuto ? "zapnuto" : "vypnuto";
+  document.body.dataset.denik = d.zapnuto ? "zapnuto" : "vypnuto";
+  // Vypínač v přehledu, upozornění i okno zpětné vazby ukazují totéž, ať se přepnulo kdekoli.
+  for (const obsluha of poZmeneVolby) obsluha();
 }
