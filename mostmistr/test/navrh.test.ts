@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { KATALOG } from "../src/data/katalog";
 import { ChybaDat } from "../src/data/kontrola";
+import { Kreslic } from "../src/data/kreslic";
 import {
   VERZE_NAVRHU,
   nactiNavrh,
@@ -88,10 +89,14 @@ describe("čtení návrhu", () => {
     ocekavejChybu({ ...trojuhelnik(), pruty: [{ id: 0, a: 0, b: 1, prvek: "bambus" }] }, "navrh.pruty[0].prvek");
   });
 
-  it("odmítne předpětí mimo rozsah 0 až 1", () => {
+  it("odmítne napínák lana mimo rozsah; povolené lano (záporné předpětí) přečte", () => {
     const navrh = trojuhelnik();
-    navrh.pruty[0]!.predpeti = 1.5;
+    navrh.pruty[0]!.predpeti = 60;
     ocekavejChybu(navrh, "navrh.pruty[0].predpeti");
+    navrh.pruty[0]!.predpeti = -60;
+    ocekavejChybu(navrh, "navrh.pruty[0].predpeti");
+    navrh.pruty[0]!.predpeti = -2.5;
+    expect(nactiNavrh(JSON.parse(JSON.stringify(navrh))).pruty[0]!.predpeti).toBe(-2.5);
   });
 
   it("odmítne novější verzi formátu, než umí", () => {
@@ -111,13 +116,39 @@ describe("kontrola návrhu proti úrovni", () => {
     const hotove = Object.entries(KATALOG)
       .filter(([, polozka]) => polozka.hotovo)
       .map(([id]) => id);
-    expect(hotove).toEqual(["mostovka-drevo", "mostovka-ocelobeton", "drevo-lehke", "drevo-tezke", "ocel-lehka", "ocel-tezka", "tlumic", "pruzina"]);
+    expect(hotove).toEqual([
+      "mostovka-drevo",
+      "mostovka-ocelobeton",
+      "drevo-lehke",
+      "drevo-tezke",
+      "ocel-lehka",
+      "ocel-tezka",
+      "lano",
+      "lano-nosne",
+      "pilir",
+      "tlumic",
+      "pruzina",
+    ]);
     for (const polozka of Object.values(KATALOG)) {
       if (polozka.predbezne) expect(polozka.hotovo).toBe(false);
     }
-    const sLanem = trojuhelnik();
-    sLanem.pruty[1]!.prvek = "lano";
-    expect(zkontrolujNavrh(sLanem, uroven)).toEqual([{ druh: "prvek-neni-hotovy", prut: 1 }]);
+    const sPistem = trojuhelnik();
+    sPistem.pruty[1]!.prvek = "pist";
+    expect(zkontrolujNavrh(sPistem, uroven)).toContainEqual({ druh: "prvek-neni-hotovy", prut: 1 });
+  });
+
+  it("pilíř musí stát na základu nebo na pilíři, který na základu stojí", () => {
+    // Zkušební výkres má základ v bodě (9, −8).
+    const k = new Kreslic(uroven.id);
+    const dolni = k.prut("pilir", [9, -8], [9, 0]);
+    const horni = k.prut("pilir", [9, 0], [9, 6]);
+    expect(zkontrolujNavrh(k.navrh(), uroven)).toEqual([]);
+    // Bez dolního dílu visí horní pilíř ve vzduchu; pilíř z kotvy mostu na základu také nestojí.
+    const bezDolniho = { ...k.navrh(), pruty: k.navrh().pruty.filter((p) => p.id !== dolni) };
+    expect(zkontrolujNavrh(bezDolniho, uroven)).toContainEqual({ druh: "pilir-mimo-zaklad", prut: horni });
+    const zKotvy = new Kreslic(uroven.id);
+    const mimo = zKotvy.prut("pilir", [0, 0], [0, 4]);
+    expect(zkontrolujNavrh(zKotvy.navrh(), uroven)).toEqual([{ druh: "pilir-mimo-zaklad", prut: mimo }]);
   });
 
   it("pozná návrh pro jinou úroveň", () => {

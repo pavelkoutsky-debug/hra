@@ -1,0 +1,140 @@
+{
+  "verze": 4,
+  "id": "4-03",
+  "nazev": "Na lanech",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -15,
+    "xMax": 70,
+    "yMax": 24
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 5,
+      "y": -9
+    },
+    {
+      "x": 14,
+      "y": -13
+    },
+    {
+      "x": 24,
+      "y": -13
+    },
+    {
+      "x": 27,
+      "y": -10
+    },
+    {
+      "x": 33,
+      "y": -10
+    },
+    {
+      "x": 36,
+      "y": -13
+    },
+    {
+      "x": 46,
+      "y": -13
+    },
+    {
+      "x": 55,
+      "y": -9
+    },
+    {
+      "x": 60,
+      "y": 0
+    },
+    {
+      "x": 70,
+      "y": 0
+    }
+  ],
+  "hladina": -11.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 60,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": 30,
+      "y": -10
+    }
+  ],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 60,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 1750000,
+  "inzenyrskyRozpocet": 1480000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.35
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka",
+    "lano",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nakladni",
+      "pocet": 4,
+      "rozestup": 12
+    },
+    {
+      "cas": 2,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 16,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "souprava"
+    }
+  ]
+}

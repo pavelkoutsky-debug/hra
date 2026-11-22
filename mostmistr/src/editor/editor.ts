@@ -2,16 +2,28 @@
 // Neví nic o plátně ani o prohlížeči; dostává body ve světových souřadnicích a hlásí změny.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, KROK_ZAVAZI, LADENY_TLUMIC, STUPNE_TLUMENI, type IdPrvku } from "../data/katalog";
+import {
+  KATALOG,
+  KROK_ZAVAZI,
+  LADENY_TLUMIC,
+  PREDPETI_LANA,
+  STUPNE_TLUMENI,
+  predpetiZeZkraceni,
+  zkraceniLana,
+  type IdPrvku,
+} from "../data/katalog";
 import type { DruhProblemu, NavrhMostu, TlumicStycniku } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPrutu, lzeZacit } from "./pravidla";
 import {
   nastavLadenyTlumic,
+  nastavPredpeti,
+  nastavSvar,
   nastavTlumeni,
   nastavZavazi,
   posunStycnik,
   pridejPrut,
+  prutMezi,
   smaz,
   stycnikV,
   zmenPrvek,
@@ -26,8 +38,11 @@ const DELKA_HISTORIE = 200;
 
 /** Rozdělaný tah myší. */
 export type Tah =
-  /** Kreslení prutu z bodu `od`; `duvod` říká, proč by nešel položit. */
-  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null }
+  /**
+   * Kreslení prutu z bodu `od`; `duvod` říká, proč by nešel položit. `dilu` je počet stejných
+   * dílů, na které se tah rozdělí, když je delší, než prvek dovoluje.
+   */
+  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number }
   /** Posun styčníku. */
   | { druh: "posun"; stycnik: number; od: Bod; k: Bod; duvod: DruhProblemu | null }
   /** Výběr obdélníkem; `od` a `k` jsou nezaokrouhlené body světa. */
@@ -60,6 +75,12 @@ export class Editor {
   /** Prvek, kterým se kreslí. */
   prvek: IdPrvku;
   readonly vybranePruty = new Set<number>();
+  /**
+   * Výběr vznikl sám (právě nakreslené lano, lano zvolené nástrojem Napínák) a slouží jen
+   * k nastavení napínáku. Volba prvku ani zrcadlení se jím neřídí: hráč, který po nakreslení
+   * nosného lana sáhne v paletě po závěsech, tím nosné lano nepřepisuje.
+   */
+  #vyberKNastaveni = false;
   readonly vybraneStycniky = new Set<number>();
   tah: Tah | null = null;
   /** Proč se poslední pokus o úpravu nepovedl; hra to ukáže hráči. */
@@ -101,6 +122,32 @@ export class Editor {
     this.#ocistiVyber();
     this.#poZmene();
     return true;
+  }
+
+  /**
+   * Tah delší, než prvek dovoluje, rozdělí na nejmenší počet stejných dílů, jejichž konce
+   * padnou na rastr (dvanáct metrů mostovky jsou dva šestimetrové díly). Jen u mostovky a
+   * pilíře, kde řada dílů za sebou dává smysl; u vzpěry by nový kloub uprostřed překvapil.
+   * Vrací návrh s díly, nebo null, když dělení nejde nebo některý díl porušuje pravidla.
+   */
+  #rozdelNaDily(od: Bod, k: Bod): { navrh: NavrhMostu; dilu: number } | null {
+    const polozka = KATALOG[this.prvek];
+    if (polozka.druh !== "mostovka" && polozka.druh !== "pilir") return null;
+    const dx = k.x - od.x;
+    const dy = k.y - od.y;
+    const delka = Math.hypot(dx, dy);
+    for (let dilu = Math.max(2, Math.ceil(delka / polozka.nejvetsiDelka - 1e-9)); dilu <= 40; dilu++) {
+      if (dx % dilu !== 0 || dy % dilu !== 0) continue;
+      let navrh = this.#navrh;
+      for (let i = 0; i < dilu; i++) {
+        const a = { x: od.x + (dx / dilu) * i, y: od.y + (dy / dilu) * i };
+        const b = { x: od.x + (dx / dilu) * (i + 1), y: od.y + (dy / dilu) * (i + 1) };
+        if (duvodProtiPrutu(navrh, this.uroven, a, b, this.prvek)) return null;
+        navrh = pridejPrut(navrh, a, b, this.prvek);
+      }
+      return { navrh, dilu };
+    }
+    return null;
   }
 
   /** Z výběru vyřadí to, co v návrhu už není. */
@@ -200,6 +247,15 @@ export class Editor {
     if (tah.druh === "prut") {
       tah.k = naRastr(bod);
       tah.duvod = duvodProtiPrutu(this.#navrh, this.uroven, tah.od, tah.k, this.prvek);
+      delete tah.dilu;
+      // Dlouhý tah mostovky nebo pilíře se rozdělí na díly; odmítne se, jen když to nejde.
+      if (tah.duvod === "prut-dlouhy") {
+        const dily = this.#rozdelNaDily(tah.od, tah.k);
+        if (dily) {
+          tah.duvod = null;
+          tah.dilu = dily.dilu;
+        }
+      }
     } else if (tah.druh === "posun") {
       tah.k = naRastr(bod);
       const beze = tah.k.x === tah.od.x && tah.k.y === tah.od.y;
@@ -229,7 +285,23 @@ export class Editor {
         return false;
       }
       this.zrusVyber();
-      return this.#zmen(pridejPrut(this.#navrh, tah.od, tah.k, this.prvek));
+      if (tah.dilu) {
+        const dily = this.#rozdelNaDily(tah.od, tah.k);
+        return dily ? this.#zmen(dily.navrh) : false;
+      }
+      const zmeneno = this.#zmen(pridejPrut(this.#navrh, tah.od, tah.k, this.prvek));
+      // Nové lano zůstane vybrané, aby se mu dal hned nastavit napínák.
+      if (zmeneno && KATALOG[this.prvek].druh === "lano") {
+        const a = stycnikV(this.#navrh, tah.od);
+        const b = stycnikV(this.#navrh, tah.k);
+        const lano = a && b ? prutMezi(this.#navrh, a.id, b.id) : undefined;
+        if (lano) {
+          this.vybranePruty.add(lano.id);
+          this.#vyberKNastaveni = true;
+          this.#poZmene();
+        }
+      }
+      return zmeneno;
     }
 
     if (tah.druh === "posun") {
@@ -264,6 +336,7 @@ export class Editor {
   }
 
   #vyberKliknutim(stisk: { stycnik: number | null; prut: number | null; pridat: boolean }): void {
+    this.#vyberKNastaveni = false;
     if (!stisk.pridat) {
       this.vybranePruty.clear();
       this.vybraneStycniky.clear();
@@ -278,6 +351,7 @@ export class Editor {
   }
 
   #vyberObdelnikem(a: Bod, b: Bod, pridat: boolean): void {
+    this.#vyberKNastaveni = false;
     if (!pridat) this.zrusVyber();
     const xMin = Math.min(a.x, b.x);
     const xMax = Math.max(a.x, b.x);
@@ -298,6 +372,20 @@ export class Editor {
   zrusVyber(): void {
     this.vybranePruty.clear();
     this.vybraneStycniky.clear();
+    this.#vyberKNastaveni = false;
+  }
+
+  /**
+   * Vybere právě jeden prut (podle id) a nic jiného, aby se mu dalo změnit nastavení
+   * (napínák). Takový výběr se nepřepíše volbou prvku v paletě a neomezuje zrcadlení.
+   */
+  vyberJenPrut(id: number): void {
+    this.zrusVyber();
+    if (this.#navrh.pruty.some((p) => p.id === id)) {
+      this.vybranePruty.add(id);
+      this.#vyberKNastaveni = true;
+    }
+    this.#poZmene();
   }
 
   /** Vybere právě jeden styčník (podle id) a nic jiného. */
@@ -308,6 +396,7 @@ export class Editor {
   }
 
   vyberVse(): void {
+    this.#vyberKNastaveni = false;
     for (const p of this.#navrh.pruty) this.vybranePruty.add(p.id);
     for (const s of this.#navrh.stycniky) this.vybraneStycniky.add(s.id);
     this.#poZmene();
@@ -332,11 +421,13 @@ export class Editor {
 
   /**
    * Zvolí prvek, kterým se kreslí. Když jsou vybrané pruty, změní je na něj; změna, která
-   * by porušila pravidla (příliš dlouhý prut pro nový prvek), se neprovede.
+   * by porušila pravidla (příliš dlouhý prut pro nový prvek), se neprovede. Výběr, který
+   * vznikl sám kvůli napínáku, se nemění, jen zruší: hráč jde kreslit něco dalšího.
    */
   zvolPrvek(prvek: IdPrvku): boolean {
     this.prvek = prvek;
     this.posledniDuvod = null;
+    if (this.#vyberKNastaveni) this.zrusVyber();
     if (this.vybranePruty.size === 0) {
       this.#poZmene();
       return false;
@@ -459,12 +550,113 @@ export class Editor {
     return this.#zmen(nastavTlumeni(this.#navrh, this.#vybraneTlumice(), () => novy));
   }
 
+  /** Vybraná lana (id prutů). */
+  #vybranaLana(): Set<number> {
+    const lana = new Set<number>();
+    for (const p of this.#navrh.pruty) {
+      if (this.vybranePruty.has(p.id) && KATALOG[p.prvek].druh === "lano") lana.add(p.id);
+    }
+    return lana;
+  }
+
+  /** Počet lan v návrhu. */
+  get pocetLan(): number {
+    let pocet = 0;
+    for (const p of this.#navrh.pruty) if (KATALOG[p.prvek].druh === "lano") pocet += 1;
+    return pocet;
+  }
+
+  /**
+   * Napínák vybraných lan: o kolik metrů je lano zkrácené (záporné: povolené) a jakému
+   * předpětí to odpovídá; z vybraných lan to nejvíc dotažené. Null, když není vybrané žádné
+   * lano. `ruzne` říká, že vybraná lana nejsou nastavená stejně.
+   */
+  get predpetiVyberu(): { zkraceni: number; nejmensiZkraceni: number; predpeti: number; prvek: IdPrvku; ruzne: boolean } | null {
+    const podleId = new Map(this.#navrh.stycniky.map((s) => [s.id, s]));
+    let nejvetsi: { zkraceni: number; predpeti: number; prvek: IdPrvku } | null = null;
+    let nejmensi = Infinity;
+    // Krajní zkrácení se hledají zvlášť: u různě dlouhých lan nemusí patřit krajním předpětím.
+    let zkraceniOd = Infinity;
+    let zkraceniDo = -Infinity;
+    for (const p of this.#navrh.pruty) {
+      if (!this.vybranePruty.has(p.id) || KATALOG[p.prvek].druh !== "lano") continue;
+      const predpeti = p.predpeti ?? 0;
+      nejmensi = Math.min(nejmensi, predpeti);
+      const a = podleId.get(p.a);
+      const b = podleId.get(p.b);
+      const delka = a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0;
+      const zkraceni = zkraceniLana(p.prvek, delka, predpeti);
+      zkraceniOd = Math.min(zkraceniOd, zkraceni);
+      zkraceniDo = Math.max(zkraceniDo, zkraceni);
+      if (nejvetsi && nejvetsi.predpeti >= predpeti) continue;
+      nejvetsi = { zkraceni, predpeti, prvek: p.prvek };
+    }
+    if (nejvetsi === null) return null;
+    return { ...nejvetsi, zkraceni: zkraceniDo, nejmensiZkraceni: zkraceniOd, ruzne: nejvetsi.predpeti - nejmensi > 1e-9 };
+  }
+
+  /** Zrcadlení se právě týká jen výběru (hráč ho udělal sám), ne celého mostu. */
+  get zrcadliJenVyber(): boolean {
+    return !this.#vyberKNastaveni && this.vybranePruty.size > 0;
+  }
+
+  /**
+   * Dotáhne (`kroku` kladné) nebo povolí napínáky vybraných lan o daný počet kroků délky.
+   * Každé lano si drží svou hodnotu: po automatickém dopnutí bývá každé nastavené jinak
+   * a společný krok ten rozdíl zachová. Délka se přitom zarovná na celé kroky.
+   */
+  zmenPredpeti(kroku: number): boolean {
+    const lana = this.#vybranaLana();
+    if (lana.size === 0 || kroku === 0) return false;
+    const krok = PREDPETI_LANA.krokDelky;
+    const podleId = new Map(this.#navrh.stycniky.map((s) => [s.id, s]));
+    const delky = new Map<number, { prvek: IdPrvku; delka: number }>();
+    for (const p of this.#navrh.pruty) {
+      const a = podleId.get(p.a);
+      const b = podleId.get(p.b);
+      if (lana.has(p.id) && a && b) delky.set(p.id, { prvek: p.prvek, delka: Math.hypot(b.x - a.x, b.y - a.y) });
+    }
+    return this.#zmen(
+      nastavPredpeti(this.#navrh, lana, (id, dosavadni) => {
+        const lano = delky.get(id);
+        if (!lano) return dosavadni;
+        const dilku = zkraceniLana(lano.prvek, lano.delka, dosavadni) / krok;
+        // Z hodnoty mezi kroky se první krok jen zarovná na nejbližší celý krok daným směrem.
+        const zarovnano = kroku > 0 ? Math.floor(dilku + 1e-6) : Math.ceil(dilku - 1e-6);
+        return predpetiZeZkraceni(lano.prvek, lano.delka, (zarovnano + kroku) * krok);
+      }),
+    );
+  }
+
+  /** Nastaví lanům předpětí podle `hodnoty` (id prutu → podíl pevnosti); jeden krok historie. */
+  nastavPredpetiLan(hodnoty: ReadonlyMap<number, number>): boolean {
+    return this.#zmen(nastavPredpeti(this.#navrh, new Set(hodnoty.keys()), (id, dosavadni) => hodnoty.get(id) ?? dosavadni));
+  }
+
+  /**
+   * Jsou vybrané styčníky svařené? Null, když není vybraný žádný styčník; true, jen když
+   * jsou svařené všechny.
+   */
+  get svarVyberu(): boolean | null {
+    if (this.vybraneStycniky.size === 0) return null;
+    return this.#navrh.stycniky.every((s) => !this.vybraneStycniky.has(s.id) || s.svar === true);
+  }
+
+  /** Svaří vybrané styčníky; když už svařené jsou všechny, svary odebere. */
+  prepniSvar(): boolean {
+    const dosavadni = this.svarVyberu;
+    if (dosavadni === null || !this.uroven.povoleneSvary) return false;
+    return this.#zmen(nastavSvar(this.#navrh, this.vybraneStycniky, !dosavadni));
+  }
+
   /** Doplní zrcadlový obraz mostu (nebo výběru) podle osy hlavní trasy. */
   zrcadli(): boolean {
     const trasa = this.uroven.trasy[0];
     if (!trasa) return false;
     const osa = (trasa.zacatek.x + trasa.konec.x) / 2;
-    const zrcadleny = zrcadli(this.#navrh, osa, this.vybranePruty);
+    // Lano vybrané jen kvůli napínáku zrcadlení neomezuje: zrcadlí se celý most.
+    const vyber: ReadonlySet<number> = this.#vyberKNastaveni ? new Set<number>() : this.vybranePruty;
+    const zrcadleny = zrcadli(this.#navrh, osa, vyber);
     // Obraz se přidá jen tehdy, když celý vyhovuje pravidlům.
     let duvod: DruhProblemu | null = null;
     const podleId = new Map(zrcadleny.stycniky.map((s) => [s.id, s]));
@@ -483,29 +675,34 @@ export class Editor {
       // Obraz přebírá nastavení předlohy: tlumení prutu a závaží v jeho koncích.
       const idA = stycnikV(postupny, a)!.id;
       const idB = stycnikV(postupny, b)!.id;
-      if (p.tlumeni !== undefined) {
-        const obraz = postupny.pruty.find((x) => (x.a === idA && x.b === idB) || (x.a === idB && x.b === idA));
+      const obrazPrutu = prutMezi(postupny, idA, idB);
+      if (p.tlumeni !== undefined && obrazPrutu) {
         const tlumeni = p.tlumeni;
-        if (obraz) postupny = nastavTlumeni(postupny, new Set([obraz.id]), () => tlumeni);
+        postupny = nastavTlumeni(postupny, new Set([obrazPrutu.id]), () => tlumeni);
+      }
+      if (p.predpeti !== undefined && obrazPrutu) {
+        const predpeti = p.predpeti;
+        postupny = nastavPredpeti(postupny, new Set([obrazPrutu.id]), () => predpeti);
       }
       for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
         const zavazi = vzor.zavazi;
         if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
       }
     }
-    // Závaží se zrcadlí i tam, kde obraz prutu už stál (typicky ve styčnících mostovky).
+    // Závaží a svary se zrcadlí i tam, kde obraz prutu už stál (typicky ve styčnících mostovky).
     const zrcadlene = new Set<number>();
     for (const p of this.#navrh.pruty) {
-      if (this.vybranePruty.size > 0 && !this.vybranePruty.has(p.id)) continue;
+      if (vyber.size > 0 && !vyber.has(p.id)) continue;
       zrcadlene.add(p.a);
       zrcadlene.add(p.b);
     }
     for (const vzor of this.#navrh.stycniky) {
       const zavazi = vzor.zavazi;
       const tlumic = vzor.tlumic;
-      if ((!zavazi && !tlumic) || !zrcadlene.has(vzor.id)) continue;
+      if ((!zavazi && !tlumic && !vzor.svar) || !zrcadlene.has(vzor.id)) continue;
       const obraz = stycnikV(postupny, { x: 2 * osa - vzor.x, y: vzor.y });
       if (!obraz) continue;
+      if (vzor.svar && this.uroven.povoleneSvary) postupny = nastavSvar(postupny, new Set([obraz.id]), true);
       if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
       // Laděný tlumič v ose mostu má obraz sám v sobě; jinde ho obraz dostane, pokud žádný nemá.
       if (tlumic) postupny = nastavLadenyTlumic(postupny, new Set([obraz.id]), (dosavadni) => dosavadni ?? tlumic);

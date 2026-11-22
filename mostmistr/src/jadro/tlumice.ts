@@ -28,6 +28,8 @@ export function pridejTlumice(s: Soustava, dt: number): void {
     const dx = x[b]! - x[a]!;
     const dy = y[b]! - y[a]!;
     const delka = Math.sqrt(dx * dx + dy * dy);
+    // Tlumič smrštěný do bodu (trosky na jednom místě terénu) nemá směr a nebrzdí nic.
+    if (!(delka > 0)) continue;
     const ex = dx / delka;
     const ey = dy / delka;
 

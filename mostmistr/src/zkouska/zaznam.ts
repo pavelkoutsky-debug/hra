@@ -56,7 +56,43 @@ export interface Snimek {
   provoz: Uint8Array;
   /** Okamžité zrychlení mostovky v m/s², jak ho měří hodnocení komfortu; 0, když se neměří. */
   kmitani: number;
+  /**
+   * Plastické klouby: dvojice (styčník, vyčerpaný podíl mezního natočení od 0 do 1). Kloub je
+   * místo, kde se tvárný prut trvale ohnul; při podílu 1 se zlomí.
+   */
+  klouby: Float32Array;
 }
+
+/** Od jakého podílu mezního natočení se plastický kloub ukazuje. */
+const PRAH_KLOUBU = 0.01;
+
+/** Plastické klouby soustavy pro záznam; ve styčníku s několika ohnutými pruty rozhoduje ten nejhorší. */
+export function plastickeKlouby(s: Soustava): Float32Array {
+  let podily: Map<number, number> | null = null;
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    const mez = s.mezniNatoceni[e]!;
+    if (!(mez > 0) || !(mez < Infinity)) continue;
+    for (const [natoceni, stycnik] of [
+      [s.plastA[e]!, s.prvekA[e]!],
+      [s.plastB[e]!, s.prvekB[e]!],
+    ] as const) {
+      const podil = Math.min(1, Math.abs(natoceni) / mez);
+      if (!(podil > PRAH_KLOUBU)) continue;
+      podily ??= new Map();
+      if (podil > (podily.get(stycnik) ?? 0)) podily.set(stycnik, podil);
+    }
+  }
+  if (!podily) return BEZ_KLOUBU;
+  const klouby = new Float32Array(2 * podily.size);
+  let i = 0;
+  for (const [stycnik, podil] of podily) {
+    klouby[i++] = stycnik;
+    klouby[i++] = podil;
+  }
+  return klouby;
+}
+
+const BEZ_KLOUBU = new Float32Array(0);
 
 /** Porušení prutu, jak ho ukazuje časová osa. */
 export interface UdalostZaznamu {
@@ -178,6 +214,7 @@ export class Zaznam {
     cil.sily = prolozit(a.sily, b.sily, t, cil.sily);
     cil.provoz = a.provoz;
     cil.kmitani = a.kmitani + (b.kmitani - a.kmitani) * t;
+    cil.klouby = a.klouby;
     return this.topologie[a.topologie] ?? null;
   }
 }
@@ -201,5 +238,6 @@ export function prazdnySnimek(): Snimek {
     sily: new Float32Array(0),
     provoz: new Uint8Array(0),
     kmitani: 0,
+    klouby: BEZ_KLOUBU,
   };
 }

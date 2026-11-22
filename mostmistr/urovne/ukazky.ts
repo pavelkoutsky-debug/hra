@@ -139,6 +139,22 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
     case "3-04":
       return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
+    // Stejné lehké příhrady pod mostovkou: bez pilířů a na pilířích.
+    case "4-01":
+      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+
+    // Stejná mostovka na pilířích: s klouby mezi poli a svařená.
+    case "4-02":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+
+    // Stejný zavěšený most: bez kotevních lan do opěr a s nimi.
+    case "4-03":
+      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+
+    // Stejný visutý most: s lany, jak je položil výkres, a po automatickém dopnutí.
+    case "4-04":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod }, rychlost: 3 };
+
     // Stejný dav, dva mosty: nižší s lidmi sjede do pásma jejich kroků, vyšší zůstane nad ním.
     case "5-01":
       return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet }, rychlost: 3 };

@@ -273,8 +273,9 @@ function nakresliZaklad(ctx: Kontext, s: StavVykresu, zaklad: Bod): void {
   ctx.fillRect(p.x - r, p.y - r, 2 * r, 2 * r);
   ctx.strokeRect(ostre(p.x - r), ostre(p.y - r), Math.round(2 * r), Math.round(2 * r));
 
-  if (m >= 14 && !s.nahled) {
-    // Popisek leží v šrafované zemině, proto má vlastní podklad.
+  if (m >= 5 && !s.nahled) {
+    // Popisek leží v šrafované zemině, proto má vlastní podklad. Schází jen při velkém
+    // oddálení, kde by se popisky sousedních základů překrývaly.
     const napis = t("vykres.zaklad");
     ctx.font = `11px ${PISMO}`;
     ctx.textAlign = "center";

@@ -31,8 +31,10 @@ export function spoctiVnitrniSily(s: Soustava): void {
     const dx = x[b]! - x[a]!;
     const dy = y[b]! - y[a]!;
     const delka = Math.sqrt(dx * dx + dy * dy);
-    const ex = dx / delka;
-    const ey = dy / delka;
+    // Prvek smrštěný do bodu nemá směr (díly svislého lana, které po zřícení dopadly na jedno
+    // místo terénu); bere se směr z výchozí polohy. Lano v tom stavu stejně nic nenese.
+    const ex = delka > 0 ? dx / delka : osaX0[e]!;
+    const ey = delka > 0 ? dy / delka : osaY0[e]!;
     const dvx = vx[b]! - vx[a]!;
     const dvy = vy[b]! - vy[a]!;
     const tlumeni = beta[e]!;

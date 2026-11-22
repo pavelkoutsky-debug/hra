@@ -43,7 +43,13 @@ export function nakresliProvoz(
       const karoserie = u.karoserie.map(bod);
       if (karoserie.some((k) => k === null)) return;
       nakresliAuto(ctx, kola.map((k) => naObraz(k!)), karoserie.map((k) => naObraz(k!)), u.vyska * m, u.smer);
-    } else if (u.druh === "dodavka" || u.druh === "autobus" || u.druh === "nakladni" || u.druh === "souprava") {
+    } else if (
+      u.druh === "dodavka" ||
+      u.druh === "autobus" ||
+      u.druh === "nakladni" ||
+      u.druh === "souprava" ||
+      u.druh === "nadmerny"
+    ) {
       const karoserie = u.karoserie.map(bod);
       if (karoserie.some((k) => k === null)) return;
       nakresliVuz(ctx, u.druh, kola.map((k) => naObraz(k!)), karoserie.map((k) => naObraz(k!)), m, u.vyska * m);
@@ -203,7 +209,7 @@ function nakresliKabinu(ctx: Kontext, p: (podel: number, vys: number) => Bod2, c
  */
 function nakresliVuz(
   ctx: Kontext,
-  druh: "dodavka" | "autobus" | "nakladni" | "souprava",
+  druh: "dodavka" | "autobus" | "nakladni" | "souprava" | "nadmerny",
   kola: Bod[],
   karoserie: Bod[],
   m: number,
@@ -230,6 +236,27 @@ function nakresliVuz(
     nakresliKabinu(ctx, p, 1.4, -0.6);
     obrys(ctx, [p(-7.75, 0.15), p(-7.75, 2.25), p(-0.85, 2.25), p(-0.85, 0.15)]);
     cary(ctx, [-6.03, -4.3, -2.58].map((x): [Bod2, Bod2] => [p(x, 0.15), p(x, 2.25)]));
+  } else if (druh === "nadmerny") {
+    // Těžký tahač, za ním podvalník: nízká plošina na osmi řadách kol a na ní náklad (transformátor).
+    obrys(ctx, [p(-5.4, -0.25), p(-5.4, 0.05), p(1.4, 0.05), p(1.4, -0.25)]);
+    nakresliKabinu(ctx, p, 1.4, -0.9);
+    const prvni = karoserie[3];
+    const posledni = karoserie[karoserie.length - 1];
+    if (prvni && posledni && karoserie.length > 4) {
+      const n = ramVozu(prvni, prvni, posledni, m);
+      const konec = -1.5 * (karoserie.length - 4) - 0.9;
+      // Labutí krk od točny tahače dolů na plošinu.
+      const [kx, ky] = p(-3.9, 0.35);
+      const [lx, ly] = n(1.6, 0.25);
+      cary(ctx, [[[kx, ky], [lx, ly]]]);
+      obrys(ctx, [n(1.6, -0.05), n(1.6, 0.3), n(konec, 0.3), n(konec, -0.05)]);
+      // Náklad: skříň transformátoru s chladiči a průchodkami.
+      obrys(ctx, [n(0.3, 0.3), n(0.3, 3.1), n(konec + 1.3, 3.1), n(konec + 1.3, 0.3)]);
+      const zebra: [Bod2, Bod2][] = [];
+      for (let x = -0.6; x > konec + 2; x -= 1.1) zebra.push([n(x, 0.6), n(x, 2.8)]);
+      zebra.push([n(-1.5, 3.1), n(-1.5, 3.8)], [n(-4, 3.1), n(-4, 3.8)], [n(-6.5, 3.1), n(-6.5, 3.8)]);
+      cary(ctx, zebra);
+    }
   } else {
     // Tahač: rám a kabina. Návěs leží vpředu na točně nad hnací nápravou a vzadu na třech nápravách.
     obrys(ctx, [p(-4.6, -0.25), p(-4.6, 0.05), p(1.4, 0.05), p(1.4, -0.25)]);

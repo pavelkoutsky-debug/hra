@@ -3,7 +3,7 @@
 
 import { krok, spoctiSily, type NastaveniKroku } from "./integrator";
 import { uvolniSjeta, type Loziska } from "./loziska";
-import { nejvyssiFrekvence, vlastniTvarySoustavy } from "./matice";
+import { frekvenceProKrokovani, vlastniTvarySoustavy } from "./matice";
 import { rozhodujiciVelicina, vnitrniSily, vyhodnotNamahani } from "./namahani";
 import { najdiPoruseni, provedPoruseni, type Poruseni } from "./poruseni";
 import { nastavTuhostPrvku, prepoctiHmoty, type Soustava } from "./soustava";
@@ -234,7 +234,7 @@ export class Simulace {
   /** Nejvyšší frekvence soustavy včetně pružin, kterými na ni působí zatížení. */
   #nejvyssiFrekvence(): number {
     const s = this.soustava;
-    const omega = nejvyssiFrekvence(s, volneStupne(s));
+    const omega = frekvenceProKrokovani(s, volneStupne(s));
     const navic = this.#nastaveni.zatizeni?.pridavnaFrekvence?.(s) ?? 0;
     return Math.sqrt(omega * omega + navic);
   }
@@ -266,6 +266,16 @@ export class Simulace {
    * vlastních tvarů nahradí tlumení úměrné hmotě a krok se zvolí znovu. Po porušení se
    * volá sama; kdo mění stavbu zvenčí, zavolá ji po `prepoctiHmoty`.
    */
+  /**
+   * Provede porušení mimo posudek a zapíše ho jako událost v současném čase. Slouží lanu,
+   * které se přetrhlo už při napínání, tedy před prvním krokem zkoušky. Po posledním
+   * takovém porušení je potřeba zavolat `poZmeneStavby`.
+   */
+  pretrhni(poruseni: Poruseni, velicina: number, unosnost: number): void {
+    provedPoruseni(this.soustava, poruseni);
+    this.udalosti.push({ ...poruseni, cas: this.#cas, krok: this.#kroku, velicina, unosnost });
+  }
+
   poZmeneStavby(): void {
     const s = this.soustava;
     this.#nastaveni.zatizeni?.poZmene?.(s);

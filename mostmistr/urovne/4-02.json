@@ -1,0 +1,130 @@
+{
+  "verze": 4,
+  "id": "4-02",
+  "nazev": "Bez jediné vzpěry",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -13,
+    "xMax": 58,
+    "yMax": 9
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -8
+    },
+    {
+      "x": 45,
+      "y": -8
+    },
+    {
+      "x": 48,
+      "y": 0
+    },
+    {
+      "x": 58,
+      "y": 0
+    }
+  ],
+  "hladina": null,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 48,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": 12,
+      "y": -8
+    },
+    {
+      "x": 24,
+      "y": -8
+    },
+    {
+      "x": 36,
+      "y": -8
+    }
+  ],
+  "zakazaneZony": [
+    {
+      "xMin": -10,
+      "yMin": 0.5,
+      "xMax": 58,
+      "yMax": 9
+    }
+  ],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 48,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 1250000,
+  "inzenyrskyRozpocet": 1000000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.6
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nakladni",
+      "pocet": 3,
+      "rozestup": 14
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 14,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "souprava"
+    }
+  ]
+}

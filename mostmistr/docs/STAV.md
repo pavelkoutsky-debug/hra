@@ -13,9 +13,106 @@ Poslední aktualizace: 22. 11. 2026
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
-| M4a Těžká doprava | Hotovo, čeká na vyzkoušení zadavatelem (pull request M4a) |
-| M4b až M8 | Nezačato |
+| M4a Těžká doprava | Hotovo, sloučeno do `main` (22. 11. 2026) |
+| M4b Velká rozpětí | Hotovo, běží nezávislé recenze; pak sloučit |
+| M4c Zpětná vazba a deník hraní | Nezačato (přidáno na přání zadavatele 22. 11. 2026) |
+| M5 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
+
+## M4b — výsledek
+
+Čtvrtá kapitola: údolí. Pilíře, svary, lana s napínáky, zavěšený a visutý most; tahač s návěsem a nadměrný náklad.
+
+**Lana a napínák** (`src/data/katalog.ts`, `src/zkouska/stavba.ts`)
+
+- **Lano** (2× spirálové lano ⌀ 40 mm, pevnost 2,6 MN, 1 800 Kč/m, do 60 m) umí jen táhnout. Nově je i **nosné lano** se čtyřnásobným průřezem (2× ⌀ 80 mm, 10,6 MN, 6 000 Kč/m): hlavní lano visutého mostu obyčejné lano neunese. V koncepci původně nebylo.
+- **Napínák mění délku lana.** V paletě je jako přídavek (klik na Napínák lana, pak na lano) a nastavení se ukáže i hned po nakreslení lana. Točí se po milimetrech (se Shiftem po centimetru) a ukazuje „dotaženo o 47 mm“ nebo „povoleno o 7 mm“ a k tomu tah, který lano nese pod vlastní tíhou mostu (z rozboru v pomocném vlákně). V návrhu se ukládá jako předpětí, tedy podíl pevnosti, kterým by lano táhlo, kdyby se jeho konce nehnuly; smí být záporné (lano delší než nakreslené) i větší než 1. Nové lano je dotažené na 5 %, aby neviselo.
+- *Odchylka od koncepce:* koncepce mluví o předpětí lana. Závěsy visutého mostu se ale musí přizpůsobit tvaru nosného lana o desítky centimetrů oběma směry, což jako „podíl pevnosti“ nedává smysl. Hráč proto vidí délku a skutečný tah; předpětí zůstalo jen ve formátu návrhu.
+
+**Automatické dopnutí lan** (`src/zkouska/dopnuti.ts`; tlačítko Dopnout lana v paletě, klávesa N)
+
+- Najde nastavení napínáků, se kterým mostovka pod vlastní tíhou drží nakreslený tvar, pylony se nenaklánějí, žádné lano nevisí (nejméně 1 % pevnosti) a žádné nenese pod vlastní tíhou mostu víc než 70 % pevnosti (po recenzích; viz níže). Tlumená Gaussova–Newtonova metoda nad maticovou statikou: vliv dotažení každého lana se spočítá z tečné matice tuhosti v klidové poloze, oprava metodou nejmenších čtverců, most se znovu ustálí a tak dokola. Lana, která by oprava povolila, se drží podmínkou.
+- Počítá se v pomocném vlákně (zpráva `dopnuti`), výsledek je jeden krok historie a jde vzít zpět. Zavěšený most dopne za 0,3 s (mostovka z 62 mm na 0,5 mm), visutý za 0,7 s (z 80 cm na 0,5 mm). Špatně nakreslené nosné lano (do „V“, „schody“) zvládne na pár centimetrů, ale trvá to až deset sekund; hra pak poradí nakreslit lano jako oblouk.
+- **Nosné lano visutého mostu se pod tíhou vyrovná do oblouku samo** a napínákem se s tím nic nenadělá; dopnutí proto mění hlavně délky závěsů. Bez něj mostovka visutého mostu klesne až o 80 cm a podvalník po ní neprojede.
+
+**Ustálení časovou simulací** (`src/jadro/ustaleni.ts`, koncepce 7.8): povolené lano nemá v nakreslené poloze příčnou tuhost a přímý výpočet rovnováhy na něm selže. Most se pak nechá pod tíhou usednout s kinetickým tlumením a výsledek se doladí přímým výpočtem. Používá to zkouška, rozbor i dopnutí (`najdiKlid`).
+
+**Pilíř** (železobeton 1 × 2 m, 15 000 Kč/m, do 12 m): smí stát jen na základu vyznačeném v úrovni nebo na jiném pilíři (pravidlo `pilir-mimo-zaklad`). Je monolit: do styčníků je vetknutý po celé výšce, takže několik dílů nad sebou tvoří jeden sloup; ostatní pruty na něm leží kloubově, dokud styčník není svařený. Výborně snáší tlak, v ohybu se křehce zlomí.
+
+**Svar** (1 500 Kč za každý prut ve styčníku): přídavek v paletě; klik na styčník ho svaří nebo svar zruší, s vybranými styčníky je svaří najednou (klávesa S). Svařený styčník přenáší ohyb. Na výkresu je plný čtvereček.
+
+**Plastické klouby**: záznam zkoušky nese místa, kde se tvárný prut trvale ohnul, a kolik mezního natočení už je pryč; při přehrávání je označí prstenec od žluté po červenou.
+
+**Nadměrný náklad** (`src/zkouska/vozidla.ts`): 120 t, 10 km/h, těžký tahač a podvalník s osmi řadami kol po 11,25 t; žádná řada nenese víc než 11,5 t.
+
+**Kapitola 4 – Údolí** (využití nejvíc namáhaného prutu):
+
+| Úroveň | Rozpětí | Provoz | Čemu učí | Průchod / rozpočet / mistrovská | Co neprojde |
+|---|---|---|---|---|---|
+| 4-01 Tři pole | 54 m, dva základy v řece | 2 tahače s návěsem, nákladní auto, 2 auta | pilíře zkrátí rozpětí | 38 / 46 / 29 % | tytéž příhrady bez pilířů; mostovka na pilířích bez příhrad |
+| 4-02 Bez jediné vzpěry | 48 m, tři základy, nad vozovkou se nestaví | kolona 3 nákladních aut, autobus, tahač | svar: spojitý nosník a rám | 80 / 80 / 55 % | bez svarů; svary jen nad pilíři; bez středního pilíře (plastické klouby) |
+| 4-03 Na lanech | 60 m, základ uprostřed | kolona 4 nákladních aut, autobus, tahač | zavěšený most, kotevní lana, dopnutí | 42 / 58 / 32 % | bez lan; bez kotevních lan (pylon se zlomí); pylon 8 m |
+| 4-04 Náklad století | 72 m, pylony na březích, kotvy v zemi | podvalník 120 t, 2 nákladní auta | visutý most, nosné lano, dopnutí | 58 / 66 / 54 % | nedopnutá lana (prověsí se); obyčejné lano místo nosného; bez kotevních lan |
+
+V 4-01 dostane rozpočtovou medaili most se šikmými vzpěrami z půlky pilířů. V 4-03 a 4-04 rozhoduje výška pylonu: nižší je levnější a víc namáhaný, vyšší naopak.
+
+Každá úroveň má ukázku a odstavec „Ve skutečnosti“ (viadukt Millau, první svařovaný silniční most v Maurzycích, zavěšený most ve Strömsundu, most 1915 Çanakkale). Zdroje jsou v popisu pull requestu.
+
+**Jak je splněno kritérium milníku**
+
+- *Visutý a zavěšený referenční most unese kolonu kamionů* (`test/lana.test.ts`): kolona čtyř nákladních aut přejede oba referenční mosty bez porušení, využití pod 70 %.
+- *Úrovně projdou testem vyhratelnosti*: všech dvacet úrovní, každá medaile i mosty, které neprojít mají.
+- Dopnutí: referenční mosty kampaně jsou dopnuté (mostovka pod vlastní tíhou do 2 mm od výkresu), výsledek dopnutí odpovídá tomu, co most opravdu dělá, a tah v nosném laně sedí se vzorcem pro parabolu.
+- Testy: 804 jednotkových, 136 kontrol v prohlížeči (z toho 11 nových v `test/e2e/udoli.e2e.ts` a 4 nové ukázky).
+
+**Co se při kalibraci ukázalo**
+
+- **Zavěšený most bez kotevních lan nevydrží ani jedno nákladní auto.** Lana z pole táhnou hlavu pylonu k zatížené straně a betonový pylon se v ohybu zlomí. Kotevní lana do opěr to vyřeší; je z toho ukázka úrovně 4-03.
+- **Svařená mostovka visutému mostu škodí.** Nosné lano se pod podvalníkem přetvoří o desítky centimetrů a tuhá mostovka se s ním musí ohnout; kloubová to udělá bez namáhání. Skutečné visuté mosty mají ztužující nosník dimenzovaný právě na tohle.
+- **Pylon visutého mostu nesmí stát ve styčníku mostovky.** Vodorovné síly z mostovky by ho ohýbaly. Základy pylonů jsou proto čtyři metry za opěrami.
+- **Mostovka se pod podvalníkem smí prohnout nejvýš o 1,5 m**; víc se počítá jako pád (pravidlo existuje od M2). U nedopnutého visutého mostu rozhoduje právě to, nic se nezlomí.
+
+**Oprava jádra.** Díly svislého lana, které po zřícení dopadly na stejné místo terénu, měly nulovou délku a výpočet se na dělení nulou rozpadl. Takový díl teď bere směr z výchozí polohy (lano v tom stavu nic nenese); totéž tlumič.
+
+**Formát návrhu má verzi 3**: předpětí lana smí být záporné i větší než 1. Starší návrhy se načtou beze změny.
+
+**Verze fyziky zůstává 5.** Výsledky dosavadních úrovní i otisky regresní sady jsou stejné. Lana a pilíře hráč dosud použít nemohl, takže jejich změny (ustálení, vetknutý pilíř) žádný uložený rekord neovlivní.
+
+**Drobnosti**
+
+- Ukázka v okně se zadáním se zvětší tak, aby se do ní vešly oba mosty celé (pylony, kotevní lana).
+- Při přehrávání se nekreslí skryté dělicí styčníky lan; lano vypadá jako lano, ne jako řetěz.
+
+### Nezávislé recenze M4b (22. 11. 2026)
+
+Tři čerstvé recenze nad hotovým milníkem: recenze kódu, hraní kapitoly 4 v prohlížeči očima nováčka a nezávislá kontrola fyziky (vlastní řešič řetězovky, rámová statika, mezní plastická analýza). Kontrola fyziky potvrdila, že lana, oba referenční mosty s lany, zatížení pilířů, plastické klouby i nadměrný náklad sedí s ručním výpočtem většinou hluboko pod 1 %; dosavadní úrovně mají stejné otisky jako na `main`.
+
+**Zapracováno**
+
+- *Editor.* Právě nakreslené lano (a lano vybrané nástrojem Napínák) zůstává vybrané jen kvůli napínáku: volba jiného prvku v paletě ho už nepřepíše a zrcadlení se jím neomezí (dřív se poslední díl nosného lana potichu změnil na obyčejné lano). Lano změněné na jiné lano si nechá napínák. Zrcadlení výběru se ohlásí. Dlouhý tah mostovky nebo pilíře se sám rozdělí na stejné díly (náhled ukáže „10 × 6 m“).
+- *Dopnutí.* Horní mez tahu 70 % pevnosti (rovné nosné lano už dopnutí „nedotáhne“ na třicetinásobek pevnosti; řekne, že tvar nedrží, a poradí průvěs nebo vyšší pylony). Dolní mez tahu jen 1 % (pětiprocentní byla u silných lan staticky nesplnitelná a kazila tvar). Vodorovná poloha styčníků pylonu má menší váhu (dopnutí nerovná ohyb pylonu kotevními lany). Výsledek nikdy není horší než vstup; most s vratkou klidovou polohou a lana bez mostovky a pylonu vracejí „nejde“. Opakovaný stisk N už nefrontuje další výpočty. Referenční mosty mají napínáky přepočítané (`PREDPETI`).
+- *Zkouška.* Lano, které by ve výchozím stavu neslo víc než trojnásobek pevnosti (napínák v krajní poloze), se přetrhne už při napínání: je to první událost v čase nula a díly lana se povolí. Dřív přetržení vymrštilo zbytek mostu rychlostí přes 2 000 m/s a hra hlásila „výpočet se rozpadl“. Výsledek nese průvěs mostovky v klidu (`pruvesVKlidu`) a u mostu s lany, který neobstál a visel přes 10 cm, poradí dopnutí.
+- *Ustálení.* Kus ve volném pádu se pozná hned (ne až po třiceti sekundách děje), stav dál než 6 m od výkresu se nebere ani jako vyvážený, neplatné číslo se nepočítá za klid, ustálení nenechá v prutech trvalé přetvoření. Body, kde se stýkají jen lana, smějí dál (volně visící lano už mostu nebere klidovou polohu); podpory ne. Soustava ze samých povolených lan má platný krok výpočtu (dřív NaN a zkouška bez provozu neskončila).
+- *Pravidla.* Na základ patří jen pilíř (v 4-01 šly místo pilířů postavit ocelové sloupy a pilíř nebyl potřeba) a pilíř se smí naklonit nejvýš o polovinu výšky (položený sloužil jako betonový trám čtyřikrát únosnější než mostovka).
+- *Obrazovka.* Nastavení výběru (napínák, svar, závaží, tlumič) drží u spodního okraje palety, takže je vidět i v okně vysokém 720 px; tlačítko „Jdu stavět“ zůstává na dohled; panel výsledku je nad popisovým polem a milionové ceny se do pole vejdou; svar má tmavý obrys a křížek; popisek „základ“ je vidět i při oddálení; znaménko u lana odpovídá tlačítkům napínáku (+ dotaženo).
+- *Texty výsledku.* Bez „tah, tah“, přetržené lano je „lano se přetrhlo“, stejný prut ve stejném okamžiku jen jednou, „most obstál, i když prut nevydržel“, vysvětlení momentu těsně pod únosností (vyčerpaná tvárnost), pohodlí v autobusu bez známky tam, kde se nehodnotí, a „neměřeno“ místo nuly; srozumitelnější „dopnout nejde“ a návod k napínáku.
+- *Kampaň.* Úroveň s rozestavěným mostem zůstává odemčená, i když před ni přibyla nová kapitola.
+
+**Nezapracováno (a proč)**
+
+- **Vlastní tíha svařených prutů je soustředěná do styčníků bez momentů vetknutí.** U spojité svařené mostovky a rámu (4-02) jsou podporové momenty od vlastní tíhy o 6 % menší a momenty v poli o 6–13 % větší než podle rámové teorie; rozhodující průřez mistrovského mostu 4-02 by měl 57 % místo 54,6 %. Kloubové mostovky (všechny starší úrovně) jsou přesné. Oprava je změna jádra pro všechny pruty s tuhými konci, tedy nová verze fyziky a nové otisky všech úrovní; udělá se na začátku M5 (železnice bude spojité nosníky potřebovat), ne v rámci slučování M4b.
+- **Pravidlo pádu 1,5 m proti poddajnosti visutého mostu.** Referenční mosty 4-04 se pod podvalníkem prohnou o 1,0–1,3 m (statika sedí) a mistrovský je mezi nimi nejblíž meze. Pravidlo se měří od spojnice trasy. Nechává se; k přezkoumání v M8 spolu s laděním kapitoly.
+- **Vratká rovnováha se bere jako klidová poloha** (vzpínadlo z lan pod kloubovou mostovkou, pylon nad Eulerovou silou). Dopnutí takový most odmítne, zkouška ho pustí a provoz ho shodí. Přímý výpočet rovnováhy selhává, když lano při zatížení povolí; používá se jen pro brnknutí do 8 kN, kde se to neprojeví.
+- **Modelové volby pilíře a průřezu:** vzpěrná délka pilíře je nakreslený díl, ohybová únosnost pilíře je štědrá (9,3 MNm proti odhadu 4–6 MNm), plastický moment se zmenšuje i tlakem (u ocelobetonu přísné), podpory drží i tah (kotvy 4-04 až −4,6 MN). Na výsledky současných úrovní nemá nic z toho vliv; zapsáno pro M8.
+- **Dopnutí špatně nakresleného nosného lana** („V“, „schody“) trvá až deset sekund; hráč dostane radu, tvar se neopraví sám.
+- **Hraní:** v 4-03 dopnutí nic nezmění na medailích (N se vyplatí až v 4-04), 4-02 nemá rozhodování (svařit vše stačí), mistrovská 4-01 je snazší než rozpočtová. Ladění obtížnosti kapitoly patří do M8, až budou data z deníku hraní (M4c).
+- **Drobný vzhled:** název úrovně se v režimu zkoušky zkracuje, jízdní řád v 4-03 a 4-04 ořezává osa frekvencí, v okně širokém 1 024 px se zmenší časová osa, popisky využití se u visutého mostu při oddálení překrývají, nadměrný náklad projíždí pod prověšeným nosným lanem bez kolize, graf „průhyb uprostřed“ v 4-03 měří u pylonu, čísla prutů ve výsledku nejsou na výkresu. Na M8.
+- **Mechanismus neoznačí volné styčníky.** Když most nemá klidovou polohu, text to říká a přehrání ukáže, kde se láme; zvýraznění volných kloubů přímo na výkresu zatím není.
+
+**Co ověřeno není**
+
+- Jak se lana a dopnutí ovládají rukou: testy v prohlížeči kreslí a klikají, ale pohodlí neposoudí.
+- Dopnutí mostů, které nejsou zavěšené ani visuté (lana jako táhla příhrady, vzpínadla): mělo by fungovat stejně, zkoušené je jen na referenčních mostech a několika vadných.
 
 ## M3b — výsledek
 
@@ -414,14 +511,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Vyzkoušet náhled M4a (kapitola 3) a rozhodnout o sloučení do `main`.
+1. Teď nic; milníky se dělají a slučují za sebou bez čekání. Po M4c bude potřeba v Netlify nastavit heslo správce (proměnná prostředí), aby šla zpětná vazba číst.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M4b Velká rozpětí (po schválení M4a): lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby a kapitola 4 s tahačem s návěsem. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M4c (zpětná vazba hráčů a deník hraní na Netlify), M5 Železnice, M6 Pohyblivé mosty, M7 Režimy, M8 Doladění; každý s interními testy a nezávislou recenzí. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
@@ -444,6 +541,10 @@ M4b Velká rozpětí (po schválení M4a): lana, napínák, automatické dopnut�
 - 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“; zadavatel opravu nechal sloučit hned.
 
 - 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“; zadavatel úpravu nechal sloučit hned (verze 0.7.2).
+
+- 22. 11. 2026: zadavatel rozhodl **M4a sloučit a jít na M4b** (verze 0.8.0). Pozn.: jeho snímky chyb byly z adresy `deploy-preview-7`, tedy ze zmrazeného náhledu staršího pull requestu; opravy se do starých náhledů nedostanou. Při hlášení opravy vždy poslat odkaz na nový náhled a říct, že starý odkaz zůstává starý.
+
+- 22. 11. 2026, k pull requestu M4b: zadavatel chce, abych **prošel všechny milníky za sebou**, každý **detailně interně otestoval, pustil nezávislé recenze a zapracoval vylepšení**. Na dotaz rozhodl: **slučovat mám sám** po testech a recenzi. Zároveň chce **zpětnou vazbu od hráčů přímo ve hře**, která se eviduje a dá se řešit, a **podrobné záznamy toho, jak hráči hrají a stavějí**, pro ladění prostředí a zábavnosti. Rozhodl: ukládat **na Netlify** (funkce a úložiště, stránka správce chráněná heslem) a záznam hraní mít **zapnutý s viditelným upozorněním a vypínačem**. Zařazeno jako milník M4c před M5.
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 

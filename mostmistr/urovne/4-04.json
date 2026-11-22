@@ -1,0 +1,132 @@
+{
+  "verze": 4,
+  "id": "4-04",
+  "nazev": "Náklad století",
+  "vyrez": {
+    "xMin": -24,
+    "yMin": -22,
+    "xMax": 96,
+    "yMax": 24
+  },
+  "teren": [
+    {
+      "x": -24,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 6,
+      "y": -14
+    },
+    {
+      "x": 18,
+      "y": -20
+    },
+    {
+      "x": 54,
+      "y": -20
+    },
+    {
+      "x": 66,
+      "y": -14
+    },
+    {
+      "x": 72,
+      "y": 0
+    },
+    {
+      "x": 96,
+      "y": 0
+    }
+  ],
+  "hladina": -17,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 72,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": -18,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 90,
+      "y": 0,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": -4,
+      "y": 0
+    },
+    {
+      "x": 76,
+      "y": 0
+    }
+  ],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 72,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 2600000,
+  "inzenyrskyRozpocet": 2100000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.56
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka",
+    "lano",
+    "lano-nosne",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nadmerny"
+    },
+    {
+      "cas": 30,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "nakladni",
+      "pocet": 2
+    }
+  ]
+}

@@ -12,6 +12,10 @@ import okresniSilnice from "./3-01.json";
 import podVedenim from "./3-02.json";
 import linka from "./3-03.json";
 import kolona from "./3-04.json";
+import triPole from "./4-01.json";
+import ramovyMost from "./4-02.json";
+import naLanech from "./4-03.json";
+import nakladStoleti from "./4-04.json";
 import nabrezi from "./5-01.json";
 import mestskyBeh from "./5-02.json";
 import slavnost from "./5-03.json";
@@ -31,6 +35,10 @@ const SOUBORY_KAMPANE: readonly unknown[] = [
   podVedenim,
   linka,
   kolona,
+  triPole,
+  ramovyMost,
+  naLanech,
+  nakladStoleti,
   nabrezi,
   mestskyBeh,
   slavnost,

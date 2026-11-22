@@ -135,6 +135,7 @@ export const ID_PRVKU = [
   "ocel-lehka",
   "ocel-tezka",
   "lano",
+  "lano-nosne",
   "pilir",
   "tlumic",
   "pruzina",
@@ -306,21 +307,28 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
   lano: {
     druh: "lano",
     nejvetsiDelka: 60,
-    hotovo: false,
+    hotovo: true,
     cena: { zaMetr: 1800 },
     material: "lano",
     prurez: { A: 2 * 942e-6, I: 0, As: 0, W: 0, Wpl: 0 },
-    predbezne: true,
+  },
+  // Nosné lano visutých mostů: 2× spirálové lano průměru 80 mm, čtyřnásobek průřezu závěsného lana.
+  "lano-nosne": {
+    druh: "lano",
+    nejvetsiDelka: 60,
+    hotovo: true,
+    cena: { zaMetr: 6000 },
+    material: "lano",
+    prurez: { A: 2 * 3770e-6, I: 0, As: 0, W: 0, Wpl: 0 },
   },
   // Železobetonový pilíř 1,0 × 2,0 m (v rovině výkresu 1,0 m).
   pilir: {
     druh: "pilir",
     nejvetsiDelka: 12,
-    hotovo: false,
+    hotovo: true,
     cena: { zaMetr: 15000 },
     material: "zelezobeton",
     prurez: { A: 2, I: 2 / 12, As: (5 * 2) / 6, Av: (2 * 2) / 3, W: 2 / 6, Wpl: 2 / 4 },
-    predbezne: true,
   },
   // Viskózní tlumič lávek: jednotky až stovky kN·s/m.
   tlumic: {
@@ -340,6 +348,52 @@ export const CENA_SVARU = 1500;
 export const CENA_ZAVAZI = 10;
 /** Po kolika kilogramech se závaží ve styčníku přidává a ubírá. */
 export const KROK_ZAVAZI = 100;
+
+/**
+ * Napínák lana mění jeho délku: dotažené lano je kratší než nakreslené, povolené delší.
+ * V návrhu se ukládá jako předpětí, tedy podíl pevnosti lana, kterým by lano táhlo, kdyby
+ * jeho konce zůstaly přesně tam, kde jsou nakreslené (záporné u povoleného lana). Konce se
+ * ale hýbou, takže skutečný tah vyjde až z výpočtu; u závěsů visutého mostu, které se
+ * přizpůsobují tvaru nosného lana, může předpětí vyjít i mimo rozsah 0 až 1.
+ * Nové lano je mírně dotažené, aby neviselo; ručně se napínák točí po milimetrech délky.
+ */
+export const PREDPETI_LANA = {
+  vychozi: 0.05,
+  /** Rozsah: lano smí být až o třetinu kratší a skoro dvakrát delší než nakreslené. */
+  nejmensi: -50,
+  nejvetsi: 50,
+  /** Krok ručního nastavení, metry délky lana. */
+  krokDelky: 0.001,
+  /** Na kolik se zaokrouhluje výsledek automatického dopnutí. */
+  presnost: 0.001,
+} as const;
+
+/**
+ * Největší tah, který smí lano nést pod vlastní tíhou mostu, jako podíl pevnosti. Zbytek je
+ * rezerva na provoz; referenční mosty kampaně mají v klidu nejvýš polovinu pevnosti.
+ * Automatické dopnutí lana nad tuto mez nedotahuje.
+ */
+export const NEJVETSI_KLIDOVY_TAH = 0.7;
+
+/** Poměrné protažení lana při plném využití pevnosti (pevnost / modul pružnosti materiálu). */
+export function protazeniNaMezi(id: IdPrvku): number {
+  const polozka = KATALOG[id];
+  if (!polozka.material) return 0;
+  const m = MATERIALY[polozka.material];
+  return m.mez.tah / m.E;
+}
+
+/** O kolik metrů je lano nakreslené v délce `delka` napínákem zkrácené; záporné u povoleného. */
+export function zkraceniLana(id: IdPrvku, delka: number, predpeti: number): number {
+  return delka - delka / (1 + predpeti * protazeniNaMezi(id));
+}
+
+/** Předpětí, se kterým je lano nakreslené v délce `delka` o `zkraceni` metrů kratší (záporné: delší). */
+export function predpetiZeZkraceni(id: IdPrvku, delka: number, zkraceni: number): number {
+  const k = protazeniNaMezi(id);
+  if (!(k > 0) || !(delka > zkraceni)) return 0;
+  return (delka / (delka - zkraceni) - 1) / k;
+}
 
 /**
  * Laděný tlumič: závaží zavěšené pod styčníkem na pružině s tlumičem. Hráč volí hmotnost

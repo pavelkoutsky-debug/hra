@@ -2,7 +2,7 @@
 // nemění, takže historie úprav (zpět a znovu) je jen řada návrhů.
 
 import type { Bod } from "../data/geometrie";
-import type { IdPrvku } from "../data/katalog";
+import { KATALOG, PREDPETI_LANA, predpetiZeZkraceni, zkraceniLana, type IdPrvku } from "../data/katalog";
 import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu, type TlumicStycniku } from "../data/navrh";
 
 export function prazdnyNavrh(idUrovne: string): NavrhMostu {
@@ -24,6 +24,13 @@ export function prutMezi(navrh: NavrhMostu, a: number, b: number): PrutNavrhu | 
   return navrh.pruty.find((p) => (p.a === a && p.b === b) || (p.a === b && p.b === a));
 }
 
+/** Nový prut daného prvku s výchozím nastavením: lano je od začátku mírně napnuté. */
+function novyPrut(id: number, a: number, b: number, prvek: IdPrvku): PrutNavrhu {
+  const prut: PrutNavrhu = { id, a, b, prvek };
+  if (KATALOG[prvek].druh === "lano") prut.predpeti = PREDPETI_LANA.vychozi;
+  return prut;
+}
+
 /**
  * Přidá prut mezi dvěma body rastru; styčníky, které v nich ještě nejsou, založí.
  * Když tam prut už je, jen mu změní prvek.
@@ -41,7 +48,7 @@ export function pridejPrut(navrh: NavrhMostu, a: Bod, b: Bod, prvek: IdPrvku): N
   const idB = idV(b);
   const stavajici = prutMezi(navrh, idA, idB);
   if (stavajici) return zmenPrvek(navrh, [stavajici.id], prvek);
-  return { ...navrh, stycniky, pruty: [...navrh.pruty, { id: volneId(navrh.pruty), a: idA, b: idB, prvek }] };
+  return { ...navrh, stycniky, pruty: [...navrh.pruty, novyPrut(volneId(navrh.pruty), idA, idB, prvek)] };
 }
 
 /** Odstraní styčníky, do kterých nevede žádný prut. */
@@ -61,14 +68,28 @@ export function smaz(navrh: NavrhMostu, pruty: ReadonlySet<number>, stycniky: Re
   return bezOsamelychStycniku({ ...navrh, pruty: zbyle });
 }
 
-/** Změní prvek daných prutů; parametry, které k novému prvku nepatří, zahodí. */
+/**
+ * Změní prvek daných prutů; parametry, které k novému prvku nepatří, zahodí. Lano změněné
+ * na jiné lano si nechá napínák dotažený o stejnou délku.
+ */
 export function zmenPrvek(navrh: NavrhMostu, pruty: Iterable<number>, prvek: IdPrvku): NavrhMostu {
   const menene = new Set(pruty);
   let zmena = false;
   const nove = navrh.pruty.map((p) => {
     if (!menene.has(p.id) || p.prvek === prvek) return p;
     zmena = true;
-    return { id: p.id, a: p.a, b: p.b, prvek };
+    const novy = novyPrut(p.id, p.a, p.b, prvek);
+    if (p.predpeti !== undefined && KATALOG[p.prvek].druh === "lano" && KATALOG[prvek].druh === "lano") {
+      const a = navrh.stycniky.find((s) => s.id === p.a);
+      const b = navrh.stycniky.find((s) => s.id === p.b);
+      if (a && b) {
+        const delka = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+        const stejne = predpetiZeZkraceni(prvek, delka, zkraceniLana(p.prvek, delka, p.predpeti));
+        const zaokrouhlene = Math.round(stejne / PREDPETI_LANA.presnost) * PREDPETI_LANA.presnost;
+        novy.predpeti = Math.max(PREDPETI_LANA.nejmensi, Math.min(PREDPETI_LANA.nejvetsi, zaokrouhlene));
+      }
+    }
+    return novy;
   });
   return zmena ? { ...navrh, pruty: nove } : navrh;
 }
@@ -131,6 +152,39 @@ export function nastavTlumeni(
 }
 
 /**
+ * Nastaví napínáky daných lan (předpětí v rozsahu `PREDPETI_LANA`; záporné lano povoluje);
+ * `hodnota` dostane id lana a dosavadní předpětí a vrátí nové. Jiných prutů než lan se nedotkne.
+ */
+export function nastavPredpeti(
+  navrh: NavrhMostu,
+  pruty: ReadonlySet<number>,
+  hodnota: (id: number, dosavadni: number) => number,
+): NavrhMostu {
+  let zmena = false;
+  const nove = navrh.pruty.map((p) => {
+    if (!pruty.has(p.id) || KATALOG[p.prvek].druh !== "lano") return p;
+    const dosavadni = p.predpeti ?? 0;
+    const nova = Math.max(PREDPETI_LANA.nejmensi, Math.min(PREDPETI_LANA.nejvetsi, hodnota(p.id, dosavadni)));
+    if (nova === dosavadni && p.predpeti !== undefined) return p;
+    zmena = true;
+    return { ...p, predpeti: nova };
+  });
+  return zmena ? { ...navrh, pruty: nove } : navrh;
+}
+
+/** Svaří dané styčníky (`svar` true), nebo z nich svar odebere. */
+export function nastavSvar(navrh: NavrhMostu, stycniky: ReadonlySet<number>, svar: boolean): NavrhMostu {
+  let zmena = false;
+  const nove = navrh.stycniky.map((s) => {
+    if (!stycniky.has(s.id) || (s.svar === true) === svar) return s;
+    zmena = true;
+    const { svar: _stary, ...bez } = s;
+    return svar ? { ...bez, svar: true } : bez;
+  });
+  return zmena ? { ...navrh, stycniky: nove } : navrh;
+}
+
+/**
  * Posune styčník na jiný bod rastru. Vrací null, když tam už jiný styčník je:
  * slučování styčníků tažením by snadno vyrobilo nechtěné pruty nulové délky.
  */
@@ -158,7 +212,7 @@ export function zrcadli(navrh: NavrhMostu, osa: number, jen?: ReadonlySet<number
     const stavajiciB = stycnikV(vysledek, obrazB);
     if (stavajiciA && stavajiciB && prutMezi(vysledek, stavajiciA.id, stavajiciB.id)) continue;
     vysledek = pridejPrut(vysledek, obrazA, obrazB, p.prvek);
-    // Obraz má stejné nastavení jako předloha: tlumení prutu a závaží v jeho koncích.
+    // Obraz má stejné nastavení jako předloha: tlumení a předpětí prutu, svar a závaží v jeho koncích.
     const idA = stycnikV(vysledek, obrazA)!.id;
     const idB = stycnikV(vysledek, obrazB)!.id;
     if (p.tlumeni !== undefined) {
@@ -166,7 +220,13 @@ export function zrcadli(navrh: NavrhMostu, osa: number, jen?: ReadonlySet<number
       const tlumeni = p.tlumeni;
       vysledek = nastavTlumeni(vysledek, new Set([obraz.id]), () => tlumeni);
     }
+    if (p.predpeti !== undefined) {
+      const obraz = prutMezi(vysledek, idA, idB)!;
+      const predpeti = p.predpeti;
+      vysledek = nastavPredpeti(vysledek, new Set([obraz.id]), () => predpeti);
+    }
     for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
+      if (vzor.svar) vysledek = nastavSvar(vysledek, new Set([obraz]), true);
       const zavazi = vzor.zavazi;
       if (zavazi) vysledek = nastavZavazi(vysledek, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
       const tlumic = vzor.tlumic;

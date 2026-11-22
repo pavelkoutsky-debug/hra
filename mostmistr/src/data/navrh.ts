@@ -1,15 +1,18 @@
 import { cenaNavrhu } from "./cena";
 import { jeUvnitr, type Bod, type Obdelnik } from "./geometrie";
-import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, type IdPrvku } from "./katalog";
+import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, PREDPETI_LANA, type IdPrvku } from "./katalog";
 import { ChybaDat, cislo, jedenZ, jenZnameKlice, logicka, polozky, text, objekt, volitelne } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 import { vyskaTerenu, type Uroven } from "./uroven";
 
-export const VERZE_NAVRHU = 2;
+export const VERZE_NAVRHU = 3;
 
 /** Převody ze starších verzí formátu návrhu; viz `prevedNaAktualni`. */
 const PREVODY_NAVRHU: readonly Prevod[] = [
   // 1 → 2: styčník může nést laděný tlumič. Starší návrhy ho neznaly a nic se v nich nemění.
+  (stary) => stary,
+  // 2 → 3: předpětí lana smí být záporné (povolené lano, delší než nakreslené) i větší než 1.
+  // Starší návrhy měly jen 0 až 1 a nic se v nich nemění.
   (stary) => stary,
 ];
 
@@ -40,7 +43,10 @@ export interface PrutNavrhu {
   a: number;
   b: number;
   prvek: IdPrvku;
-  /** Předpětí lana jako podíl jeho pevnosti, 0 až 1. */
+  /**
+   * Nastavení napínáku lana jako předpětí: podíl pevnosti, kterým by lano táhlo, kdyby jeho
+   * konce zůstaly, kde jsou nakreslené. Kladné lano zkracuje, záporné prodlužuje; viz `PREDPETI_LANA`.
+   */
   predpeti?: number;
   /** Tuhost pružiny v N/m. */
   tuhost?: number;
@@ -94,7 +100,7 @@ function prut(h: unknown, cesta: string): PrutNavrhu {
     b: cislo(o.b, `${cesta}.b`, { min: 0, cele: true }),
     prvek: jedenZ(o.prvek, `${cesta}.prvek`, ID_PRVKU),
   };
-  const predpeti = volitelne(o.predpeti, (v) => cislo(v, `${cesta}.predpeti`, { min: 0, max: 1 }));
+  const predpeti = volitelne(o.predpeti, (v) => cislo(v, `${cesta}.predpeti`, { min: PREDPETI_LANA.nejmensi, max: PREDPETI_LANA.nejvetsi }));
   if (predpeti !== undefined) p.predpeti = predpeti;
   const tuhost = volitelne(o.tuhost, (v) => cislo(v, `${cesta}.tuhost`, { min: 0 }));
   if (tuhost !== undefined) p.tuhost = tuhost;
@@ -162,12 +168,16 @@ export type DruhProblemu =
   | "prvek-nepovoleny"
   | "prvek-neni-hotovy"
   | "svar-nepovoleny"
+  | "pilir-mimo-zaklad"
+  | "pilir-sikmy"
+  | "zaklad-jen-pilir"
   | "stycnik-v-terenu"
   | "prut-v-zakazane-zone"
   | "zavazi-nepovolene"
   | "ladeny-tlumic-nepovoleny"
   | "ladeny-tlumic-mimo-rozsah"
   | "tlumeni-mimo-rozsah"
+  | "predpeti-mimo-rozsah"
   | "nad-rozpocet";
 
 /** Porušení pravidla úrovně. `stycnik` a `prut` jsou id z návrhu. */
@@ -232,12 +242,55 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (rozsah && p.tlumeni !== undefined && (p.tlumeni < rozsah.nejmensi || p.tlumeni > rozsah.nejvetsi)) {
       problemy.push({ druh: "tlumeni-mimo-rozsah", prut: p.id });
     }
+    if (p.predpeti !== undefined && (p.predpeti < PREDPETI_LANA.nejmensi || p.predpeti > PREDPETI_LANA.nejvetsi)) {
+      problemy.push({ druh: "predpeti-mimo-rozsah", prut: p.id });
+    }
     if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {
       problemy.push({ druh: "prut-v-zakazane-zone", prut: p.id });
     }
+    if (polozka.druh === "pilir") {
+      // Pilíř je sloup: smí se naklonit, ale ne ležet. Položený by sloužil jako betonový trám
+      // několikrát únosnější než mostovka, a to pilíř ve hře být nemá.
+      if (2 * Math.abs(b.x - a.x) > Math.abs(b.y - a.y)) problemy.push({ druh: "pilir-sikmy", prut: p.id });
+    } else {
+      // Základ je patka pilíře; jiný prut do něj nevede (opěry a kotvy lan jsou kotvy úrovně).
+      const naZaklade = (s: StycnikNavrhu): boolean =>
+        uroven.zaklady.some((z) => z.x === s.x && z.y === s.y) && !uroven.kotvy.some((k) => k.x === s.x && k.y === s.y);
+      if (naZaklade(a) || naZaklade(b)) problemy.push({ druh: "zaklad-jen-pilir", prut: p.id });
+    }
   }
+  for (const id of pilireMimoZaklad(navrh, uroven)) problemy.push({ druh: "pilir-mimo-zaklad", prut: id });
   if (uroven.rozpocet !== null && cenaNavrhu(navrh) > uroven.rozpocet) problemy.push({ druh: "nad-rozpocet" });
   return problemy;
+}
+
+/**
+ * Pilíře (id prutů), které nestojí na základu: pilíř musí začínat v základu vyznačeném
+ * v úrovni, nebo navazovat na pilíř, který na základu stojí.
+ */
+export function pilireMimoZaklad(navrh: NavrhMostu, uroven: Uroven): number[] {
+  const pilire = navrh.pruty.filter((p) => KATALOG[p.prvek].druh === "pilir");
+  if (pilire.length === 0) return [];
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  // Styčníky, kterých se dotýká pilíř stojící na základu; začíná se v základech.
+  const nesene = new Set<number>();
+  for (const s of navrh.stycniky) {
+    if (uroven.zaklady.some((z) => z.x === s.x && z.y === s.y)) nesene.add(s.id);
+  }
+  const stoji = new Set<number>();
+  let pribylo = true;
+  while (pribylo) {
+    pribylo = false;
+    for (const p of pilire) {
+      if (stoji.has(p.id) || !podleId.has(p.a) || !podleId.has(p.b)) continue;
+      if (!nesene.has(p.a) && !nesene.has(p.b)) continue;
+      stoji.add(p.id);
+      nesene.add(p.a);
+      nesene.add(p.b);
+      pribylo = true;
+    }
+  }
+  return pilire.filter((p) => !stoji.has(p.id)).map((p) => p.id);
 }
 
 /**

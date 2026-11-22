@@ -1,6 +1,7 @@
 import { zkontrolujNavrh } from "../data/navrh";
 import { VERZE_FYZIKY } from "../jadro/verze";
-import type { RozborMostu, ZpravaProZkousku, ZpravaZeZkousky } from "./protokol";
+import type { DopnutiLan, RozborMostu, ZpravaProZkousku, ZpravaZeZkousky } from "./protokol";
+import { dopniLana } from "./dopnuti";
 import { rozeberMost } from "./rozbor";
 import { Zkouska } from "./zkouska";
 
@@ -50,6 +51,19 @@ export class BehZkousky {
         this.#posli({ typ: "rozbor", id: zprava.id, rozbor });
         return;
       }
+      case "dopnuti": {
+        // Stejně jako rozbor: běžící zkoušku neruší a most nad rozpočet dopnout smí.
+        let dopnuti: DopnutiLan | null = null;
+        try {
+          const prekazky = zkontrolujNavrh(zprava.navrh, zprava.uroven).filter((p) => p.druh !== "nad-rozpocet");
+          const vysledek = prekazky.length === 0 ? dopniLana(zprava.uroven, zprava.navrh) : null;
+          if (vysledek) dopnuti = { predpeti: [...vysledek.predpeti], pred: vysledek.pred, po: vysledek.po, tah: vysledek.tah };
+        } catch {
+          dopnuti = null;
+        }
+        this.#posli({ typ: "dopnuti", id: zprava.id, dopnuti });
+        return;
+      }
     }
   }
 
@@ -95,7 +109,8 @@ export class BehZkousky {
       const davka = zkouska.pokracuj(sekundDeje);
       this.#posli(
         { typ: "zaznam", ...davka },
-        davka.snimky.flatMap((s) => [s.polohy.buffer, s.vyuziti.buffer]),
+        // Prázdné pole kloubů je sdílené mezi snímky a nepřenáší se; přenést jde jen jednou.
+        davka.snimky.flatMap((s) => [s.polohy.buffer, s.vyuziti.buffer, ...(s.klouby.length > 0 ? [s.klouby.buffer] : [])]),
       );
       if (zkouska.hotovo) {
         this.#zkouska = null;

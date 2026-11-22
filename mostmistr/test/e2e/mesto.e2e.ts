@@ -143,7 +143,24 @@ describe("ukázky v okně se zadáním", () => {
   // Každá ukázka kampaně se musí v prohlížeči opravdu spočítat a rozehrát. Jednotkový test
   // hlídá, co ukázka předvádí; tady se hlídá, že ji hra neodmítne (most nad rozpočtem
   // úrovně kdysi skončil hlášením „ukázku se nepodařilo spočítat“).
-  for (const id of ["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "5-01", "5-02", "5-03", "5-04"]) {
+  for (const id of [
+    "1-01",
+    "2-02",
+    "2-03",
+    "2-04",
+    "3-01",
+    "3-02",
+    "3-03",
+    "3-04",
+    "4-01",
+    "4-02",
+    "4-03",
+    "4-04",
+    "5-01",
+    "5-02",
+    "5-03",
+    "5-04",
+  ]) {
     it(`ukázka úrovně ${id} se spočítá a přehrává: vlevo most neobstojí, vpravo ano`, async () => {
       await stranka.goto(`${adresa}?uroven=${id}`);
       await stranka.locator("#okno-zadani").waitFor({ state: "visible" });

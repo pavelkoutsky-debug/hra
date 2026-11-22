@@ -2,7 +2,7 @@
 // rozdělaný tah myší a po zkoušce obálka namáhání.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, LADENY_TLUMIC, type IdPrvku } from "../data/katalog";
+import { KATALOG, LADENY_TLUMIC, zkraceniLana, type IdPrvku } from "../data/katalog";
 import type { NavrhMostu, ProblemNavrhu } from "../data/navrh";
 import type { Tah } from "../editor/editor";
 import { cislo, delka as zapisDelky } from "../ui/formaty";
@@ -40,6 +40,8 @@ export function tloustkaPrutu(prvek: IdPrvku, m: number): number {
   // Ocelobetonová mostovka je na výkresu silnější než dřevěná, jako ve skutečnosti.
   if (prvek === "mostovka-ocelobeton") return mezi(0.32 * m, 6.5, 12);
   if (druh === "mostovka") return mezi(0.22 * m, 4.5, 9);
+  // Nosné lano je svazek: na výkresu je znatelně silnější než závěsné.
+  if (prvek === "lano-nosne") return 3.2;
   if (druh === "lano") return 1.6;
   if (druh === "pilir") return mezi(0.5 * m, 8, 18);
   // Těžký průřez se od lehkého liší jen tloušťkou; proužek uprostřed čáry je vyhrazený tahu.
@@ -111,6 +113,45 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
     });
   }
 
+  // Napínák: na každém laně malá objímka; u vybraného lana i to, o kolik je zkrácené (−) nebo prodloužené (+).
+  ctx.font = `10px ${PISMO}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  for (const p of s.navrh.pruty) {
+    if (KATALOG[p.prvek].druh !== "lano") continue;
+    const a = podleId.get(p.a);
+    const b = podleId.get(p.b);
+    if (!a || !b) continue;
+    const pa = naObraz(a);
+    const pb = naObraz(b);
+    const dx = pb.x - pa.x;
+    const dy = pb.y - pa.y;
+    const delka = Math.hypot(dx, dy);
+    if (delka < 24) continue;
+    // Objímka sedí ve třetině lana od jeho spodního konce, aby se u vějíře lan nepřekrývaly.
+    const odSpodu = a.y <= b.y ? 1 / 3 : 2 / 3;
+    const stred = { x: pa.x + odSpodu * dx, y: pa.y + odSpodu * dy };
+    const barva = spatnePruty.has(p.id) ? BARVY.varovani : BARVY.caraSilna;
+    ctx.save();
+    ctx.translate(stred.x, stred.y);
+    ctx.rotate(Math.atan2(dy, dx));
+    ctx.fillStyle = BARVY.pozadi;
+    ctx.strokeStyle = barva;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.rect(-6, -2.6, 12, 5.2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    if (!s.vybranePruty.has(p.id)) continue;
+    const mm = Math.round(1000 * zkraceniLana(p.prvek, Math.hypot(b.x - a.x, b.y - a.y), p.predpeti ?? 0));
+    ctx.fillStyle = barva;
+    // Znaménko jako na tlačítkách napínáku: plus je dotaženo, minus povoleno.
+    ctx.fillText(`${mm > 0 ? "+" : mm < 0 ? "−" : ""}${Math.abs(mm)} mm`, stred.x, stred.y - 7);
+  }
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
   // Závaží visí pod styčníkem; popisek říká kolik.
   for (const st of s.navrh.stycniky) {
     if (!st.zavazi) continue;
@@ -150,16 +191,37 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
-  // Styčníky: kloub jako prázdné kolečko.
+  // Styčníky: kloub jako prázdné kolečko, svar jako plný čtvereček s tmavým obrysem a křížkem,
+  // aby byl vidět i na tlusté čáře mostovky.
   const polomer = mezi(0.11 * m, 2.8, 5);
   for (const st of s.navrh.stycniky) {
     const p = naObraz(st);
+    const barva = spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.caraSilna;
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = barva;
+    if (st.svar) {
+      const strana = 2 * polomer + 4;
+      if (s.vybraneStycniky.has(st.id)) {
+        ctx.fillStyle = "rgba(143, 208, 255, 0.55)";
+        ctx.fillRect(p.x - strana / 2 - 4, p.y - strana / 2 - 4, strana + 8, strana + 8);
+      }
+      ctx.fillStyle = barva;
+      ctx.fillRect(p.x - strana / 2, p.y - strana / 2, strana, strana);
+      ctx.strokeStyle = BARVY.pozadi;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(p.x - strana / 2 - 1, p.y - strana / 2 - 1, strana + 2, strana + 2);
+      ctx.beginPath();
+      ctx.moveTo(p.x - strana / 2 + 2, p.y - strana / 2 + 2);
+      ctx.lineTo(p.x + strana / 2 - 2, p.y + strana / 2 - 2);
+      ctx.moveTo(p.x + strana / 2 - 2, p.y - strana / 2 + 2);
+      ctx.lineTo(p.x - strana / 2 + 2, p.y + strana / 2 - 2);
+      ctx.stroke();
+      continue;
+    }
     ctx.beginPath();
     ctx.arc(p.x, p.y, polomer, 0, 2 * Math.PI);
     ctx.fillStyle = s.vybraneStycniky.has(st.id) ? "#8fd0ff" : BARVY.pozadi;
     ctx.fill();
-    ctx.lineWidth = 1.6;
-    ctx.strokeStyle = spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.caraSilna;
     ctx.stroke();
   }
 
@@ -214,11 +276,18 @@ function nakresliTah(
   ctx.beginPath();
   ctx.arc(b.x, b.y, 5, 0, 2 * Math.PI);
   ctx.stroke();
+  // Dlouhý tah, který se rozdělí na díly: kroužky tam, kde vzniknou styčníky.
+  const dilu = tah.druh === "prut" ? (tah.dilu ?? 1) : 1;
+  for (let i = 1; i < dilu; i++) {
+    ctx.beginPath();
+    ctx.arc(a.x + ((b.x - a.x) * i) / dilu, a.y + ((b.y - a.y) * i) / dilu, 3.5, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
 
   // Délka taženého prutu vedle jeho středu.
   if (tah.druh === "prut") {
     const metry = Math.hypot(tah.k.x - od.x, tah.k.y - od.y);
-    const text = zapisDelky(metry);
+    const text = dilu > 1 ? `${dilu} × ${zapisDelky(metry / dilu)}` : zapisDelky(metry);
     ctx.font = `12px ${PISMO}`;
     const sirka = ctx.measureText(text).width + 10;
     const x = (a.x + b.x) / 2 + 12;

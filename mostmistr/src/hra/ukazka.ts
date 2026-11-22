@@ -3,6 +3,7 @@
 // dokola současně; pohyb mostu je zvětšený, aby bylo houpání vidět.
 
 import type { Obdelnik } from "../data/geometrie";
+import type { NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { VERZE_FYZIKY } from "../jadro/verze";
 import { cislo } from "../ui/formaty";
@@ -40,19 +41,31 @@ interface Strana {
   zvetsene: Float32Array;
 }
 
-/** Výřez světa, který ukázka kreslí: most s kouskem břehů a s tím, co je pod ním. */
-function vyrezUkazky(uroven: Uroven): Obdelnik {
+/**
+ * Výřez světa, který ukázka kreslí: most s kouskem břehů a s tím, co je pod ním. Vejít se do
+ * něj musí oba mosty celé, tedy i pylony, kotevní lana za opěrami a paty pilířů.
+ */
+function vyrezUkazky(uroven: Uroven, navrhy: readonly NavrhMostu[]): Obdelnik {
   const trasa = uroven.trasy[0]!;
   const rozpeti = trasa.konec.x - trasa.zacatek.x;
   const okraj = Math.max(3, 0.14 * rozpeti);
   let dno = trasa.zacatek.y - 0.2 * rozpeti;
   for (const kotva of uroven.kotvy) dno = Math.min(dno, kotva.y - 1.5);
-  return {
+  const vyrez = {
     xMin: trasa.zacatek.x - okraj,
     xMax: trasa.konec.x + okraj,
     yMin: dno,
     yMax: trasa.zacatek.y + 0.22 * rozpeti,
   };
+  for (const navrh of navrhy) {
+    for (const st of navrh.stycniky) {
+      vyrez.xMin = Math.min(vyrez.xMin, st.x - 2);
+      vyrez.xMax = Math.max(vyrez.xMax, st.x + 2);
+      vyrez.yMin = Math.min(vyrez.yMin, st.y - 1.5);
+      vyrez.yMax = Math.max(vyrez.yMax, st.y + 2);
+    }
+  }
+  return vyrez;
 }
 
 export class Ukazka {
@@ -67,6 +80,8 @@ export class Ukazka {
   #delka = 0;
   /** Kolikrát rychleji než ve skutečnosti se děj přehrává. */
   readonly #rychlost: number;
+  /** Výřez světa společný oběma stranám, aby šly porovnat. */
+  readonly #vyrez: Obdelnik;
 
   /**
    * `koren` je oddíl okna s ukázkou: obsahuje dva prvky `[data-strana]`, každý s plátnem
@@ -75,6 +90,7 @@ export class Ukazka {
   constructor(koren: HTMLElement, zadani: UkazkaUrovne) {
     this.#koren = koren;
     this.#rychlost = zadani.rychlost ?? 1;
+    this.#vyrez = vyrezUkazky(zadani.a.uroven, [zadani.a.navrh, zadani.b.navrh]);
     this.#poznamka = koren.querySelector<HTMLElement>("[data-poznamka]")!;
     this.#strany = (["a", "b"] as const).map((ktera) => {
       const uzel = koren.querySelector<HTMLElement>(`[data-strana="${ktera}"]`)!;
@@ -205,7 +221,7 @@ export class Ukazka {
     ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
 
     const { uroven, navrh } = strana.zadani;
-    const kamera = celyVyrez(vyrezUkazky(uroven), rozmer, 2);
+    const kamera = celyVyrez(this.#vyrez, rozmer, 2);
     nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, nahled: true, bezKot: true });
 
     const cas = Math.min(this.#cas, strana.vysledek?.trvani ?? 0);

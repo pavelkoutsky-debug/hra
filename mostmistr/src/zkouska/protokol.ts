@@ -60,6 +60,22 @@ export interface RozborMostu {
    * síly, pro frekvence `od`, `od + krok`, … Hz. Null v úrovni, která křivku neukazuje.
    */
   krivka: { od: number; krok: number; prazdny: number[]; obsazeny: number[] | null } | null;
+  /**
+   * Tah lan pod vlastní tíhou mostu v N, pro každý prut návrhu ve stejném pořadí; 0 u lana,
+   * které visí povolené, a null u prutu, který lano není.
+   */
+  tahyLan: (number | null)[];
+}
+
+/** Výsledek automatického dopnutí lan. */
+export interface DopnutiLan {
+  /** Nové nastavení napínáků: dvojice id prutu a předpětí (viz `PrutNavrhu.predpeti`). */
+  predpeti: [number, number][];
+  /** Největší svislá odchylka mostovky od nakresleného tvaru před dopnutím a po něm, v metrech. */
+  pred: number;
+  po: number;
+  /** Největší tah v laně po dopnutí pod vlastní tíhou mostu, jako podíl jeho pevnosti. */
+  tah: number;
 }
 
 /** Co se při zkoušce stalo a kdy. Čísla způsobu a následku porušení jsou konstanty jádra. */
@@ -143,6 +159,11 @@ export interface VysledekZkousky {
   komfortCestujicich: KomfortZkousky | null;
   /** Cena mostu v korunách. */
   cena: number;
+  /**
+   * O kolik metrů se mostovka pod vlastní tíhou, ještě před provozem, nejvíc lišila od výkresu.
+   * U mostu s lany prozradí nedopnuté napínáky. Null, když most klidovou polohu nemá.
+   */
+  pruvesVKlidu: number | null;
   /** Největší využití ze všech prutů. */
   nejvetsiVyuziti: number;
   /** Kmitání mostovky, dokud po ní šli lidé; null v úrovni bez lidí. */
@@ -179,7 +200,9 @@ export type ZpravaProZkousku =
   | { typ: "start"; vstup: VstupZkousky }
   | { typ: "stop" }
   /** Žádost o rozbor mostu; `id` se vrátí v odpovědi, aby šla poznat zastaralá. */
-  | { typ: "rozbor"; id: number; uroven: Uroven; navrh: NavrhMostu };
+  | { typ: "rozbor"; id: number; uroven: Uroven; navrh: NavrhMostu }
+  /** Žádost o automatické dopnutí lan; `id` se vrátí v odpovědi. */
+  | { typ: "dopnuti"; id: number; uroven: Uroven; navrh: NavrhMostu };
 
 export type ZpravaZeZkousky =
   | { typ: "pripraveno"; verzeFyziky: number }
@@ -195,6 +218,11 @@ export type ZpravaZeZkousky =
   | { typ: "konec"; vysledek: VysledekZkousky }
   /** Odpověď na žádost o rozbor; null, když se most nedal sestavit (nevyhovuje pravidlům). */
   | { typ: "rozbor"; id: number; rozbor: RozborMostu | null }
+  /**
+   * Odpověď na žádost o dopnutí lan; null, když most nevyhovuje pravidlům, nemá lana, nemá
+   * klidovou polohu, nebo lana nemají na co působit.
+   */
+  | { typ: "dopnuti"; id: number; dopnuti: DopnutiLan | null }
   | { typ: "chyba"; kod: KodChyby; podrobnosti?: string };
 
 export type KodChyby = "jina-verze-fyziky" | "neplatny-vstup" | "vypocet-selhal";

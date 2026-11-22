@@ -115,15 +115,15 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Kolejiště | Pojízdné jen pro kolejová vozidla | Tvárně | Kolej na mostnicích | 6 m |
 | Dřevěný trám | Tah, tlak, ohyb; brzy se vzpírá | Křehce | GL24h, lehký a těžký průřez | 6 m |
 | Ocelový nosník | Tah, tlak, ohyb | Tvárně: trvale se ohne, pak se zlomí | S355 · E 210 GPa · kluz ~400 MPa · pevnost ~510 MPa · 7 850 kg/m³ | 12 m |
-| Ocelové lano | Jen tah, v tlaku prověsí | Křehce: praskne a švihne | Spirálové · E 150 GPa · pevnost ~1 400 MPa | 60 m |
-| Betonový pilíř | Výborný v tlaku, slabý v tahu, těžký | V tahu křehce, v tlaku drcením | C30/37 · E 33 GPa · tlak ~38 MPa · 2 500 kg/m³ | 12 m |
+| Ocelové lano | Jen tah, v tlaku prověsí | Křehce: praskne a švihne | Spirálové · E 150 GPa · pevnost ~1 400 MPa *(M4b: 2× lano ⌀ 40 mm, 2,6 MN; k němu nosné lano 2× ⌀ 80 mm se čtyřnásobným průřezem pro hlavní lana visutých mostů)* | 60 m |
+| Betonový pilíř | Výborný v tlaku, slabý v tahu, těžký | V tahu křehce, v tlaku drcením | C30/37 · E 33 GPa · tlak ~38 MPa · 2 500 kg/m³ *(M4b: průřez 1 × 2 m; do styčníků je vetknutý po celé výšce, ostatní pruty na něm leží kloubově)* | 12 m |
 
 **Pokročilé prvky**
 
 | Prvek | K čemu je |
 |---|---|
-| Napínák lana | Lanu se nastaví předpětí. Ladí se tím tvar a tuhost zavěšených a visutých mostů. |
-| Automatické dopnutí | Tlačítko, které lana napne tak, aby mostovka pod vlastní tíhou držela nakreslený tvar. Napínák pak slouží k ručnímu doladění. |
+| Napínák lana | Lanu se nastaví předpětí. Ladí se tím tvar a tuhost zavěšených a visutých mostů. *(M4b: hráč nastavuje délku lana po milimetrech, „dotaženo o 47 mm“ nebo „povoleno o 7 mm“, a hra k tomu ukazuje tah v laně pod vlastní tíhou mostu. Závěsy visutého mostu se musí umět o desítky centimetrů zkrátit i prodloužit, což jako podíl pevnosti nejde vyjádřit.)* |
+| Automatické dopnutí | Tlačítko, které lana napne tak, aby mostovka pod vlastní tíhou držela nakreslený tvar. Napínák pak slouží k ručnímu doladění. *(M4b: hlídá i to, aby se pylony nenakláněly, žádné lano neviselo a žádné neneslo pod vlastní tíhou mostu přes 70 % pevnosti; tvar, který by lana udržela jen za cenu přetížení, nedotáhne a řekne proč. Tvar nosného lana visutého mostu určuje zatížení, ne výkres; dopnutí mu přizpůsobí délky závěsů.)* |
 | Viskózní tlumič | Prut, který klade odpor rychlosti. Tlumí kmitání. Rozsah nastavení je omezený. *(M3a: 5 až 200 kN·s/m v devíti stupních.)* |
 | Pružina | Prut s volitelnou tuhostí. |
 | Závaží | Hmota ve styčníku. Protizávaží zvedacích mostů a hmota laděných tlumičů. |
@@ -135,14 +135,14 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Prvek | Chování |
 |---|---|
 | Kloub (výchozí, zdarma) | Pruty se ve styčníku volně natáčejí. Konstrukce musí být ztužená trojúhelníky. |
-| Svar (tuhý spoj) | Nastavuje se na styčník a platí se za každý připojený prut. Přenáší ohybový moment. Při přetížení v něm vznikne plastický kloub. |
+| Svar (tuhý spoj) | Nastavuje se na styčník a platí se za každý připojený prut. Přenáší ohybový moment. Při přetížení v něm vznikne plastický kloub. *(M4b: 1 500 Kč za prut; plastický kloub při přehrávání zkoušky označí prstenec, jehož barva říká, kolik mezního natočení už je pryč.)* |
 | Dělicí zámek | Styčník, který se při zvedání mostu rozpojí a po sklopení zase zamkne. |
 | Pevná kotva, posuvné ložisko, vetknutí | Dané úrovní. V analytickém panelu ukazují reakce. Posuvné ložisko má úložnou délku 0,5 m: konec mostu, který se posune dál, z něj sjede a spadne. *(Doplněno v M2.)* |
 
 **Pravidla stavby**
 
 - Mostovka se ve styčnících chová jako každý jiný prut: ve výchozím stavu je kloubově dělená, svar ji udělá průběžnou.
-- Pilíře lze stavět jen na základech vyznačených ve výkresu.
+- Pilíře lze stavět jen na základech vyznačených ve výkresu. *(M4b: nebo na jiném pilíři, který na základu stojí.)*
 - Úroveň může mít zakázané zóny, například průjezdný profil pod mostem nebo plavební dráhu.
 - Paleta ukazuje jen prvky, které jsou v dané úrovni odemčené.
 
@@ -174,7 +174,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Nákladní auto | 26 t | 40 km/h | 3 nápravy |
 | Tahač s návěsem | 40 t | 40 km/h | 5 náprav, kloub mezi tahačem a návěsem |
 | Traktor s vlekem | 15 t | 20 km/h | Pomalý, dlouho zatěžuje |
-| Nadměrný náklad | 120 t | 10 km/h | Mnohonápravový podvalník |
+| Nadměrný náklad | 120 t | 10 km/h | Mnohonápravový podvalník *(M4b: těžký tahač a osm řad kol po 11,25 t)* |
 | Lokomotiva | 88 t | 40–60 km/h | 4 nápravy po 22 t, podvozky |
 | Nákladní vůz | 22 t prázdný / 90 t ložený | podle lokomotivy | 4 nápravy |
 | Osobní vůz | 45 t | podle lokomotivy | Komfort cestujících |
@@ -296,7 +296,7 @@ Vedle časové simulace má jádro druhou, maticovou cestu výpočtu:
 - **Rezonanční křivka:** jak silně most odpovídá na buzení v závislosti na frekvenci. Je na ní vidět, jak laděný tlumič rozdělí špičku na dvě nižší.
 - **Automatické dopnutí lan** používá tentýž výpočet.
 
-Pro povolená lana, kde přímý výpočet selhává, slouží jako záloha ustálení časovou simulací. Obě cesty se zároveň navzájem kontrolují.
+Pro povolená lana, kde přímý výpočet selhává, slouží jako záloha ustálení časovou simulací. Obě cesty se zároveň navzájem kontrolují. *(M4b: ustálení s kinetickým tlumením, `src/jadro/ustaleni.ts`; dopnutí je tlumená Gaussova–Newtonova metoda nad maticovou statikou, `src/zkouska/dopnuti.ts`.)*
 
 ### 7.9 Determinismus
 
@@ -500,6 +500,7 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M3b Dav a analýza** | Dav, běžecký závod, průvod, skákající dav, laděný tlumič, analytický panel, rezonanční křivka, budič, grafy, záznam porušení, porovnání pokusů, kapitola 5 | Laděný tlumič v testu rozdělí rezonanční špičku; úrovně projdou testem vyhratelnosti |
 | **M4a Těžká doprava** | Nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka, kapitola 3 | Dynamické zvýšení od nerovností odpovídá očekávanému rozsahu; úrovně projdou |
 | **M4b Velká rozpětí** | Lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby, kapitola 4 | Visutý a zavěšený referenční most unese kolonu kamionů; úrovně projdou |
+| **M4c Zpětná vazba a deník hraní** | Okno pro zpětnou vazbu hráče přímo ve hře (s přiloženým mostem a posledním děním), anonymní deník hraní (úrovně, úpravy mostu, zkoušky a jejich výsledky, chyby), ukládání na Netlify, stránka správce s evidencí a stavem řešení. *(Přidáno na přání zadavatele 22. 11. 2026.)* | Zpětná vazba odeslaná ve hře se objeví na stránce správce se stavem „nová“ a jde označit za vyřešenou; deník z průchodu úrovní obsahuje stavbu, zkoušky i výsledek; s vypnutým záznamem hra neodešle nic |
 | **M5 Železnice** | Kolejiště, lokomotiva, vagóny, dvoupatrové mosty, kapitola 6 | Nákladní vlak přejede referenční most; úrovně projdou |
 | **M6 Pohyblivé mosty** | Písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 | Most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou |
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |
