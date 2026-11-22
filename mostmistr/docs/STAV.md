@@ -13,8 +13,9 @@ Poslední aktualizace: 22. 11. 2026
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
-| M4a Těžká doprava | Hotovo, čeká na vyzkoušení zadavatelem (pull request M4a) |
-| M4b až M8 | Nezačato |
+| M4a Těžká doprava | Hotovo, sloučeno do `main` (22. 11. 2026) |
+| M4b Velká rozpětí | Rozpracováno |
+| M5 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
 ## M3b — výsledek
@@ -414,14 +415,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Vyzkoušet náhled M4a (kapitola 3) a rozhodnout o sloučení do `main`.
+1. Teď nic; M4b se rozpracovává.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M4b Velká rozpětí (po schválení M4a): lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby a kapitola 4 s tahačem s návěsem. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M4b Velká rozpětí: lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby a kapitola 4 s tahačem s návěsem. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
@@ -444,6 +445,8 @@ M4b Velká rozpětí (po schválení M4a): lana, napínák, automatické dopnut�
 - 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“; zadavatel opravu nechal sloučit hned.
 
 - 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“; zadavatel úpravu nechal sloučit hned (verze 0.7.2).
+
+- 22. 11. 2026: zadavatel rozhodl **M4a sloučit a jít na M4b** (verze 0.8.0). Pozn.: jeho snímky chyb byly z adresy `deploy-preview-7`, tedy ze zmrazeného náhledu staršího pull requestu; opravy se do starých náhledů nedostanou. Při hlášení opravy vždy poslat odkaz na nový náhled a říct, že starý odkaz zůstává starý.
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 
