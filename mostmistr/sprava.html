@@ -43,6 +43,9 @@
       th, td { padding: 4px 8px; border: 1px solid rgb(207 227 255 / 0.4); text-align: left; vertical-align: top; }
       th { color: #8fb4e6; font-weight: normal; white-space: nowrap; }
       td.cislo, th.cislo { text-align: right; white-space: nowrap; }
+      /* Souhrn má hodně sloupců: záhlaví se smí zalomit, ať se tabulka vejde na šířku okna. */
+      #souhrn th { white-space: normal; vertical-align: bottom; }
+      #souhrn td:first-child { white-space: nowrap; }
       tbody tr[data-vyber] { cursor: pointer; }
       tbody tr[data-vyber]:hover { background: rgb(29 90 163 / 0.6); }
       tbody tr[aria-selected="true"] { background: #1d5aa3; color: #fff; }
@@ -138,9 +141,9 @@
             <thead>
               <tr>
                 <th>Úroveň</th><th class="cislo">Hráčů</th><th class="cislo">Zkoušek</th><th class="cislo">Prošlo</th>
-                <th class="cislo">Hráčů s průchodem</th><th class="cislo">Bez zkoušky</th><th class="cislo">Zkoušek do průchodu</th>
+                <th class="cislo">Hráčů prošlo</th><th class="cislo">Bez zkoušky</th><th class="cislo">Zkoušek do průchodu</th>
                 <th class="cislo">Minut do průchodu</th><th class="cislo">Medaile P / R / M</th>
-                <th>Cena průchodu (nejnižší · medián · rozpočet úrovně)</th><th>Čím stavěli</th><th>Na čem mosty padaly</th>
+                <th>Cena průchodu: nejnižší · medián · rozpočty úrovně</th><th>Čím stavěli</th><th>Na čem mosty padaly</th>
               </tr>
             </thead>
             <tbody></tbody>
