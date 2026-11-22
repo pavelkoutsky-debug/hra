@@ -1,0 +1,136 @@
+{
+  "verze": 4,
+  "id": "3-04",
+  "nazev": "Kolona",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -19,
+    "xMax": 58,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 4,
+      "y": -8
+    },
+    {
+      "x": 10,
+      "y": -15
+    },
+    {
+      "x": 20,
+      "y": -15
+    },
+    {
+      "x": 22,
+      "y": -10
+    },
+    {
+      "x": 26,
+      "y": -10
+    },
+    {
+      "x": 28,
+      "y": -15
+    },
+    {
+      "x": 38,
+      "y": -15
+    },
+    {
+      "x": 44,
+      "y": -8
+    },
+    {
+      "x": 48,
+      "y": 0
+    },
+    {
+      "x": 58,
+      "y": 0
+    }
+  ],
+  "hladina": -13,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 48,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 24,
+      "y": -10,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 48,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "B",
+  "rozpocet": 1700000,
+  "inzenyrskyRozpocet": 1270000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.45
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nakladni",
+      "pocet": 4,
+      "rozestup": 12,
+      "brzdeni": {
+        "misto": 44,
+        "stani": 3
+      }
+    },
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    }
+  ]
+}

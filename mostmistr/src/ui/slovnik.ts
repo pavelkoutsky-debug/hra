@@ -331,6 +331,26 @@ const CS = {
   "skutecnost.2-04":
     "londýnská lávka Millennium Bridge se v červnu 2000 pod davem rozhoupala tak, že ji pár dní po otevření zavřeli. Kmitala do stran, ne nahoru a dolů, ale lék byl stejný: 37 viskózních tlumičů a k nim 52 laděných závaží. Od února 2002 je klidná.",
   "ukazka.zrychleni": "Děj je {nasobek}× zrychlený.",
+  "ukazka.3-01.a": "Metr vysoká příhrada",
+  "ukazka.3-01.b": "Tři metry vysoká příhrada",
+  "ukazka.3-01.popis": "Mostovka váží sto tun, autobus osmnáct. Čím je příhrada nižší, tím větší síly má v pásech. Metr vysoká neunese ani mostovku a zlomí se dřív, než na most kdo vjede.",
+  "ukazka.3-02.a": "Horní pás z lehkého profilu",
+  "ukazka.3-02.b": "Horní pás z těžkého profilu",
+  "ukazka.3-02.popis": "Oba mosty mají stejný tvar. Dvanáctimetrový tlačený prut z lehkého profilu vybočí do strany a složí se, i když by samotný tlak snesl: to je vzpěr. Těžký profil je v ohybu desetkrát tužší a nevybočí.",
+  "ukazka.3-03.a": "Příhrada nad mostovkou",
+  "ukazka.3-03.b": "Stejná příhrada pod mostovkou",
+  "ukazka.3-03.popis": "Stejné pruty, jen zrcadlově. Nahoře je ocelový pás tlačený a vzpírá se. Dole je tlačená betonová mostovka, která tlak snese bez potíží, a ocelový pás jen táhne; tažený prut vybočit nemůže.",
+  "ukazka.3-04.a": "Pilíř z lehkého profilu",
+  "ukazka.3-04.b": "Pilíř z těžkého profilu",
+  "ukazka.3-04.popis": "Kolona na mostě zabrzdí. Brzdnou sílu přes padesát tun odvádějí do skály nohy pilíře, které už nesou víc než polovinu mostu. Lehké nohy vybočí a most spadne; těžké to unesou.",
+  "skutecnost.3-01":
+    "most přes řeku svatého Vavřince v Québecu se roku 1907 zřítil ještě při stavbě a zabil 75 dělníků. Konstrukce vyšla asi o pětinu těžší, než s čím projekt počítal, a nikdo to včas nepřepočítal. U velkých mostů je vlastní tíha největší zatížení ze všech.",
+  "skutecnost.3-02":
+    "vzorec pro vzpěr odvodil Leonhard Euler už roku 1744: dvakrát delší tlačený prut vybočí při čtvrtinové síle. Sto padesát let ležel skoro bez užitku, dokud se nezačalo stavět z oceli a pruty nezeštíhlely. V Québecu roku 1907 začal pád právě vybočením tlačeného pásu.",
+  "skutecnost.3-03":
+    "ocelobetonovým mostům se říká spřažené: betonová deska je s ocelovými nosníky spojená trny, takže pracují jako jeden celek. Beton umí tlak, ocel tah. Spojením vyjde nosník zhruba dvakrát únosnější a až třikrát tužší než samotná ocel.",
+  "skutecnost.3-04":
+    "skutečný most má obvykle jedno ložisko pevné a ostatní posuvná, aby se mohl teplem roztahovat. Všechny vodorovné síly, tedy i brzdění, pak jdou tím jedním pevným bodem. Evropská norma počítá brzdnou sílu jako 60 % tíhy nejtěžší dvojnápravy a k tomu desetinu rovnoměrného zatížení jízdního pruhu po celé délce mostu.",
   "ukazka.5-01.a": "Dva metry vysoká příhrada",
   "ukazka.5-01.b": "Tři metry vysoká příhrada",
   "ukazka.5-01.popis": "Oba mosty jsou prázdné mimo rytmus chůze. Sto dvacet lidí ale váží skoro deset tun a těžší most kmitá pomaleji: nižší z nich s davem sjede přímo do pásma kroků, vyšší zůstane nad ním.",
@@ -485,6 +505,8 @@ const CS = {
   "kapitola.1.tema": "Trojúhelník drží. Dřevo, chodci, cyklisté a první auto.",
   "kapitola.2.nazev": "Lávka",
   "kapitola.2.tema": "Most, který se houpe. Ocel, běžci, pochodující útvar a rezonance.",
+  "kapitola.3.nazev": "Okresní silnice",
+  "kapitola.3.tema": "Tíha a vzpěr. Ocelobetonová mostovka, těžký ocelový profil, dodávky, autobusy, nákladní auta a brzdění.",
   "kapitola.5.nazev": "Lávka ve městě",
   "kapitola.5.tema": "Město v pohybu. Dav, běžecký závod, průvod s kapelou, skákající dav a laděný tlumič.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
@@ -513,6 +535,14 @@ const CS = {
     "Čtyři běžci poklusem ve stejném rytmu, tři doskoky za sekundu. Most, který kmitá stejně rychle nebo přesně dvakrát rychleji, rozhoupou tak, že se po něm nedá jít. Nepomůže víc oceli, pomůže jiná frekvence: uprav výšku příhrady tak, aby vlastní frekvence na ose padla mezi krok běžců a jeho dvojnásobek, nebo vysoko nad oba.",
   "zadani.2-03":
     "Čestná jednotka, čtyřiadvacet lidí rychlým pochodem. Nad mostovkou vede vedení a pod ní je plavební profil, takže vyšší příhradu postavit nejde a nízká kmitá skoro v rytmu pochodu. Když most nejde vyztužit, dá se zpomalit: zavěs do styčníků mostovky závaží (vyber styčník a přidej kilogramy vlevo v paletě). Těžší most kmitá pomaleji.",
+  "zadani.3-01":
+    "Okresní silnice, čtyřiadvacet metrů, dva jízdní pruhy. Pojede dodávka, dvě auta a linkový autobus. Stavíš z oceli a mostovka je ocelobetonová: unese i nákladní auto, ale sama váží přes čtyři tuny na metr. Celá má sto tun, autobus osmnáct. Most tu nese hlavně sám sebe a nízká příhrada se zlomí dřív, než na ni kdo vjede. Pod mostem vede cesta, takže stavět můžeš jen nad mostovkou.",
+  "zadani.3-02":
+    "Šestatřicet metrů a nad silnicí vedení vysokého napětí: výš než tři metry stavět nejde a pod mostem je průjezd. Pojedou dvě nákladní auta za sebou, autobus a dodávka. Horní pás nízké příhrady je silně tlačený a dlouhý tlačený prut se nerozdrtí, ale vybočí: tomu se říká vzpěr. Lehký profil tu nestačí. Těžký ocelový profil stojí dvakrát tolik a ve vzpěru vydrží desetkrát víc. Dej ho tam, kde je tlak, a jinde šetři.",
+  "zadani.3-03":
+    "Třicet metrů přes hlubokou rokli, autobusy v obou směrech a dvě auta. Pod mostem je tentokrát místa dost. Zkus příhradu postavit pod mostovku: tlak pak nese betonová mostovka, která ho umí, a ocel dole jen táhne. Vozovka je nová a hladká, takže cestující v autobusu ucítí jen to, jak se most pod nimi prohýbá. Mistrovská medaile chce jízdu skoro bez houpání; na to musí být most tuhý.",
+  "zadani.3-04":
+    "Osmačtyřicet metrů ve dvou polích. Oba konce mostu leží na posuvných ložiskách; pevný bod je jen na skále uprostřed údolí. Přijede kolona čtyř nákladních aut, na mostě zabrzdí, tři sekundy stojí a rozjede se; proti ní jede autobus. Brzdící kola tlačí vozovku dopředu polovinou své tíhy, dohromady přes padesát tun, a tu sílu musí most odvést do skály. Nohy pilíře jsou dlouhé a tlačené: pozor na vzpěr.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Nikdo nepochoduje, takže most nerozhoupou tolik jako útvar, ale je jich skoro deset tun a těžší most kmitá pomaleji. Na ose frekvencí proto sleduj i druhý trojúhelník, most s lidmi. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s². Tlačítkem Analýza dole otevřeš rezonanční křivku, která ukazuje, jak silně most na který rytmus odpoví.",
   "zadani.5-02":

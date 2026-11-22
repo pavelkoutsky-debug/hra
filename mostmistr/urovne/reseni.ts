@@ -114,6 +114,85 @@ function vzperadla(k: Kreslic, prvek: IdPrvku): void {
   }
 }
 
+const TO: IdPrvku = "ocel-tezka";
+const BETON: IdPrvku = "mostovka-ocelobeton";
+
+/** Ocelobetonová mostovka z polí po šesti metrech od x = 0 do x = rozpětí. */
+function vozovka(k: Kreslic, rozpeti: number): void {
+  for (let x = 0; x < rozpeti; x += 6) k.prut(BETON, [x, 0], [x + 6, 0]);
+}
+
+/**
+ * Silniční příhrada nad ocelobetonovou mostovkou s poli 6 m: krajní šikminy a horní pás
+ * z prvku `pas` ve výšce `vyska`, svislice a diagonály klesající ke středu z prvku `vypln`.
+ * S `krokPasu` 12 má horní pás dvanáctimetrové pruty; svislice jsou jen pod jeho styčníky
+ * a mezilehlé styčníky mostovky nesou diagonály do V.
+ */
+function silnicni(
+  uroven: string,
+  rozpeti: number,
+  vyska: number,
+  pas: IdPrvku,
+  vypln: IdPrvku,
+  krokPasu: 6 | 12 = 6,
+  uprava?: (k: Kreslic) => void,
+): NavrhMostu {
+  return navrh(uroven, (k) => {
+    vozovka(k, rozpeti);
+    k.prut(pas, [0, 0], [6, vyska]);
+    k.prut(pas, [rozpeti - 6, vyska], [rozpeti, 0]);
+    for (let x = 6; x < rozpeti - 6; x += krokPasu) k.prut(pas, [x, vyska], [Math.min(x + krokPasu, rozpeti - 6), vyska]);
+    if (krokPasu === 6) {
+      for (let x = 6; x <= rozpeti - 6; x += 6) k.prut(vypln, [x, 0], [x, vyska]);
+      for (let x = 6; x < rozpeti - 6; x += 6) {
+        const kStredu = x < rozpeti / 2;
+        k.prut(vypln, kStredu ? [x, vyska] : [x, 0], kStredu ? [x + 6, 0] : [x + 6, vyska]);
+      }
+    } else {
+      for (let x = 6; x <= rozpeti - 6; x += 12) k.prut(vypln, [x, 0], [x, vyska]);
+      for (let x = 6; x < rozpeti - 6; x += 12) {
+        k.prut(vypln, [x, vyska], [x + 6, 0]);
+        k.prut(vypln, [x + 6, 0], [x + 12, vyska]);
+      }
+    }
+    uprava?.(k);
+  });
+}
+
+/**
+ * Příhrada pod ocelobetonovou mostovkou: dolní pás v hloubce `hloubka`, krajní šikminy,
+ * svislice a diagonály stoupající ke středu. Tlak tu nese mostovka, ocel dole jen táhne.
+ */
+function podMostovkou(uroven: string, rozpeti: number, hloubka: number, pas: IdPrvku, vypln: IdPrvku): NavrhMostu {
+  return navrh(uroven, (k) => {
+    vozovka(k, rozpeti);
+    k.prut(pas, [0, 0], [6, -hloubka]);
+    k.prut(pas, [rozpeti - 6, -hloubka], [rozpeti, 0]);
+    for (let x = 6; x < rozpeti - 6; x += 6) k.prut(pas, [x, -hloubka], [x + 6, -hloubka]);
+    for (let x = 6; x <= rozpeti - 6; x += 6) k.prut(vypln, [x, 0], [x, -hloubka]);
+    for (let x = 6; x < rozpeti - 6; x += 6) {
+      const kStredu = x < rozpeti / 2;
+      k.prut(vypln, kStredu ? [x, 0] : [x, -hloubka], kStredu ? [x + 6, -hloubka] : [x + 6, 0]);
+    }
+  });
+}
+
+/** Změní prvek prutu, který most mezi dvěma místy už má. */
+function zmenPrvek(k: Kreslic, a: [number, number], b: [number, number], prvek: IdPrvku): void {
+  const ia = k.bod(a[0], a[1]);
+  const ib = k.bod(b[0], b[1]);
+  const prut = k.pruty.find((p) => (p.a === ia && p.b === ib) || (p.a === ib && p.b === ia));
+  if (!prut) throw new Error(`Mezi ${a.join(",")} a ${b.join(",")} žádný prut není.`);
+  prut.prvek = prvek;
+}
+
+/** Nohy pilíře ze skály uprostřed údolí (úroveň 3-04) do styčníků mostovky na daných místech. */
+function nohy(prvek: IdPrvku, mista: readonly number[]): (k: Kreslic) => void {
+  return (k) => {
+    for (const x of mista) k.prut(prvek, [24, -10], [x, 0]);
+  };
+}
+
 export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
   "1-01": {
     pruchod: navrh("1-01", (k) => {
@@ -294,6 +373,65 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "jen mostovka", navrh: navrh("2-04", (k) => mostovka(k, 32, 4)) },
       { nazev: "nízká příhrada bez tlumičů", navrh: lavka("2-04", 32, 4, rovne(32, 4, 1)) },
       { nazev: "vysoká příhrada kmitá na trojnásobku kroku", navrh: lavka("2-04", 32, 4, rovne(32, 4, 3)) },
+    ],
+  },
+
+  // ---- Kapitola 3: Okresní silnice ----
+
+  // Okresní silnice, 24 m, dva pruhy. Ocelobetonová mostovka váží sto tun: most nese hlavně
+  // sám sebe. Metr vysoká příhrada se zlomí dřív, než na ni kdo vjede.
+  "3-01": {
+    pruchod: silnicni("3-01", 24, 3, O, O),
+    rozpocet: silnicni("3-01", 24, 2, O, O),
+    mistrovska: silnicni("3-01", 24, 4, O, O),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("3-01", (k) => vozovka(k, 24)) },
+      { nazev: "metr vysoká příhrada neunese ani sebe", navrh: silnicni("3-01", 24, 1, O, O) },
+    ],
+  },
+
+  // Pod vedením, 36 m, výš než tři metry stavět nejde. Tlačený horní pás z lehkého profilu
+  // nestačí; těžký ano. Výplň a tažená mostovka těžký profil nepotřebují.
+  "3-02": {
+    pruchod: silnicni("3-02", 36, 3, TO, TO),
+    rozpocet: silnicni("3-02", 36, 2, TO, O),
+    mistrovska: silnicni("3-02", 36, 3, TO, O),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("3-02", (k) => vozovka(k, 36)) },
+      { nazev: "horní pás z lehkého profilu", navrh: silnicni("3-02", 36, 3, O, O) },
+      { nazev: "dvanáctimetrový horní pás z lehkého profilu se vzpírá", navrh: silnicni("3-02", 36, 3, O, O, 12) },
+    ],
+  },
+
+  // Linka přes rokli, 30 m, autobusy v obou směrech po nové vozovce. Pod mostem je místa dost:
+  // příhrada pod mostovkou tlačí do betonu, který tlak umí, a ocel jen táhne. Stejná příhrada
+  // nad mostovkou má tlačený ocelový pás a je zhruba dvakrát víc namáhaná. Cestující
+  // v autobusu poznají, jak moc se most prohýbá: mistrovská medaile chce hlubokou příhradu.
+  "3-03": {
+    pruchod: silnicni("3-03", 30, 3, O, O),
+    rozpocet: podMostovkou("3-03", 30, 2, O, O),
+    mistrovska: podMostovkou("3-03", 30, 4, O, O),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("3-03", (k) => vozovka(k, 30)) },
+      { nazev: "metr vysoká příhrada nad mostovkou", navrh: silnicni("3-03", 30, 1, O, O) },
+    ],
+  },
+
+  // Kolona, 2 × 24 m se skálou uprostřed. Oba konce leží na posuvných ložiskách, pevný bod
+  // je jen na skále: nohy pilíře nesou půlku mostu a k tomu brzdnou sílu čtyř nákladních aut.
+  "3-04": {
+    pruchod: silnicni("3-04", 48, 4, O, O, 6, nohy(TO, [18, 30])),
+    rozpocet: silnicni("3-04", 48, 2, O, O, 6, nohy(TO, [18, 30])),
+    // Nejvíc namáhané jsou tlačené diagonály u pilíře; z těžkého profilu mají rezervu.
+    mistrovska: silnicni("3-04", 48, 4, O, O, 6, (k) => {
+      nohy(TO, [18, 30])(k);
+      zmenPrvek(k, [12, 4], [18, 0], TO);
+      zmenPrvek(k, [30, 0], [36, 4], TO);
+    }),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("3-04", (k) => vozovka(k, 48)) },
+      { nazev: "příhrada bez pilíře", navrh: silnicni("3-04", 48, 4, O, O) },
+      { nazev: "pilíř z lehkého profilu", navrh: silnicni("3-04", 48, 4, O, O, 6, nohy(O, [18, 30])) },
     ],
   },
 

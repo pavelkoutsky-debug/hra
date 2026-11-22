@@ -1,0 +1,114 @@
+{
+  "verze": 4,
+  "id": "3-01",
+  "nazev": "Okresní silnice",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -10,
+    "xMax": 34,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 2,
+      "y": -6
+    },
+    {
+      "x": 22,
+      "y": -6
+    },
+    {
+      "x": 24,
+      "y": 0
+    },
+    {
+      "x": 34,
+      "y": 0
+    }
+  ],
+  "hladina": null,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 24,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": 0.5,
+      "yMin": -6,
+      "xMax": 23.5,
+      "yMax": -0.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 24,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 600000,
+  "inzenyrskyRozpocet": 490000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.4
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "dodavka"
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto",
+      "pocet": 2
+    },
+    {
+      "cas": 5,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    }
+  ]
+}

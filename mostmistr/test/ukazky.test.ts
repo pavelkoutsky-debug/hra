@@ -36,15 +36,29 @@ function prehraj(strana: StranaUkazky): VysledekZkousky {
 describe("ukázky k úrovním", () => {
   it("mají je úrovně, které učí něco nového, a ke každé jsou texty", () => {
     const sUkazkou = kampan.filter((u) => ukazkaUrovne(u) !== null).map((u) => u.id);
-    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "5-01", "5-02", "5-03", "5-04"]);
+    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "5-01", "5-02", "5-03", "5-04"]);
     for (const id of sUkazkou) {
       for (const cast of ["a", "b", "popis"]) expect(jeKlicTextu(`ukazka.${id}.${cast}`), `${id}.${cast}`).toBe(true);
     }
   });
 
-  it("souvislost se skutečností má první úroveň a celá druhá a pátá kapitola", () => {
+  it("souvislost se skutečností má první úroveň a celá druhá, třetí a pátá kapitola", () => {
     const sTextem = kampan.filter((u) => jeKlicTextu(`skutecnost.${u.id}`)).map((u) => u.id);
-    expect(sTextem).toEqual(["1-01", "2-01", "2-02", "2-03", "2-04", "5-01", "5-02", "5-03", "5-04"]);
+    expect(sTextem).toEqual([
+      "1-01",
+      "2-01",
+      "2-02",
+      "2-03",
+      "2-04",
+      "3-01",
+      "3-02",
+      "3-03",
+      "3-04",
+      "5-01",
+      "5-02",
+      "5-03",
+      "5-04",
+    ]);
   });
 
   it("každá úroveň kampaně má text zadání a každá kapitola název a téma", () => {
@@ -77,7 +91,16 @@ describe("ukázky k úrovním", () => {
         expect(a.rozpad || b.rozpad).toBe(false);
       });
 
-      if (uroven.id !== "1-01") {
+      // Ukázky první a třetí kapitoly jsou o pevnosti: vlevo se most zlomí, vpravo zůstane celý.
+      const oPevnosti = uroven.id.startsWith("1-") || uroven.id.startsWith("3-");
+      if (oPevnosti) {
+        it("rozdíl dělá pevnost: vlevo se most zlomí, vpravo zůstane celý a nikdo nespadne", () => {
+          // Zlomí se, nebo se složí v kloubech (mostovka bez podpory): někdo spadne.
+          expect(a.poruseni + a.spadlo).toBeGreaterThan(0);
+          expect(b).toMatchObject({ spadlo: 0, poruseni: 0 });
+          expect(b.nejvetsiVyuziti).toBeLessThan(1);
+        });
+      } else {
         it("rozdíl dělá kmitání, ne pevnost: nikdo nespadne, nic se nezlomí a vlevo se houpe mnohem víc", () => {
           expect(a).toMatchObject({ spadlo: 0, poruseni: 0 });
           expect(a.komfort!.zrychleni).toBeGreaterThan(2.5 * b.komfort!.zrychleni);
@@ -86,10 +109,11 @@ describe("ukázky k úrovním", () => {
           expect(b.komfort!.trida).toBeLessThanOrEqual(uroven.nejhorsiKomfort);
         });
 
-        it("ukázka netrvá déle než půl minuty (dlouhé děje se přehrávají zrychleně)", () => {
-          expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(32);
-        });
       }
+
+      it("ukázka netrvá déle než půl minuty (dlouhé děje se přehrávají zrychleně)", () => {
+        expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(32);
+      });
     }, 120_000);
   }
 });
