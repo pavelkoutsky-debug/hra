@@ -184,7 +184,9 @@ describe("náhodně nakreslené mosty", () => {
 
   it("ať se zřítí jakkoli, výpočet nevyrobí neplatná čísla ani nesmyslné rychlosti", () => {
     let zricenych = 0;
-    for (let nasada = 1; nasada <= 40; nasada++) {
+    // Sto padesát mostů: vzácné selhání (ráz tlumiče kola o utržený díl mostovky) se dřív
+    // objevilo jednou ze tří set a čtyřicet mostů ho nezachytilo.
+    for (let nasada = 1; nasada <= 150; nasada++) {
       const { simulace } = pripravScenar(nahodnyMost(nasada));
       const s = simulace.soustava;
       while (simulace.cas < 1.5 && !simulace.rozpadla) simulace.krok();
@@ -195,8 +197,8 @@ describe("náhodně nakreslené mosty", () => {
       if (simulace.porusena) zricenych++;
     }
     // Sada obsahuje mosty, které vydrží, i takové, které se rozpadnou.
-    expect(zricenych).toBeGreaterThan(3);
-    expect(zricenych).toBeLessThan(40);
+    expect(zricenych).toBeGreaterThan(10);
+    expect(zricenych).toBeLessThan(150);
   }, 120_000);
 });
 

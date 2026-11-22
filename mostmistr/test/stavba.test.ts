@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { vlastnostiPrutu } from "../src/data/katalog";
 import { zkontrolujNavrh } from "../src/data/navrh";
-import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
+import { spoctiSily, TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
 import { najdiRovnovahu, vlastniTvarySoustavy } from "../src/jadro/matice";
 import { LANO, NOSNIK, PRUZINA, sestavSoustavu } from "../src/jadro/soustava";
 import { volneStupne } from "../src/jadro/stupne";
@@ -148,12 +148,13 @@ describe("most sestavený z návrhu", () => {
     const s = sestavSoustavu(sestavMost(uroven, prihrada().navrh()).popis);
     const stupne = volneStupne(s);
     expect(najdiRovnovahu(s, stupne, new Float64Array(stupne.length), g)).toBeGreaterThanOrEqual(0);
+    // Výsledné síly včetně tíhy: na zadržený styčník působí pruty a tíha silou, kterou podpora vyrovnává.
+    spoctiSily(s, g, 0);
     let hmota = 0;
     let reakce = 0;
     for (let i = 0; i < s.pocetStycniku; i++) {
       hmota += s.hmota[i]!;
-      // Na zadržený styčník působí pruty silou, kterou podpora vyrovnává; k ní patří i jeho tíha.
-      if (s.invHmotaY[i] === 0) reakce += -s.fy[i]! + s.hmota[i]! * g;
+      if (s.invHmotaY[i] === 0) reakce += -s.fy[i]!;
     }
     expect(reakce / (hmota * g)).toBeCloseTo(1, 6);
     // Střed se prohne o milimetry, ne o metry.

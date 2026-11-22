@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spoctiSily, TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
 import { najdiRovnovahu } from "../src/jadro/matice";
 import { spoctiVnitrniSily } from "../src/jadro/sily";
 import { sestavSoustavu, type PopisSoustavy, type Soustava } from "../src/jadro/soustava";
@@ -217,5 +218,92 @@ describe("síla uvnitř prvku: známé hodnoty", () => {
     spoctiVnitrniSily(s);
     expect(s.pocetZatizenych).toBe(0);
     expect(momentVPoli(s, 0, 1, 0)).toBe(0);
+  });
+});
+
+describe("vlastní tíha rozložená po délce prutu", () => {
+  const g = TIHOVE_ZRYCHLENI;
+  const q = HEB200.hmotnostNaMetr * g;
+  const vKlidu = (popis: PopisSoustavy): Soustava => {
+    const s = sestavSoustavu(popis);
+    const stupne = volneStupne(s);
+    expect(najdiRovnovahu(s, stupne, new Float64Array(stupne.length), g)).toBeGreaterThanOrEqual(0);
+    spoctiSily(s, g, 0);
+    return s;
+  };
+
+  it("nosník vetknutý na obou koncích: v podporách −q·L²/12, uprostřed q·L²/24", () => {
+    const L = 6;
+    const s = vKlidu({
+      stycniky: [
+        { x: 0, y: 0, pevneX: true, pevneY: true, pevneNatoceni: true },
+        { x: L, y: 0, pevneX: true, pevneY: true, pevneNatoceni: true },
+      ],
+      prvky: [{ ...HEB200, a: 0, b: 1 }],
+    });
+    expect(momentNaKonciA(s, 0)).toBeCloseTo((-q * L * L) / 12, 6);
+    expect(momentNaKonciB(s, 0)).toBeCloseTo((-q * L * L) / 12, 6);
+    expect(momentVPoli(s, 0, 1, g)).toBeCloseTo((q * L * L) / 24, 6);
+  });
+
+  it("spojitý nosník o dvou polích má nad střední podporou −q·L²/8, i když je každé pole jediný prvek", () => {
+    const L = 5;
+    const s = vKlidu({
+      stycniky: [
+        { x: 0, y: 0, pevneX: true, pevneY: true },
+        { x: L, y: 0, pevneY: true },
+        { x: 2 * L, y: 0, pevneY: true },
+      ],
+      prvky: [
+        { ...HEB200_BEZ_SMYKU, a: 0, b: 1, kloubA: true },
+        { ...HEB200_BEZ_SMYKU, a: 1, b: 2, kloubB: true },
+      ],
+    });
+    expect(momentNaKonciB(s, 0) / ((-q * L * L) / 8)).toBeCloseTo(1, 6);
+    expect(momentNaKonciA(s, 1) / ((-q * L * L) / 8)).toBeCloseTo(1, 6);
+    // Největší moment v poli je 9/128·q·L² ve vzdálenosti 3/8·L od krajní podpory; ve čtvrtinách
+    // pole se posuzuje q·L²/16 uprostřed a 9/128·q·L² − … u kraje, tedy vždy méně.
+    expect(momentVPoli(s, 0, 1, g) / ((q * L * L) / 16)).toBeCloseTo(1, 6);
+  });
+
+  it("prostý nosník ze dvou dílů se prohne o 5·q·L⁴/(384·E·I), ne o pětinu méně", () => {
+    const L = 8;
+    const popis: PopisSoustavy = {
+      stycniky: [
+        { x: 0, y: 0, pevneX: true, pevneY: true },
+        { x: L / 2, y: 0 },
+        { x: L, y: 0, pevneY: true },
+      ],
+      prvky: [
+        { ...HEB200_BEZ_SMYKU, a: 0, b: 1, kloubA: true },
+        { ...HEB200_BEZ_SMYKU, a: 1, b: 2, kloubB: true },
+      ],
+    };
+    const s = vKlidu(popis);
+    expect(s.y[1]! / ((-5 * q * L ** 4) / (384 * HEB200.EI))).toBeCloseTo(1, 4);
+    expect(momentNaKonciB(s, 0) / ((q * L * L) / 8)).toBeCloseTo(1, 6);
+  });
+
+  it("šikmý a svislý prut: příčně působí jen průmět tíhy, svislý sloup ohyb nedostane", () => {
+    const sloup = vKlidu({
+      stycniky: [
+        { x: 0, y: 0, pevneX: true, pevneY: true, pevneNatoceni: true },
+        { x: 0, y: 5 },
+      ],
+      prvky: [{ ...HEB200, a: 0, b: 1 }],
+    });
+    expect(Math.abs(momentNaKonciA(sloup, 0))).toBeLessThan(1e-6);
+    // Konzola skloněná pod 45°: moment ve vetknutí je tíha krát vodorovné rameno těžiště.
+    const d = 3;
+    const sikma = vKlidu({
+      stycniky: [
+        { x: 0, y: 0, pevneX: true, pevneY: true, pevneNatoceni: true },
+        { x: d, y: d },
+      ],
+      prvky: [{ ...HEB200_BEZ_SMYKU, a: 0, b: 1 }],
+    });
+    const tiha = q * Math.hypot(d, d);
+    // (Na tři platná místa: konzola se tíhou prohne a rameno se o zlomek milimetru změní.)
+    expect(momentNaKonciA(sikma, 0) / ((-tiha * d) / 2)).toBeCloseTo(1, 3);
   });
 });
