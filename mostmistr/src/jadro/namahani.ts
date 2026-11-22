@@ -107,3 +107,59 @@ export function vyhodnotNamahani(s: Soustava, tiha: number, vaha: number): void 
     mistoNamahani[e] = misto;
   }
 }
+
+/** Vnitřní síly prvku v jednom okamžiku. */
+export interface VnitrniSily {
+  /** Osová síla v newtonech; tah kladný, tlak záporný. */
+  osova: number;
+  /** Největší ohybový moment po délce prvku, N·m (velikost). */
+  moment: number;
+  /** Největší posouvající síla, N (velikost). */
+  smyk: number;
+}
+
+/**
+ * Vnitřní síly prvku tak, jak s nimi počítá posudek: osová síla, největší ohybový moment
+ * (konce a čtvrtiny prutu včetně zatížení uvnitř prvku a vlastní tíhy) a největší posouvající
+ * síla na koncích. Slouží hlášením pro hráče; do výpočtu nevstupuje.
+ */
+export function vnitrniSily(s: Soustava, e: number, tiha: number): VnitrniSily {
+  const osova = s.osovaSila[e]!;
+  if (s.druh[e] === LANO) return { osova, moment: 0, smyk: 0 };
+  const a = s.prvekA[e]!;
+  const b = s.prvekB[e]!;
+  const dx = s.x[b]! - s.x[a]!;
+  const dy = s.y[b]! - s.y[a]!;
+  const delka = Math.sqrt(dx * dx + dy * dy);
+  const koncovyA = -(s.momentA[e]! - s.zatMomentA[e]!);
+  const koncovyB = s.momentB[e]! - s.zatMomentB[e]!;
+  let moment = Math.max(Math.abs(koncovyA), Math.abs(koncovyB));
+  const tihaNaMetr = s.hmotnostNaMetr[e]! * tiha;
+  for (let k = 0; k < 3; k++) {
+    const xi = MISTA_POSUDKU[k]!;
+    const vPoli =
+      koncovyA * (1 - xi) + koncovyB * xi + s.zatMomentPole[3 * e + k]! + 0.5 * tihaNaMetr * dx * delka * xi * (1 - xi);
+    if (Math.abs(vPoli) > moment) moment = Math.abs(vPoli);
+  }
+  const zDeformace = delka > 0 ? (s.momentA[e]! + s.momentB[e]!) / delka : 0;
+  const vlastni = 0.5 * tihaNaMetr * Math.abs(dx);
+  const smyk = Math.max(Math.abs(zDeformace - s.zatSilaA[e]!), Math.abs(-zDeformace - s.zatSilaB[e]!)) + vlastni;
+  return { osova, moment, smyk };
+}
+
+/**
+ * Veličina, která při daném způsobu namáhání rozhoduje, a únosnost prvku v ní: u tahu,
+ * tlaku a vzpěru osová síla v newtonech (u tlaku a vzpěru únosnost podle Rankina, tedy
+ * rozdrcení a vybočení dohromady), u ohybu moment v N·m, u smyku posouvající síla v N.
+ */
+export function rozhodujiciVelicina(s: Soustava, e: number, zpusob: number, sily: VnitrniSily): { velicina: number; unosnost: number } {
+  if (zpusob === ZPUSOB_OHYB) return { velicina: sily.moment, unosnost: s.unosnostMoment[e]! };
+  if (zpusob === ZPUSOB_SMYK) return { velicina: sily.smyk, unosnost: s.unosnostSmyk[e]! };
+  if (zpusob === ZPUSOB_TLAK || zpusob === ZPUSOB_VZPER) {
+    const tlak = s.unosnostTlak[e]!;
+    const kriticka = s.kritickaSila[e]!;
+    const unosnost = s.druh[e] === LANO ? 0 : 1 / (1 / tlak + 1 / kriticka);
+    return { velicina: Math.abs(sily.osova), unosnost };
+  }
+  return { velicina: Math.abs(sily.osova), unosnost: s.unosnostTah[e]! };
+}

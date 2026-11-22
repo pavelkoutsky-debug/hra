@@ -39,7 +39,7 @@ const spion = (): Promise<Spion> =>
 
 async function otevriUroven(id: string): Promise<void> {
   await stranka.goto(`${adresa}?uroven=${id}`);
-  await stranka.locator("#obrazovka-uroven canvas").waitFor();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
   await expect.poll(() => stranka.locator('[data-udaj="fyzika"]').innerText(), { timeout: 5000 }).toMatch(/^v\d+$/);
 }
 
@@ -56,7 +56,7 @@ async function nactiMost(text: string): Promise<void> {
 
 /** Pustí zkoušku a nechá ji čtyřnásobnou rychlostí dohrát až k výsledku. */
 async function prehrajZkousku(): Promise<void> {
-  await stranka.locator("#obrazovka-uroven canvas").focus();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
   await stranka.keyboard.press("Space");
   // Tlačítka rychlosti jsou na časové ose, která je vidět až při zkoušce.
   await stranka.locator('#obrazovka-uroven [data-rychlost="4"]').click();
@@ -186,7 +186,7 @@ describe("zvuk ve hře", () => {
   });
 
   it("klávesa Z zvuk vypne; vypnutý zvuk nic nehraje", async () => {
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("z");
     expect(await telo("zvuk")).toBe("vypnuto");
     expect(await akce("zvuk").innerText()).toBe("Zvuk: vypnutý");
@@ -204,7 +204,7 @@ describe("zvuk ve hře", () => {
 
   it("ztlumení se pamatuje: po novém načtení hra mlčí a o zvuk nežádá ani při zkoušce", async () => {
     await stranka.reload();
-    await stranka.locator("#obrazovka-uroven canvas").waitFor();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
     expect(await telo("zvuk")).toBe("vypnuto");
     expect(await akce("zvuk").innerText()).toBe("Zvuk: vypnutý");
     await prehrajZkousku();
@@ -226,7 +226,7 @@ describe("zvuk ve hře", () => {
     expect(await zaznelo("splouchnuti")).toBeGreaterThanOrEqual(2);
     // Další stisk klávesy Z ztiší; i tichou hlasitost hra předvede vrznutím.
     const vrznuti = await zaznelo("vrzani");
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("z");
     expect(await telo("zvuk")).toBe("potichu");
     expect(await akce("zvuk").innerText()).toBe("Zvuk: potichu");

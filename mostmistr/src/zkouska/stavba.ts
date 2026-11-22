@@ -1,6 +1,7 @@
 // Převod prvků katalogu na popis, kterému rozumí fyzikální jádro.
 
-import { KATALOG, vlastnostiPrutu, type IdPrvku, type VlastnostiPrutu } from "../data/katalog";
+import { KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku, type VlastnostiPrutu } from "../data/katalog";
+import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import type { NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import {
@@ -97,6 +98,11 @@ export interface StavbaMostu {
   utlumPrvku: Float64Array;
   /** Pruty mostovky každé trasy úrovně (indexy v návrhu). */
   trasy: { id: string; pruty: number[] }[];
+  /**
+   * Laděné tlumiče: styčník návrhu, pod kterým visí, styčník jádra se závažím a prvek
+   * jádra (pružina s tlumičem), který je spojuje.
+   */
+  tlumice: { stycnik: number; zavazi: number; prvek: number }[];
 }
 
 /**
@@ -207,5 +213,26 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
     return { id: trasa.id, pruty };
   });
 
-  return { popis, stycnikuNavrhu: navrh.stycniky.length, utlumPrvku: Float64Array.from(utlumy), trasy };
+  // Laděné tlumiče: závaží visí pod styčníkem na pružině s tlumičem a hýbe se jen svisle.
+  // Pružina je zkrácená o protažení vlastní tíhou závaží, takže závaží v klidu visí přesně
+  // o délku závěsu pod styčníkem, ať je naladěné jakkoli.
+  const tlumice: StavbaMostu["tlumice"] = [];
+  navrh.stycniky.forEach((st, i) => {
+    if (!st.tlumic) return;
+    const { hmota, frekvence } = st.tlumic;
+    const omega = 2 * Math.PI * frekvence;
+    const tuhost = hmota * omega * omega;
+    const zavazi = popis.stycniky.length;
+    popis.stycniky.push({ x: st.x, y: st.y - LADENY_TLUMIC.zaves, pevneX: true, hmota });
+    const prvek = popis.prvky.length;
+    popis.prvky.push({
+      ...popisPruziny(i, zavazi, tuhost, 2 * LADENY_TLUMIC.utlum * hmota * omega),
+      klidovaDelka: LADENY_TLUMIC.zaves - (hmota * TIHOVE_ZRYCHLENI) / tuhost,
+      prut: -1,
+    });
+    utlumy.push(0);
+    tlumice.push({ stycnik: i, zavazi, prvek });
+  });
+
+  return { popis, stycnikuNavrhu: navrh.stycniky.length, utlumPrvku: Float64Array.from(utlumy), trasy, tlumice };
 }

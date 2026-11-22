@@ -85,6 +85,13 @@ function zavazi(mista: readonly number[], kg: number): (k: Kreslic) => void {
   };
 }
 
+/** Zavěsí pod styčníky mostovky na daných místech laděné tlumiče. */
+function tlumice(mista: readonly number[], hmota: number, frekvence: number): (k: Kreslic) => void {
+  return (k) => {
+    for (const x of mista) k.bod(x, 0, { tlumic: { hmota, frekvence } });
+  };
+}
+
 /** Věšadlo: dvě krokve do vrcholu nad (nebo pod) středem a sloupek ke styčníku mostovky. */
 function vesadlo(k: Kreslic, rozpeti: number, h: number): void {
   const stred = rozpeti / 2;
@@ -287,6 +294,61 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "jen mostovka", navrh: navrh("2-04", (k) => mostovka(k, 32, 4)) },
       { nazev: "nízká příhrada bez tlumičů", navrh: lavka("2-04", 32, 4, rovne(32, 4, 1)) },
       { nazev: "vysoká příhrada kmitá na trojnásobku kroku", navrh: lavka("2-04", 32, 4, rovne(32, 4, 3)) },
+    ],
+  },
+
+  // ---- Kapitola 5: Lávka II ----
+
+  // Nábřeží, 48 m, dav 120 lidí. Prázdná dvoumetrová příhrada kmitá na 2,3 Hz, nad pásmem
+  // kroků davu; s lidmi klesne na 2,0 Hz, přímo do něj. Třímetrová je i s lidmi nad pásmem.
+  "5-01": {
+    pruchod: lavka("5-01", 48, 4, rovne(48, 4, 4)),
+    rozpocet: lavka("5-01", 48, 4, rovne(48, 4, 3)),
+    // Dvoumetrová pole mostovky nedrnčí pod jednotlivými kroky.
+    mistrovska: lavka("5-01", 48, 2, rovne(48, 2, 3)),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("5-01", (k) => mostovka(k, 48, 4)) },
+      { nazev: "dvoumetrová příhrada: prázdná mimo pásmo, s lidmi v něm", navrh: lavka("5-01", 48, 4, rovne(48, 4, 2)) },
+    ],
+  },
+
+  // Městský běh, 32 m, 40 běžců kolem 2,6 Hz. Výš než metr stavět nejde a nízká příhrada
+  // kmitá s běžci na 2,5 Hz, uprostřed jejich pásma. Pomůže jen laděný tlumič.
+  "5-02": {
+    pruchod: lavka("5-02", 32, 4, rovne(32, 4, 1), tlumice([16], 600, 2.5)),
+    rozpocet: lavka("5-02", 32, 4, rovne(32, 4, 1), tlumice([16], 300, 2.5)),
+    mistrovska: lavka("5-02", 32, 2, rovne(32, 2, 1), tlumice([16], 1000, 2.5)),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("5-02", (k) => mostovka(k, 32, 4)) },
+      { nazev: "nízká příhrada bez tlumiče", navrh: lavka("5-02", 32, 4, rovne(32, 4, 1)) },
+      { nazev: "krátká pole mostovky bez tlumiče", navrh: lavka("5-02", 32, 2, rovne(32, 2, 1)) },
+    ],
+  },
+
+  // Slavnost, 36 m, průvod 48 lidí s kapelou v taktu 2,0 Hz. Prázdný most kmitá na 2,2 Hz,
+  // s průvodem na 2,0 Hz: tlumič se ladí na most s lidmi.
+  "5-03": {
+    pruchod: lavka("5-03", 36, 4, rovne(36, 4, 1), tlumice([16], 600, 2)),
+    rozpocet: lavka("5-03", 36, 4, rovne(36, 4, 1), tlumice([16], 400, 2)),
+    mistrovska: lavka("5-03", 36, 4, rovne(36, 4, 1), tlumice([16], 1200, 2)),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("5-03", (k) => mostovka(k, 36, 4)) },
+      { nazev: "nízká příhrada bez tlumiče", navrh: lavka("5-03", 36, 4, rovne(36, 4, 1)) },
+      { nazev: "tlumič naladěný daleko od mostu", navrh: lavka("5-03", 36, 4, rovne(36, 4, 1), tlumice([16], 1200, 3.2)) },
+    ],
+  },
+
+  // Koncert na mostě, 32 m, 30 lidí skáče v rytmu 2,2 Hz. Skákání budí i na dvojnásobku
+  // a trojnásobku rytmu; dvoumetrová příhrada s lidmi kmitá na 4,5 Hz, přímo na dvojnásobku.
+  // Tlumič se ladí na 4,4 Hz a mostovka musí mít krátká pole, jinak drnčí sama.
+  "5-04": {
+    pruchod: lavka("5-04", 32, 2, rovne(32, 2, 2), tlumice([16], 1000, 4.4)),
+    rozpocet: lavka("5-04", 32, 2, rovne(32, 2, 2), tlumice([16], 700, 4.4)),
+    mistrovska: lavka("5-04", 32, 2, rovne(32, 2, 2), tlumice([14, 18], 1000, 4.4)),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("5-04", (k) => mostovka(k, 32, 4)) },
+      { nazev: "dvoumetrová příhrada bez tlumiče", navrh: lavka("5-04", 32, 2, rovne(32, 2, 2)) },
+      { nazev: "dlouhá pole mostovky", navrh: lavka("5-04", 32, 4, rovne(32, 4, 2), tlumice([16], 1000, 4.4)) },
     ],
   },
 };

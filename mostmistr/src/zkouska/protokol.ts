@@ -22,6 +22,21 @@ export interface VstupZkousky {
    * se nepočítá do medailí.
    */
   brnknuti?: { stycnik: number; sila: number };
+  /**
+   * Budič místo provozu: ve styčníku návrhu (pořadí v návrhu) působí svislá harmonická
+   * síla o amplitudě `sila` (N). Její frekvence první polovinu doby `trvani` (s) plynule roste
+   * z `od` na `do` Hz a druhou polovinu se vrací; se stejným `od` a `do` drží stálý rytmus.
+   * Výsledek se nepočítá do medailí.
+   */
+  budic?: BudicZkousky;
+}
+
+export interface BudicZkousky {
+  stycnik: number;
+  sila: number;
+  od: number;
+  do: number;
+  trvani: number;
 }
 
 /** Rozbor mostu ve stavebním režimu: maticový výpočet bez časové simulace. */
@@ -35,6 +50,16 @@ export interface RozborMostu {
    * hmotu, takže frekvence klesnou; prázdné pole v úrovni bez lidí.
    */
   frekvenceObsazeneho: number[];
+  /**
+   * Tvary kmitání prázdného mostu ke každé frekvenci z `frekvence`: posuny styčníků návrhu
+   * (dx0, dy0, dx1, dy1, …) v pořadí, v jakém jsou v návrhu. Největší posun má velikost 1.
+   */
+  tvary: number[][];
+  /**
+   * Rezonanční křivka: největší svislé zrychlení mostovky v m/s² na 1 kN svislé harmonické
+   * síly, pro frekvence `od`, `od + krok`, … Hz. Null v úrovni, která křivku neukazuje.
+   */
+  krivka: { od: number; krok: number; prazdny: number[]; obsazeny: number[] | null } | null;
 }
 
 /** Co se při zkoušce stalo a kdy. Čísla způsobu a následku porušení jsou konstanty jádra. */
@@ -47,6 +72,12 @@ export type Udalost = { cas: number } & (
       nasledek: number;
       /** Využití v okamžiku porušení; 1 je mez únosnosti. */
       mira: number;
+      /**
+       * Co prut v tu chvíli nesl a kolik unese: osová nebo posouvající síla v N, u ohybu
+       * moment v N·m; únosnost ve stejných jednotkách.
+       */
+      velicina: number;
+      unosnost: number;
     }
   /** Konec mostu sjel z posuvné podpory; `stycnik` je pořadí styčníku v návrhu. */
   | { druh: "sjeti"; stycnik: number }
@@ -64,6 +95,23 @@ export interface ObalkaPrutu {
   zpusob: number;
   /** Kdy nastalo, v sekundách. */
   cas: number;
+  /** Osová síla v tu chvíli v N (tah kladný) a největší ohybový moment v N·m. */
+  osova: number;
+  moment: number;
+  /** Veličina, která rozhodovala (síla v N nebo moment v N·m), a únosnost prutu v ní. */
+  velicina: number;
+  unosnost: number;
+}
+
+/** Největší síly, kterými most za zkoušku tlačil na jednu podporu. */
+export interface ReakcePodpory {
+  /** Pořadí styčníku v návrhu. */
+  stycnik: number;
+  /** Největší svislá síla, kterou podpora most nesla, v N (kladná nahoru), a největší tah dolů (záporný). */
+  svisla: number;
+  nadzvednuti: number;
+  /** Největší vodorovná síla v N (velikost). */
+  vodorovna: number;
 }
 
 /** Kmitání mostovky pod lidmi. */
@@ -79,6 +127,10 @@ export interface KomfortZkousky {
 export interface VysledekZkousky {
   /** Všichni přešli a přejeli, nikdo nespadl. */
   pruchod: boolean;
+  /**
+   * Kolik lidí a vozidel mělo přejít, kolik jich přešlo a kolik spadlo. Řada lidí, kterou
+   * simulace vede jako jednoho účastníka, se počítá po lidech.
+   */
   ucastniku: number;
   prejelo: number;
   spadlo: number;
@@ -95,9 +147,17 @@ export interface VysledekZkousky {
    * nerozkmital). U běžné zkoušky null.
    */
   brnknuti: { frekvence: number | null } | null;
+  /**
+   * Výsledek pokusu s budičem: změřená odezva mostovky (zrychlení v m/s² na 1 kN síly pro
+   * frekvence buzení v Hz, v pořadí, v jakém budič frekvence procházel) a frekvence, při které
+   * most odpovídal nejsilněji; null, když se nerozkmital. U běžné zkoušky null.
+   */
+  budic: { frekvence: number | null; zrychleni: number; krivka: { f: number; a: number }[] } | null;
   medaile: Medaile;
   /** Obálka namáhání; pořadí odpovídá prutům návrhu. */
   obalka: ObalkaPrutu[];
+  /** Reakce v podporách: pro každý podepřený styčník návrhu největší síly za zkoušku. */
+  reakce: ReakcePodpory[];
   /** Most neměl pod vlastní tíhou klidovou polohu (chybí mu ztužení) a zkouška začala z nakreslené. */
   bezRovnovahy: boolean;
   /** Výpočet se rozpadl; výsledek neplatí. */

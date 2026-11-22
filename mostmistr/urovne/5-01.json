@@ -1,0 +1,103 @@
+{
+  "verze": 3,
+  "id": "5-01",
+  "nazev": "Nábřeží",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -11,
+    "xMax": 56,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -6
+    },
+    {
+      "x": 7,
+      "y": -8
+    },
+    {
+      "x": 41,
+      "y": -8
+    },
+    {
+      "x": 45,
+      "y": -6
+    },
+    {
+      "x": 48,
+      "y": 0
+    },
+    {
+      "x": 56,
+      "y": 0
+    }
+  ],
+  "hladina": -6.8,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 48,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 48,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "A",
+  "rozpocet": 1050000,
+  "inzenyrskyRozpocet": 740000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 0.25
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": true,
+  "budic": false,
+  "nejhorsiKomfort": 1,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "dav",
+      "pocet": 120
+    }
+  ]
+}

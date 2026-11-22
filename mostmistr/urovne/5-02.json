@@ -1,0 +1,117 @@
+{
+  "verze": 3,
+  "id": "5-02",
+  "nazev": "Městský běh",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -11,
+    "xMax": 40,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -6
+    },
+    {
+      "x": 7,
+      "y": -8
+    },
+    {
+      "x": 25,
+      "y": -8
+    },
+    {
+      "x": 29,
+      "y": -6
+    },
+    {
+      "x": 32,
+      "y": 0
+    },
+    {
+      "x": 40,
+      "y": 0
+    }
+  ],
+  "hladina": -6.8,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 32,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": -8,
+      "yMin": 1,
+      "xMax": 40,
+      "yMax": 8
+    },
+    {
+      "xMin": 7,
+      "yMin": -11,
+      "xMax": 25,
+      "yMax": -1
+    }
+  ],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 32,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "A",
+  "rozpocet": 520000,
+  "inzenyrskyRozpocet": 415000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 1.0
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 1000,
+  "rezonancniKrivka": true,
+  "budic": true,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "bezecky-zavod",
+      "pocet": 40,
+      "kadence": 2.6
+    }
+  ]
+}

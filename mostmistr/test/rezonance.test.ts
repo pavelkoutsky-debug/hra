@@ -126,7 +126,13 @@ describe("závaží a rozbor mostu", () => {
   it("mechanismus ani prázdný návrh vlastní frekvence nemají", () => {
     const k = new Kreslic("2-04");
     for (let x = 0; x < 32; x += 4) k.prut("mostovka-drevo", [x, 0], [x + 4, 0]);
-    expect(rozeberMost(prehlidka, k.navrh())).toEqual({ stabilni: false, frekvence: [], frekvenceObsazeneho: [] });
+    expect(rozeberMost(prehlidka, k.navrh())).toEqual({
+      stabilni: false,
+      frekvence: [],
+      frekvenceObsazeneho: [],
+      tvary: [],
+      krivka: null,
+    });
     expect(rozeberMost(prehlidka, new Kreslic("2-04").navrh()).stabilni).toBe(false);
   });
 

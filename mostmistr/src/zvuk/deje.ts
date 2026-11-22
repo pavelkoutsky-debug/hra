@@ -317,7 +317,10 @@ export class Poslech {
       if (u.kadence && u.faze) {
         // Kroková síla je největší, když je fáze čtvrt otáčky; tehdy noha došlápne.
         const faze = Math.atan2(u.faze[1], u.faze[0]) / (2 * Math.PI);
-        chodici = { kadence: u.kadence, posun: faze - 0.25, lidi: u.lidi ?? 1, bezi: (model?.rychlost ?? 0) >= 2.5 };
+        // Kdo jde s ostatními v taktu, dupne s nimi naráz; lidé jdoucí volně splývají v šum
+        // a jejich řada zní jen jako odmocnina jejich počtu.
+        const lidi = u.vTaktu || u.druh === "utvar" ? (u.lidi ?? 1) : Math.sqrt(u.lidi ?? 1);
+        chodici = { kadence: u.kadence, posun: faze - 0.25, lidi, bezi: (model?.rychlost ?? 0) >= 2.5 };
       }
       return {
         xOd: trasa ? Math.min(trasa.zacatek.x, trasa.konec.x) : -Infinity,
@@ -543,24 +546,39 @@ export class Poslech {
       const x = ted.polohy[2 * stycnik];
       const posluchac = this.#posluchaci[k]!;
       if (x === undefined || x < posluchac.xOd || x > posluchac.xDo) continue;
-      const prvni = Math.floor(chodici.kadence * od + chodici.posun) + 1;
-      const posledni = Math.floor(chodici.kadence * cas + chodici.posun);
+      // Skákající dav: kdo stojí, nedupe; při skákání doskakují všichni naráz v rytmu hudby.
+      let kadence = chodici.kadence;
+      let posun = chodici.posun;
+      let pocatek = 0;
+      let lidi = chodici.lidi;
+      let dupe = chodici.bezi;
+      const skok = u.skok;
+      if (skok && cas >= skok.prichod && od < skok.odchod) {
+        if (cas < skok.od || od >= skok.do) continue;
+        kadence = skok.kadence;
+        posun = -0.25;
+        pocatek = skok.od;
+        lidi = u.lidi ?? 1;
+        dupe = true;
+      }
+      const prvni = Math.floor(kadence * (od - pocatek) + posun) + 1;
+      const posledni = Math.floor(kadence * (cas - pocatek) + posun);
       for (let n = prvni; n <= posledni; n++) {
-        const kdy = (n - chodici.posun) / chodici.kadence;
-        const klic = Math.round(kdy / SPOLECNY_KROK) * 2 + (chodici.bezi ? 1 : 0);
+        const kdy = pocatek + (n - posun) / kadence;
+        const klic = Math.round(kdy / SPOLECNY_KROK) * 2 + (dupe ? 1 : 0);
         const spolecny = kroky.get(klic);
         if (spolecny) {
           // `velikost` zatím nese počet lidí a `x` součet poloh vážený počtem.
-          spolecny.x += x * chodici.lidi;
-          spolecny.velikost += chodici.lidi;
+          spolecny.x += x * lidi;
+          spolecny.velikost += lidi;
         } else {
           kroky.set(klic, {
             druh: "krok",
             cas: kdy,
-            x: x * chodici.lidi,
+            x: x * lidi,
             y: (ted.polohy[2 * stycnik + 1] ?? 0) - u.vyska,
-            sila: chodici.bezi ? 0.6 : 0.4,
-            velikost: chodici.lidi,
+            sila: dupe ? 0.6 : 0.4,
+            velikost: lidi,
             material: this.#materialMostovky,
             odstin: otisk(n, k),
             puvod: k,

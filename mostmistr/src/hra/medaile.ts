@@ -22,7 +22,7 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
   const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
   const pruchod =
     lide && uroven.osaFrekvenci
-      ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[2], 1) })
+      ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) })
       : t("medaile.pruchod.podminka");
   const seznam: RadekMedaile[] = [{ nazev: "medaile.pruchod", podminka: pruchod, ziskana: medaile.pruchod }];
   if (uroven.inzenyrskyRozpocet !== null) {

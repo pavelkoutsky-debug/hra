@@ -1,7 +1,7 @@
 // Cena a hmotnost návrhu mostu. Ceny žijí jen v katalogu; uložené mosty je neobsahují,
 // takže přecenění prvku změní cenu všech mostů najednou.
 
-import { CENA_SVARU, CENA_ZAVAZI, KATALOG, vlastnostiPrutu } from "./katalog";
+import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, vlastnostiPrutu } from "./katalog";
 import type { NavrhMostu } from "./navrh";
 import type { Uroven } from "./uroven";
 
@@ -20,7 +20,12 @@ export function cenaPrutu(prvek: keyof typeof KATALOG, delka: number): number {
   return "zaMetr" in cena ? cena.zaMetr * delka : cena.zaKus;
 }
 
-/** Cena celého návrhu v korunách, zaokrouhlená na celé koruny: pruty, svary a závaží. */
+/** Cena laděného tlumiče se závažím dané hmotnosti, v korunách. */
+export function cenaLadenehoTlumice(hmota: number): number {
+  return LADENY_TLUMIC.cenaZaKus + LADENY_TLUMIC.cenaZaKg * hmota;
+}
+
+/** Cena celého návrhu v korunách, zaokrouhlená na celé koruny: pruty, svary, závaží a laděné tlumiče. */
 export function cenaNavrhu(navrh: NavrhMostu): number {
   const delky = delkyPrutu(navrh);
   let cena = 0;
@@ -30,6 +35,7 @@ export function cenaNavrhu(navrh: NavrhMostu): number {
   for (const s of navrh.stycniky) {
     if (s.svar) cena += CENA_SVARU * navrh.pruty.filter((p) => p.a === s.id || p.b === s.id).length;
     if (s.zavazi) cena += CENA_ZAVAZI * s.zavazi;
+    if (s.tlumic) cena += cenaLadenehoTlumice(s.tlumic.hmota);
   }
   return Math.round(cena);
 }
@@ -44,6 +50,6 @@ export function hmotnostNavrhu(navrh: NavrhMostu, uroven: Uroven): number {
     const vybaveni = KATALOG[p.prvek].druh === "mostovka" ? uroven.hmotnostVybaveni : 0;
     hmotnost += delky[i]! * (vlastnosti.hmotnostNaMetr + vybaveni);
   });
-  for (const s of navrh.stycniky) hmotnost += s.zavazi ?? 0;
+  for (const s of navrh.stycniky) hmotnost += (s.zavazi ?? 0) + (s.tlumic?.hmota ?? 0);
   return hmotnost;
 }

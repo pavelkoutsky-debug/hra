@@ -11,9 +11,84 @@ Poslední aktualizace: 22. 11. 2026
 | M1b Jádro | Hotovo, sloučeno do `main` (20. 11. 2026) |
 | M2 První hratelná verze | Hotovo, zadavatel vyzkoušel a schválil sloučení do `main` (21. 11. 2026) |
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
-| M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze** (pull request M3z). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
-| M3b až M8 | Nezačato |
+| M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
+| M3b Dav a analýza | Hotovo, čeká na vyzkoušení zadavatelem (pull request M3b) |
+| M4a až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
+
+## M3b — výsledek
+
+Pátá kapitola: lávky ve městě, po kterých nejde útvar, ale dav. K tomu laděný tlumič a nástroje, kterými hráč vidí, proč se most houpe: rezonanční křivka, tvary kmitání, budič, grafy a záznam porušení.
+
+**Nový provoz** (`src/zkouska/vozidla.ts`, `provoz.ts`)
+
+| Provoz | Jak se chová |
+|---|---|
+| Dav | Řady přes šířku mostovky, 1,1 m/s. Každá řada má svůj krok kolem 1,7 Hz (rozptyl 0,15 Hz) a svou fázi. Lidé v řadě nejdou v taktu, takže síla řady roste s odmocninou z počtu lidí, ne s počtem. |
+| Běžecký závod | Řady nejvýš po třech, 3 m/s, každý svým tempem v úzkém pásmu (rozptyl 0,07 Hz kolem tempa z úrovně). |
+| Průvod s kapelou | Vpředu kapela (třetina lidí) pochodem přesně v taktu, za ní volně jdoucí dav. |
+| Skákající dav | Dojde doprostřed mostu, zastaví, skáče v taktu po zadanou dobu a odejde. Doskok má špičku kolem 2,7 váhy a budí i na dvojnásobku a trojnásobku rytmu. |
+
+- **Ztráta kroku** (koncepce 7.7, `src/jadro/bremena.ts`): když se mostovka pod člověkem houpe víc než 2,5 m/s², jeho budicí síla slábne; nad 6 m/s² z ní zbývá čtvrtina. Rezonance tak neroste donekonečna.
+- **Výsledek počítá lidi**, ne řady, ve kterých je simulace vede: „Přešli a přejeli všichni (120)“.
+- **Požadovaný komfort úrovně** (`nejhorsiKomfort`): úroveň může chtít klidnější most než jen „ne nepřijatelný“. Nábřeží (5-01) smí kmitat nejvýš 0,5 m/s².
+
+**Laděný tlumič** (`src/data/katalog.ts`, `src/zkouska/stavba.ts`)
+
+- Závaží na pružině s tlumičem, zavěšené metr pod styčníkem mostovky. Výběr styčníku a klávesa L; závaží po 50 kg až do meze úrovně, ladění po 0,05 Hz v rozsahu 0,8–6 Hz. Stojí 30 000 Kč za kus a 30 Kč za kilogram.
+- Nový tlumič se sám naladí na první vlastní frekvenci mostu s lidmi; doladit ho musí hráč.
+- Zrcadlení tlumiče přenáší. Po zřícení mostu závaží odpadne.
+
+**Analytický panel** (klávesa A nebo tlačítko dole; `src/hra/uroven.ts`, `src/vykres/grafy.ts`)
+
+- *Při stavbě*: **rezonanční křivka** (jak silně mostovka odpoví na buzení v kterém rytmu, pro prázdný most i most s lidmi, s pásmy kroků z jízdního řádu) a **tvary kmitání** (tři nejnižší; po kliknutí se most na výkresu rozhýbe). Křivku počítá `src/jadro/odezva.ts` modální redukcí v pomocném vlákně po každé úpravě. Svislé měřítko si pamatuje nejvyšší špičku, aby bylo vidět, o kolik ji tlumič srazil; kliknutí na graf ho přizpůsobí.
+- *Při zkoušce*: průběhy v čase (průhyb uprostřed, kmitání mostovky s vyznačenou mezí, využití vybraného prutu), **síly ve vybraném prutu** (osová síla, moment, co rozhoduje a kolik z únosnosti) a **reakce podpor**.
+- V úrovních s rezonanční křivkou je panel otevřený od začátku.
+
+**Budič** (klávesa U; `src/zkouska/budic.ts`)
+
+- Kliknutím na styčník do něj budič začne tlačit a tahat silou 2 kN. Buď **přeladí celý rozsah** 0,5–6 Hz tam a zpět (80 s) a řekne, kde most rezonuje, nebo buší **ve stálém rytmu** (14 s) a změří jeden bod. Po přeladění se sám nastaví na nalezený rytmus.
+- Co naměří, se kreslí přes spočítanou rezonanční křivku (tenká čára a tečky), takže hráč vidí, že výpočet a pokus říkají totéž. Do medailí se nepočítá.
+- *Odchylka od koncepce:* koncepce mluví o táhle frekvence, kterým hráč rezonanci „najde rukou“ za běhu. Zkouška se ale počítá napřed a pak přehrává, takže živé táhlo by znamenalo jiný způsob simulace. Přelaďování dá stejné poznání bez něj.
+
+**Záznam porušení a porovnání pokusů**
+
+- Výsledek řekne, co selhalo první a proč, s čísly: „Jako první selhal prut 5 (lehký trám): vzpěr, tlak 82,4 kN při únosnosti 92,2 kN“. Tlačítko **Přehrát první porušení zpomaleně** skočí kousek před zlom, označí prut a přehraje ho desetinovou rychlostí.
+- U ceny, největšího využití a kmitání je řádek „minule … · rozdíl …“ proti předchozí zkoušce.
+
+**Kapitola 5 – Lávka ve městě**, čtyři úrovně s referenčními mosty (kmitání v m/s²):
+
+| Úroveň | Rozpětí | Provoz | Čemu učí | Průchod / rozpočet / mistrovská | Co neprojde |
+|---|---|---|---|---|---|
+| 5-01 Nábřeží | 48 m | dav 120 lidí | hmota lidí most zpomalí; mez 0,5 m/s² | 0,31 / 0,30 / 0,23 | dvoumetrová příhrada: prázdná 2,3 Hz, s lidmi 2,0 Hz (1,28) |
+| 5-02 Městský běh | 32 m, výška do 1 m | 40 běžců kolem 2,6 Hz | laděný tlumič | 1,42 / 1,65 / 0,84 | stejný most bez tlumiče (3,75) |
+| 5-03 Slavnost | 36 m, výška do 1 m | průvod 48 lidí, kapela 2,0 Hz | ladit na most s lidmi | 1,40 / 1,84 / 0,87 | bez tlumiče (4,26); tlumič naladěný na 3,2 Hz (2,62) |
+| 5-04 Koncert na mostě | 32 m, výška do 2 m | 30 lidí skáče 2,2 Hz | dvojnásobek rytmu, krátká pole mostovky | 1,86 / 2,15 / 1,50 | bez tlumiče (3,76); dlouhá pole mostovky (3,90) |
+
+Každá úroveň má ukázku (bez prvku a s prvkem) a odstavec „Ve skutečnosti“: Golden Gate 1987, tlumič v Tchaj-pej 101, lávka Solférino, tribuny Millennium Stadium. Ukázky dlouhých dějů se přehrávají zrychleně a okno to říká. Zdroje faktů jsou v popisu pull requestu.
+
+V přehledu kampaně je pátá kapitola hned za druhou; třetí a čtvrtá (silnice, údolí) přijdou s M4a a M4b a zařadí se před ni. Rekordy se ukládají podle čísla úrovně, takže se tím nic neztratí.
+
+**Jak je splněno kritérium milníku**
+
+- *Laděný tlumič rozdělí rezonanční špičku* (`test/ladeny-tlumic.test.ts`): na spočítané křivce jsou místo jedné špičky dvě nižší po stranách původní; totéž potvrzuje časová simulace s budičem. V prohlížeči to hlídá `test/e2e/mesto.e2e.ts`: po zavěšení tlumiče klesne nejvyšší špička pod polovinu a přibude vrchol.
+- *Úrovně projdou testem vyhratelnosti* (`test/vyhratelnost.test.ts`): všech dvanáct úrovní, každá medaile i mosty, které neprojít mají.
+- Testy: 649 jednotkových, 99 kontrol v prohlížeči.
+
+**Formáty.** Úroveň má verzi 3 (`nejvetsiTlumic`, `rezonancniKrivka`, `budic`, `nejhorsiKomfort`, u položky jízdního řádu `trvani`), návrh verzi 2 (laděný tlumič ve styčníku). Starší soubory se načítají přes převod.
+
+**Co se při kalibraci ukázalo**
+
+- Dav sám o sobě most do rezonance nedostane tak snadno jako útvar: síly řad se sčítají odmocninou. Rozhoduje u něj hmota (120 lidí je skoro deset tun), která most zpomalí do pásma kroků.
+- Lidé most tlumí, takže špička s lidmi je nižší a širší než u prázdného mostu. Tlumič naladěný podle prázdného mostu je vedle; v úrovni 5-03 to stojí mistrovskou medaili.
+- Skákání je nejtvrdší zatížení ve hře. Čtyřmetrová pole dřevěné mostovky se pod doskoky rozdrnčí sama a tlumič na tom nic nezmění; pomůžou jen krátká pole.
+- Budič při přelaďování ukazuje špičku o něco později, než kde opravdu je (most potřebuje čas, aby se rozkmital). Proto jede tam a zpět a bere průměr; trefí se na desetinu hertzu.
+
+**Co ověřeno není**
+
+- Jak se s panelem a budičem pracuje člověku, který je vidí poprvé. Testy ověřují, že fungují, ne že jsou srozumitelné.
+- Obtížnost páté kapitoly: je nastavená z referenčních mostů stejně jako dřív, ale úrovně s tlumičem jsou první, kde hráč ladí dvě čísla najednou.
+- Jiné prohlížeče než Chromium.
 
 ## M3z — výsledek
 
@@ -53,7 +128,7 @@ Hra dostala zvuk. Nemá žádné nahrávky: všechno se skládá za běhu z šum
 - *Ztlumení se pamatuje*: jednotkový test úložiště a v prohlížeči nové načtení stránky (`test/e2e/zvuk.e2e.ts`).
 - *Bez gesta hráče hra nevydá ani tón*: test v prohlížeči počítá vytvořené zvukové kontexty a spuštěné zdroje zvuku. Před spuštěním zkoušky jsou obojí nula, i když v zadání běží ukázka a hráč kliká v paletě; se ztlumeným zvukem zůstávají nula i při zkoušce.
 - Navíc: každý zvuk spočítaný do paměti není němý, nepřebudí výstup a včas dozní; celé scény (chodci, auto, pochod, zřícení) mají rozumný poměr hlasitostí a omezovač zasahuje jen při zřícení.
-- Celkem prochází 534 jednotkových testů a 83 kontrol v prohlížeči.
+- Na konci M3z procházelo 534 jednotkových testů a 83 kontrol v prohlížeči.
 
 **Co ověřeno není**
 
@@ -99,8 +174,8 @@ Testy: 511 jednotkových, 70 kontrol v prohlížeči.
 
 **Co M3a vědomě neobsahuje**
 
-- Ztrátu kroku při silném kmitání (koncepce 7.7): síla lidí zatím s kmitáním neklesá. Přijde s davem v M3b.
-- Laděný tlumič, rezonanční křivku, grafy a analytický panel (M3b).
+- Ztrátu kroku při silném kmitání (koncepce 7.7): doplněno v M3b.
+- Laděný tlumič, rezonanční křivku, grafy a analytický panel: doplněno v M3b.
 - Pružinu v paletě: jádro ji umí, ale bez laděného tlumiče nemá ve hře využití.
 
 ## M2 — výsledek
@@ -235,14 +310,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Rozhodnout, jestli se má pull request M3z s pracovními zvuky sloučit do `main` a jestli mají být pracovní zvuky ve výchozím stavu zapnuté.
+1. Vyzkoušet náhled M3b (pátá kapitola, laděný tlumič, analytický panel, budič) a rozhodnout o sloučení do `main`.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M3b: dav, ztráta kroku při silném kmitání, laděný tlumič a analytický panel. Zvuky se teď neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M4a Těžká doprava (po schválení M3b): nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka a kapitola 3. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
@@ -260,6 +335,8 @@ M3b: dav, ztráta kroku při silném kmitání, laděný tlumič a analytický p
 
 - 22. 11. 2026, k náhledu M3z: „Nechme tyhle zvuky zatím jako pracovní“ a **zvuky se budou ještě předělávat pomocí ElevenLabs, ale až po dokončení ostatních fází projektu**. Zapsáno jako milník M9 v koncepci. Pozn.: v dialogu s otázkou nešly odkazy zkopírovat ani otevřít; odkazy na náhled proto vždy posílat přímo do textu odpovědi.
 
+- 22. 11. 2026: zadavatel rozhodl **M3z sloučit a pokračovat na M3b**; pracovní zvuky mají být ve výchozím stavu **zapnuté potichu**.
+
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 
 - 21. 11. 2026, k pull requestu M3a, ještě před hraním: zadavatel chce, aby hra **ukázala, proč je nutné tlumiče a další prvky používat a k čemu jsou**: „jednoduše herně, ale s odkazem na reálný smysl“. **Hotovo**: ukázky dvou mostů vedle sebe a odstavec „Ve skutečnosti“ v okně se zadáním. Platí to i pro další kapitoly: každý nový prvek má dostat ukázku a souvislost se skutečností.
@@ -273,3 +350,4 @@ M3b: dav, ztráta kroku při silném kmitání, laděný tlumič a analytický p
 | 2 | Kalibrace první kapitoly (M2): štíhlejší průřezy dřeva (lehký trám 2× 60 × 120 mm, těžký 2× 120 × 240 mm, mostovka z fošen 80 mm). Styčník, který po porušení osiří, se zastaví. Posuvná podpora má úložnou délku 0,5 m; konec mostu, který z ní sjede, podporu ztratí. Verze 2 vznikla celá v M2 a před ní žádná hratelná verze nevyšla. |
 | 3 | Hodnocení kmitání (M3a): měří se zrychlení mostovky pod lidmi a nepřijatelné kmitání je neúspěch. Otisky referenčních mostů se nezměnily; změnilo se, které mosty zkouškou projdou. Referenční mosty první kapitoly vycházejí 0,2 až 1,9 m/s², tedy pod hranicí. |
 | 4 | Konec děje (M3z): zkouška nekončí, dokud ti, kdo spadli, nedopadnou na zem nebo do vody (nejdéle 5 s po posledním pádu). Mění se délka záznamu a konečný stav mostů, ze kterých někdo spadl. Otisky referenčních mostů ani výsledky referenčních řešení se nezměnily. |
+| 5 | Ztráta kroku (M3b): budicí síla člověka slábne, když se mostovka pod ním houpe víc než 2,5 m/s²; nad 6 m/s² z ní zbývá čtvrtina. Mění se kmitání mostů, které se rozhoupaly přes mez (nízká příhrada úrovně 2-03 bez závaží: 5,51 → 4,16 m/s², dál neprojde). Ve výsledku se lidé počítají po jednom, ne po řadách. Otisky referenčních mostů ani to, která referenční řešení projdou, se nezměnily. |

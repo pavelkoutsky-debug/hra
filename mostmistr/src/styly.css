@@ -760,6 +760,12 @@ a.tlacitko {
   display: none;
 }
 
+/* S otevřeným analytickým panelem má hlášení jen řádek nad ním: smí být širší a zůstává navrchu. */
+body[data-analyza="otevrena"] .vykres__hlaseni {
+  z-index: 2;
+  max-width: calc(100% - 20px);
+}
+
 .vykres__hlaseni[data-druh="varovani"] {
   border-color: var(--varovani);
   color: var(--varovani);
@@ -1245,6 +1251,148 @@ body[data-rezim="stavba"] .uroven .legenda {
   text-align: center;
 }
 
+/* Analytický panel: rozbalovací pruh při horním okraji výkresu, nad mostem */
+
+.analyza {
+  position: absolute;
+  top: 44px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px 18px;
+  flex-wrap: wrap;
+  max-height: calc(100% - 110px);
+  overflow-y: auto;
+  padding: 8px 40px 8px 10px;
+  background: rgb(11 47 92 / 0.94);
+  border: 1.5px solid var(--cara);
+  font-size: 11px;
+}
+
+.analyza[hidden] {
+  display: none;
+}
+
+.analyza__hlavicka {
+  display: contents;
+}
+
+.analyza__hlavicka h2 {
+  display: none;
+}
+
+.analyza__hlavicka .tlacitko {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.analyza h3 {
+  margin: 0;
+  color: var(--popisek);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.analyza__cast {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-width: 0;
+}
+
+.analyza__cast[hidden] {
+  display: none;
+}
+
+.analyza__cast--graf {
+  width: 300px;
+}
+
+.analyza__cast--uzka {
+  width: 190px;
+}
+
+.analyza__cast--prubeh {
+  flex: 1 1 170px;
+  max-width: 260px;
+}
+
+.analyza__cast--prubeh .analyza__graf {
+  height: 84px;
+}
+
+.analyza__cast--udaje {
+  flex: 0 0 215px;
+}
+
+.analyza__cast--reakce {
+  flex: 0 0 140px;
+}
+
+.vysledek__prvni {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--varovani);
+}
+
+.vysledek__prvni[hidden] {
+  display: none;
+}
+
+.analyza__graf {
+  display: block;
+  width: 100%;
+  height: 104px;
+}
+
+.analyza__graf--klikaci {
+  cursor: pointer;
+}
+
+.analyza__popis {
+  margin: 0;
+  color: var(--popisek);
+}
+
+.analyza__popis strong {
+  color: var(--cara-silna);
+  font-weight: normal;
+}
+
+.analyza__tvary {
+  display: grid;
+  gap: 4px;
+}
+
+.analyza__tvary .tlacitko {
+  padding: 2px 8px;
+  font-size: 11px;
+  text-align: left;
+}
+
+.analyza__tabulka {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.analyza__tabulka dt {
+  color: var(--popisek);
+}
+
+.analyza__tabulka dd {
+  margin: 0;
+  color: var(--cara-silna);
+  text-align: right;
+  /* Reakce podpory mají každou složku na vlastním řádku. */
+  white-space: pre-line;
+}
+
 /* Osa frekvencí: vlastní frekvence mostu proti krokům lidí */
 
 .osa__frekvence {
@@ -1297,6 +1445,15 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 .frekvence__krok--dvojnasobek {
   border-left: 1px dashed var(--popisek);
+}
+
+/* Pásmo kroku skupiny, která nejde jedním rytmem (dav, běžecký závod). */
+.frekvence__pasmo {
+  position: absolute;
+  top: 6px;
+  height: 8px;
+  background: rgb(143 208 255 / 0.28);
+  border-radius: 1px;
 }
 
 /* Vlastní frekvence mostu: trojúhelník pod osou; obsazený most jen obrysem. */

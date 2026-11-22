@@ -25,15 +25,24 @@ function prehraj(strana: StranaUkazky): VysledekZkousky {
 describe("ukázky k úrovním", () => {
   it("mají je úrovně, které učí něco nového, a ke každé jsou texty", () => {
     const sUkazkou = kampan.filter((u) => ukazkaUrovne(u) !== null).map((u) => u.id);
-    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04"]);
+    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "5-01", "5-02", "5-03", "5-04"]);
     for (const id of sUkazkou) {
       for (const cast of ["a", "b", "popis"]) expect(jeKlicTextu(`ukazka.${id}.${cast}`), `${id}.${cast}`).toBe(true);
     }
   });
 
-  it("souvislost se skutečností má první úroveň a celá druhá kapitola", () => {
+  it("souvislost se skutečností má první úroveň a celá druhá a pátá kapitola", () => {
     const sTextem = kampan.filter((u) => jeKlicTextu(`skutecnost.${u.id}`)).map((u) => u.id);
-    expect(sTextem).toEqual(["1-01", "2-01", "2-02", "2-03", "2-04"]);
+    expect(sTextem).toEqual(["1-01", "2-01", "2-02", "2-03", "2-04", "5-01", "5-02", "5-03", "5-04"]);
+  });
+
+  it("každá úroveň kampaně má text zadání a každá kapitola název a téma", () => {
+    for (const u of kampan) {
+      expect(jeKlicTextu(`zadani.${u.id}`), u.id).toBe(true);
+      const kapitola = u.id.split("-")[0]!;
+      expect(jeKlicTextu(`kapitola.${kapitola}.nazev`), kapitola).toBe(true);
+      expect(jeKlicTextu(`kapitola.${kapitola}.tema`), kapitola).toBe(true);
+    }
   });
 
   for (const uroven of kampan) {
@@ -60,11 +69,13 @@ describe("ukázky k úrovním", () => {
         it("rozdíl dělá kmitání, ne pevnost: nikdo nespadne, nic se nezlomí a vlevo se houpe mnohem víc", () => {
           expect(a).toMatchObject({ spadlo: 0, poruseni: 0 });
           expect(a.komfort!.zrychleni).toBeGreaterThan(2.5 * b.komfort!.zrychleni);
-          expect(a.komfort!.trida).toBe(4);
+          // Vlevo se most houpe víc, než úroveň dovoluje; vpravo se do meze vejde.
+          expect(a.komfort!.trida).toBeGreaterThan(uroven.nejhorsiKomfort);
+          expect(b.komfort!.trida).toBeLessThanOrEqual(uroven.nejhorsiKomfort);
         });
 
-        it("ukázka netrvá déle než půl minuty", () => {
-          expect(Math.max(a.trvani, b.trvani)).toBeLessThan(32);
+        it("ukázka netrvá déle než půl minuty (dlouhé děje se přehrávají zrychleně)", () => {
+          expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(32);
         });
       }
     }, 120_000);

@@ -76,6 +76,9 @@
           <button type="button" class="paleta__tlacitko" data-akce="brnknout" data-popis="paleta.brnknout.popis" aria-pressed="false" hidden>
             <kbd>B</kbd><span data-text="paleta.brnknout"></span>
           </button>
+          <button type="button" class="paleta__tlacitko" data-akce="budic" data-popis="paleta.budic.popis" aria-pressed="false" hidden>
+            <kbd>U</kbd><span data-text="paleta.budic"></span>
+          </button>
           <div class="paleta__dvojice">
             <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
               <kbd>Del</kbd><span data-text="paleta.smazat"></span>
@@ -97,6 +100,33 @@
               <button type="button" class="paleta__tlacitko" data-akce="zavazi-min" data-popis="paleta.zavazi.min">&minus;</button>
               <output data-udaj="zavazi"></output>
               <button type="button" class="paleta__tlacitko" data-akce="zavazi-plus" data-popis="paleta.zavazi.plus">+</button>
+            </div>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="budic" hidden>
+            <h2 data-text="paleta.budic.rytmus"></h2>
+            <div class="paleta__krokovac">
+              <button type="button" class="paleta__tlacitko" data-akce="budic-min" data-popis="paleta.budic.niz">&minus;</button>
+              <output data-udaj="budic-rytmus"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="budic-plus" data-popis="paleta.budic.vys">+</button>
+            </div>
+            <button type="button" class="paleta__tlacitko" data-akce="budic-rozsah" data-popis="paleta.budic.rozsah.popis" aria-pressed="true">
+              <span data-text="paleta.budic.rozsah"></span>
+            </button>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="ladeny" hidden>
+            <h2 data-text="paleta.ladeny"></h2>
+            <button type="button" class="paleta__tlacitko" data-akce="ladeny-prepnout" data-popis="paleta.ladeny.popis" aria-pressed="false">
+              <kbd>L</kbd><span data-udaj="ladeny-prepnout"></span>
+            </button>
+            <div class="paleta__krokovac" data-cast="ladeny-hmota">
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-hmota-min" data-popis="paleta.ladeny.lehci">&minus;</button>
+              <output data-udaj="ladeny-hmota"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-hmota-plus" data-popis="paleta.ladeny.tezsi">+</button>
+            </div>
+            <div class="paleta__krokovac" data-cast="ladeny-frekvence">
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-frekvence-min" data-popis="paleta.ladeny.niz">&minus;</button>
+              <output data-udaj="ladeny-frekvence"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-frekvence-plus" data-popis="paleta.ladeny.vys">+</button>
             </div>
           </div>
           <div class="paleta__nastaveni" data-nastaveni="tlumeni" hidden>
@@ -143,6 +173,48 @@
             <output class="legenda__kmitani" data-udaj="kmitani" data-popis="legenda.kmitani.popis"></output>
           </div>
 
+          <section class="analyza" data-udaj="analyza" hidden>
+            <header class="analyza__hlavicka">
+              <h2 data-text="analyza.nadpis"></h2>
+              <button type="button" class="tlacitko tlacitko--znak" data-akce="analyza-zavrit" data-popis="analyza.zavrit">×</button>
+            </header>
+            <div class="analyza__cast analyza__cast--graf" data-cast="krivka">
+              <h3 data-text="analyza.krivka"></h3>
+              <canvas class="analyza__graf analyza__graf--klikaci" data-udaj="krivka" data-popis="analyza.krivka.popis"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--uzka" data-cast="krivka-popis">
+              <h3 data-text="analyza.krivka.cteni"></h3>
+              <p class="analyza__popis" data-udaj="krivka-popis"></p>
+              <p class="analyza__popis" data-text="analyza.krivka.osy"></p>
+            </div>
+            <div class="analyza__cast analyza__cast--uzka" data-cast="tvary">
+              <h3 data-text="analyza.tvary"></h3>
+              <div class="analyza__tvary" data-udaj="tvary"></div>
+            </div>
+            <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-pruhyb">
+              <h3 data-text="analyza.pruhyb"></h3>
+              <canvas class="analyza__graf" data-udaj="graf-pruhyb"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-kmitani">
+              <h3 data-text="analyza.kmitaniGraf"></h3>
+              <canvas class="analyza__graf" data-udaj="graf-kmitani"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-prut">
+              <h3 data-udaj="graf-prut-nadpis"></h3>
+              <canvas class="analyza__graf" data-udaj="graf-prut"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--udaje" data-cast="prut">
+              <h3 data-text="analyza.prut"></h3>
+              <dl class="analyza__tabulka" data-udaj="prut-udaje"></dl>
+              <p class="analyza__popis" data-udaj="prut-napoveda"></p>
+            </div>
+            <div class="analyza__cast analyza__cast--reakce" data-cast="reakce">
+              <h3 data-text="analyza.reakce"></h3>
+              <dl class="analyza__tabulka" data-udaj="reakce"></dl>
+            </div>
+            <p class="analyza__popis" data-udaj="analyza-prazdna" data-text="analyza.prazdna" hidden></p>
+          </section>
+
           <section class="vysledek" hidden>
             <div class="vysledek__hlavicka">
               <span class="vysledek__otisk" data-udaj="otisk"></span>
@@ -160,9 +232,11 @@
               <dt data-text="vysledek.poruseni"></dt>
               <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
             </dl>
+            <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
             <div class="vysledek__tlacitka">
               <a class="tlacitko tlacitko--hlavni" data-akce="dalsi" data-text="vysledek.dalsi" hidden></a>
               <button type="button" class="tlacitko" data-akce="upravit" data-text="vysledek.upravit"></button>
+              <button type="button" class="tlacitko" data-akce="prehrat-poruseni" data-text="vysledek.prehratPoruseni" hidden></button>
               <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
               <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika"></button>
             </div>
@@ -221,6 +295,9 @@
             </div>
             <output class="frekvence__popis" data-udaj="frekvence-popis"></output>
           </div>
+          <button type="button" class="tlacitko" data-akce="analyza" data-popis="analyza.popis" aria-pressed="false">
+            <kbd>A</kbd> <span data-text="analyza.tlacitko"></span>
+          </button>
           <button type="button" class="tlacitko" data-akce="prehrat" data-jen="zkouska"></button>
           <button type="button" class="tlacitko" data-akce="na-konec" data-text="zkouska.naKonec" data-jen="zkouska"></button>
           <span class="lista__skupina" role="group" data-popis="zkouska.krokovani" data-jen="zkouska">

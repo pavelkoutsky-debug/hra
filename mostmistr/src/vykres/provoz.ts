@@ -45,15 +45,29 @@ export function nakresliProvoz(
     } else if (u.druh === "cyklista") {
       nakresliCyklistu(ctx, kola.map((k) => naObraz(k!)), u.vyska * m, u.smer);
     } else {
-      const faze = 2 * Math.PI * (u.kadence ?? 1.9) * Math.max(0, snimek.cas - u.start) + uhelFaze(u.faze);
-      const bezi = u.druh === "bezec" || (u.druh === "utvar" && (u.kadence ?? 0) >= KADENCE_BEHU);
-      const postava = bezi ? nakresliBezce : nakresliChodce;
-      // Řada útvaru: lidé vedle sebe se v bokorysu kryjí; vzdálenější jsou o kousek vzadu a bledší.
+      let faze = 2 * Math.PI * (u.kadence ?? 1.9) * Math.max(0, snimek.cas - u.start) + uhelFaze(u.faze);
+      const bezi =
+        u.druh === "bezec" || u.druh === "bezecky-zavod" || (u.druh === "utvar" && (u.kadence ?? 0) >= KADENCE_BEHU);
+      let postava = bezi ? nakresliBezce : nakresliChodce;
+      // Skákající dav: kdo došel na místo, stojí; při skákání je ve vzduchu v té půlce
+      // rytmu, kdy na mostovku netlačí.
+      let vyskok = -1;
+      const skok = u.skok;
+      if (skok && snimek.cas >= skok.prichod && snimek.cas < skok.odchod) {
+        faze = 0;
+        postava = nakresliChodce;
+        if (snimek.cas >= skok.od && snimek.cas < skok.do) {
+          vyskok = Math.max(0, -Math.sin(2 * Math.PI * skok.kadence * (snimek.cas - skok.od)));
+        }
+      }
+      // Řada: lidé vedle sebe se v bokorysu kryjí; vzdálenější jsou o kousek vzadu a bledší.
       const lidi = u.lidi ?? 1;
       const teziste = naObraz(kola[0]!);
       for (let i = lidi - 1; i >= 0; i--) {
         ctx.globalAlpha = i === 0 ? 1 : 0.45;
-        postava(ctx, { x: teziste.x - u.smer * 0.24 * i * m, y: teziste.y - 0.05 * i * m }, u.vyska * m, u.smer, faze);
+        const misto: Bod = { x: teziste.x - u.smer * 0.24 * i * m, y: teziste.y - 0.05 * i * m };
+        if (vyskok >= 0) nakresliSkokana(ctx, misto, u.vyska * m, u.smer, vyskok);
+        else postava(ctx, misto, u.vyska * m, u.smer, faze);
       }
       ctx.globalAlpha = 1;
     }
@@ -192,6 +206,39 @@ function nakresliChodce(ctx: Kontext, teziste: Bod, vyska: number, smer: number,
   for (const konec of [ruka(-kyv * 0.8), ruka(kyv * 0.8)]) {
     ctx.moveTo(ramena.x, ramena.y);
     ctx.lineTo(konec.x, konec.y);
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(hlava.x, hlava.y, 0.13 * j, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.stroke();
+}
+
+/**
+ * Skákající člověk: `vyskok` 0 stojí na mostovce v podřepu, 1 je nejvýš ve vzduchu
+ * s rukama nad hlavou.
+ */
+function nakresliSkokana(ctx: Kontext, teziste: Bod, vyska: number, smer: number, vyskok: number): void {
+  const j = vyska;
+  // Ve vzduchu je o čtvrt metru výš; při doskoku jde těžiště v podřepu trochu dolů.
+  const zdvih = (0.28 * vyskok - 0.08 * (1 - vyskok)) * j;
+  const kycle: Bod = { x: teziste.x, y: teziste.y - zdvih };
+  const ramena: Bod = { x: kycle.x + smer * 0.02 * j, y: kycle.y - 0.48 * j };
+  const hlava: Bod = { x: ramena.x + smer * 0.02 * j, y: ramena.y - 0.2 * j };
+  const chodidlo = teziste.y + 0.98 * j - 0.28 * vyskok * j;
+  const pokrceni = 0.12 * (1 - vyskok) * j;
+  ctx.beginPath();
+  ctx.moveTo(kycle.x, kycle.y);
+  ctx.lineTo(ramena.x, ramena.y);
+  for (const strana of [-1, 1]) {
+    // Noha: koleno vybočí dopředu, když je skokan v podřepu.
+    ctx.moveTo(kycle.x, kycle.y);
+    ctx.lineTo(kycle.x + smer * pokrceni + strana * 0.05 * j, (kycle.y + chodidlo) / 2);
+    ctx.lineTo(kycle.x + strana * 0.07 * j, chodidlo);
+    // Ruka: ve vzduchu nad hlavou, při doskoku podél těla.
+    const uhel = (0.25 + 2.5 * vyskok) * strana;
+    ctx.moveTo(ramena.x, ramena.y);
+    ctx.lineTo(ramena.x + Math.sin(uhel) * 0.5 * j, ramena.y + Math.cos(uhel) * 0.5 * j);
   }
   ctx.stroke();
   ctx.beginPath();

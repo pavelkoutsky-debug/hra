@@ -78,6 +78,10 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     // Regresní mosty smějí všechno; pravidla úrovní se zkoušejí jinde.
     nejvetsiZavazi: 1e9,
     osaFrekvenci: true,
+    nejvetsiTlumic: 1e9,
+    rezonancniKrivka: true,
+    budic: true,
+    nejhorsiKomfort: 3,
     jizdniRad: [],
   };
 }

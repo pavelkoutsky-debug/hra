@@ -317,6 +317,29 @@ export const CENA_ZAVAZI = 10;
 /** Po kolika kilogramech se závaží ve styčníku přidává a ubírá. */
 export const KROK_ZAVAZI = 100;
 
+/**
+ * Laděný tlumič: závaží zavěšené pod styčníkem na pružině s tlumičem. Hráč volí hmotnost
+ * závaží a frekvenci v hertzech, na které má závaží samo kmitat; tuhost pružiny a tlumič se
+ * z nich dopočítají. Poměrný útlum 10 % je blízko optima pro závaží o několika procentech
+ * hmoty kmitající lávky.
+ */
+export const LADENY_TLUMIC = {
+  /** Nejmenší závaží a krok, po kterém se přidává, kg. */
+  nejmensiHmota: 50,
+  krokHmoty: 50,
+  /** Rozsah a krok ladění, Hz. */
+  nejmensiFrekvence: 0.8,
+  nejvetsiFrekvence: 6,
+  krokFrekvence: 0.05,
+  /** Poměrný útlum tlumiče mezi závažím a mostem. */
+  utlum: 0.1,
+  /** Jak hluboko pod styčníkem závaží v klidu visí, m. */
+  zaves: 1,
+  /** Cena za kus a za kilogram závaží, Kč. */
+  cenaZaKus: 30000,
+  cenaZaKg: 30,
+} as const;
+
 /** Nejkratší prut, který lze postavit (rastr 1 m). */
 export const NEJMENSI_DELKA = 1;
 

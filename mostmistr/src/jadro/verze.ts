@@ -12,5 +12,9 @@
  * - 4: zkouška nekončí, dokud ti, kdo spadli, nedopadnou na zem nebo do vody (milník M3z).
  *      Mění se délka děje a konečný stav mostů, ze kterých někdo spadl; otisky referenčních
  *      mostů se nezměnily.
+ * - 5: lidé na silně kmitající mostovce ztrácejí krok (nad 2,5 m/s² jejich budicí síla slábne,
+ *      nad 6 m/s² z ní zbývá čtvrtina) a ve výsledku se lidé počítají po jednom, ne po řadách
+ *      (milník M3b). Mění se kmitání mostů, které se rozhoupaly přes mez; otisky referenčních
+ *      mostů se nezměnily.
  */
-export const VERZE_FYZIKY = 4;
+export const VERZE_FYZIKY = 5;

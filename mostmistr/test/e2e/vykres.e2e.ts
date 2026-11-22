@@ -40,7 +40,7 @@ async function pockejNaSnimek(): Promise<void> {
 }
 
 async function stredPlatna(): Promise<{ x: number; y: number }> {
-  const obrys = await stranka.locator("#obrazovka-uroven canvas").boundingBox();
+  const obrys = await stranka.locator("#obrazovka-uroven canvas.vykres__platno").boundingBox();
   if (!obrys) throw new Error("Plátno není na stránce.");
   return { x: obrys.x + obrys.width / 2, y: obrys.y + obrys.height / 2 };
 }
@@ -58,7 +58,7 @@ beforeAll(async () => {
     if (zprava.type() === "error") chybyStranky.push(zprava.text());
   });
   await stranka.goto(`${adresa}?uroven=0-00`);
-  await stranka.locator("#obrazovka-uroven canvas").waitFor();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
   // Prázdná úroveň vítá oknem se zadáním; výkres je pod ním.
   await stranka.locator('#okno-zadani button[value="zavrit"]').click();
   await pockejNaSnimek();

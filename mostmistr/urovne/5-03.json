@@ -1,0 +1,117 @@
+{
+  "verze": 3,
+  "id": "5-03",
+  "nazev": "Slavnost",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -11,
+    "xMax": 44,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -6
+    },
+    {
+      "x": 7,
+      "y": -8
+    },
+    {
+      "x": 29,
+      "y": -8
+    },
+    {
+      "x": 33,
+      "y": -6
+    },
+    {
+      "x": 36,
+      "y": 0
+    },
+    {
+      "x": 44,
+      "y": 0
+    }
+  ],
+  "hladina": -6.8,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 36,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": -8,
+      "yMin": 1,
+      "xMax": 44,
+      "yMax": 8
+    },
+    {
+      "xMin": 7,
+      "yMin": -11,
+      "xMax": 29,
+      "yMax": -1
+    }
+  ],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 36,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "A",
+  "rozpocet": 560000,
+  "inzenyrskyRozpocet": 465000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 0.9
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 1200,
+  "rezonancniKrivka": true,
+  "budic": true,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "pruvod",
+      "pocet": 48,
+      "kadence": 2
+    }
+  ]
+}

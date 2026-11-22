@@ -27,6 +27,17 @@ export const BEZ_OPORY = -2;
 const NEJVETSI_STLACENI = 0.5;
 /** Kolik kol se nanejvýš sejde na jednom prvku mostovky; pro odhad kroku výpočtu. */
 const KOL_NA_PRVKU = 3;
+/**
+ * Ztráta kroku. Na silně rozhoupané mostovce člověk přestane držet rytmus, zpomalí a chytá
+ * rovnováhu, takže síla, kterou do mostu vnáší, s kmitáním neroste donekonečna. Do zrychlení
+ * `ZTRATA_OD` (m/s², hranice nepřijatelného kmitání) budí naplno, pak budicí síla lineárně
+ * slábne až na `ZBYTEK_BUZENI` při `ZTRATA_DO`. Mosty, které kmitají přijatelně, to nemění.
+ */
+export const ZTRATA_OD = 2.5;
+export const ZTRATA_DO = 6;
+export const ZBYTEK_BUZENI = 0.25;
+/** Jak dlouho člověku trvá, než rozhoupání mostovky pocítí a než ho zase přestane cítit, s. */
+const DOBA_HOUPANI = 0.5;
 
 export interface PopisBremene {
   /** Styčník soustavy, který břemeno nese; bez něj je břemeno pouhá síla. */
@@ -81,6 +92,11 @@ export interface Bremena {
   prvek: Int32Array;
   /** Břemeno je vypnuté (1): s trasou se nestýká a nic nepřenáší, například po pádu z mostu. */
   vypnuto: Uint8Array;
+  /**
+   * Jak moc se mostovka pod břemenem houpe: vyhlazená velikost její svislé rychlosti, m/s.
+   * Vede se jen u břemen s budicí silou (lidí); podle ní člověk ztrácí krok.
+   */
+  houpani: Float64Array;
   dt: number;
 }
 
@@ -109,6 +125,7 @@ export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[]): Br
     sila: new Float64Array(n),
     prvek: new Int32Array(n).fill(BEZ_OPORY),
     vypnuto: new Uint8Array(n),
+    houpani: new Float64Array(n),
     dt: 0,
   };
   popisy.forEach((p, i) => {
@@ -138,28 +155,81 @@ export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[]): Br
  */
 export function nastavKrokBremen(b: Bremena, dt: number): void {
   b.dt = dt;
-  for (let i = 0; i < b.pocet; i++) {
-    const pul = Math.PI * b.frekvence[i]! * dt;
-    const p2 = pul * pul;
-    const t = pul * (1 + p2 * (1 / 3 + p2 * (2 / 15 + (p2 * 17) / 315)));
-    const jmenovatel = 1 / (1 + t * t);
-    b.krokCos[i] = (1 - t * t) * jmenovatel;
-    b.krokSin[i] = 2 * t * jmenovatel;
-  }
+  for (let i = 0; i < b.pocet; i++) nastavKrokFaze(b, i);
+}
+
+/** Otočení fáze jednoho břemene za krok výpočtu podle jeho frekvence. */
+function nastavKrokFaze(b: Bremena, i: number): void {
+  const pul = Math.PI * b.frekvence[i]! * b.dt;
+  const p2 = pul * pul;
+  const t = pul * (1 + p2 * (1 / 3 + p2 * (2 / 15 + (p2 * 17) / 315)));
+  const jmenovatel = 1 / (1 + t * t);
+  b.krokCos[i] = (1 - t * t) * jmenovatel;
+  b.krokSin[i] = 2 * t * jmenovatel;
 }
 
 /** Posune síly bez styčníku a fáze buzení o krok. */
 export function posunBremena(b: Bremena): void {
-  const { x, rychlost, stycnik, fazeCos, fazeSin, krokCos, krokSin, spojnice, spojniceMinula } = b;
+  const { x, rychlost, stycnik, fazeCos, fazeSin, krokCos, krokSin, spojnice, spojniceMinula, houpani } = b;
   const dt = b.dt;
+  const prizpusobeni = dt < DOBA_HOUPANI ? dt / DOBA_HOUPANI : 1;
   for (let i = 0; i < b.pocet; i++) {
     if (stycnik[i]! < 0) x[i] = x[i]! + rychlost[i]! * dt;
     const c = fazeCos[i]!;
     const sn = fazeSin[i]!;
     fazeCos[i] = c * krokCos[i]! - sn * krokSin[i]!;
     fazeSin[i] = sn * krokCos[i]! + c * krokSin[i]!;
+    // Rozhoupání mostovky pod člověkem; na pevné zemi a ve vzduchu odeznívá.
+    if (b.frekvence[i] !== 0 && stycnik[i]! >= 0) {
+      const ted = spojnice[i]!;
+      const minula = spojniceMinula[i]!;
+      let rychlostPovrchu = 0;
+      if (b.prvek[i]! >= 0 && ted === ted && minula === minula && dt > 0) {
+        rychlostPovrchu = (ted - minula) / dt;
+        if (rychlostPovrchu < 0) rychlostPovrchu = -rychlostPovrchu;
+      }
+      houpani[i] = houpani[i]! + (rychlostPovrchu - houpani[i]!) * prizpusobeni;
+    }
     spojniceMinula[i] = spojnice[i]!;
   }
+}
+
+/**
+ * Jakou částí své budicí síly člověk mostovku právě budí: 1, dokud se pod ním houpe
+ * přijatelně, méně, když ztrácí krok. Zrychlení mostovky se odhaduje z vyhlazené rychlosti
+ * a z frekvence kroku: při rezonanci kmitá most právě v rytmu, který ho budí, a střední
+ * velikost rychlosti harmonického kmitu je 2/π jeho amplitudy.
+ */
+export function podilBuzeni(b: Bremena, i: number): number {
+  const zrychleni = Math.PI * Math.PI * b.frekvence[i]! * b.houpani[i]!;
+  if (!(zrychleni > ZTRATA_OD)) return 1;
+  if (zrychleni >= ZTRATA_DO) return ZBYTEK_BUZENI;
+  return 1 - ((1 - ZBYTEK_BUZENI) * (zrychleni - ZTRATA_OD)) / (ZTRATA_DO - ZTRATA_OD);
+}
+
+/**
+ * Změní budicí sílu břemene za běhu: frekvenci, amplitudy šesti složek a fázi. Slouží
+ * lidem, kteří se zastaví, začnou skákat nebo se zase rozejdou, a budiči, který se přelaďuje.
+ */
+export function nastavBuzeni(
+  b: Bremena,
+  i: number,
+  frekvence: number,
+  amplitudy: readonly number[],
+  fazeCos: number,
+  fazeSin: number,
+): void {
+  b.frekvence[i] = frekvence;
+  for (let k = 0; k < 6; k++) b.amplitudy[6 * i + k] = amplitudy[k] ?? 0;
+  b.fazeCos[i] = fazeCos;
+  b.fazeSin[i] = fazeSin;
+  nastavKrokFaze(b, i);
+}
+
+/** Změní jen frekvenci budicí síly a fázi nechá běžet dál (přelaďování budiče). */
+export function nastavFrekvenci(b: Bremena, i: number, frekvence: number): void {
+  b.frekvence[i] = frekvence;
+  nastavKrokFaze(b, i);
 }
 
 /**
@@ -236,13 +306,19 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
       const c = b.fazeCos[i]!;
       const sn = b.fazeSin[i]!;
       const k = 6 * i;
-      tlak +=
+      let buzeni =
         amplitudy[k]! * sn +
         amplitudy[k + 1]! * c +
         amplitudy[k + 2]! * (2 * sn * c) +
         amplitudy[k + 3]! * (c * c - sn * sn) +
         amplitudy[k + 4]! * (sn * (3 - 4 * sn * sn)) +
         amplitudy[k + 5]! * (c * (4 * c * c - 3));
+      // Kdo ztrácí krok, budí slaběji. Síla bez styčníku (budič) krok ztratit nemůže.
+      if (uzel >= 0 && b.houpani[i]! > 0) {
+        const podil = podilBuzeni(b, i);
+        if (podil < 1) buzeni *= podil;
+      }
+      tlak += buzeni;
       // Styčník mostovku jen tlačí. Síla bez styčníku je předepsaná a smí i táhnout (budič).
       if (tlak < 0 && uzel >= 0) tlak = 0;
     }
