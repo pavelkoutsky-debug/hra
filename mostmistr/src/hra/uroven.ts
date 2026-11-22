@@ -543,15 +543,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (polozka.rychlost !== undefined && !jeClovek(polozka.druh)) {
       kdo = t("provoz.rychlost", { kdo, rychlost: cislo(3.6 * polozka.rychlost, 0) });
     }
-    if (polozka.brzdeni && jeVozidlo(polozka.druh)) {
-      kdo = t("provoz.brzdi", { kdo, stani: cislo(polozka.brzdeni.stani, Number.isInteger(polozka.brzdeni.stani) ? 0 : 1) });
-    }
+    const brzdi = polozka.brzdeni !== undefined && jeVozidlo(polozka.druh);
+    const stani = polozka.brzdeni ? cislo(polozka.brzdeni.stani, Number.isInteger(polozka.brzdeni.stani) ? 0 : 1) : "";
     const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
     if (vetou) {
       const odkud = t(polozka.smer === 1 ? "zadani.provoz.zleva" : "zadani.provoz.zprava");
-      return t("zadani.provoz.polozka", { kdo, odkud, cas });
+      const veta = t("zadani.provoz.polozka", { kdo, odkud, cas });
+      return brzdi ? t("zadani.provoz.brzdi", { veta, stani }) : veta;
     }
-    return t("rad.polozka", { cas, smer: polozka.smer === 1 ? "→" : "←", kdo });
+    const kratce = t("rad.polozka", { cas, smer: polozka.smer === 1 ? "→" : "←", kdo });
+    return brzdi ? t("rad.brzdi", { polozka: kratce }) : kratce;
   }
 
   // ---- Stavba ----
