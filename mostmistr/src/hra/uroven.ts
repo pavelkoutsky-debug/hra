@@ -10,7 +10,7 @@ import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "..
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import type { Denik } from "../denik/denik";
-import { predOdchodem } from "../denik/prohlizec";
+import { predOdchodem, stopkyViditelnosti } from "../denik/prohlizec";
 import type { HodnotaDeniku } from "../denik/udalosti";
 import { Editor } from "../editor/editor";
 import { prekazkyZkousky } from "../editor/pravidla";
@@ -176,8 +176,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   prvek("#obrazovka-uroven", HTMLElement).hidden = false;
 
   // ---- Deník hraní: co hráč v úrovni dělá (viz src/denik/) ----
-  const otevrenoV = Date.now();
-  const sekundVUrovni = (): number => Math.round((Date.now() - otevrenoV) / 1000);
+  // Čas v úrovni běží jen, když je stránka vidět; panel na pozadí se do něj nepočítá.
+  const stopky = stopkyViditelnosti();
+  const sekundVUrovni = (): number => Math.round(stopky() / 1000);
   const zapis = (druh: string, data?: { [klic: string]: HodnotaDeniku }): void => denik.zapis(druh, data, uroven.id);
   /** Kolik úprav mostu hráč udělal od poslední zkoušky a kolik zkoušek s provozem už pustil. */
   let upravOdZkousky = 0;
@@ -300,6 +301,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const ulozeny = uloziste.navrh(uroven.id);
   let naposledUlozeny: NavrhMostu | null = ulozeny ?? null;
   const editor = new Editor(uroven, ulozeny ?? prazdnyNavrh(uroven.id), poZmeneNavrhu);
+  // Výchozí stav výkresu není úprava: bez toho by první klik mimo kreslení (výběr, nástroj)
+  // zapsal do deníku změnu stavby, která se nestala.
+  naposledUlozeny = editor.navrh;
   {
     const medaile = uloziste.rekord(uroven.id)?.medaile;
     zapis("uroven.otevrena", {
@@ -1599,6 +1603,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(pokus && p.druh === "nad-rozpocet"))[0];
     if (prekazka) {
       ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
+      zapis("zkouska.odmitnuta", { duvod: prekazka.druh, pokus: brnknuti ? "brnknuti" : budic ? "budic" : null, cena: cenaNavrhu(editor.navrh) });
       return;
     }
     skryjHlaseni();
@@ -2010,7 +2015,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         t("vysledek.shrnuti.cast", { prejelo: vysledek.prejelo, pocet: vysledek.ucastniku, spadlo: vysledek.spadlo }),
       );
     }
-    if (vysledek.bezRovnovahy) vety.push(t("vysledek.bezRovnovahy"));
+    // Most, který zkouškou prošel, klidovou polohu našel (jen ne hned napoprvé); věta by mátla.
+    if (vysledek.bezRovnovahy && !vysledek.pruchod) vety.push(t("vysledek.bezRovnovahy"));
     // Most s lany, který už před zkouškou visel hluboko pod výkresem, má nedopnuté napínáky.
     const maLana = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "lano");
     if (!vysledek.pruchod && !jePokus && maLana && (vysledek.pruvesVKlidu ?? 0) > 0.1) {

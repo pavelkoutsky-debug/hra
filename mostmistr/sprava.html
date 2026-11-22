@@ -55,6 +55,13 @@
       .stav[data-stav="vyreseno"] { color: #9be29b; }
       .stav[data-stav="zamitnuto"] { color: #8fb4e6; }
       .detail { padding: 12px 14px; border: 1px solid rgb(207 227 255 / 0.6); background: rgb(11 47 92 / 0.6); }
+      /* Detail drží u horního okraje okna, ať je vidět i po kliknutí na řádek hluboko v seznamu. */
+      @media (min-width: 1001px) {
+        .sloupce .detail { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+      }
+      /* Dlouhé slovo bez mezer ve zprávě se zalomí; ostatní sloupce drží slova pohromadě. */
+      #vazby td:last-child { overflow-wrap: anywhere; }
+      #vazby td:not(:last-child) { white-space: nowrap; }
       .detail dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 0 0 10px; }
       .detail dt { color: #8fb4e6; }
       .detail dd { margin: 0; overflow-wrap: anywhere; }
@@ -71,7 +78,7 @@
     <p>
       Zpětná vazba hráčů a deník hraní. Stránka je jen pro tebe: bez hesla správce server nic
       nevydá. Heslo je proměnná prostředí <code>MM_SPRAVCE_HESLO</code> v nastavení webu na Netlify
-      (aspoň osm znaků); po jejím nastavení web znovu nasaď.
+      (aspoň osm znaků, bez diakritiky; nejlépe dlouhé náhodné); po jejím nastavení web znovu nasaď.
     </p>
 
     <form class="rada" id="prihlaseni">
@@ -81,6 +88,7 @@
       <button type="button" id="odhlasit" hidden>Odhlásit</button>
     </form>
     <p class="hlaseni" id="hlaseni" role="status"></p>
+    <p id="uloziste"></p>
 
     <div id="obsah" hidden>
       <div class="rada" role="tablist">
@@ -98,6 +106,7 @@
               </thead>
               <tbody></tbody>
             </table>
+            <button type="button" id="vazby-starsi" style="margin-top: 8px" hidden>Načíst starší</button>
           </div>
           <div class="detail" id="detail-vazby" hidden>
             <dl id="vazba-udaje"></dl>
@@ -105,7 +114,8 @@
             <canvas class="most" id="vazba-most" hidden></canvas>
             <div class="rada">
               <button type="button" id="vazba-kopirovat" hidden>Zkopírovat most</button>
-              <a id="vazba-uroven" hidden>Otevřít úroveň ve hře</a>
+              <a id="vazba-uroven" target="_blank" rel="noopener" hidden>Otevřít úroveň ve hře (nový panel, bez záznamu)</a>
+              <button type="button" id="vazba-sezeni">Ukázat sezení v deníku</button>
             </div>
             <h2>Řešení</h2>
             <div class="rada" id="vazba-stavy"></div>
@@ -122,7 +132,7 @@
 
       <section data-panel="denik" hidden>
         <div class="rada">
-          <label for="den">Den</label>
+          <label for="den">Den (UTC)</label>
           <select id="den"></select>
           <label for="obdobi">Souhrn za</label>
           <select id="obdobi">
@@ -140,10 +150,10 @@
           <table id="souhrn">
             <thead>
               <tr>
-                <th>Úroveň</th><th class="cislo">Hráčů</th><th class="cislo">Zkoušek</th><th class="cislo">Prošlo</th>
-                <th class="cislo">Hráčů prošlo</th><th class="cislo">Bez zkoušky</th><th class="cislo">Zkoušek do průchodu</th>
+                <th>Úroveň</th><th class="cislo">Hráčů</th><th class="cislo">Zkoušek</th><th class="cislo">Zkoušek prošlo</th>
+                <th class="cislo">Hráčů prošlo</th><th class="cislo">Hráčů bez zkoušky</th><th class="cislo">Zkoušek do průchodu</th>
                 <th class="cislo">Minut do průchodu</th><th class="cislo">Medaile P / R / M</th>
-                <th>Cena průchodu: nejnižší · medián · rozpočty úrovně</th><th>Čím stavěli</th><th>Na čem mosty padaly</th>
+                <th>Cena průchodu: nejnižší · medián · rozpočty úrovně</th><th>Nakreslené pruty podle prvku</th><th>Na čem mosty padaly</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -154,7 +164,7 @@
         <div class="sloupce">
           <div class="tabulka">
             <table id="sezeni">
-              <thead><tr><th>Hráč</th><th>Sezení</th><th class="cislo">Dávek</th></tr></thead>
+              <thead><tr><th>Hráč</th><th>Začátek a číslo sezení</th><th>Dávky přišly</th><th class="cislo">Dávek</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>

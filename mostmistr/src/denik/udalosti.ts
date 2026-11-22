@@ -26,6 +26,8 @@ export interface HlavickaDeniku {
   hrac: string;
   /** Náhodné číslo jednoho sezení: od otevření hry po zavření panelu prohlížeče. */
   sezeni: string;
+  /** Kdy sezení začalo podle hodin hráče (ms od roku 1970); řadí se podle něj sezení za sebou. */
+  zacatek: number;
   /** Verze hry a otisk sestavení. */
   hra: string;
   sestaveni: string;
@@ -97,6 +99,11 @@ export interface EvidovanaVazba extends ZpetnaVazba {
   upraveno: string | null;
 }
 
+/** Nejdelší text a největší číslo v datech události; zápis mostu (`navrh`) smí být delší. */
+const NEJDELSI_TEXT_UDALOSTI = 300;
+const NEJDELSI_NAVRH_UDALOSTI = 80_000;
+const NEJVETSI_CISLO_UDALOSTI = 1e12;
+
 const ID = /^[0-9a-f]{8,32}$/;
 const DRUH_UDALOSTI = /^[a-z][a-z0-9]*(\.[a-z0-9-]+){0,3}$/;
 const ID_UROVNE = /^[0-9]{1,2}-[0-9]{2}$/;
@@ -114,17 +121,25 @@ function podleVzoru(h: unknown, cesta: string, vzor: RegExp, nejvic: number): st
 }
 
 /** Zkontroluje, že hodnota je jen z jednoduchých dat a není zanořená hlouběji, než je rozumné. */
-function hodnotaDeniku(h: unknown, cesta: string, hloubka: number): HodnotaDeniku {
-  if (h === null || typeof h === "string" || typeof h === "boolean") return h;
+function hodnotaDeniku(h: unknown, cesta: string, hloubka: number, nejdelsiText = NEJDELSI_TEXT_UDALOSTI): HodnotaDeniku {
+  if (h === null || typeof h === "boolean") return h;
+  if (typeof h === "string") {
+    if (h.length > nejdelsiText) throw new ChybaDat(cesta, `text je delší než ${nejdelsiText} znaků`);
+    return h;
+  }
   if (typeof h === "number") {
-    if (!Number.isFinite(h)) throw new ChybaDat(cesta, "očekáváno konečné číslo");
+    if (!Number.isFinite(h) || Math.abs(h) > NEJVETSI_CISLO_UDALOSTI) throw new ChybaDat(cesta, "očekáváno konečné číslo rozumné velikosti");
     return h;
   }
   if (hloubka <= 0) throw new ChybaDat(cesta, "data jsou zanořená příliš hluboko");
   if (Array.isArray(h)) return h.map((p, i) => hodnotaDeniku(p, `${cesta}[${i}]`, hloubka - 1));
   if (typeof h === "object") {
     const vysledek: { [klic: string]: HodnotaDeniku } = {};
-    for (const [klic, hodnota] of Object.entries(h)) vysledek[klic] = hodnotaDeniku(hodnota, `${cesta}.${klic}`, hloubka - 1);
+    for (const [klic, hodnota] of Object.entries(h)) {
+      if (klic.length > 40) throw new ChybaDat(cesta, "název údaje je příliš dlouhý");
+      // Zápis mostu je jediný dlouhý text, který událost smí nést.
+      vysledek[klic] = hodnotaDeniku(hodnota, `${cesta}.${klic}`, hloubka - 1, klic === "navrh" ? NEJDELSI_NAVRH_UDALOSTI : NEJDELSI_TEXT_UDALOSTI);
+    }
     return vysledek;
   }
   throw new ChybaDat(cesta, "nepodporovaný druh hodnoty");
@@ -132,7 +147,7 @@ function hodnotaDeniku(h: unknown, cesta: string, hloubka: number): HodnotaDenik
 
 export function nactiHlavicku(h: unknown, cesta: string): HlavickaDeniku {
   const o = objekt(h, cesta);
-  jenZnameKlice(o, cesta, ["verze", "hrac", "sezeni", "hra", "sestaveni", "jazyk", "okno", "dotyk"]);
+  jenZnameKlice(o, cesta, ["verze", "hrac", "sezeni", "zacatek", "hra", "sestaveni", "jazyk", "okno", "dotyk"]);
   if (o.verze !== VERZE_DENIKU) throw new ChybaDat(`${cesta}.verze`, `očekávána verze ${VERZE_DENIKU}`);
   const okno = pole(o.okno, `${cesta}.okno`);
   if (okno.length !== 2) throw new ChybaDat(`${cesta}.okno`, "očekávána šířka a výška");
@@ -140,9 +155,11 @@ export function nactiHlavicku(h: unknown, cesta: string): HlavickaDeniku {
     verze: VERZE_DENIKU,
     hrac: podleVzoru(o.hrac, `${cesta}.hrac`, ID, 32),
     sezeni: podleVzoru(o.sezeni, `${cesta}.sezeni`, ID, 32),
+    zacatek: cislo(o.zacatek, `${cesta}.zacatek`, { min: 0, max: 1e14, cele: true }),
     hra: kratkyText(o.hra, `${cesta}.hra`, 40),
     sestaveni: kratkyText(o.sestaveni, `${cesta}.sestaveni`, 40),
-    jazyk: kratkyText(o.jazyk, `${cesta}.jazyk`, 20),
+    // Jazyk prohlížeč uvádět nemusí; prázdný je v pořádku.
+    jazyk: typeof o.jazyk === "string" && o.jazyk.length === 0 ? "" : kratkyText(o.jazyk, `${cesta}.jazyk`, 20),
     okno: [
       cislo(okno[0], `${cesta}.okno[0]`, { min: 0, max: 100000, cele: true }),
       cislo(okno[1], `${cesta}.okno[1]`, { min: 0, max: 100000, cele: true }),

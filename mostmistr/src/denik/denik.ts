@@ -4,7 +4,8 @@
 //
 // Hráč může záznam vypnout. Pak se nic neposílá a do fronty k odeslání se nic neukládá;
 // v paměti stránky zůstává jen krátký seznam posledních událostí, který se přiloží ke
-// zpětné vazbě, pokud si to hráč sám zaškrtne.
+// zpětné vazbě, pokud si to hráč sám zaškrtne. Volba se čte z paměti prohlížeče znovu před
+// každým odesláním, takže platí i tehdy, když ji hráč změnil v jiném panelu.
 
 import {
   NEJVIC_DAVEK_SEZENI,
@@ -23,6 +24,12 @@ export interface PametDeniku {
   setItem(klic: string, hodnota: string): void;
 }
 
+/**
+ * Jak dopadlo odeslání: server dávku přijal; odmítl ji natrvalo (špatný tvar, moc velká:
+ * zkoušet znovu nemá smysl); nebo je nedostupný a má se to zkusit později.
+ */
+export type VysledekOdeslani = "prijato" | "odmitnuto" | "nedostupne";
+
 export interface ProstrediDeniku {
   /** Paměť, která přežije zavření prohlížeče (číslo hráče, vypínač); null, když ji prohlížeč nedá. */
   trvala: PametDeniku | null;
@@ -33,10 +40,10 @@ export interface ProstrediDeniku {
   /** Náhodné šestnáctkové číslo o šestnácti znacích. */
   nahoda: () => string;
   /**
-   * Odešle text na adresu; vrací, zda ho server přijal. `naOdchodu` znamená, že se stránka
-   * zavírá a na odpověď se nedá čekat.
+   * Odešle text na adresu. `naOdchodu` znamená, že se stránka zavírá a na odpověď se nedá
+   * čekat; pak stačí, že prohlížeč žádost převzal.
    */
-  posli: (adresa: string, telo: string, naOdchodu: boolean) => Promise<boolean>;
+  posli: (adresa: string, telo: string, naOdchodu: boolean) => Promise<VysledekOdeslani>;
   hra: string;
   sestaveni: string;
   jazyk: string;
@@ -48,20 +55,21 @@ export const ADRESA_DENIKU = "/api/denik";
 export const ADRESA_VAZBY = "/api/vazba";
 
 const KLIC_HRACE = "mostmistr.hrac";
-const KLIC_ZAZNAMU = "mostmistr.denik";
+export const KLIC_ZAZNAMU = "mostmistr.denik";
 const KLIC_UPOZORNENI = "mostmistr.denik.upozorneno";
 const KLIC_SEZENI = "mostmistr.sezeni";
 const KLIC_PORADI = "mostmistr.sezeni.poradi";
 const KLIC_ZACATKU = "mostmistr.sezeni.zacatek";
-const KLIC_POTIZI = "mostmistr.sezeni.potize";
 
 /** Kolik událostí ve frontě spustí odeslání a jak dlouho smí nejstarší čekat, ms. */
 export const UDALOSTI_NA_DAVKU = 40;
 export const NEJDELSI_CEKANI = 20_000;
 /** Nejvíc událostí ve frontě; když server neodpovídá, nejstarší se zahazují. */
 const NEJDELSI_FRONTA = 400;
-/** Po tolika nepovedených odesláních za sebou to deník do konce sezení vzdá. */
+/** Po tolika nepovedených odesláních za sebou si deník dá přestávku. */
 const NEJVIC_NEZDARU = 3;
+/** Jak dlouho po opakovaném nezdaru deník server nezkouší, ms. Hraní tím netrpí. */
+export const PRESTAVKA_PO_NEZDARECH = 5 * 60_000;
 /** Největší dávka v znacích zápisu; větší se rozdělí. */
 const NEJVETSI_DAVKA = 60_000;
 
@@ -69,16 +77,21 @@ const ID = /^[0-9a-f]{8,32}$/;
 
 export class Denik {
   readonly #p: ProstrediDeniku;
+  /** Kam se ukládá číslo hráče, vypínač a potvrzení upozornění: trvalá paměť, jinak paměť panelu. */
+  readonly #volby: PametDeniku | null;
   readonly #hrac: string;
   readonly #sezeni: string;
   readonly #zacatek: number;
   /** Hráč tu byl už dřív (měl uložené své číslo). */
   readonly navrat: boolean;
   #zapnuto: boolean;
+  #upozorneno = false;
   #fronta: UdalostDeniku[] = [];
   #posledni: UdalostDeniku[] = [];
   #poradi: number;
-  #nezdaru: number;
+  #nezdaru = 0;
+  /** Do kdy se po opakovaném nezdaru nic neposílá; čas v ms. */
+  #prestavkaDo = 0;
   /** Čas zápisu nejstarší události ve frontě; null, když je fronta prázdná. */
   #cekaOd: number | null = null;
   /** Kolik dávek deník v této stránce úspěšně odeslal. */
@@ -86,19 +99,21 @@ export class Denik {
 
   constructor(p: ProstrediDeniku) {
     this.#p = p;
-    const ulozeny = this.#cti(p.trvala, KLIC_HRACE);
+    this.#volby = p.trvala ?? p.sezeni;
+    const ulozeny = this.#cti(this.#volby, KLIC_HRACE);
     this.navrat = ulozeny !== null && ID.test(ulozeny);
     this.#hrac = this.navrat ? ulozeny! : p.nahoda();
-    if (!this.navrat) this.#pis(p.trvala, KLIC_HRACE, this.#hrac);
-    this.#zapnuto = this.#cti(p.trvala, KLIC_ZAZNAMU) !== "0";
+    if (!this.navrat) this.#pis(this.#volby, KLIC_HRACE, this.#hrac);
+    // Bez paměti prohlížeče by si hra nepamatovala ani to, že hráč záznam vypnul, a s každou
+    // stránkou by ho zapnula znovu. Takovému hráči se proto deník nevede vůbec.
+    this.#zapnuto = this.#volby !== null && this.#cti(this.#volby, KLIC_ZAZNAMU) !== "0";
 
     const sezeni = this.#cti(p.sezeni, KLIC_SEZENI);
     const zacatek = Number(this.#cti(p.sezeni, KLIC_ZACATKU));
     const pokracuje = sezeni !== null && ID.test(sezeni) && Number.isFinite(zacatek) && zacatek > 0;
     this.#sezeni = pokracuje ? sezeni : p.nahoda();
     this.#zacatek = pokracuje ? zacatek : p.ted();
-    this.#poradi = pokracuje ? Math.max(0, Math.floor(Number(this.#cti(p.sezeni, KLIC_PORADI)) || 0)) : 0;
-    this.#nezdaru = pokracuje ? Math.max(0, Math.floor(Number(this.#cti(p.sezeni, KLIC_POTIZI)) || 0)) : 0;
+    this.#poradi = pokracuje ? this.#ulozenePoradi() : 0;
     if (!pokracuje) {
       this.#pis(p.sezeni, KLIC_SEZENI, this.#sezeni);
       this.#pis(p.sezeni, KLIC_ZACATKU, String(this.#zacatek));
@@ -113,33 +128,56 @@ export class Denik {
   }
 
   set zapnuto(zapnuto: boolean) {
+    if (this.#volby === null) return;
     if (zapnuto === this.#zapnuto) return;
-    // Vypnutí se ještě zapíše a odešle (ať je vidět, kolik hráčů záznam vypíná), pak už nic.
-    if (!zapnuto) {
-      this.zapis("denik.vypnut");
-      void this.odesli();
-    }
     this.#zapnuto = zapnuto;
-    this.#pis(this.#p.trvala, KLIC_ZAZNAMU, zapnuto ? "1" : "0");
-    if (zapnuto) this.zapis("denik.zapnut");
-    else {
+    this.#pis(this.#volby, KLIC_ZAZNAMU, zapnuto ? "1" : "0");
+    if (zapnuto) {
+      this.zapis("denik.zapnut");
+      return;
+    }
+    // Co čekalo ve frontě, se zahodí. Odejde jen zpráva o vypnutí samotná, ať je vidět,
+    // kolik hráčů záznam vypíná; pak už nic.
+    this.#fronta = [];
+    this.#cekaOd = null;
+    const vypnuti: UdalostDeniku = { t: this.#cas(), druh: "denik.vypnut" };
+    this.#zapamatuj(vypnuti);
+    void this.#odesliDavku([vypnuti], false);
+  }
+
+  /**
+   * Přečte vypínač znovu z paměti prohlížeče (hráč ho mohl přepnout v jiném panelu).
+   * Vrací, zda je záznam zapnutý.
+   */
+  nactiVolbu(): boolean {
+    if (this.#volby === null) return false;
+    const zapnuto = this.#cti(this.#volby, KLIC_ZAZNAMU) !== "0";
+    if (!zapnuto && this.#zapnuto) {
       this.#fronta = [];
       this.#cekaOd = null;
     }
+    this.#zapnuto = zapnuto;
+    return zapnuto;
+  }
+
+  /** Jde záznam vůbec vést? Bez paměti prohlížeče ne (hra by si nepamatovala vypnutí). */
+  get lzeZapnout(): boolean {
+    return this.#volby !== null;
   }
 
   /** Viděl už hráč upozornění, že hra deník vede? */
   get upozorneno(): boolean {
-    return this.#cti(this.#p.trvala, KLIC_UPOZORNENI) === "1";
+    return this.#upozorneno || this.#cti(this.#volby, KLIC_UPOZORNENI) === "1";
   }
 
   potvrdUpozorneni(): void {
-    this.#pis(this.#p.trvala, KLIC_UPOZORNENI, "1");
+    this.#upozorneno = true;
+    this.#pis(this.#volby, KLIC_UPOZORNENI, "1");
   }
 
-  /** Server neodpovídá a deník to do konce sezení vzdal (místní spuštění bez serveru, výpadek). */
+  /** Server neodpovídá a deník si dává přestávku (místní spuštění bez serveru, výpadek). */
   get vzdano(): boolean {
-    return this.#nezdaru >= NEJVIC_NEZDARU;
+    return this.#p.ted() < this.#prestavkaDo;
   }
 
   get hlavicka(): HlavickaDeniku {
@@ -148,9 +186,10 @@ export class Denik {
       verze: VERZE_DENIKU,
       hrac: this.#hrac,
       sezeni: this.#sezeni,
+      zacatek: this.#zacatek,
       hra: p.hra,
       sestaveni: p.sestaveni,
-      jazyk: p.jazyk,
+      jazyk: p.jazyk.slice(0, 20),
       okno: p.okno,
       dotyk: p.dotyk,
     };
@@ -159,12 +198,11 @@ export class Denik {
   /** Zapíše událost. `uroven` je id úrovně, ve které se stala. */
   zapis(druh: string, data?: { [klic: string]: HodnotaDeniku }, uroven?: string): void {
     const ted = this.#p.ted();
-    const udalost: UdalostDeniku = { t: Math.max(0, Math.round(ted - this.#zacatek)), druh };
+    const udalost: UdalostDeniku = { t: this.#cas(), druh };
     if (uroven !== undefined) udalost.uroven = uroven;
     if (data !== undefined) udalost.data = data;
-    this.#posledni.push(udalost);
-    if (this.#posledni.length > NEJVIC_UDALOSTI_U_VAZBY) this.#posledni.shift();
-    if (!this.#zapnuto || this.vzdano) return;
+    this.#zapamatuj(udalost);
+    if (!this.#zapnuto) return;
     this.#fronta.push(udalost);
     if (this.#fronta.length > NEJDELSI_FRONTA) this.#fronta.shift();
     this.#cekaOd ??= ted;
@@ -183,34 +221,22 @@ export class Denik {
 
   /** Odešle všechno, co čeká. Při zavírání stránky (`naOdchodu`) nečeká na odpověď. */
   async odesli(naOdchodu = false): Promise<void> {
-    if (!this.#zapnuto || this.vzdano || this.#fronta.length === 0) return;
-    const udalosti = this.#fronta;
+    if (!this.nactiVolbu() || this.vzdano || this.#fronta.length === 0) return;
+    const casti = this.#rozdel(this.#fronta);
     this.#fronta = [];
     this.#cekaOd = null;
-    for (const cast of this.#rozdel(udalosti)) {
-      if (this.#poradi >= NEJVIC_DAVEK_SEZENI) return;
-      // Číslo dávky se zabere hned, takže souběžné odeslání při zavírání stránky dostane další.
-      const poradi = this.#poradi++;
-      this.#pis(this.#p.sezeni, KLIC_PORADI, String(this.#poradi));
-      const davka: DavkaDeniku = { hlavicka: this.hlavicka, poradi, udalosti: cast };
-      let prijato = false;
-      try {
-        prijato = await this.#p.posli(ADRESA_DENIKU, JSON.stringify(davka), naOdchodu);
-      } catch {
-        prijato = false;
+    for (let i = 0; i < casti.length; i++) {
+      // Hráč mohl záznam vypnout, zatímco se čekalo na odpověď: zbytek už neodejde.
+      if (!this.#zapnuto) return;
+      const vysledek = await this.#odesliDavku(casti[i]!, naOdchodu);
+      if (vysledek !== "nedostupne") continue;
+      // Server je nedostupný: tahle část i všechny další se vrátí do fronty a zkusí se
+      // příště (s novým číslem dávky).
+      if (this.#zapnuto) {
+        this.#fronta = [...casti.slice(i).flat(), ...this.#fronta].slice(-NEJDELSI_FRONTA);
+        this.#cekaOd ??= this.#p.ted();
       }
-      if (prijato) {
-        this.odeslano += 1;
-        this.#nezdar(0);
-      } else {
-        this.#nezdar(this.#nezdaru + 1);
-        // Nepřijaté události se vrátí na začátek fronty a zkusí se příště s novým číslem dávky.
-        if (!this.vzdano && this.#zapnuto) {
-          this.#fronta = [...cast, ...this.#fronta].slice(-NEJDELSI_FRONTA);
-          this.#cekaOd ??= this.#p.ted();
-        } else this.#fronta = [];
-        return;
-      }
+      return;
     }
   }
 
@@ -230,11 +256,54 @@ export class Denik {
       odpoved = null;
     }
     if (odpoved) {
-      const data: { [klic: string]: HodnotaDeniku } = { id: odpoved.id, druh: vazba.druh };
+      const data: { [klic: string]: HodnotaDeniku } = { druh: vazba.druh };
       if (vazba.hodnoceni !== undefined) data.hodnoceni = vazba.hodnoceni;
       this.zapis("vazba.odeslana", data, vazba.uroven);
     }
     return odpoved ? odpoved.id : null;
+  }
+
+  /** Čas události: milisekundy od začátku sezení. */
+  #cas(): number {
+    return Math.max(0, Math.round(this.#p.ted() - this.#zacatek));
+  }
+
+  #zapamatuj(udalost: UdalostDeniku): void {
+    this.#posledni.push(udalost);
+    if (this.#posledni.length > NEJVIC_UDALOSTI_U_VAZBY) this.#posledni.shift();
+  }
+
+  /** Pořadí další dávky uložené v paměti panelu (zapisují ho všechny stránky téhož sezení). */
+  #ulozenePoradi(): number {
+    return Math.max(0, Math.floor(Number(this.#cti(this.#p.sezeni, KLIC_PORADI)) || 0));
+  }
+
+  /** Odešle jednu dávku a zaznamená, jak to dopadlo. */
+  async #odesliDavku(udalosti: UdalostDeniku[], naOdchodu: boolean): Promise<VysledekOdeslani> {
+    // Číslo dávky je větší z toho, co si pamatuje stránka a co je v paměti panelu: jiná
+    // stránka téhož sezení (návrat tlačítkem Zpět) mezitím mohla čísla spotřebovat.
+    const poradi = Math.max(this.#poradi, this.#ulozenePoradi());
+    if (poradi >= NEJVIC_DAVEK_SEZENI) return "odmitnuto";
+    this.#poradi = poradi + 1;
+    this.#pis(this.#p.sezeni, KLIC_PORADI, String(this.#poradi));
+    const davka: DavkaDeniku = { hlavicka: this.hlavicka, poradi, udalosti };
+    let vysledek: VysledekOdeslani;
+    try {
+      vysledek = await this.#p.posli(ADRESA_DENIKU, JSON.stringify(davka), naOdchodu);
+    } catch {
+      vysledek = "nedostupne";
+    }
+    if (vysledek === "prijato") {
+      this.odeslano += 1;
+      this.#nezdaru = 0;
+    } else if (vysledek === "nedostupne") {
+      this.#nezdaru += 1;
+      if (this.#nezdaru >= NEJVIC_NEZDARU) {
+        this.#nezdaru = 0;
+        this.#prestavkaDo = this.#p.ted() + PRESTAVKA_PO_NEZDARECH;
+      }
+    }
+    return vysledek;
   }
 
   /** Rozdělí události na dávky, které se vejdou do meze velikosti. */
@@ -254,11 +323,6 @@ export class Denik {
     }
     if (davka.length > 0) davky.push(davka);
     return davky;
-  }
-
-  #nezdar(pocet: number): void {
-    this.#nezdaru = pocet;
-    this.#pis(this.#p.sezeni, KLIC_POTIZI, String(pocet));
   }
 
   #cti(pamet: PametDeniku | null, klic: string): string | null {
