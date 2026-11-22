@@ -139,6 +139,30 @@ describe("zadání páté kapitoly", () => {
   }, 150_000);
 });
 
+describe("ukázky v okně se zadáním", () => {
+  // Každá ukázka kampaně se musí v prohlížeči opravdu spočítat a rozehrát. Jednotkový test
+  // hlídá, co ukázka předvádí; tady se hlídá, že ji hra neodmítne (most nad rozpočtem
+  // úrovně kdysi skončil hlášením „ukázku se nepodařilo spočítat“).
+  for (const id of ["1-01", "2-02", "2-03", "2-04", "5-01", "5-02", "5-03", "5-04"]) {
+    it(`ukázka úrovně ${id} se spočítá a přehrává: vlevo most neobstojí, vpravo ano`, async () => {
+      await stranka.goto(`${adresa}?uroven=${id}`);
+      await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
+      const ukazka = stranka.locator('[data-udaj="ukazka"]');
+      expect(await ukazka.isVisible()).toBe(true);
+      await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 150_000 });
+      expect(await ukazka.locator('[data-strana="a"]').getAttribute("data-pruchod")).toBe("false");
+      expect(await ukazka.locator('[data-strana="b"]').getAttribute("data-pruchod")).toBe("true");
+      for (const strana of ["a", "b"]) {
+        expect(await ukazka.locator(`[data-strana="${strana}"] [data-stav]`).innerText()).not.toContain("nepodařilo");
+      }
+      if (id === "5-04") {
+        await stranka.waitForTimeout(8000);
+        await stranka.screenshot({ path: `${SLOZKA}/75-ukazka-koncert.png` });
+      }
+    }, 180_000);
+  }
+});
+
 describe("laděný tlumič a analytický panel při stavbě", () => {
   let spickaBez = 0;
   let vrcholuBez = 0;

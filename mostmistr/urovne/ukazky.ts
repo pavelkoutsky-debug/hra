@@ -40,8 +40,22 @@ function sProvozem(uroven: Uroven, jizdniRad: PolozkaJizdnihoRadu[]): Uroven {
   return { ...uroven, jizdniRad };
 }
 
-/** Ukázka k úrovni, nebo null, když žádnou nemá. */
+/**
+ * Ukázka k úrovni, nebo null, když žádnou nemá. Ukázka předvádí princip, ne hospodaření:
+ * její mosty nejsou vázané rozpočtem úrovně (most se třemi tlumiči smí být dražší), takže
+ * úroveň obou stran rozpočet nemá. Bez toho by zkouška dražší most odmítla jako neplatný.
+ */
 export function ukazkaUrovne(uroven: Uroven): UkazkaUrovne | null {
+  const sceny = scenyUkazky(uroven);
+  if (!sceny) return null;
+  const bezRozpoctu = (strana: StranaUkazky): StranaUkazky => ({
+    ...strana,
+    uroven: { ...strana.uroven, rozpocet: null, inzenyrskyRozpocet: null },
+  });
+  return { ...sceny, a: bezRozpoctu(sceny.a), b: bezRozpoctu(sceny.b) };
+}
+
+function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
   const reseni = RESENI[uroven.id];
   if (!reseni) return null;
   const trasa = uroven.trasy[0]!.id;

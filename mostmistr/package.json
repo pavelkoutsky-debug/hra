@@ -1,6 +1,6 @@
 {
   "name": "mostmistr",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "description": "Mostmistr — 2D stavění mostů ve stylu technického výkresu s vlastní fyzikou",

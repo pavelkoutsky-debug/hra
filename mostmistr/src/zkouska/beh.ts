@@ -63,7 +63,9 @@ export class BehZkousky {
       });
       return;
     }
-    const problemy = zkontrolujNavrh(vstup.navrh, vstup.uroven);
+    // Brnknout a rozkmitat budičem se smí i most dražší, než je rozpočet: pokus nic nehodnotí.
+    const pokus = vstup.brnknuti !== undefined || vstup.budic !== undefined;
+    const problemy = zkontrolujNavrh(vstup.navrh, vstup.uroven).filter((p) => !(pokus && p.druh === "nad-rozpocet"));
     if (problemy.length > 0) {
       this.#posli({ typ: "chyba", kod: "neplatny-vstup", podrobnosti: problemy.map((p) => p.druh).join(", ") });
       return;

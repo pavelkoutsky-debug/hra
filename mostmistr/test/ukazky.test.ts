@@ -2,24 +2,35 @@
 // a zvětšení pohybu nesmí rozhodit, kdo na čem stojí.
 import { describe, expect, it } from "vitest";
 import { zkontrolujNavrh } from "../src/data/navrh";
+import { VERZE_FYZIKY } from "../src/jadro/verze";
 import { jeKlicTextu } from "../src/ui/slovnik";
 import { hezkeZvetseni, nejvetsiVychylka, zvetsiPohyb } from "../src/vykres/zvetseni";
-import type { VysledekZkousky } from "../src/zkouska/protokol";
+import { BehZkousky } from "../src/zkouska/beh";
+import type { VysledekZkousky, ZpravaZeZkousky } from "../src/zkouska/protokol";
 import { CARA_MOSTOVKA, CARA_PRUT, STYCNIK_BEZNY, STYCNIK_SKRYTY, type Topologie } from "../src/zkouska/zaznam";
-import { Zkouska } from "../src/zkouska/zkouska";
 import { nactiKampan, nasadaUrovne } from "../urovne/index";
 import { ukazkaUrovne, type StranaUkazky } from "../urovne/ukazky";
 
 const kampan = nactiKampan();
 
+/**
+ * Spočítá jednu stranu ukázky stejnou cestou jako hra: zprávou „start“ přes rozhraní
+ * zkoušky, které návrh nejdřív zkontroluje proti pravidlům úrovně. Most, který by hra
+ * odmítla (například dražší než rozpočet), tu skončí chybou a ne výsledkem.
+ */
 function prehraj(strana: StranaUkazky): VysledekZkousky {
-  const zkouska = new Zkouska(strana.uroven, strana.navrh, nasadaUrovne(strana.uroven));
+  const zpravy: ZpravaZeZkousky[] = [];
+  const beh = new BehZkousky((zprava) => zpravy.push(zprava));
+  beh.prijmi({
+    typ: "start",
+    vstup: { uroven: strana.uroven, navrh: strana.navrh, nasada: nasadaUrovne(strana.uroven), verzeFyziky: VERZE_FYZIKY },
+  });
+  expect(zpravy[0]!.typ, JSON.stringify(zpravy[0])).toBe("zacatek");
   let pojistka = 0;
-  while (!zkouska.hotovo) {
-    zkouska.pokracuj(1);
-    expect(pojistka++).toBeLessThan(200);
-  }
-  return zkouska.vysledek();
+  while (beh.pokracuj(1)) expect(pojistka++).toBeLessThan(200);
+  const konec = zpravy.at(-1)!;
+  if (konec.typ !== "konec") throw new Error(`Ukázka neskončila výsledkem: ${JSON.stringify(konec)}`);
+  return konec.vysledek;
 }
 
 describe("ukázky k úrovním", () => {
@@ -49,10 +60,11 @@ describe("ukázky k úrovním", () => {
     const ukazka = ukazkaUrovne(uroven);
     if (!ukazka) continue;
     describe(`ukázka ${uroven.id}`, () => {
-      it("oba mosty vyhovují pravidlům úrovně (až na rozpočet)", () => {
+      it("oba mosty vyhovují pravidlům úrovně, se kterou se ukázka počítá", () => {
         for (const strana of [ukazka.a, ukazka.b]) {
-          const problemy = zkontrolujNavrh(strana.navrh, strana.uroven).filter((p) => p.druh !== "nad-rozpocet");
-          expect(problemy).toEqual([]);
+          // Ukázka rozpočet nemá: předvádí princip a její most smí být dražší než úroveň dovolí.
+          expect(strana.uroven.rozpocet).toBeNull();
+          expect(zkontrolujNavrh(strana.navrh, strana.uroven)).toEqual([]);
         }
       });
 

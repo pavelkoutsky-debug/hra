@@ -161,6 +161,19 @@ describe("pokus s budičem", () => {
     }
   }, 120_000);
 
+  it("pokus jde pustit i na mostě dražším než rozpočet; zkouška s provozem ne", () => {
+    const chuda: Uroven = { ...uroven, rozpocet: 1000, inzenyrskyRozpocet: null };
+    const prvniOdpoved = (vstup: { budic?: BudicZkousky; brnknuti?: { stycnik: number; sila: number } }): ZpravaZeZkousky => {
+      const zpravy: ZpravaZeZkousky[] = [];
+      const beh = new BehZkousky((zprava) => zpravy.push(zprava));
+      beh.prijmi({ typ: "start", vstup: { uroven: chuda, navrh: lavka, nasada: 1, verzeFyziky: VERZE_FYZIKY, ...vstup } });
+      return zpravy[0]!;
+    };
+    expect(prvniOdpoved({})).toMatchObject({ typ: "chyba", kod: "neplatny-vstup", podrobnosti: "nad-rozpocet" });
+    expect(prvniOdpoved({ budic }).typ).toBe("zacatek");
+    expect(prvniOdpoved({ brnknuti: { stycnik: stred, sila: 3000 } }).typ).toBe("zacatek");
+  });
+
   it("budič ve styčníku, který v návrhu není, nedělá nic a zkouška proběhne jako bez provozu", () => {
     const { vysledek: bez } = zkousej(lavka, { ...budic, stycnik: 999 });
     expect(bez.budic).toBeNull();
