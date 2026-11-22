@@ -10,7 +10,7 @@ import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "..
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import type { Denik } from "../denik/denik";
-import { predOdchodem } from "../denik/prohlizec";
+import { predOdchodem, stopkyViditelnosti } from "../denik/prohlizec";
 import type { HodnotaDeniku } from "../denik/udalosti";
 import { Editor } from "../editor/editor";
 import { prekazkyZkousky } from "../editor/pravidla";
@@ -176,8 +176,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   prvek("#obrazovka-uroven", HTMLElement).hidden = false;
 
   // ---- Deník hraní: co hráč v úrovni dělá (viz src/denik/) ----
-  const otevrenoV = Date.now();
-  const sekundVUrovni = (): number => Math.round((Date.now() - otevrenoV) / 1000);
+  // Čas v úrovni běží jen, když je stránka vidět; panel na pozadí se do něj nepočítá.
+  const stopky = stopkyViditelnosti();
+  const sekundVUrovni = (): number => Math.round(stopky() / 1000);
   const zapis = (druh: string, data?: { [klic: string]: HodnotaDeniku }): void => denik.zapis(druh, data, uroven.id);
   /** Kolik úprav mostu hráč udělal od poslední zkoušky a kolik zkoušek s provozem už pustil. */
   let upravOdZkousky = 0;

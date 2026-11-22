@@ -74,6 +74,11 @@
 
       <div class="uroven">
         <aside class="paleta">
+          <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
+            <span data-text="denik.upozorneni"></span>
+            <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
+            <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
+          </div>
           <h2 data-text="paleta.prvky"></h2>
           <div class="paleta__prvky"></div>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek paleta__tlacitko--akce" data-akce="dopnout" data-popis="paleta.dopnout.popis" hidden>
@@ -406,15 +411,16 @@
         </label>
         <label class="vazba__popisek" for="vazba-kontakt" data-text="vazba.kontakt"></label>
         <input id="vazba-kontakt" type="email" maxlength="200" autocomplete="email" />
-        <input id="vazba-web" class="vazba__past" type="text" name="web" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <p class="vazba__poznamka" data-text="vazba.kontakt.poznamka"></p>
+        <input id="vazba-web" class="vazba__past" type="text" name="potvrzeni-zpravy" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <p class="vazba__zaznam">
           <span data-udaj="vazba-zaznam"></span>
           <button type="button" class="tlacitko" data-akce="vazba-zaznam"></button>
         </p>
         <p class="okno__hlaseni" data-udaj="vazba-hlaseni" role="status"></p>
         <div class="okno__tlacitka">
-          <button type="button" class="tlacitko tlacitko--hlavni" data-akce="vazba-odeslat" data-text="vazba.odeslat"></button>
-          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+          <button type="submit" class="tlacitko tlacitko--hlavni" value="odeslat" data-akce="vazba-odeslat" data-text="vazba.odeslat"></button>
+          <button class="tlacitko" value="zavrit" formnovalidate data-text="okno.zavrit"></button>
         </div>
       </form>
     </dialog>

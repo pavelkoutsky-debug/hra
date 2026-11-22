@@ -4,8 +4,13 @@
 import { getStore, type Store } from "@netlify/blobs";
 import type { SkladZaznamu } from "./sklad";
 
-/** Jméno úložiště v Netlify Blobs; je společné všem nasazením webu. */
-export const JMENO_ULOZISTE = "mostmistr";
+/**
+ * Jména úložišť v Netlify Blobs. Úložiště je společné všem nasazením webu, proto má ostrý
+ * web jedno a náhledy pull requestů a pokusná nasazení druhé: náhled tak nevidí zprávy
+ * hráčů a hraní při zkoušení náhledu nekazí statistiky.
+ */
+export const ULOZISTE_OSTRE = "mostmistr";
+export const ULOZISTE_NAHLEDU = "mostmistr-nahled";
 
 /**
  * Sklad nad daným úložištěm Netlify Blobs. Čte se pokud možno „silně“ (hned po zápisu je
@@ -46,7 +51,8 @@ export function skladNadBlobs(bezne: Store, silne: Store | null = null): SkladZa
   };
 }
 
-/** Sklad webu na Netlify; nastavení si knihovna bere z prostředí funkce. */
-export function skladNetlify(): SkladZaznamu {
-  return skladNadBlobs(getStore(JMENO_ULOZISTE), getStore({ name: JMENO_ULOZISTE, consistency: "strong" }));
+/** Sklad webu na Netlify pro ostrý web nebo pro náhledy; nastavení si knihovna bere z prostředí funkce. */
+export function skladNetlify(ostry: boolean): SkladZaznamu {
+  const jmeno = ostry ? ULOZISTE_OSTRE : ULOZISTE_NAHLEDU;
+  return skladNadBlobs(getStore(jmeno), getStore({ name: jmeno, consistency: "strong" }));
 }

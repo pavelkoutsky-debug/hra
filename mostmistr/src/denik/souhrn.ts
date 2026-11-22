@@ -10,6 +10,7 @@
 // Čisté funkce bez prohlížeče i serveru; události se čtou opatrně, protože deník starší
 // verze hry může mít jiná data.
 
+import { ID_PRVKU } from "../data/katalog";
 import type { DavkaDeniku, HodnotaDeniku, UdalostDeniku } from "./udalosti";
 
 export interface SouhrnUrovne {
@@ -77,9 +78,23 @@ export interface HracVeVytahu {
 }
 
 export const VERZE_VYTAHU = 1;
-/** Nejvíc různých textů chyb, které si výtah pamatuje; další se sčítají pod „ostatní“. */
-const NEJVIC_CHYB_VE_VYTAHU = 40;
+/**
+ * Nejvíc různých textů chyb, které si výtah pamatuje; další se sčítají pod „ostatní“. Strop
+ * chrání výtah před zahlcením vymyšlenými daty; běžný den k němu nedojde. Nad ním už sloučení
+ * výtahů nedává přesně totéž co výpočet najednou (záleží na pořadí, v jakém chyby přišly).
+ */
+const NEJVIC_CHYB_VE_VYTAHU = 200;
 const OSTATNI_CHYBY = "ostatní";
+/** Nejdelší text chyby, který se počítá zvlášť, a meze údajů, kterým souhrn věří. */
+const NEJDELSI_CHYBA = 120;
+const NEJVIC_SEKUND = 2 * 86_400;
+const NEJVETSI_CENA = 1e10;
+const NEJVIC_DILU = 40;
+
+// Deník plní kdokoli, kdo umí poslat žádost: souhrn proto bere jen hodnoty, které hra opravdu
+// posílá (známé prvky a způsoby porušení, časy a ceny v rozumných mezích).
+const ZNAME_PRVKY: ReadonlySet<string> = new Set<string>(ID_PRVKU);
+const ZNAME_ZPUSOBY: ReadonlySet<string> = new Set(["tah", "tlak", "ohyb", "smyk", "vzper"]);
 
 /**
  * Výtah z deníku: mezivýsledek, který jde slučovat. Vše je po hráčích, takže sloučením
@@ -108,6 +123,12 @@ function median(hodnoty: number[]): number | null {
 }
 
 const cisloZ = (h: HodnotaDeniku | undefined): number => (typeof h === "number" && Number.isFinite(h) ? h : 0);
+/** Číslo v mezích; mimo ně (i záporné) nula. */
+const vMezich = (h: HodnotaDeniku | undefined, nejvic: number): number => {
+  const hodnota = cisloZ(h);
+  return hodnota > 0 && hodnota <= nejvic ? hodnota : 0;
+};
+const znamyPrvek = (h: HodnotaDeniku | undefined): string | null => (typeof h === "string" && ZNAME_PRVKY.has(h) ? h : null);
 const anoZ = (h: HodnotaDeniku | undefined): boolean => h === true;
 const textZ = (h: HodnotaDeniku | undefined): string | null => (typeof h === "string" ? h : null);
 
@@ -177,14 +198,15 @@ function novyHracVUrovni(): HracVUrovni {
 const novyHrac = (): HracVeVytahu => ({ sezeni: [], novy: false, dotyk: false, vypnul: false });
 
 /**
- * Výtah z dávek deníku. Dávky nemusejí být seřazené; řadí se podle hráče, sezení a pořadí.
- * Sezení téhož hráče se řadí podle abecedy jejich čísel, což nemusí být podle času: na počty
- * to vliv nemá, čas do průchodu je proto jen přibližný u hráčů s více sezeními za den.
+ * Výtah z dávek deníku. Dávky nemusejí být seřazené; řadí se podle hráče, začátku sezení
+ * (podle hodin hráče) a pořadí, tedy tak, jak se hrálo, a stejně, jak jdou za sebou klíče
+ * v úložišti. Na pořadí záleží u „zkoušek do prvního průchodu“.
  */
 export function vytahDeniku(davky: readonly DavkaDeniku[]): VytahDeniku {
   const serazene = [...davky].sort(
     (a, b) =>
       a.hlavicka.hrac.localeCompare(b.hlavicka.hrac) ||
+      (a.hlavicka.zacatek ?? 0) - (b.hlavicka.zacatek ?? 0) ||
       a.hlavicka.sezeni.localeCompare(b.hlavicka.sezeni) ||
       a.poradi - b.poradi,
   );
@@ -197,32 +219,33 @@ export function vytahDeniku(davky: readonly DavkaDeniku[]): VytahDeniku {
     else if (u.druh === "denik.vypnut") oHraci.vypnul = true;
     else if (u.druh === "chyba") {
       v.chyb += 1;
-      prictiChybu(v.chyby, textZ(data.zprava) ?? "neznámá chyba", 1);
+      prictiChybu(v.chyby, (textZ(data.zprava) ?? "neznámá chyba").slice(0, NEJDELSI_CHYBA), 1);
     } else if (u.druh === "vazba.odeslana") v.vazeb += 1;
     if (u.uroven === undefined) return;
     const hraciUrovne = (v.urovne[u.uroven] ??= slovnik());
     const zaznam = (hraciUrovne[hrac] ??= novyHracVUrovni());
     if (u.druh === "uroven.otevrena") zaznam.otevreni += 1;
-    else if (u.druh === "uroven.opustena") zaznam.sekundDriv += cisloZ(data.sekund);
+    else if (u.druh === "uroven.opustena") zaznam.sekundDriv += vMezich(data.sekund, NEJVIC_SEKUND);
     else if (u.druh === "stavba.zmena" && data.co === "prut") {
-      const prvek = textZ(data.prvek);
+      const prvek = znamyPrvek(data.prvek);
       // Dlouhý tah rozdělený na díly dal víc prutů najednou.
-      if (prvek !== null) pricti((v.prvky[u.uroven] ??= slovnik()), prvek, Math.max(1, Math.round(cisloZ(data.dilu))));
+      if (prvek !== null) pricti((v.prvky[u.uroven] ??= slovnik()), prvek, Math.max(1, Math.round(vMezich(data.dilu, NEJVIC_DILU))));
     } else if (u.druh === "zkouska.konec" && (data.pokus === null || data.pokus === undefined)) {
       zaznam.zkousek += 1;
       if (anoZ(data.pruchod)) {
         zaznam.pruchodu += 1;
         if (zaznam.zkousekDoPruchodu === null) {
           zaznam.zkousekDoPruchodu = zaznam.zkousek;
-          zaznam.sekundDoPruchodu = zaznam.sekundDriv + cisloZ(data.sekund);
+          zaznam.sekundDoPruchodu = zaznam.sekundDriv + vMezich(data.sekund, NEJVIC_SEKUND);
         }
-        const cena = cisloZ(data.cena);
-        if (cena > 0 && (zaznam.nejlevnejsi === null || cena < zaznam.nejlevnejsi)) zaznam.nejlevnejsi = cena;
+        const cena = Math.round(vMezich(data.cena, NEJVETSI_CENA));
+        if (cena >= 1 && (zaznam.nejlevnejsi === null || cena < zaznam.nejlevnejsi)) zaznam.nejlevnejsi = cena;
       } else {
         const prvni = data.prvni;
         let duvod = "bez porušení";
         if (prvni !== null && typeof prvni === "object" && !Array.isArray(prvni)) {
-          duvod = `${textZ(prvni.prvek) ?? "?"}/${textZ(prvni.zpusob) ?? "?"}`;
+          const zpusob = textZ(prvni.zpusob);
+          duvod = `${znamyPrvek(prvni.prvek) ?? "?"}/${zpusob !== null && ZNAME_ZPUSOBY.has(zpusob) ? zpusob : "?"}`;
         }
         pricti((v.selhani[u.uroven] ??= slovnik()), duvod, 1);
       }

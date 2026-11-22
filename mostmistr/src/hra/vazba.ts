@@ -46,8 +46,11 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
       tlacitko.setAttribute("aria-pressed", String(Number(tlacitko.dataset.hodnoceni) === hodnoceni));
     }
     odeslat.disabled = odesilaSe || text.value.trim().length === 0;
-    udaj("vazba-zaznam").textContent = t(denik.zapnuto ? "vazba.zaznam.zapnuty" : "vazba.zaznam.vypnuty");
+    udaj("vazba-zaznam").textContent = t(
+      !denik.lzeZapnout ? "denik.bezPameti" : denik.zapnuto ? "vazba.zaznam.zapnuty" : "vazba.zaznam.vypnuty",
+    );
     prepinacZaznamu.textContent = t(denik.zapnuto ? "vazba.zaznam.vypnout" : "vazba.zaznam.zapnout");
+    prepinacZaznamu.hidden = !denik.lzeZapnout;
     // Bez mostu a v přehledu není co přikládat kromě posledních kroků.
     udaj("vazba-prilohy").textContent = t(zdroj.navrh() === undefined ? "vazba.prilohy.kroky" : "vazba.prilohy.most");
   };
@@ -82,7 +85,17 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
     obnov();
   });
 
-  odeslat.addEventListener("click", () => {
+  // Odeslat je výchozí tlačítko formuláře, takže Enter v poli s e-mailem zprávu odešle
+  // (dřív okno zavřel a zpráva se ztratila). Okno zavírá jen tlačítko Zavřít a Escape.
+  const formular = prvek("#okno-vazba form", HTMLFormElement);
+  formular.addEventListener("submit", (udalost) => {
+    const tlacitko = udalost.submitter;
+    if (tlacitko instanceof HTMLButtonElement && tlacitko.value === "zavrit") return;
+    udalost.preventDefault();
+    odesli();
+  });
+
+  const odesli = (): void => {
     const zprava = text.value.trim();
     if (zprava.length === 0 || odesilaSe) return;
     const vazba: Omit<ZpetnaVazba, "hlavicka"> & { web?: string } = { druh: druh(), text: zprava };
@@ -114,7 +127,7 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
       }
       obnov();
     });
-  });
+  };
 
   obnov();
   return { otevri };

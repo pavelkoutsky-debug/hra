@@ -625,7 +625,7 @@ a.tlacitko {
   text-transform: uppercase;
 }
 
-.paleta h2:first-child {
+.paleta h2:first-of-type {
   margin-top: 0;
 }
 
@@ -1104,6 +1104,24 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 .zaznam--vOkne {
   max-width: none;
   margin: 10px 0 0;
+  font-size: 12px;
+}
+
+/* V paletě úrovně: úzký sloupec, text nad tlačítky. */
+.zaznam--vPalete {
+  flex-shrink: 0;
+  margin: 0 0 8px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.zaznam--vPalete span {
+  flex-basis: 100%;
+}
+
+.vazba__poznamka {
+  margin: 4px 0 0;
+  color: var(--popisek);
   font-size: 12px;
 }
 
@@ -1789,5 +1807,23 @@ body[data-rezim="stavba"] .uroven .legenda {
 
   .paleta h2 {
     margin-top: 6px;
+  }
+}
+
+/*
+ * Užší okno: v liště úrovně je od M4c o tlačítko víc. Místo názvu úrovně („4-03 N…“) se
+ * zkrátí pruh rozpočtu a schová jeho popisek; částky zůstávají.
+ */
+@media (max-width: 1400px) {
+  .rozpocet__popis {
+    display: none;
+  }
+
+  .rozpocet__pruh {
+    width: 90px;
+  }
+
+  .lista__uroven {
+    flex-shrink: 0.2;
   }
 }

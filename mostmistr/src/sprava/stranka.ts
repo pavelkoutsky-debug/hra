@@ -303,10 +303,38 @@ async function otevriVazbu(id: string): Promise<void> {
   }
 }
 
+/** Číslo nejstarší načtené zprávy, za kterou jsou na serveru ještě starší; null, když je načteno vše. */
+let starsiNez: string | null = null;
+
 async function nactiVazby(): Promise<void> {
-  vazby = (await sprava<{ vazby: PolozkaSeznamuVazeb[] }>("co=vazby")).vazby;
+  const odpoved = await sprava<{ vazby: PolozkaSeznamuVazeb[]; celkem: number; dalsi: string | null }>("co=vazby");
+  vazby = odpoved.vazby;
+  starsiNez = odpoved.dalsi;
   vykresliVazby();
+  vykresliStarsi(odpoved.celkem);
 }
+
+function vykresliStarsi(celkem: number): void {
+  const tlacitko = prvek<HTMLButtonElement>("#vazby-starsi");
+  tlacitko.hidden = starsiNez === null;
+  tlacitko.textContent = `Načíst starší (zobrazeno ${vazby.length} z ${celkem})`;
+}
+
+prvek("#vazby-starsi").addEventListener("click", () => {
+  const pred = starsiNez;
+  if (pred === null) return;
+  void (async () => {
+    try {
+      const odpoved = await sprava<{ vazby: PolozkaSeznamuVazeb[]; celkem: number; dalsi: string | null }>(`co=vazby&pred=${pred}`);
+      vazby = [...vazby, ...odpoved.vazby];
+      starsiNez = odpoved.dalsi;
+      vykresliVazby();
+      vykresliStarsi(odpoved.celkem);
+    } catch (chyba) {
+      ohlas(`Starší zprávy se nepodařilo načíst: ${(chyba as Error).message}`);
+    }
+  })();
+});
 
 prvek("#vazba-ulozit").addEventListener("click", () => {
   const v = vybrana;
@@ -406,7 +434,7 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
 async function otevriSezeni(den: string, s: SezeniDne, radek: HTMLTableRowElement): Promise<void> {
   try {
     const data = await sprava<{ hlavicka: HlavickaDeniku; udalosti: UdalostDeniku[]; neuplne: boolean }>(
-      `co=sezeni&den=${den}&hrac=${s.hrac}&sezeni=${s.sezeni}`,
+      `co=sezeni&den=${den}&hrac=${s.hrac}&slozka=${s.slozka}`,
     );
     for (const r of prvek("#sezeni tbody").querySelectorAll("tr[aria-selected]")) r.setAttribute("aria-selected", "false");
     radek.setAttribute("aria-selected", "true");
@@ -444,9 +472,14 @@ function zacatekObdobi(den: string): string {
 async function nactiSouhrn(den: string): Promise<void> {
   const dotaz = `co=souhrn&od=${zacatekObdobi(den)}&do=${den}`;
   let odpoved = await sprava<OdpovedSouhrnu>(dotaz);
-  for (let kolo = 0; kolo < 60 && odpoved.dopocitatelne.length > 0; kolo++) {
-    ohlas(`Počítám souhrn: zbývá ${odpoved.dopocitatelne.length} dní…`);
-    odpoved = await sprava<OdpovedSouhrnu>(dotaz);
+  // Opakuje se, dokud je co dopočítat a každé kolo něco přidá (uzavřené dny si server
+  // pamatuje; dnešek se počítá vždy znovu, takže u něj další kolo pomůže jen jednou).
+  for (let kolo = 0; kolo < 200 && odpoved.neuplne; kolo++) {
+    ohlas(`Počítám souhrn: zbývá ${odpoved.nedokonceno.length} dní…`);
+    const dalsi = await sprava<OdpovedSouhrnu>(dotaz);
+    const pokrok = dalsi.davek > odpoved.davek || dalsi.nedokonceno.length < odpoved.nedokonceno.length;
+    odpoved = dalsi;
+    if (!pokrok) break;
   }
   vykresliSouhrn(odpoved);
   ohlas("");
@@ -459,7 +492,7 @@ async function nactiDen(den: string): Promise<void> {
     ...seznam.sezeni.map((s) => {
       const radek = document.createElement("tr");
       radek.dataset.vyber = `${s.hrac}/${s.sezeni}`;
-      radek.append(bunka(s.hrac), bunka(s.sezeni), bunka(String(s.davek), "cislo"));
+      radek.append(bunka(s.hrac), bunka(`${cas(new Date(s.zacatek).toISOString())} · ${s.sezeni}`), bunka(String(s.davek), "cislo"));
       radek.addEventListener("click", () => void otevriSezeni(den, s, radek));
       return radek;
     }),
@@ -556,28 +589,46 @@ for (const zalozka of document.querySelectorAll<HTMLButtonElement>("[data-zalozk
 }
 
 async function prihlas(): Promise<void> {
-  ohlas("Načítám…");
+  // Heslo jde v hlavičce žádosti a ta snese jen znaky bez diakritiky.
+  if (/[^\x20-\x7e]/.test(heslo)) {
+    obsah.hidden = true;
+    document.body.dataset.sprava = "odmitnuto";
+    ohlas("Heslo správce smí obsahovat jen písmena bez diakritiky, číslice a běžné znaky.");
+    return;
+  }
+  ohlas("Přihlašuji…");
   try {
-    await nactiVazby();
-    await nactiDny();
-    obsah.hidden = false;
-    prvek("#odhlasit").hidden = false;
-    document.body.dataset.sprava = "prihlaseno";
-    try {
-      window.sessionStorage.setItem(KLIC_HESLA, heslo);
-    } catch {
-      // Bez paměti panelu se heslo po obnovení stránky zadá znovu.
-    }
-    ohlas("");
+    const overeni = await sprava<{ prostredi: string }>("co=overeni");
+    prvek("#uloziste").textContent =
+      overeni.prostredi === "production"
+        ? "Data ostrého webu."
+        : `Data náhledů a pokusných nasazení (${overeni.prostredi}); ostrý web má vlastní úložiště.`;
   } catch (chyba) {
     obsah.hidden = true;
     document.body.dataset.sprava = "odmitnuto";
     const stav = chyba instanceof ChybaSpravy ? chyba.stav : 0;
     if (stav === 401) ohlas("Nesprávné heslo správce.");
+    else if (stav === 429) ohlas("Příliš mnoho pokusů za sebou. Chvíli počkej a zkus to znovu.");
     else if (stav === 503) ohlas(`Server heslo správce nezná: ${(chyba as Error).message}.`);
     else if (stav === 404 || stav === 0) ohlas("Správa na této adrese neběží (funkce Netlify nejsou nasazené, nebo je stránka otevřená mimo Netlify).");
     else ohlas(`Přihlášení se nepovedlo: ${(chyba as Error).message}`);
+    return;
   }
+  // Heslo sedí: stránka se ukáže, i kdyby se některá data načíst nepodařila (jinak by se
+  // k tlačítkům na mazání nešlo dostat právě tehdy, když je dat příliš).
+  obsah.hidden = false;
+  prvek("#odhlasit").hidden = false;
+  document.body.dataset.sprava = "prihlaseno";
+  try {
+    window.sessionStorage.setItem(KLIC_HESLA, heslo);
+  } catch {
+    // Bez paměti panelu se heslo po obnovení stránky zadá znovu.
+  }
+  ohlas("");
+  const potize: string[] = [];
+  await nactiVazby().catch((chyba: unknown) => potize.push(`zpětnou vazbu (${(chyba as Error).message})`));
+  await nactiDny().catch((chyba: unknown) => potize.push(`deník (${(chyba as Error).message})`));
+  if (potize.length > 0) ohlas(`Nepodařilo se načíst ${potize.join(" a ")}.`);
 }
 
 prvek<HTMLFormElement>("#prihlaseni").addEventListener("submit", (udalost) => {

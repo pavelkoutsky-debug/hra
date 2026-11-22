@@ -155,6 +155,9 @@ const CS = {
   "vazba.prilohy.most": "Přiložit můj most a posledních pár kroků ve hře (pomůže nám to najít chybu)",
   "vazba.prilohy.kroky": "Přiložit posledních pár kroků ve hře (pomůže nám to najít chybu)",
   "vazba.kontakt": "E-mail, pokud chceš odpověď (nepovinné)",
+  "vazba.kontakt.poznamka":
+    "E-mail uvidíme jen u této zprávy. Zpráva nese i číslo, pod kterým si hra vede tvůj anonymní záznam hraní, takže podle něj poznáme, co jsi ve hře zkoušel.",
+  "denik.bezPameti": "Prohlížeč hře nedovolí nic si zapamatovat, proto se záznam hraní nevede.",
   "vazba.odeslat": "Odeslat",
   "vazba.odesilaSe": "Odesílám…",
   "vazba.diky": "Díky! Zpráva dorazila pod číslem {id}.",

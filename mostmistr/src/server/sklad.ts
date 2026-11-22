@@ -21,9 +21,6 @@ export interface SkladZaznamu {
 export class SkladVPameti implements SkladZaznamu {
   readonly #zaznamy = new Map<string, string>();
 
-  get pocet(): number {
-    return this.#zaznamy.size;
-  }
 
   cti(klic: string): Promise<unknown> {
     const zapis = this.#zaznamy.get(klic);

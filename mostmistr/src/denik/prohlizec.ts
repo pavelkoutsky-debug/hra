@@ -1,7 +1,7 @@
 // Deník hraní napojený na prohlížeč: paměť, síť, pravidelné odesílání, odeslání při zavření
 // stránky a zápis chyb, které prohlížeč ohlásí. Jedna stránka má jeden deník.
 
-import { Denik, type PametDeniku } from "./denik";
+import { Denik, KLIC_ZAZNAMU, type PametDeniku, type VysledekOdeslani } from "./denik";
 
 function pamet(ktera: "localStorage" | "sessionStorage"): PametDeniku | null {
   try {
@@ -59,6 +59,31 @@ let denik: Denik | null = null;
 /** Co se má stihnout zapsat, než se při zavírání stránky deník odešle. */
 const predOdeslanim: (() => void)[] = [];
 
+/** Co se má překreslit, když se volba záznamu změní jinde (v jiném panelu prohlížeče). */
+const poZmeneVolby: (() => void)[] = [];
+
+/** Přihlásí obsluhu, která se zavolá, když hráč přepne záznam v jiném panelu. */
+export function priZmeneVolby(obsluha: () => void): void {
+  poZmeneVolby.push(obsluha);
+}
+
+/**
+ * Stopky, které běží jen tehdy, když je stránka vidět: čas strávený v úrovni se nemá
+ * počítat, zatímco má hráč hru v panelu na pozadí.
+ */
+export function stopkyViditelnosti(): () => number {
+  let nasbirano = 0;
+  let od: number | null = document.visibilityState === "visible" ? Date.now() : null;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") od ??= Date.now();
+    else if (od !== null) {
+      nasbirano += Date.now() - od;
+      od = null;
+    }
+  });
+  return () => nasbirano + (od === null ? 0 : Date.now() - od);
+}
+
 /** Přihlásí obsluhu, která se zavolá při opouštění stránky těsně před odesláním deníku. */
 export function predOdchodem(obsluha: () => void): void {
   predOdeslanim.push(obsluha);
@@ -72,15 +97,27 @@ export function denikHry(): Denik {
     sezeni: pamet("sessionStorage"),
     ted: () => Date.now(),
     nahoda: nahodneCislo,
-    posli: async (adresa, telo, naOdchodu) => {
+    posli: async (adresa, telo, naOdchodu): Promise<VysledekOdeslani> => {
       if (naOdchodu && typeof navigator.sendBeacon === "function") {
-        return navigator.sendBeacon(adresa, new Blob([telo], { type: "application/json" }));
+        return navigator.sendBeacon(adresa, new Blob([telo], { type: "application/json" })) ? "prijato" : "nedostupne";
       }
-      return (await odesli(adresa, telo)) !== null;
+      try {
+        const odpoved = await fetch(adresa, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: telo,
+          keepalive: telo.length < 60_000,
+        });
+        if (odpoved.ok) return "prijato";
+        // Chybu v žádosti (špatný tvar, moc velká) nemá smysl opakovat; přetížení a chyby serveru ano.
+        return odpoved.status >= 400 && odpoved.status < 500 && odpoved.status !== 429 ? "odmitnuto" : "nedostupne";
+      } catch {
+        return "nedostupne";
+      }
     },
     hra: __VERZE_HRY__,
     sestaveni: __OTISK_SESTAVENI__,
-    jazyk: navigator.language || "",
+    jazyk: (navigator.language || "").slice(0, 20),
     okno: [window.innerWidth, window.innerHeight],
     dotyk: window.matchMedia?.("(pointer: coarse)").matches ?? false,
   });
@@ -109,16 +146,35 @@ export function denikHry(): Denik {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") naOdchodu();
   });
+  // Stránka vrácená tlačítkem Zpět z paměti prohlížeče má starý stav: vypínač záznamu,
+  // čísla dávek i medaile v přehledu. Načte se proto znovu.
+  window.addEventListener("pageshow", (udalost) => {
+    if (udalost.persisted) window.location.reload();
+  });
+  // Hráč přepnul záznam v jiném panelu: platí hned i tady.
+  window.addEventListener("storage", (udalost) => {
+    if (udalost.key !== null && udalost.key !== KLIC_ZAZNAMU) return;
+    novy.nactiVolbu();
+    stav();
+    for (const obsluha of poZmeneVolby) obsluha();
+  });
+  // Chyby prohlížeče: stejná chyba nejvýš třikrát a nejvýš třicet za stránku. Chyba, která
+  // se opakuje v každém snímku, by jinak deník zahltila a vytlačila z něj všechno ostatní.
+  const pocetChyb = new Map<string, number>();
+  let chybCelkem = 0;
+  const zapisChybu = (zprava: string, zdroj: string, radek: number): void => {
+    const kolikrat = (pocetChyb.get(zprava) ?? 0) + 1;
+    pocetChyb.set(zprava, kolikrat);
+    if (kolikrat > 3 || chybCelkem >= 30) return;
+    chybCelkem += 1;
+    novy.zapis("chyba", { zprava, zdroj, radek });
+  };
   window.addEventListener("error", (udalost) => {
-    novy.zapis("chyba", {
-      zprava: String(udalost.message).slice(0, 300),
-      zdroj: zdrojChyby(udalost.filename),
-      radek: udalost.lineno ?? 0,
-    });
+    zapisChybu(String(udalost.message).slice(0, 200), zdrojChyby(udalost.filename), udalost.lineno ?? 0);
   });
   window.addEventListener("unhandledrejection", (udalost) => {
     const duvod: unknown = udalost.reason;
-    novy.zapis("chyba", { zprava: String(duvod instanceof Error ? duvod.message : duvod).slice(0, 300), zdroj: "promise" });
+    zapisChybu(String(duvod instanceof Error ? duvod.message : duvod).slice(0, 200), "promise", 0);
   });
   return novy;
 }

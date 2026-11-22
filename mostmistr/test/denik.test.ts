@@ -6,7 +6,16 @@ import { join } from "node:path";
 import { getStore } from "@netlify/blobs";
 import { BlobsServer } from "@netlify/blobs/server";
 import { describe, expect, it } from "vitest";
-import { ADRESA_DENIKU, Denik, NEJDELSI_CEKANI, UDALOSTI_NA_DAVKU, type PametDeniku, type ProstrediDeniku } from "../src/denik/denik";
+import {
+  ADRESA_DENIKU,
+  Denik,
+  NEJDELSI_CEKANI,
+  PRESTAVKA_PO_NEZDARECH,
+  UDALOSTI_NA_DAVKU,
+  type PametDeniku,
+  type ProstrediDeniku,
+  type VysledekOdeslani,
+} from "../src/denik/denik";
 import { slucVytahy, souhrnDeniku, souhrnZVytahu, vytahDeniku } from "../src/denik/souhrn";
 import {
   nactiDavku,
@@ -22,6 +31,8 @@ import { skladNadBlobs } from "../src/server/blobs";
 import {
   NEJVETSI_DAVKA,
   NEJVIC_DAVEK_NAJEDNOU,
+  NEJVIC_VAZEB_DENNE,
+  NEJVIC_VAZEB_V_SEZNAMU,
   prijmiDenik,
   prijmiVazbu,
   spravuj,
@@ -34,8 +45,11 @@ import { SkladVPameti, type SkladZaznamu } from "../src/server/sklad";
 
 const WEB = "https://mostmistr.example";
 
-function hlavicka(hrac = "aaaaaaaaaaaaaaaa", sezeni = "bbbbbbbbbbbbbbbb", dotyk = false): HlavickaDeniku {
-  return { verze: VERZE_DENIKU, hrac, sezeni, hra: "0.10.0", sestaveni: "abc1234", jazyk: "cs-CZ", okno: [1280, 720], dotyk };
+/** Začátek sezení, se kterým testy počítají, když jim na něm nezáleží (ms). */
+const ZACATEK = 1_795_000_000_000;
+
+function hlavicka(hrac = "aaaaaaaaaaaaaaaa", sezeni = "bbbbbbbbbbbbbbbb", dotyk = false, zacatek = ZACATEK): HlavickaDeniku {
+  return { verze: VERZE_DENIKU, hrac, sezeni, zacatek, hra: "0.10.0", sestaveni: "abc1234", jazyk: "cs-CZ", okno: [1280, 720], dotyk };
 }
 
 function davka(udalosti: UdalostDeniku[], poradi = 0, h = hlavicka()): DavkaDeniku {
@@ -48,7 +62,7 @@ function pamet(pocatek: Record<string, string> = {}): PametDeniku & { data: Map<
 }
 
 /** Prostředí deníku s hodinami, které posouvá test, a se záznamem všeho odeslaného. */
-function prostrediHry(volby: { prijima?: () => boolean; trvala?: PametDeniku | null; sezeni?: PametDeniku | null } = {}) {
+function prostrediHry(volby: { prijima?: () => boolean | VysledekOdeslani; trvala?: PametDeniku | null; sezeni?: PametDeniku | null } = {}) {
   const stav = { cas: 1_000_000, cislo: 0, odeslane: [] as { adresa: string; davka: DavkaDeniku; naOdchodu: boolean }[] };
   const p: ProstrediDeniku = {
     trvala: volby.trvala === undefined ? pamet() : volby.trvala,
@@ -56,9 +70,10 @@ function prostrediHry(volby: { prijima?: () => boolean; trvala?: PametDeniku | n
     ted: () => stav.cas,
     nahoda: () => (++stav.cislo).toString(16).padStart(16, "0"),
     posli: (adresa, telo, naOdchodu) => {
-      const prijato = volby.prijima ? volby.prijima() : true;
-      if (prijato) stav.odeslane.push({ adresa, davka: JSON.parse(telo) as DavkaDeniku, naOdchodu });
-      return Promise.resolve(prijato);
+      const odpoved = volby.prijima ? volby.prijima() : true;
+      const vysledek: VysledekOdeslani = odpoved === true ? "prijato" : odpoved === false ? "nedostupne" : odpoved;
+      if (vysledek === "prijato") stav.odeslane.push({ adresa, davka: JSON.parse(telo) as DavkaDeniku, naOdchodu });
+      return Promise.resolve(vysledek);
     },
     hra: "0.10.0",
     sestaveni: "abc1234",
@@ -81,10 +96,11 @@ function server(volby: Partial<ProstrediServeru> = {}): ProstrediServeru & { skl
   };
 }
 
+/** Žádost na server hry; s tělem je to POST ze stránky téhož webu (prohlížeč přidá Origin). */
 function zadost(cesta: string, telo?: unknown, hlavicky: Record<string, string> = {}, metoda?: string): Request {
   return new Request(`${WEB}${cesta}`, {
     method: metoda ?? (telo === undefined ? "GET" : "POST"),
-    headers: { ...(telo === undefined ? {} : { "content-type": "application/json" }), ...hlavicky },
+    headers: { ...(telo === undefined ? {} : { "content-type": "application/json", origin: WEB }), ...hlavicky },
     ...(telo === undefined ? {} : { body: typeof telo === "string" ? telo : JSON.stringify(telo) }),
   });
 }
@@ -176,15 +192,16 @@ describe("deník ve hře", () => {
     expect(denik.posledni()).toHaveLength(101);
   });
 
-  it("vypnutí se ještě odešle, pak už nic; volba se pamatuje a jde vrátit", async () => {
+  it("při vypnutí odejde jen zpráva o vypnutí, pak už nic; volba se pamatuje a jde vrátit", async () => {
     const trvala = pamet();
     const { p, stav } = prostrediHry({ trvala });
     const denik = new Denik(p);
     denik.zapis("prehled.otevren");
     denik.zapnuto = false;
     await new Promise((hotovo) => setTimeout(hotovo, 0));
+    // Co čekalo ve frontě, se zahodilo: hráč, který záznam vypíná, nechce poslat ani to.
     expect(stav.odeslane).toHaveLength(1);
-    expect(stav.odeslane[0]!.davka.udalosti.map((u) => u.druh)).toEqual(["sezeni.start", "prehled.otevren", "denik.vypnut"]);
+    expect(stav.odeslane[0]!.davka.udalosti.map((u) => u.druh)).toEqual(["denik.vypnut"]);
     denik.zapis("uroven.otevrena", {}, "1-01");
     await denik.odesli();
     expect(stav.odeslane).toHaveLength(1);
@@ -199,10 +216,46 @@ describe("deník ve hře", () => {
     expect(new Denik(prostrediHry({ trvala }).p).upozorneno).toBe(true);
   });
 
-  it("když server nepřijímá, události zkusí znovu a po třech nezdarech to do konce sezení vzdá", async () => {
-    let prijima = false;
+  it("vypnutí v jiném panelu platí i tady: volba se čte před každým odesláním", async () => {
+    const trvala = pamet();
+    const { p, stav } = prostrediHry({ trvala });
+    const denik = new Denik(p);
+    denik.zapis("uroven.otevrena", {}, "1-01");
+    // Jiná stránka téhož prohlížeče záznam vypne.
+    trvala.data.set("mostmistr.denik", "0");
+    await denik.odesli(true);
+    expect(stav.odeslane).toHaveLength(0);
+    expect(denik.zapnuto).toBe(false);
+    denik.zapis("stavba.zmena", {}, "1-01");
+    denik.tik();
+    await denik.odesli();
+    expect(stav.odeslane).toHaveLength(0);
+    // A zapnutí jinde zase platí.
+    trvala.data.set("mostmistr.denik", "1");
+    expect(denik.nactiVolbu()).toBe(true);
+  });
+
+  it("dvě stránky téhož sezení (návrat tlačítkem Zpět) si číslo dávky nevezmou", async () => {
+    const trvala = pamet();
     const sezeni = pamet();
-    const { p, stav } = prostrediHry({ prijima: () => prijima, sezeni });
+    const prvni = prostrediHry({ trvala, sezeni });
+    const prehled = new Denik(prvni.p);
+    // Druhá stránka vznikla dřív, než první cokoli odeslala: obě si pamatují pořadí nula.
+    const druha = prostrediHry({ trvala, sezeni });
+    const uroven = new Denik(druha.p);
+    prehled.zapis("prehled.otevren");
+    await prehled.odesli();
+    uroven.zapis("uroven.otevrena", {}, "1-01");
+    await uroven.odesli();
+    prehled.zapis("prehled.otevren");
+    await prehled.odesli();
+    const poradi = [...prvni.stav.odeslane, ...druha.stav.odeslane].map((o) => o.davka.poradi).sort();
+    expect(poradi).toEqual([0, 1, 2]);
+  });
+
+  it("když server neodpovídá, události zkusí znovu; po třech nezdarech si dá přestávku a pak pokračuje", async () => {
+    let prijima: boolean | VysledekOdeslani = false;
+    const { p, stav } = prostrediHry({ prijima: () => prijima });
     const denik = new Denik(p);
     denik.zapis("uroven.otevrena", {}, "1-01");
     await denik.odesli();
@@ -213,32 +266,78 @@ describe("deník ve hře", () => {
     expect(stav.odeslane).toHaveLength(1);
     expect(stav.odeslane[0]!.davka.poradi).toBe(1);
     expect(stav.odeslane[0]!.davka.udalosti.map((u) => u.druh)).toEqual(["sezeni.start", "uroven.otevrena"]);
-    // Trvalý výpadek (hra spuštěná bez serveru): tři nezdary a dost, i na dalších stránkách sezení.
+    // Trvalý výpadek (hra spuštěná bez serveru): tři nezdary a přestávka.
     prijima = false;
     for (let i = 0; i < 3; i++) {
-      denik.zapis("stavba.zmena", {}, "1-01");
+      denik.zapis("stavba.zmena", { krok: i }, "1-01");
       await denik.odesli();
     }
     expect(denik.vzdano).toBe(true);
     prijima = true;
-    denik.zapis("stavba.zmena", {}, "1-01");
+    denik.zapis("stavba.zmena", { krok: 3 }, "1-01");
     await denik.odesli();
     expect(stav.odeslane).toHaveLength(1);
-    expect(new Denik(prostrediHry({ sezeni }).p).vzdano).toBe(true);
+    // Po přestávce odejde všechno, co se mezitím nasbíralo.
+    stav.cas += PRESTAVKA_PO_NEZDARECH + 1;
+    expect(denik.vzdano).toBe(false);
+    await denik.odesli();
+    expect(stav.odeslane).toHaveLength(2);
+    expect(stav.odeslane[1]!.davka.udalosti.map((u) => u.data?.krok)).toEqual([0, 1, 2, 3]);
+    // Žádost, kterou server odmítl natrvalo (špatný tvar), se neopakuje a za nezdar se nepočítá.
+    prijima = "odmitnuto";
+    for (let i = 0; i < 5; i++) {
+      denik.zapis("stavba.zmena", {}, "1-01");
+      await denik.odesli();
+    }
+    expect(denik.vzdano).toBe(false);
+    prijima = true;
+    await denik.odesli();
+    expect(stav.odeslane).toHaveLength(2);
   });
 
-  it("funguje i bez paměti prohlížeče a velkou frontu rozdělí na dávky, které server přijme", async () => {
-    const { p, stav } = prostrediHry({ trvala: null, sezeni: null });
+  it("velkou frontu rozdělí na dávky; když jedna neprojde, vrátí do fronty ji i všechny další", async () => {
+    let pokus = 0;
+    // Druhá žádost selže, ostatní projdou.
+    const { p, stav } = prostrediHry({ prijima: () => ++pokus !== 2 });
     const denik = new Denik(p);
     const velky = "x".repeat(30_000);
-    denik.zapis("zkouska.start", { navrh: velky }, "4-04");
-    denik.zapis("zkouska.start", { navrh: velky }, "4-04");
-    denik.zapis("zkouska.start", { navrh: velky }, "4-04");
+    for (let i = 0; i < 4; i++) denik.zapis("zkouska.start", { navrh: velky, cislo: i }, "4-04");
     await denik.odesli();
-    expect(stav.odeslane.length).toBeGreaterThan(1);
-    expect(stav.odeslane.map((o) => o.davka.poradi)).toEqual(stav.odeslane.map((_, i) => i));
+    expect(stav.odeslane).toHaveLength(1);
+    await denik.odesli();
+    expect(stav.odeslane.length).toBeGreaterThan(2);
     for (const o of stav.odeslane) expect(JSON.stringify(o.davka).length).toBeLessThan(NEJVETSI_DAVKA);
-    expect(stav.odeslane.flatMap((o) => o.davka.udalosti)).toHaveLength(4);
+    // Nic se neztratilo a nic nepřišlo dvakrát.
+    const cisla = stav.odeslane.flatMap((o) => o.davka.udalosti).flatMap((u) => (u.druh === "zkouska.start" ? [u.data!.cislo] : []));
+    expect(cisla).toEqual([0, 1, 2, 3]);
+    expect(new Set(stav.odeslane.map((o) => o.davka.poradi)).size).toBe(stav.odeslane.length);
+  });
+
+  it("bez trvalé paměti si volby pamatuje aspoň do zavření panelu; bez jakékoli paměti deník nevede", async () => {
+    // Jen paměť panelu: vypnutí i potvrzení upozornění přežijí přechod na další stránku.
+    const sezeni = pamet();
+    const prvni = new Denik(prostrediHry({ trvala: null, sezeni }).p);
+    expect(prvni.zapnuto).toBe(true);
+    prvni.potvrdUpozorneni();
+    prvni.zapnuto = false;
+    const dalsi = new Denik(prostrediHry({ trvala: null, sezeni }).p);
+    expect(dalsi.zapnuto).toBe(false);
+    expect(dalsi.upozorneno).toBe(true);
+    expect(dalsi.hlavicka.hrac).toBe(prvni.hlavicka.hrac);
+    // Žádná paměť: hra by si nepamatovala ani vypnutí, takže se nezaznamenává nic.
+    const { p, stav } = prostrediHry({ trvala: null, sezeni: null });
+    const bez = new Denik(p);
+    expect(bez.zapnuto).toBe(false);
+    expect(bez.lzeZapnout).toBe(false);
+    bez.zapnuto = true;
+    expect(bez.zapnuto).toBe(false);
+    bez.zapis("uroven.otevrena", {}, "1-01");
+    await bez.odesli(true);
+    expect(stav.odeslane).toHaveLength(0);
+    // Potvrzení upozornění platí aspoň pro tuhle stránku a zpětnou vazbu poslat jde.
+    bez.potvrdUpozorneni();
+    expect(bez.upozorneno).toBe(true);
+    expect(bez.posledni().map((u) => u.druh)).toContain("uroven.otevrena");
   });
 
   it("zpětná vazba se posílá i s vypnutým záznamem a nese hlavičku deníku", async () => {
@@ -296,7 +395,9 @@ describe("server: příjem deníku a zpětné vazby", () => {
     const d = davka([{ t: 0, druh: "sezeni.start", data: { navrat: false } }], 3);
     const odpoved = await prijmiDenik(zadost("/api/denik", d, { origin: WEB }), p);
     expect(odpoved.status).toBe(204);
-    const klic = "denik/2026-11-22/aaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbb/00003.json";
+    // Složka sezení začíná časem jeho začátku a jméno dávky končí náhodným dovětkem, aby
+    // se dvě dávky se stejným číslem (dvě stránky téhož sezení) nepřepsaly.
+    const klic = "denik/2026-11-22/aaaaaaaaaaaaaaaa/1795000000000-bbbbbbbbbbbbbbbb/00003-000001.json";
     expect(await p.sklad.klice("denik/")).toEqual([klic]);
     expect(await p.sklad.cti(klic)).toEqual({ prijato: "2026-11-22T20:15:30.000Z", prostredi: "test", ...d });
   });
@@ -333,6 +434,67 @@ describe("server: příjem deníku a zpětné vazby", () => {
   });
 });
 
+describe("server: odolnost veřejných adres", () => {
+  const udalost: UdalostDeniku = { t: 5, druh: "uroven.otevrena", uroven: "1-01" };
+
+  it("žádost bez hlavičky Origin nebo z cizího webu odmítne; adresu webu bere i z hlaviček Netlify", async () => {
+    const p = server();
+    const bez = new Request(`${WEB}/api/denik`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(davka([udalost])) });
+    expect((await prijmiDenik(bez, p)).status).toBe(403);
+    expect((await prijmiVazbu(zadost("/api/vazba", { hlavicka: hlavicka(), druh: "jine", text: "x" }, { origin: "https://jinde.example" }), p)).status).toBe(403);
+    expect(await p.sklad.klice("")).toEqual([]);
+    // Funkce může vidět vnitřní adresu; veřejnou jí Netlify předá v hlavičce.
+    const vnitrni = new Request("http://vnitrni.invalid/api/denik", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: WEB, "x-forwarded-host": "mostmistr.example" },
+      body: JSON.stringify(davka([udalost])),
+    });
+    expect((await prijmiDenik(vnitrni, p)).status).toBe(204);
+  });
+
+  it("dvě dávky se stejným číslem se nepřepíšou (zdvojený panel prohlížeče)", async () => {
+    const p = server();
+    await prijmiDenik(zadost("/api/denik", davka([udalost], 1)), p);
+    await prijmiDenik(zadost("/api/denik", davka([{ t: 9, druh: "uroven.opustena", uroven: "1-01", data: { sekund: 4 } }], 1)), p);
+    const klice = await p.sklad.klice("denik/");
+    expect(klice).toHaveLength(2);
+    const sezeni = (await (await spravuj(zadost("/api/sprava?co=sezeni&den=2026-11-22&hrac=aaaaaaaaaaaaaaaa&slozka=1795000000000-bbbbbbbbbbbbbbbb", undefined, SPRAVCE), p)).json()) as { udalosti: UdalostDeniku[] };
+    expect(sezeni.udalosti.map((u) => u.druh)).toEqual(["uroven.otevrena", "uroven.opustena"]);
+  });
+
+  it("hlavička smí mít prázdný jazyk; dlouhé texty a nesmyslně velká čísla v událostech neprojdou", () => {
+    expect(nactiDavku(davka([udalost], 0, { ...hlavicka(), jazyk: "" })).hlavicka.jazyk).toBe("");
+    expect(() => nactiDavku(davka([{ t: 1, druh: "chyba", data: { zprava: "x".repeat(301) } }]))).toThrow(/delší než 300/);
+    expect(() => nactiDavku(davka([{ t: 1, druh: "zkouska.konec", uroven: "1-01", data: { cena: 1e300 } }]))).toThrow(/rozumné velikosti/);
+    // Zápis mostu dlouhý být smí.
+    expect(nactiDavku(davka([{ t: 1, druh: "zkouska.start", uroven: "1-01", data: { navrh: "x".repeat(40_000) } }])).udalosti).toHaveLength(1);
+    expect(() => nactiDavku(davka([udalost], 0, { ...hlavicka(), zacatek: -1 }))).toThrow();
+  });
+
+  it("zpětných vazeb přijme za den jen omezený počet a seznam je po stránkách", async () => {
+    const p = server();
+    const posli = (text: string): Promise<Response> => prijmiVazbu(zadost("/api/vazba", { hlavicka: hlavicka(), druh: "jine", text }), p);
+    for (let i = 0; i < NEJVIC_VAZEB_DENNE; i++) expect((await posli(`zpráva ${i}`)).status).toBe(201);
+    expect((await posli("o jednu víc")).status).toBe(429);
+    expect(await p.sklad.klice("vazba/")).toHaveLength(NEJVIC_VAZEB_DENNE);
+    type Stranka = { vazby: PolozkaSeznamuVazeb[]; celkem: number; dalsi: string | null };
+    const cti = async (dotaz: string): Promise<Stranka> => (await (await spravuj(zadost(`/api/sprava?${dotaz}`, undefined, SPRAVCE), p)).json()) as Stranka;
+    const prvni = await cti("co=vazby");
+    expect(prvni.vazby).toHaveLength(NEJVIC_VAZEB_V_SEZNAMU);
+    expect(prvni.celkem).toBe(NEJVIC_VAZEB_DENNE);
+    expect(prvni.vazby[0]!.ukazka).toBe(`zpráva ${NEJVIC_VAZEB_DENNE - 1}`);
+    const druha = await cti(`co=vazby&pred=${prvni.dalsi}`);
+    expect(druha.vazby).toHaveLength(NEJVIC_VAZEB_DENNE - NEJVIC_VAZEB_V_SEZNAMU);
+    expect(druha.dalsi).toBeNull();
+    expect(druha.vazby.at(-1)!.ukazka).toBe("zpráva 0");
+    // Žádná zpráva není na obou stránkách.
+    expect(new Set([...prvni.vazby, ...druha.vazby].map((v) => v.id)).size).toBe(NEJVIC_VAZEB_DENNE);
+    // Další den se počítá znovu.
+    p.ted = () => new Date("2026-11-23T08:00:00.000Z");
+    expect((await posli("nový den")).status).toBe(201);
+  });
+});
+
 describe("server: správa", () => {
   async function naplneny(): Promise<ProstrediServeru> {
     const p = server();
@@ -348,6 +510,12 @@ describe("server: správa", () => {
     await prijmiDenik(zadost("/api/denik", davka([{ t: 0, druh: "sezeni.start", data: { navrat: true } }], 0, hlavicka("cccccccccccccccc", "dddddddddddddddd", true))), p);
     return p;
   }
+
+  it("heslo jde ověřit samostatně, bez načítání dat", async () => {
+    const p = server();
+    expect(await (await spravuj(zadost("/api/sprava?co=overeni", undefined, SPRAVCE), p)).json()).toEqual({ ok: true, prostredi: "test" });
+    expect((await spravuj(zadost("/api/sprava?co=overeni", undefined, { authorization: "Bearer spatne-heslo" }), p)).status).toBe(401);
+  });
 
   it("bez hesla nepustí nikoho; bez nastaveného hesla řekne, co chybí", async () => {
     const p = await naplneny();
@@ -366,7 +534,7 @@ describe("server: správa", () => {
     const p = await naplneny();
     const { vazby } = (await (await spravuj(zadost("/api/sprava?co=vazby", undefined, SPRAVCE), p)).json()) as { vazby: PolozkaSeznamuVazeb[] };
     expect(vazby.map((v) => v.id)).toEqual(["20261122T093000-000002", "20261121T080000-000001"]);
-    expect(vazby[0]).toMatchObject({ stav: "nova", druh: "napad", uroven: "1-02", hodnoceni: 5, maNavrh: true, maKontakt: true, hra: "0.10.0" });
+    expect(vazby[0]).toMatchObject({ stav: "nova", druh: "napad", uroven: "1-02", hodnoceni: 5, maNavrh: true, maKontakt: true });
     expect(vazby[0]!.ukazka).toHaveLength(241);
     expect(vazby[0]).not.toHaveProperty("kontakt");
     expect(vazby[1]).toMatchObject({ uroven: null, hodnoceni: null, maNavrh: false, maKontakt: false, ukazka: "První." });
@@ -397,10 +565,10 @@ describe("server: správa", () => {
     expect(await cti("co=dny")).toEqual({ dny: ["2026-11-22"] });
     const den = await cti<{ sezeni: SezeniDne[] }>("co=den&den=2026-11-22");
     expect(den.sezeni).toEqual([
-      { hrac: "aaaaaaaaaaaaaaaa", sezeni: "bbbbbbbbbbbbbbbb", davek: 2 },
-      { hrac: "cccccccccccccccc", sezeni: "dddddddddddddddd", davek: 1 },
+      { hrac: "aaaaaaaaaaaaaaaa", sezeni: "bbbbbbbbbbbbbbbb", slozka: "1795000000000-bbbbbbbbbbbbbbbb", zacatek: ZACATEK, davek: 2 },
+      { hrac: "cccccccccccccccc", sezeni: "dddddddddddddddd", slozka: "1795000000000-dddddddddddddddd", zacatek: ZACATEK, davek: 1 },
     ]);
-    const sezeni = await cti<{ udalosti: UdalostDeniku[]; hlavicka: HlavickaDeniku }>("co=sezeni&den=2026-11-22&hrac=aaaaaaaaaaaaaaaa&sezeni=bbbbbbbbbbbbbbbb");
+    const sezeni = await cti<{ udalosti: UdalostDeniku[]; hlavicka: HlavickaDeniku }>("co=sezeni&den=2026-11-22&hrac=aaaaaaaaaaaaaaaa&slozka=1795000000000-bbbbbbbbbbbbbbbb");
     expect(sezeni.udalosti.map((u) => u.druh)).toEqual(["sezeni.start", "uroven.otevrena", "zkouska.konec"]);
     expect(sezeni.hlavicka.hrac).toBe("aaaaaaaaaaaaaaaa");
     const souhrn = await cti<OdpovedSouhrnu>("co=souhrn&den=2026-11-22");
@@ -410,8 +578,8 @@ describe("server: správa", () => {
     expect(await cti("co=export&den=2026-11-22&preskocit=2")).toMatchObject({ davky: [{ hlavicka: { hrac: "cccccccccccccccc" } }], celkem: 3, dalsi: null });
     expect((await spravuj(zadost("/api/sprava?co=souhrn&od=2026-11-23&do=2026-11-22", undefined, SPRAVCE), p)).status).toBe(400);
     expect((await spravuj(zadost("/api/sprava?co=den&den=vcera", undefined, SPRAVCE), p)).status).toBe(400);
-    expect((await spravuj(zadost("/api/sprava?co=sezeni&den=2026-11-22&hrac=x&sezeni=y", undefined, SPRAVCE), p)).status).toBe(400);
-    expect((await spravuj(zadost("/api/sprava?co=sezeni&den=2026-11-20&hrac=aaaaaaaaaaaaaaaa&sezeni=bbbbbbbbbbbbbbbb", undefined, SPRAVCE), p)).status).toBe(404);
+    expect((await spravuj(zadost("/api/sprava?co=sezeni&den=2026-11-22&hrac=x&slozka=y", undefined, SPRAVCE), p)).status).toBe(400);
+    expect((await spravuj(zadost("/api/sprava?co=sezeni&den=2026-11-20&hrac=aaaaaaaaaaaaaaaa&slozka=1795000000000-bbbbbbbbbbbbbbbb", undefined, SPRAVCE), p)).status).toBe(404);
     expect((await spravuj(zadost("/api/sprava?co=neco", undefined, SPRAVCE), p)).status).toBe(400);
     expect((await spravuj(zadost("/api/sprava", undefined, SPRAVCE), p)).status).toBe(404);
   });
@@ -486,7 +654,7 @@ describe("server: správa", () => {
 
     cteni.length = 0;
     expect(await souhrn("od=2026-11-01&do=2026-11-30")).toEqual(obdobi);
-    expect(cteni.filter((k) => k.startsWith("denik/"))).toEqual(["denik/2026-11-22/b2b2b2b2b2b2b2b2/8888888888888888/00000.json"]);
+    expect(cteni.filter((k) => k.startsWith("denik/"))).toEqual(["denik/2026-11-22/b2b2b2b2b2b2b2b2/1795000000000-8888888888888888/00000-000004.json"]);
     // Jeden den z období a den bez deníku.
     expect((await souhrn("den=2026-11-21")).souhrn).toMatchObject({ hracu: 2, sezeni: 2, novych: 1 });
     expect(await souhrn("den=2026-11-19")).toMatchObject({ dny: [], davek: 0, neuplne: false, souhrn: { hracu: 0, urovne: [] } });
@@ -524,7 +692,7 @@ describe("server: správa", () => {
         vsechny.push(davka(udalosti, d, hl));
       }
     }
-    for (const d of vsechny) await p.sklad.zapis(`denik/2026-11-20/${d.hlavicka.hrac}/${d.hlavicka.sezeni}/${String(d.poradi).padStart(5, "0")}.json`, d);
+    for (const d of vsechny) await p.sklad.zapis(`denik/2026-11-20/${d.hlavicka.hrac}/${d.hlavicka.zacatek}-${d.hlavicka.sezeni}/${String(d.poradi).padStart(5, "0")}-000000.json`, d);
     ted = "2026-11-22T20:00:00.000Z";
     await prijmiDenik(zadost("/api/denik", davka([{ t: 0, druh: "sezeni.start", data: { navrat: true } }], 0, hlavicka("ffffffffffffffff", "eeeeeeeeeeeeeeee"))), p);
 
@@ -536,7 +704,7 @@ describe("server: správa", () => {
     expect(druhy).toMatchObject({ davek: vsechny.length + 1, neuplne: false, nedokonceno: [], dopocitatelne: [] });
     const najednou = souhrnDeniku([...vsechny, davka([{ t: 0, druh: "sezeni.start", data: { navrat: true } }], 0, hlavicka("ffffffffffffffff", "eeeeeeeeeeeeeeee"))]);
     expect(druhy.souhrn).toEqual(najednou);
-    expect(najednou.urovne[0]).toMatchObject({ hracu, hracuSPruchodem: hracu, zkousekDoPruchodu: davekHrace, nejlevnejsiPruchod: 100000, prvky: { "ocel-lehka": 800, "ocel-tezka": 800 } });
+    expect(najednou.urovne[0]).toMatchObject({ hracu, hracuSPruchodem: hracu, zkousekDoPruchodu: davekHrace, nejlevnejsiPruchod: 100000, prvky: { "ocel-lehka": (hracu / 2) * davekHrace, "ocel-tezka": (hracu / 2) * davekHrace } });
   });
 });
 
@@ -626,6 +794,40 @@ describe("souhrn deníku", () => {
     }
     // Výtah přežije uložení: po cestě přes JSON dá stejný souhrn.
     expect(souhrnZVytahu(JSON.parse(JSON.stringify(vytahDeniku(davky))) as ReturnType<typeof vytahDeniku>)).toEqual(cely);
+  });
+
+  it("sezení téhož hráče řadí podle času, ne podle čísla sezení", () => {
+    // Ráno pět neúspěchů v sezení, jehož číslo je v abecedě až druhé; večer průchod napoprvé.
+    const rano = hlavicka("a1a1a1a1a1a1a1a1", "ffffffffffffffff", false, ZACATEK);
+    const vecer = hlavicka("a1a1a1a1a1a1a1a1", "0000000000000000", false, ZACATEK + 10 * 3_600_000);
+    const souhrn = souhrnDeniku([
+      davka([u(1, "uroven.otevrena", "2-03"), konec(600, true, 60)], 0, vecer),
+      davka([u(1, "uroven.otevrena", "2-03"), ...[1, 2, 3, 4, 5].map((i) => konec(100 * i, false, 100 * i)), u(700, "uroven.opustena", "2-03", { sekund: 600 })], 0, rano),
+    ]);
+    expect(souhrn.urovne[0]).toMatchObject({ zkousek: 6, pruchodu: 1, zkousekDoPruchodu: 6, minutDoPruchodu: 11 });
+  });
+
+  it("vymyšleným hodnotám nevěří: neznámý prvek, nesmyslná cena a čas se nezapočítají", () => {
+    const souhrn = souhrnDeniku([
+      davka([
+        u(1, "uroven.otevrena", "2-03"),
+        u(2, "stavba.zmena", "2-03", { co: "prut", prvek: "zlato", dilu: 5 }),
+        u(3, "stavba.zmena", "2-03", { co: "prut", prvek: "ocel-lehka", dilu: 100000 }),
+        u(4, "uroven.opustena", "2-03", { sekund: -1e9 }),
+        konec(5, false, 10, { prvni: { prvek: "x".repeat(200), zpusob: "kouzlo" } }),
+        konec(6, true, -5e10, { cena: 0.001 }),
+        konec(7, true, 30, { cena: 5e11 }),
+        u(8, "chyba", undefined, { zprava: "y".repeat(250) }),
+      ]),
+    ]);
+    expect(souhrn.urovne[0]).toMatchObject({
+      prvky: { "ocel-lehka": 1 },
+      selhani: { "?/?": 1 },
+      nejlevnejsiPruchod: null,
+      cenaPruchodu: null,
+      minutDoPruchodu: 0,
+    });
+    expect(souhrn.chyby[0]!.zprava).toHaveLength(120);
   });
 
   it("cizí data se nepotkají s vestavěnými vlastnostmi objektů", () => {

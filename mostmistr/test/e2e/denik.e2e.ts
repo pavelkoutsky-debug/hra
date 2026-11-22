@@ -277,7 +277,9 @@ describe("zpětná vazba", () => {
     expect(await udaj("vazba-prilohy")).toContain("Přiložit posledních pár kroků");
     await stranka.locator("#vazba-text").fill("Chtělo by to víc úrovní.");
     await stranka.locator("#vazba-kontakt").fill("hrac@example.org");
-    await akce("vazba-odeslat").click();
+    expect(await stranka.locator(".vazba__poznamka").innerText()).toContain("E-mail uvidíme jen u této zprávy");
+    // Enter v poli s e-mailem zprávu odešle (dřív okno zavřel a zpráva se ztratila).
+    await stranka.locator("#vazba-kontakt").press("Enter");
     await expect.poll(() => stranka.locator("#okno-vazba").getAttribute("data-odeslano")).toBe("ano");
     expect(await sklad.klice("vazba/")).toHaveLength(2);
     expect(zadosti.denik).toBe(predtim);
@@ -293,6 +295,37 @@ describe("zpětná vazba", () => {
     const odchod = await pockejNaUdalost("uroven.opustena");
     expect(odchod).toMatchObject({ uroven: "1-01", data: { zkousek: 0, prutu: 6 } });
   }, 120_000);
+});
+
+describe("hráč, který přijde rovnou do úrovně", () => {
+  it("vidí upozornění na záznam i po zavření zadání, v paletě; vypnutím zmizí a nic dalšího neodejde", async () => {
+    const novyHrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const okno = await novyHrac.newPage();
+    try {
+      await okno.goto(`${adresa}?uroven=1-02`);
+      await okno.locator(PLATNO).waitFor();
+      // V okně se zadáním upozornění je; hráč ho přejde a okno zavře.
+      expect(await okno.locator('#okno-zadani [data-udaj="zaznam-upozorneni"]').isVisible()).toBe(true);
+      await okno.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      const vPalete = okno.locator('.paleta [data-udaj="zaznam-upozorneni"]');
+      expect(await vPalete.isVisible()).toBe(true);
+      await okno.screenshot({ path: `${SLOZKA}/a4-upozorneni-v-palete.png` });
+      const predtim = zadosti.denik;
+      await vPalete.locator('[data-akce="zaznam-vypnout"]').click();
+      expect(await vPalete.isVisible()).toBe(false);
+      expect(await okno.locator("body").getAttribute("data-denik")).toBe("vypnuto");
+      // Odejde jediná dávka s jedinou událostí: že hráč záznam vypnul.
+      await expect.poll(() => zadosti.denik).toBe(predtim + 1);
+      const davky = (await prijateDavky()).filter((d) => d.udalosti.some((u) => u.druh === "denik.vypnut"));
+      expect(davky.at(-1)!.udalosti.map((u) => u.druh)).toEqual(["denik.vypnut"]);
+      await okno.goto(adresa);
+      await okno.locator(".karta").first().waitFor();
+      await okno.waitForTimeout(300);
+      expect(zadosti.denik).toBe(predtim + 1);
+    } finally {
+      await novyHrac.close();
+    }
+  });
 });
 
 describe("stránka správce", () => {
@@ -352,8 +385,8 @@ describe("stránka správce", () => {
     await stranka.locator('[data-zalozka="denik"]').click();
     const dnes = new Date().toISOString().slice(0, 10);
     expect(await stranka.locator("#den").inputValue()).toBe(dnes);
-    expect(await stranka.locator("#den-pocty").innerText()).toMatch(/^1 hráčů \(1 nových, 0 na dotyku\) · 1 sezení/);
-    expect(await stranka.locator("#den-pocty").innerText()).toContain("záznam si vypnulo 1");
+    expect(await stranka.locator("#den-pocty").innerText()).toMatch(/^2 hráčů \(1 nových, 0 na dotyku\) · 2 sezení/);
+    expect(await stranka.locator("#den-pocty").innerText()).toContain("záznam si vypnulo 2");
     const souhrn = stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td');
     const bunky = await souhrn.allInnerTexts();
     expect(bunky.slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
@@ -367,8 +400,10 @@ describe("stránka správce", () => {
     expect((await stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td').allInnerTexts()).slice(0, 5)).toEqual(bunky.slice(0, 5));
     await stranka.locator("#obdobi").selectOption("1");
     const sezeni = stranka.locator("#sezeni tbody tr");
-    expect(await sezeni.count()).toBe(1);
-    await sezeni.first().click();
+    // Dvě sezení: hráč z průchodu úrovní a ten, který záznam hned vypnul (má jedinou dávku).
+    expect(await sezeni.count()).toBe(2);
+    const davek = await sezeni.locator("td.cislo").allInnerTexts();
+    await sezeni.nth(davek.findIndex((pocet) => Number(pocet) > 1)).click();
     await stranka.locator("#detail-sezeni").waitFor({ state: "visible" });
     const udalosti = stranka.locator("#sezeni-udalosti tr");
     expect(await udalosti.count()).toBeGreaterThan(10);

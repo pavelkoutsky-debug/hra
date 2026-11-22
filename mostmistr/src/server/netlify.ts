@@ -14,12 +14,23 @@ function promenna(jmeno: string): string | null {
   return hodnota === undefined || hodnota === "" ? null : hodnota;
 }
 
-export function prostrediNetlify(): ProstrediServeru {
+/** Co funkce Netlify dostává jako druhý argument; z něj se pozná, o jaké nasazení jde. */
+export interface KontextNetlify {
+  deploy?: { context?: string };
+}
+
+/**
+ * Prostředí pro obsluhu žádosti. Druh nasazení (`production`, `deploy-preview`, `dev`…) je
+ * v kontextu funkce; proměnná CONTEXT existuje jen při sestavení. Když se nepozná, bere se
+ * nasazení jako náhled: do úložiště ostrého webu se tak omylem nic nedostane.
+ */
+export function prostrediNetlify(kontext?: KontextNetlify): ProstrediServeru {
+  const prostredi = kontext?.deploy?.context ?? promenna("CONTEXT") ?? "neznamo";
   return {
-    sklad: skladNetlify(),
+    sklad: skladNetlify(prostredi === "production"),
     ted: () => new Date(),
     nahoda: () => Array.from(crypto.getRandomValues(new Uint8Array(3)), (b) => b.toString(16).padStart(2, "0")).join(""),
-    prostredi: promenna("CONTEXT") ?? "neznamo",
+    prostredi,
     hesloSpravce: promenna("MM_SPRAVCE_HESLO"),
   };
 }

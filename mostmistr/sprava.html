@@ -71,7 +71,7 @@
     <p>
       Zpětná vazba hráčů a deník hraní. Stránka je jen pro tebe: bez hesla správce server nic
       nevydá. Heslo je proměnná prostředí <code>MM_SPRAVCE_HESLO</code> v nastavení webu na Netlify
-      (aspoň osm znaků); po jejím nastavení web znovu nasaď.
+      (aspoň osm znaků, bez diakritiky; nejlépe dlouhé náhodné); po jejím nastavení web znovu nasaď.
     </p>
 
     <form class="rada" id="prihlaseni">
@@ -81,6 +81,7 @@
       <button type="button" id="odhlasit" hidden>Odhlásit</button>
     </form>
     <p class="hlaseni" id="hlaseni" role="status"></p>
+    <p id="uloziste"></p>
 
     <div id="obsah" hidden>
       <div class="rada" role="tablist">
@@ -98,6 +99,7 @@
               </thead>
               <tbody></tbody>
             </table>
+            <button type="button" id="vazby-starsi" style="margin-top: 8px" hidden>Načíst starší</button>
           </div>
           <div class="detail" id="detail-vazby" hidden>
             <dl id="vazba-udaje"></dl>
@@ -154,7 +156,7 @@
         <div class="sloupce">
           <div class="tabulka">
             <table id="sezeni">
-              <thead><tr><th>Hráč</th><th>Sezení</th><th class="cislo">Dávek</th></tr></thead>
+              <thead><tr><th>Hráč</th><th>Začátek a číslo sezení</th><th class="cislo">Dávek</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>

@@ -1,7 +1,11 @@
 // Příjem zpětné vazby hráčů. Logika je v `src/server/obsluha.ts`.
-import { prostrediNetlify } from "../../src/server/netlify";
+import { prostrediNetlify, type KontextNetlify } from "../../src/server/netlify";
 import { prijmiVazbu } from "../../src/server/obsluha";
 
-export default (zadost: Request): Promise<Response> => prijmiVazbu(zadost, prostrediNetlify());
+export default (zadost: Request, kontext: KontextNetlify): Promise<Response> => prijmiVazbu(zadost, prostrediNetlify(kontext));
 
-export const config = { path: "/api/vazba" };
+// Zprávu píše člověk: deset za minutu z jedné adresy je víc než dost.
+export const config = {
+  path: "/api/vazba",
+  rateLimit: { windowLimit: 10, windowSize: 60, aggregateBy: ["ip", "domain"] },
+};
