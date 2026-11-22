@@ -81,6 +81,7 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     nejvetsiTlumic: 1e9,
     rezonancniKrivka: true,
     budic: true,
+    nejhorsiKomfort: 3,
     jizdniRad: [],
   };
 }

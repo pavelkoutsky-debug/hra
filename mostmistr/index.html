@@ -159,6 +159,27 @@
             <output class="legenda__kmitani" data-udaj="kmitani" data-popis="legenda.kmitani.popis"></output>
           </div>
 
+          <section class="analyza" data-udaj="analyza" hidden>
+            <header class="analyza__hlavicka">
+              <h2 data-text="analyza.nadpis"></h2>
+              <button type="button" class="tlacitko tlacitko--znak" data-akce="analyza-zavrit" data-popis="analyza.zavrit">×</button>
+            </header>
+            <div class="analyza__cast analyza__cast--graf" data-cast="krivka">
+              <h3 data-text="analyza.krivka"></h3>
+              <canvas class="analyza__graf analyza__graf--klikaci" data-udaj="krivka" data-popis="analyza.krivka.popis"></canvas>
+            </div>
+            <div class="analyza__cast analyza__cast--uzka" data-cast="krivka-popis">
+              <h3 data-text="analyza.krivka.cteni"></h3>
+              <p class="analyza__popis" data-udaj="krivka-popis"></p>
+              <p class="analyza__popis" data-text="analyza.krivka.osy"></p>
+            </div>
+            <div class="analyza__cast analyza__cast--uzka" data-cast="tvary">
+              <h3 data-text="analyza.tvary"></h3>
+              <div class="analyza__tvary" data-udaj="tvary"></div>
+            </div>
+            <p class="analyza__popis" data-udaj="analyza-prazdna" data-text="analyza.prazdna" hidden></p>
+          </section>
+
           <section class="vysledek" hidden>
             <div class="vysledek__hlavicka">
               <span class="vysledek__otisk" data-udaj="otisk"></span>
@@ -237,6 +258,9 @@
             </div>
             <output class="frekvence__popis" data-udaj="frekvence-popis"></output>
           </div>
+          <button type="button" class="tlacitko" data-akce="analyza" data-popis="analyza.popis" aria-pressed="false">
+            <kbd>A</kbd> <span data-text="analyza.tlacitko"></span>
+          </button>
           <button type="button" class="tlacitko" data-akce="prehrat" data-jen="zkouska"></button>
           <button type="button" class="tlacitko" data-akce="na-konec" data-text="zkouska.naKonec" data-jen="zkouska"></button>
           <span class="lista__skupina" role="group" data-popis="zkouska.krokovani" data-jen="zkouska">

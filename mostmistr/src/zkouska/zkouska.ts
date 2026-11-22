@@ -337,9 +337,10 @@ export class Zkouska {
     const komfort: KomfortZkousky | null =
       mereni === null ? null : { zrychleni: mereni.nejvetsi, cas: mereni.cas, trida: tridaKomfortu(mereni.nejvetsi) };
     // Most, na kterém se lidem nedá jít, neobstál, i když nikdo nespadl (koncepce, kap. 4).
-    const snesitelny = komfort === null || komfort.trida < 4;
-    const pruchod = !rozpad && spadlo === 0 && prejelo === ucastniku && (ucastniku > 0 || cely) && snesitelny;
+    // Úroveň může chtít víc než jen snesitelné kmitání.
     const uroven = this.#uroven;
+    const snesitelny = komfort === null || komfort.trida <= uroven.nejhorsiKomfort;
+    const pruchod = !rozpad && spadlo === 0 && prejelo === ucastniku && (ucastniku > 0 || cely) && snesitelny;
     const bonus = uroven.mistrovska;
     // Brnknutí je pokus, ne zkouška: frekvence se určí z obratů pohybu a medaile se neudělují.
     let frekvenceKmitani: number | null = null;

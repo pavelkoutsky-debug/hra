@@ -10,7 +10,7 @@ import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
 import { najdiRovnovahu } from "../src/jadro/matice";
 import { PRUZINA, sestavSoustavu } from "../src/jadro/soustava";
 import { volneStupne } from "../src/jadro/stupne";
-import { rozeberMost } from "../src/zkouska/rozbor";
+import { frekvenceKrivky, KRIVKA_DO, KRIVKA_OD, KROK_KRIVKY, rozeberMost } from "../src/zkouska/rozbor";
 import { sestavMost } from "../src/zkouska/stavba";
 import { STYCNIK_ZAVAZI, Zaznam } from "../src/zkouska/zaznam";
 import { Zkouska } from "../src/zkouska/zkouska";
@@ -133,6 +133,98 @@ describe("vlastní frekvence", () => {
     // Těžší závaží roztáhne obě frekvence dál od sebe.
     const tezsi = rozeberMost(uroven, sTlumicem(1000, 2.3));
     expect(tezsi.frekvence[1]! - tezsi.frekvence[0]!).toBeGreaterThan(s.frekvence[1]! - s.frekvence[0]!);
+  });
+});
+
+describe("rezonanční křivka mostu", () => {
+  // Kritérium milníku M3b: laděný tlumič rozdělí rezonanční špičku.
+  const sKrivkou: Uroven = { ...uroven, rezonancniKrivka: true };
+  const frekvence = frekvenceKrivky();
+
+  /** Vrcholy křivky v pásmu kolem první vlastní frekvence, od nejnižší frekvence. */
+  function vrcholy(krivka: number[], od: number, po: number): { f: number; hodnota: number }[] {
+    const nalezene: { f: number; hodnota: number }[] = [];
+    for (let i = 1; i + 1 < krivka.length; i++) {
+      const f = frekvence[i]!;
+      if (f < od || f > po) continue;
+      if (krivka[i]! > krivka[i - 1]! && krivka[i]! >= krivka[i + 1]!) nalezene.push({ f, hodnota: krivka[i]! });
+    }
+    return nalezene;
+  }
+
+  it("úroveň bez křivky ji nepočítá; s křivkou ji vrátí pro prázdný i obsazený most", () => {
+    expect(rozeberMost(uroven, lavka).krivka).toBeNull();
+    const rozbor = rozeberMost(sKrivkou, lavka);
+    const krivka = rozbor.krivka!;
+    expect(krivka.od).toBe(KRIVKA_OD);
+    expect(krivka.krok).toBe(KROK_KRIVKY);
+    expect(krivka.prazdny).toHaveLength(frekvence.length);
+    expect(krivka.obsazeny).toHaveLength(frekvence.length);
+    expect(frekvence.at(-1)).toBeCloseTo(KRIVKA_DO, 9);
+    for (const hodnota of [...krivka.prazdny, ...krivka.obsazeny!]) {
+      expect(Number.isFinite(hodnota)).toBe(true);
+      expect(hodnota).toBeGreaterThan(0);
+    }
+  });
+
+  it("má špičku na první vlastní frekvenci; s lidmi je špička níž a je nižší", () => {
+    const rozbor = rozeberMost(sKrivkou, lavka);
+    const prazdny = vrcholy(rozbor.krivka!.prazdny, 1.5, 4)[0]!;
+    const obsazeny = vrcholy(rozbor.krivka!.obsazeny!, 1.5, 4)[0]!;
+    expect(Math.abs(prazdny.f - rozbor.frekvence[0]!)).toBeLessThanOrEqual(KROK_KRIVKY);
+    expect(Math.abs(obsazeny.f - rozbor.frekvenceObsazeneho[0]!)).toBeLessThanOrEqual(KROK_KRIVKY);
+    expect(obsazeny.f).toBeLessThan(prazdny.f);
+    // Těžší most se stejnou silou rozhoupe hůř.
+    expect(obsazeny.hodnota).toBeLessThan(prazdny.hodnota);
+  });
+
+  it("laděný tlumič rozdělí rezonanční špičku na dvě mnohem nižší", () => {
+    const bez = rozeberMost(sKrivkou, lavka);
+    const f0 = bez.frekvenceObsazeneho[0]!;
+    const puvodni = vrcholy(bez.krivka!.obsazeny!, 1.5, 4);
+    expect(puvodni).toHaveLength(1);
+    // Tlumič naladěný na frekvenci obsazeného mostu, závaží kolem pěti procent kmitající hmoty.
+    const s = rozeberMost(sKrivkou, sTlumicem(600, Math.round(f0 * 20) / 20));
+    const rozdelene = vrcholy(s.krivka!.obsazeny!, 1.5, 4);
+    expect(rozdelene).toHaveLength(2);
+    expect(rozdelene[0]!.f).toBeLessThan(puvodni[0]!.f);
+    expect(rozdelene[1]!.f).toBeGreaterThan(puvodni[0]!.f);
+    for (const vrchol of rozdelene) expect(vrchol.hodnota).toBeLessThan(0.4 * puvodni[0]!.hodnota);
+    // Kde byla špička, je teď mezi oběma novými sedlo.
+    const naPuvodni = s.krivka!.obsazeny![Math.round((puvodni[0]!.f - KRIVKA_OD) / KROK_KRIVKY)]!;
+    expect(naPuvodni).toBeLessThan(0.2 * puvodni[0]!.hodnota);
+  });
+
+  it("viskózní tlumiče do kotev špičku sníží, ale nerozdělí", () => {
+    const prehlidka: Uroven = { ...nactiKampan().find((u) => u.id === "2-04")!, rezonancniKrivka: true };
+    const reseni = RESENI["2-04"]!;
+    const bez = rozeberMost(prehlidka, reseni.pady.find((p) => p.nazev === "nízká příhrada bez tlumičů")!.navrh);
+    const s = rozeberMost(prehlidka, reseni.mistrovska);
+    const vrcholBez = Math.max(...vrcholy(bez.krivka!.obsazeny!, 1.5, 4).map((v) => v.hodnota));
+    const vrcholyS = vrcholy(s.krivka!.obsazeny!, 1.5, 4);
+    expect(vrcholyS.length).toBeLessThanOrEqual(1);
+    const nejvicS = Math.max(...s.krivka!.obsazeny!.slice(40, 140));
+    expect(nejvicS).toBeLessThan(0.6 * vrcholBez);
+  });
+
+  it("tvary kmitání: první je půlvlna s největší výchylkou uprostřed, druhý má uprostřed uzel", () => {
+    const rozbor = rozeberMost(sKrivkou, lavka);
+    expect(rozbor.tvary).toHaveLength(rozbor.frekvence.length);
+    for (const tvar of rozbor.tvary) {
+      expect(tvar).toHaveLength(2 * lavka.stycniky.length);
+      const nejvetsi = Math.max(...lavka.stycniky.map((_, i) => Math.hypot(tvar[2 * i]!, tvar[2 * i + 1]!)));
+      expect(nejvetsi).toBeCloseTo(1, 9);
+    }
+    const svisle = (tvar: number[], x: number): number => tvar[2 * lavka.stycniky.findIndex((st) => st.x === x && st.y === 0) + 1]!;
+    const prvni = rozbor.tvary[0]!;
+    // Největší svislá výchylka míří dolů a je uprostřed; konce v podporách stojí.
+    expect(svisle(prvni, 16)).toBeLessThan(-0.9);
+    expect(Math.abs(svisle(prvni, 0))).toBeLessThan(1e-9);
+    expect(Math.abs(svisle(prvni, 32))).toBeLessThan(1e-9);
+    expect(Math.abs(svisle(prvni, 8))).toBeLessThan(Math.abs(svisle(prvni, 16)));
+    const druhy = rozbor.tvary[1]!;
+    expect(Math.abs(svisle(druhy, 16))).toBeLessThan(0.2);
+    expect(svisle(druhy, 8) * svisle(druhy, 24)).toBeLessThan(0);
   });
 });
 

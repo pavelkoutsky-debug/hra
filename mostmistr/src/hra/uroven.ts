@@ -12,6 +12,7 @@ import type { Uroven } from "../data/uroven";
 import { Editor } from "../editor/editor";
 import { prekazkyZkousky } from "../editor/pravidla";
 import { prazdnyNavrh } from "../editor/upravy";
+import { MEZE_KOMFORTU } from "../jadro/komfort";
 import { ZPUSOB_OHYB, ZPUSOB_SMYK, ZPUSOB_TAH, ZPUSOB_TLAK, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { NASLEDEK_KLOUB, NASLEDEK_ODPOJENI } from "../jadro/poruseni";
 import { VERZE_FYZIKY } from "../jadro/verze";
@@ -26,6 +27,7 @@ import { pripojOvladani } from "../vykres/ovladani";
 import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
 import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
+import { nakresliKrivku, stropGrafu, vrcholyKrivky } from "../vykres/grafy";
 import { nakresliVykres } from "../vykres/vykres";
 import { KlientZkousky } from "../zkouska/klient";
 import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
@@ -60,6 +62,9 @@ const ROZSAH_OSY = 6;
 const PASMO_SHODY = 0.08;
 /** Prodleva mezi úpravou návrhu a žádostí o rozbor, v milisekundách. */
 const PRODLEVA_ROZBORU = 200;
+/** Animace tvaru kmitání při stavbě: kolikrát za sekundu se most zhoupne a jak daleko (podíl rozpětí). */
+const FREKVENCE_ANIMACE = 0.8;
+const VYCHYLKA_ANIMACE = 0.035;
 /** Jak daleko do stran zvuk zní, když je jeho zdroj na kraji plátna (1 je úplně v jednom uchu). */
 const SIRKA_ZVUKU = 0.85;
 
@@ -139,6 +144,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const oknoZadani = prvek("#okno-zadani", HTMLDialogElement);
   const prepinacCisel = prvek('[data-akce="cisla"]', HTMLButtonElement);
   const tlacitkoZvuku = prvek('[data-akce="zvuk"]', HTMLButtonElement);
+  const panelAnalyzy = udaj("analyza");
+  const tlacitkoAnalyzy = prvek('[data-akce="analyza"]', HTMLButtonElement);
+  const platnoKrivky = prvek('[data-udaj="krivka"]', HTMLCanvasElement);
 
   // ---- Stav ----
 
@@ -178,6 +186,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   ozvuceni.priZmeneStavu = () => obnovZvuk();
   /** Poslech právě přehrávané zkoušky: říká, co má v kterém okamžiku záznamu zaznít. */
   let poslech: Poslech | null = null;
+  /** Je analytický panel rozbalený? V úrovni s rezonanční křivkou začíná otevřený. */
+  let analyzaOtevrena = uroven.rezonancniKrivka;
+  /** Horní okraj svislé osy rezonanční křivky; drží se, aby bylo vidět, že úprava špičku snížila. */
+  let stropKrivky = 0;
+  /** Který tvar kmitání se právě na výkresu předvádí (pořadí v rozboru); null žádný. */
+  let tvarKmitani: number | null = null;
 
   // Pomocné vlákno pro rozbory mostu při stavbě; zkoušky mají každá vlastní.
   const pomocny = new KlientZkousky();
@@ -185,6 +199,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (zprava.typ !== "rozbor" || zprava.id !== idRozboru) return;
     rozbor = zprava.rozbor;
     obnovOsuFrekvenci();
+    obnovAnalyzu();
   });
 
   const ulozeny = uloziste.navrh(uroven.id);
@@ -232,7 +247,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const svet = stavi && mistoKurzoru ? obrazNaSvet(kamera, rozmer, mistoKurzoru) : null;
     const obalka = platnaObalka()?.obalka ?? null;
     nakresliNavrh(ctx, kamera, rozmer, {
-      navrh: editor.navrh,
+      navrh: stavi ? navrhVPohybu() : editor.navrh,
       vybranePruty: editor.vybranePruty,
       vybraneStycniky: editor.vybraneStycniky,
       tah: stavi ? editor.tah : null,
@@ -245,6 +260,25 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   }
 
   /** Síla brnknutí v newtonech podle toho, jak daleko hráč styčník stáhl. */
+  /**
+   * Návrh tak, jak se má právě nakreslit: když se předvádí tvar kmitání, jsou jeho styčníky
+   * vychýlené podle tvaru a houpají se. Rozbor patří právě tomuto návrhu; po každé úpravě
+   * se zahodí a spočítá znovu.
+   */
+  function navrhVPohybu(): NavrhMostu {
+    const navrh = editor.navrh;
+    const tvar = tvarKmitani !== null ? rozbor?.tvary[tvarKmitani] : undefined;
+    if (!tvar || tvar.length !== 2 * navrh.stycniky.length || editor.tah) return navrh;
+    const trasa = uroven.trasy[0];
+    const rozpeti = trasa ? trasa.konec.x - trasa.zacatek.x : 20;
+    const amplituda = Math.max(0.35, Math.min(1.5, VYCHYLKA_ANIMACE * rozpeti));
+    const vychylka = amplituda * Math.sin((2 * Math.PI * FREKVENCE_ANIMACE * performance.now()) / 1000);
+    return {
+      ...navrh,
+      stycniky: navrh.stycniky.map((st, i) => ({ ...st, x: st.x + vychylka * tvar[2 * i]!, y: st.y + vychylka * tvar[2 * i + 1]! })),
+    };
+  }
+
   function silaBrnknuti(b: { od: Bod; k: Bod }): number {
     const metru = Math.max(0, b.k.y - b.od.y) / kamera.meritko;
     return Math.min(NEJVETSI_BRNKNUTI, metru * SILA_NA_METR);
@@ -702,6 +736,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       prvek('[data-akce="tlumeni-min"]', HTMLButtonElement).disabled = tlumeni <= rozsah.nejmensi;
       prvek('[data-akce="tlumeni-plus"]', HTMLButtonElement).disabled = tlumeni >= rozsah.nejvetsi;
     }
+    obnovAnalyzu();
     nastav("smazat", editor.neconiJeVybrano);
     nastav("zrcadlit", navrh.pruty.length > 0);
     nastav("zpet", editor.lzeZpet);
@@ -729,6 +764,91 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     uloziste.cislaVyuziti = cisla;
     prepinacCisel.setAttribute("aria-pressed", String(cisla));
     platno.prekresli();
+  }
+
+  // ---- Analytický panel ----
+
+  function prepniAnalyzu(): void {
+    analyzaOtevrena = !analyzaOtevrena;
+    obnovAnalyzu();
+  }
+
+  /** Naplní analytický panel tím, co se v právě zobrazeném režimu dá říct. */
+  function obnovAnalyzu(): void {
+    const stavi = rezim === "stavba";
+    // Při stavbě má panel co ukázat jen tam, kde se hraje o kmitání.
+    const kDispozici = uroven.osaFrekvenci;
+    tlacitkoAnalyzy.hidden = !kDispozici;
+    const otevrena = analyzaOtevrena && kDispozici && stavi;
+    tlacitkoAnalyzy.setAttribute("aria-pressed", String(otevrena));
+    panelAnalyzy.hidden = !otevrena;
+    document.body.dataset.analyza = otevrena ? "otevrena" : "zavrena";
+    if (!otevrena) {
+      if (tvarKmitani !== null) {
+        tvarKmitani = null;
+        platno.prekresli();
+      }
+      return;
+    }
+
+    // Dokud se po úpravě mostu počítá nový rozbor, zůstává v panelu ten minulý.
+    if (rozbor === undefined) return;
+    const krivka = rozbor?.krivka ?? null;
+    prvek('[data-cast="krivka"]', HTMLElement).hidden = krivka === null;
+    prvek('[data-cast="krivka-popis"]', HTMLElement).hidden = krivka === null;
+    if (krivka) {
+      const hlavni = krivka.obsazeny ?? krivka.prazdny;
+      const vrcholy = vrcholyKrivky(hlavni, krivka.od, krivka.krok);
+      const nejvyssi = vrcholy.reduce((a, b) => (b.hodnota > a.hodnota ? b : a), { f: 0, hodnota: 0 });
+      let nejvic = 0;
+      for (const hodnota of krivka.prazdny) nejvic = Math.max(nejvic, hodnota);
+      for (const hodnota of krivka.obsazeny ?? []) nejvic = Math.max(nejvic, hodnota);
+      stropKrivky = Math.max(stropKrivky, stropGrafu(nejvic));
+      const hustota = window.devicePixelRatio || 1;
+      const obrys = platnoKrivky.getBoundingClientRect();
+      const sirka = Math.max(1, obrys.width);
+      const vyska = Math.max(1, obrys.height);
+      platnoKrivky.width = Math.round(sirka * hustota);
+      platnoKrivky.height = Math.round(vyska * hustota);
+      const ctx = platnoKrivky.getContext("2d");
+      if (ctx) {
+        ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
+        nakresliKrivku(ctx, sirka, vyska, {
+          ...krivka,
+          kroky: krokyLidi(),
+          rozsah: ROZSAH_OSY,
+          strop: stropKrivky,
+        });
+      }
+      platnoKrivky.dataset.vrcholu = String(vrcholy.length);
+      platnoKrivky.dataset.nejvyssi = nejvyssi.hodnota.toFixed(4);
+      platnoKrivky.dataset.strop = String(stropKrivky);
+      const klic = krivka.obsazeny ? "analyza.krivka.spickaSLidmi" : "analyza.krivka.spicka";
+      udaj("krivka-popis").textContent = t(klic, { hodnota: cislo(nejvyssi.hodnota, 2), f: cislo(nejvyssi.f, 2) });
+    }
+
+    const frekvence = rozbor?.stabilni ? rozbor.frekvence : [];
+    prvek('[data-cast="tvary"]', HTMLElement).hidden = frekvence.length === 0;
+    if (tvarKmitani !== null && tvarKmitani >= frekvence.length) tvarKmitani = null;
+    udaj("tvary").replaceChildren(
+      ...frekvence.map((f, poradi) => {
+        const tlacitko = document.createElement("button");
+        tlacitko.type = "button";
+        tlacitko.className = "tlacitko";
+        tlacitko.dataset.tvar = String(poradi);
+        tlacitko.textContent = t("analyza.tvar", { poradi: poradi + 1, f: cislo(f, 2) });
+        tlacitko.title = t("analyza.tvar.popis", { f: cislo(f, 2) });
+        tlacitko.setAttribute("aria-pressed", String(tvarKmitani === poradi));
+        tlacitko.addEventListener("click", () => {
+          tvarKmitani = tvarKmitani === poradi ? null : poradi;
+          obnovAnalyzu();
+          platno.prekresli();
+        });
+        return tlacitko;
+      }),
+    );
+    udaj("analyza-prazdna").hidden = krivka !== null || frekvence.length > 0;
+    document.body.dataset.tvar = tvarKmitani === null ? "" : String(tvarKmitani);
   }
 
   /** Promítne hlasitost do tlačítka v liště a do háčků pro testy. */
@@ -1109,7 +1229,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     }
     if (vysledek.bezRovnovahy) vety.push(t("vysledek.bezRovnovahy"));
     const komfort = vysledek.komfort;
-    if (komfort && komfort.trida === 4 && vysledek.spadlo === 0 && !vysledek.rozpad) vety.push(t("vysledek.shrnuti.kmitani"));
+    if (komfort && komfort.trida > uroven.nejhorsiKomfort && vysledek.spadlo === 0 && !vysledek.rozpad) {
+      vety.push(
+        komfort.trida === 4
+          ? t("vysledek.shrnuti.kmitani")
+          : t("vysledek.shrnuti.kmitaniNadMez", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) }),
+      );
+    }
     udaj("vysledek-shrnuti").textContent = vety.join(" ");
     if (vysledek.brnknuti) document.body.dataset.brnknuti = vysledek.brnknuti.frekvence?.toFixed(3) ?? "";
 
@@ -1431,6 +1557,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("krok-vpred", () => krokuj(1));
   priKliknuti("cisla", prepniCisla);
   priKliknuti("zvuk", prepniZvuk);
+  priKliknuti("analyza", prepniAnalyzu);
+  priKliknuti("analyza-zavrit", prepniAnalyzu);
+  platnoKrivky.addEventListener("click", () => {
+    // Svislé měřítko křivky se drží; kliknutí ho přizpůsobí tomu, co je vidět teď.
+    stropKrivky = 0;
+    obnovAnalyzu();
+  });
   priKliknuti("zadani", otevriZadani);
   priKliknuti("upravit", zpetKeStavbe);
   priKliknuti("prehrat-znovu", () => {
@@ -1529,6 +1662,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       case "l":
         prepniLadenyTlumic();
         break;
+      case "a":
+        prepniAnalyzu();
+        break;
       default: {
         const poradi = Number(klavesa) - 1;
         const id = Number.isInteger(poradi) ? uroven.povolenePrvky[poradi] : undefined;
@@ -1573,8 +1709,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       const meri = maLidi && !b.brnknuti && b.zaznam.stavV(prehravani.cas, snimek) !== null;
       const text = meri ? t("legenda.kmitani", { zrychleni: cislo(snimek.kmitani, 2) }) : "";
       if (poleKmitani.textContent !== text) poleKmitani.textContent = text;
-    } else if (poleKmitani.textContent !== "") {
-      poleKmitani.textContent = "";
+    } else {
+      if (poleKmitani.textContent !== "") poleKmitani.textContent = "";
+      // Předváděný tvar kmitání se houpe, i když se na výkresu nic jiného neděje.
+      if (tvarKmitani !== null && rezim === "stavba") platno.prekresli();
     }
     requestAnimationFrame(snimekObrazu);
   }
@@ -1605,6 +1743,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   oknoZadani.addEventListener("close", () => ukazka?.zastav());
   prepinacCisel.setAttribute("aria-pressed", String(cisla));
   obnovZvuk();
+  obnovAnalyzu();
   document.body.dataset.rezim = rezim;
   document.body.dataset.zkouska = "";
   obnovMedaile();

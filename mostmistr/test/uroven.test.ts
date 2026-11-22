@@ -186,12 +186,17 @@ describe("verze formátu úrovně", () => {
     expect(druha.nejvetsiTlumic).toBe(0);
     expect(druha.rezonancniKrivka).toBe(false);
     expect(druha.budic).toBe(false);
+    // Dřív neobstál jen most s nepřijatelným kmitáním; tak to starším úrovním zůstává.
+    expect(druha.nejhorsiKomfort).toBe(3);
   });
 
   it("verze 3 nese laděný tlumič, rezonanční křivku a budič sama a bez nich neprojde", () => {
-    const zaklad = { ...platna(), verze: 3, nejvetsiZavazi: 0, osaFrekvenci: true };
+    const zaklad = { ...platna(), verze: 3, nejvetsiZavazi: 0, osaFrekvenci: true, nejhorsiKomfort: 2 };
     const u = nactiUroven({ ...zaklad, nejvetsiTlumic: 800, rezonancniKrivka: true, budic: true });
-    expect(u).toMatchObject({ nejvetsiTlumic: 800, rezonancniKrivka: true, budic: true });
+    expect(u).toMatchObject({ nejvetsiTlumic: 800, rezonancniKrivka: true, budic: true, nejhorsiKomfort: 2 });
+    const uplna = { ...zaklad, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false };
+    ocekavejChybu({ ...uplna, nejhorsiKomfort: 4 }, "uroven.nejhorsiKomfort");
+    ocekavejChybu({ ...uplna, nejhorsiKomfort: 1.5 }, "uroven.nejhorsiKomfort");
     ocekavejChybu({ ...zaklad, rezonancniKrivka: true, budic: true }, "uroven.nejvetsiTlumic");
     ocekavejChybu({ ...zaklad, nejvetsiTlumic: -1, rezonancniKrivka: true, budic: true }, "uroven.nejvetsiTlumic");
     ocekavejChybu({ ...zaklad, nejvetsiTlumic: 0, budic: true }, "uroven.rezonancniKrivka");
@@ -199,7 +204,7 @@ describe("verze formátu úrovně", () => {
   });
 
   it("skákající dav může mít zadanou dobu skákání", () => {
-    const zaklad = { ...platna(), verze: 3, nejvetsiZavazi: 0, osaFrekvenci: false, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false };
+    const zaklad = { ...platna(), verze: 3, nejvetsiZavazi: 0, osaFrekvenci: false, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false, nejhorsiKomfort: 3 };
     const polozka = { cas: 0, trasa: (platna().trasy as { id: string }[])[0]!.id, smer: 1, druh: "skakajici-dav", pocet: 30, kadence: 2.4, trvani: 8 };
     const u = nactiUroven({ ...zaklad, jizdniRad: [polozka] });
     expect(u.jizdniRad[0]).toMatchObject({ druh: "skakajici-dav", trvani: 8, kadence: 2.4 });

@@ -35,6 +35,16 @@ export interface RozborMostu {
    * hmotu, takže frekvence klesnou; prázdné pole v úrovni bez lidí.
    */
   frekvenceObsazeneho: number[];
+  /**
+   * Tvary kmitání prázdného mostu ke každé frekvenci z `frekvence`: posuny styčníků návrhu
+   * (dx0, dy0, dx1, dy1, …) v pořadí, v jakém jsou v návrhu. Největší posun má velikost 1.
+   */
+  tvary: number[][];
+  /**
+   * Rezonanční křivka: největší svislé zrychlení mostovky v m/s² na 1 kN svislé harmonické
+   * síly, pro frekvence `od`, `od + krok`, … Hz. Null v úrovni, která křivku neukazuje.
+   */
+  krivka: { od: number; krok: number; prazdny: number[]; obsazeny: number[] | null } | null;
 }
 
 /** Co se při zkoušce stalo a kdy. Čísla způsobu a následku porušení jsou konstanty jádra. */
