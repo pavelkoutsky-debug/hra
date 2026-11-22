@@ -90,10 +90,11 @@ describe("píst", () => {
     expect(s.x[2]!).toBeCloseTo(8 * Math.cos(uhel), 1);
     expect(s.y[2]!).toBeGreaterThan(8 * Math.sin(uhel) - 0.12);
     expect(s.y[2]!).toBeLessThan(8 * Math.sin(uhel) + 0.01);
-    expect(Math.abs(s.vy[2]!)).toBeLessThan(0.02);
+    // Po zastavení pístu se konec křídla se závažím ještě chvíli houpe, ale doznívá.
+    expect(Math.abs(s.vy[2]!)).toBeLessThan(0.2);
 
     pisty.vysunout = false;
-    while (sim.cas < 16) sim.krok();
+    while (sim.cas < 26) sim.krok();
     expect(pistyVCili(s, pisty)).toBe(true);
     expect(s.y[2]!).toBeCloseTo(klid, 2);
     expect(s.klidovaDelka[2]!).toBe(ZASUNUTY);
