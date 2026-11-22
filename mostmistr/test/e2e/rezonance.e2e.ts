@@ -151,8 +151,18 @@ describe("osa frekvencí, závaží a tlumič", () => {
     await stranka.waitForTimeout(9000);
     await stranka.screenshot({ path: `${SLOZKA}/41-zadani-prehlidka.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
-    expect(await stranka.locator(".paleta__prvky button").allInnerTexts()).toHaveLength(3);
+    // Mostovka, ocel, tlumič a závaží: co úroveň dovoluje, je mezi stavebními prvky vidět.
+    const prvky = await stranka.locator(".paleta__prvky button").allInnerTexts();
+    expect(prvky).toHaveLength(4);
     expect(await stranka.locator('[data-prvek="tlumic"]').innerText()).toContain("Tlumič");
+    expect(prvky[3]).toContain("Závaží");
+    expect(prvky[3]).toContain("10\u00a0Kč/kg · do 2000 kg");
+    expect(await udaj("zadani-stavba")).toContain("Závaží do styčníku: 10\u00a0Kč za kilogram, nejvýš 2000 kg");
+    // Brnknutí je vidět i bez mostu a poradí, co mu chybí.
+    expect(await akce("brnknout").isDisabled()).toBe(false);
+    await akce("brnknout").click();
+    expect(await udaj("hlaseni")).toBe("Brnknout jde až do postaveného mostu. Nejdřív ho nakresli.");
+    expect(await akce("brnknout").getAttribute("aria-pressed")).toBe("false");
   });
 
   it("osa ukáže vlastní frekvenci mostu a varuje, když je u kroku útvaru", async () => {
@@ -184,6 +194,21 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await udaj("zavazi")).toBe("900 kg");
     await stranka.screenshot({ path: `${SLOZKA}/43-zavazi.png` });
     await stranka.keyboard.press("Escape");
+    expect(await nastaveni.isVisible()).toBe(false);
+
+    // Totéž jde z palety: položka Závaží a kliknutí na styčník mu dá první stovku kilogramů.
+    const polozka = stranka.locator('[data-pridavek="zavazi"]');
+    await polozka.click();
+    expect(await polozka.getAttribute("aria-pressed")).toBe("true");
+    expect(await udaj("hlaseni")).toContain("Klikni na styčník, do kterého chceš závaží");
+    await klikni([12, 0]);
+    expect(await nastaveni.isVisible()).toBe(true);
+    expect(await udaj("zavazi")).toBe("100 kg");
+    // Styčník, který závaží už má, se jen vybere.
+    await klikni([16, 0]);
+    expect(await udaj("zavazi")).toBe("900 kg");
+    await stranka.keyboard.press("Escape");
+    expect(await polozka.getAttribute("aria-pressed")).toBe("false");
     expect(await nastaveni.isVisible()).toBe(false);
   });
 

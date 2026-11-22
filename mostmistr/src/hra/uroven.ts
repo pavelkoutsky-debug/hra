@@ -4,7 +4,7 @@
 import { cenaNavrhu, hmotnostNavrhu } from "../data/cena";
 import type { Bod } from "../data/geometrie";
 import { jeUvnitr } from "../data/geometrie";
-import { KATALOG, LADENY_TLUMIC, type IdPrvku } from "../data/katalog";
+import { CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, type IdPrvku } from "../data/katalog";
 import { ChybaDat } from "../data/kontrola";
 import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
@@ -75,6 +75,9 @@ const VYCHYLKA_ANIMACE = 0.035;
 const SIRKA_ZVUKU = 0.85;
 
 /** Jedna zkouška mostu: záznam, který plní pracovní vlákno, a nakonec výsledek. */
+/** Přídavek, který se nekreslí tahem, ale věší do styčníku: závaží nebo laděný tlumič. */
+type Pridavek = "zavazi" | "ladeny";
+
 interface Beh {
   /** Návrh, který se zkoušel. Dokud ho hráč nezmění, platí pro něj obálka namáhání. */
   navrh: NavrhMostu;
@@ -185,7 +188,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let kurzor: Bod | null = null;
 
   let rezim: "stavba" | "zkouska" = "stavba";
-  let nastroj: "kresleni" | "vyber" | "brnknuti" | "budic" = "kresleni";
+  let nastroj: "kresleni" | "vyber" | "brnknuti" | "budic" | Pridavek = "kresleni";
+  /** Přídavky styčníků, které úroveň dovoluje; v paletě stojí za nosnými prvky. */
+  const pridavky: Pridavek[] = [];
+  if (uroven.nejvetsiZavazi > 0) pridavky.push("zavazi");
+  if (uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota) pridavky.push("ladeny");
   /** Rytmus, ve kterém budič bije, v Hz; null znamená přeladit celý rozsah. */
   let rytmusBudice: number | null = null;
   /** Co budič na mostě naměřil: křivka z přelaďování a body ze stálých rytmů. Platí pro `navrh`. */
@@ -194,6 +201,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let brnk: { stycnik: number; od: Bod; k: Bod } | null = null;
   /** Poslední rozbor mostu; undefined, dokud se počítá, null, když most rozebrat nejde. */
   let rozbor: RozborMostu | null | undefined;
+  /** Poslední rozbor mostu, který měl klidovou polohu; slouží jako odhad, dokud se počítá nový. */
+  let posledniZnamyRozbor: RozborMostu | null = null;
   let idRozboru = 0;
   let casovacRozboru: number | undefined;
   const maLidi = uroven.jizdniRad.some((p) => jeClovek(p.druh));
@@ -233,6 +242,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   pomocny.poslouchej((zprava) => {
     if (zprava.typ !== "rozbor" || zprava.id !== idRozboru) return;
     rozbor = zprava.rozbor;
+    if (rozbor?.stabilni) posledniZnamyRozbor = rozbor;
     obnovOsuFrekvenci();
     obnovAnalyzu();
   });
@@ -563,7 +573,60 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         tlacitko.addEventListener("click", () => zvolPrvek(id));
         return tlacitko;
       }),
+      // Závaží a laděný tlumič se nekreslí tahem, ale věší do styčníku: klik na položku, pak na styčník.
+      ...pridavky.map((ktery, poradi) => {
+        const tlacitko = document.createElement("button");
+        tlacitko.type = "button";
+        tlacitko.className = "paleta__tlacitko paleta__tlacitko--prvek";
+        tlacitko.dataset.pridavek = ktery;
+        tlacitko.title = t(ktery === "ladeny" ? "paleta.ladeny.prvek.popis" : "paleta.zavazi.prvek.popis");
+        const klavesa = document.createElement("kbd");
+        klavesa.textContent = String(uroven.povolenePrvky.length + poradi + 1);
+        const nazev = document.createElement("span");
+        nazev.className = "paleta__nazev";
+        nazev.textContent = t(ktery === "ladeny" ? "paleta.ladeny" : "paleta.zavazi.nazev");
+        const cena = document.createElement("span");
+        cena.className = "paleta__cena";
+        cena.textContent =
+          ktery === "ladeny"
+            ? t("paleta.ladeny.cena", {
+                zaKus: koruny(LADENY_TLUMIC.cenaZaKus),
+                zaKg: koruny(LADENY_TLUMIC.cenaZaKg),
+                kg: cislo(uroven.nejvetsiTlumic, 0),
+              })
+            : t("paleta.zavazi.cena", { zaKg: koruny(CENA_ZAVAZI), kg: cislo(uroven.nejvetsiZavazi, 0) });
+        tlacitko.append(klavesa, nazev, cena);
+        tlacitko.addEventListener("click", () => prepniPridavek(ktery));
+        return tlacitko;
+      }),
     );
+  }
+
+  /** Zapne nebo vypne věšení přídavku (závaží, laděný tlumič) do styčníků kliknutím. */
+  function prepniPridavek(ktery: Pridavek): void {
+    if (rezim !== "stavba" || !pridavky.includes(ktery)) return;
+    nastroj = nastroj === ktery ? "kresleni" : ktery;
+    editor.zrusTah();
+    editor.zrusVyber();
+    if (nastroj === ktery) ukazHlaseni(t(ktery === "ladeny" ? "paleta.ladeny.navod" : "paleta.zavazi.navod"), "info", false);
+    else skryjHlaseni();
+    obnovStavbu();
+  }
+
+  /** Kliknutí při věšení přídavku: vybere styčník a pověsí do něj, co ještě nemá. */
+  function povesPridavek(ktery: Pridavek, bod: Bod): void {
+    const id = editor.stycnikU(bod);
+    if (id === null) {
+      editor.zrusVyber();
+      obnovStavbu();
+      return;
+    }
+    skryjHlaseni();
+    editor.vyberJenStycnik(id);
+    if (ktery === "ladeny") {
+      if (editor.ladenyTlumicVyberu === undefined) zavesLadenyTlumic();
+    } else if (editor.zavaziVyberu === 0) editor.zmenZavazi(1);
+    obnovStavbu();
   }
 
   function zvolPrvek(id: IdPrvku): void {
@@ -726,18 +789,24 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       tlacitko.setAttribute("aria-pressed", String(nastroj === "kresleni" && tlacitko.dataset.prvek === editor.prvek));
       tlacitko.disabled = !stavi || !KATALOG[tlacitko.dataset.prvek as IdPrvku].hotovo;
     }
+    for (const tlacitko of paletaPrvku.querySelectorAll<HTMLButtonElement>("[data-pridavek]")) {
+      tlacitko.setAttribute("aria-pressed", String(nastroj === tlacitko.dataset.pridavek));
+      tlacitko.disabled = !stavi;
+    }
     const nastav = (akce: string, povoleno: boolean): void => {
       prvek(`[data-akce="${akce}"]`, HTMLButtonElement).disabled = !(stavi && povoleno);
     };
     nastav("vyber", true);
     prvek('[data-akce="vyber"]', HTMLButtonElement).setAttribute("aria-pressed", String(nastroj === "vyber"));
+    // Pokusy jsou vidět a dají se zmáčknout i bez mostu; pak poradí, co jim chybí.
+    prvek('[data-cast="pokusy"]', HTMLElement).hidden = !(uroven.osaFrekvenci || uroven.budic);
     const tlacitkoBrnknuti = prvek('[data-akce="brnknout"]', HTMLButtonElement);
     tlacitkoBrnknuti.hidden = !uroven.osaFrekvenci;
-    tlacitkoBrnknuti.disabled = !stavi || navrh.pruty.length === 0;
+    tlacitkoBrnknuti.disabled = !stavi;
     tlacitkoBrnknuti.setAttribute("aria-pressed", String(nastroj === "brnknuti"));
     const tlacitkoBudice = prvek('[data-akce="budic"]', HTMLButtonElement);
     tlacitkoBudice.hidden = !uroven.budic;
-    tlacitkoBudice.disabled = !stavi || navrh.pruty.length === 0;
+    tlacitkoBudice.disabled = !stavi;
     tlacitkoBudice.setAttribute("aria-pressed", String(nastroj === "budic"));
     const nastavujeBudic = stavi && uroven.budic && nastroj === "budic";
     prvek('[data-nastaveni="budic"]', HTMLElement).hidden = !nastavujeBudic;
@@ -1149,10 +1218,26 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
    * Zavěsí pod vybrané styčníky laděný tlumič, nebo ho odebere. Nový se naladí na první
    * vlastní frekvenci mostu s lidmi, pokud je známá; tu má tlumič krotit nejčastěji.
    */
+  /**
+   * Zavěsí pod vybrané styčníky laděný tlumič, nebo ho odebere. Další tlumič je stejný jako
+   * ten, který most už má; první se naladí na vlastní frekvenci mostu s lidmi. Když se rozbor
+   * po poslední úpravě teprve počítá, poslouží ten předchozí.
+   */
+  function zavesLadenyTlumic(): void {
+    const vzor = editor.navrh.stycniky.find((st) => st.tlumic)?.tlumic;
+    const znamy = rozbor ?? posledniZnamyRozbor;
+    const frekvence = vzor?.frekvence ?? znamy?.frekvenceObsazeneho[0] ?? znamy?.frekvence[0] ?? 2;
+    editor.prepniLadenyTlumic(vzor?.hmota ?? Math.min(300, uroven.nejvetsiTlumic), frekvence);
+  }
+
+  /**
+   * Klávesa L a tlačítko v nastavení: s vybraným styčníkem tlumič zavěsí nebo odebere,
+   * bez výběru zapne věšení tlumičů kliknutím (totéž co položka v paletě).
+   */
   function prepniLadenyTlumic(): void {
     if (rezim !== "stavba") return;
-    const frekvence = rozbor?.frekvenceObsazeneho[0] ?? rozbor?.frekvence[0] ?? 2;
-    editor.prepniLadenyTlumic(Math.min(300, uroven.nejvetsiTlumic), frekvence);
+    if (editor.ladenyTlumicVyberu === null) prepniPridavek("ladeny");
+    else zavesLadenyTlumic();
   }
 
   function smazVybrane(): void {
@@ -1172,7 +1257,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   }
 
   function prepniBrnknuti(): void {
-    if (rezim !== "stavba" || !uroven.osaFrekvenci || editor.navrh.pruty.length === 0) return;
+    if (rezim !== "stavba" || !uroven.osaFrekvenci) return;
+    if (editor.navrh.pruty.length === 0) {
+      ukazHlaseni(t("brnknuti.bezMostu"), "info", true);
+      return;
+    }
     nastroj = nastroj === "brnknuti" ? "kresleni" : "brnknuti";
     editor.zrusVyber();
     if (nastroj === "brnknuti") ukazHlaseni(t("brnknuti.navod"), "info", false);
@@ -1181,7 +1270,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   }
 
   function prepniBudic(): void {
-    if (rezim !== "stavba" || !uroven.budic || editor.navrh.pruty.length === 0) return;
+    if (rezim !== "stavba" || !uroven.budic) return;
+    if (editor.navrh.pruty.length === 0) {
+      ukazHlaseni(t("budic.bezMostu"), "info", true);
+      return;
+    }
     nastroj = nastroj === "budic" ? "kresleni" : "budic";
     editor.zrusVyber();
     if (nastroj === "budic") ukazHlaseni(t("budic.navod"), "info", false);
@@ -1712,6 +1805,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const stavba = uroven.povolenePrvky
       .filter((id) => KATALOG[id].hotovo)
       .map((id) => polozka(t("zadani.stavba.prvek", { prvek: nazevPrvku(id), cena: zapisCenyPrvku(id) })));
+    if (uroven.nejvetsiZavazi > 0) {
+      stavba.push(
+        polozka(t("zadani.stavba.zavazi", { zaKg: koruny(CENA_ZAVAZI), kg: cislo(uroven.nejvetsiZavazi, 0) })),
+      );
+    }
     if (uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota) {
       stavba.push(
         polozka(
@@ -1847,6 +1945,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
             return;
           }
           brnk = poradi >= 0 ? { stycnik: poradi, od: misto, k: misto } : null;
+          return;
+        }
+        if (nastroj === "ladeny" || nastroj === "zavazi") {
+          povesPridavek(nastroj, obrazNaSvet(kamera, platno.rozmer, misto));
+          obnovPohled();
           return;
         }
         skryjHlaseni();
@@ -2008,6 +2111,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           editor.zrusVyber();
           editor.zrusTah();
           skryjHlaseni();
+          // Věšení přídavků Escape ukončí; zůstane kreslení zvoleným prvkem.
+          if (nastroj === "ladeny" || nastroj === "zavazi") nastroj = "kresleni";
+          obnovStavbu();
         } else zpetKeStavbe();
         break;
       case "Delete":
@@ -2054,9 +2160,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         break;
       default: {
         const poradi = Number(klavesa) - 1;
-        const id = Number.isInteger(poradi) ? uroven.povolenePrvky[poradi] : undefined;
-        if (!id) return;
-        zvolPrvek(id);
+        if (!Number.isInteger(poradi)) return;
+        const id = uroven.povolenePrvky[poradi];
+        const pridavek = pridavky[poradi - uroven.povolenePrvky.length];
+        if (id) zvolPrvek(id);
+        else if (pridavek) prepniPridavek(pridavek);
+        else return;
       }
     }
     udalost.preventDefault();

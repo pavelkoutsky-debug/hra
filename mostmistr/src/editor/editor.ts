@@ -300,6 +300,13 @@ export class Editor {
     this.vybraneStycniky.clear();
   }
 
+  /** Vybere právě jeden styčník (podle id) a nic jiného. */
+  vyberJenStycnik(id: number): void {
+    this.zrusVyber();
+    if (this.#navrh.stycniky.some((s) => s.id === id)) this.vybraneStycniky.add(id);
+    this.#poZmene();
+  }
+
   vyberVse(): void {
     for (const p of this.#navrh.pruty) this.vybranePruty.add(p.id);
     for (const s of this.#navrh.stycniky) this.vybraneStycniky.add(s.id);
