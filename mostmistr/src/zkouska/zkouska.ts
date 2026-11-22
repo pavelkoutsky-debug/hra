@@ -195,11 +195,11 @@ export class Zkouska {
     } else {
       this.#komfort = null;
     }
-    // Pohodlí cestujících se měří na karoseriích autobusů.
+    // Pohodlí cestujících se měří na karoseriích autobusů a na skříních osobních vozů.
     this.#autobusy = [];
     const karoserieAutobusu: number[] = [];
     this.ucastnici.forEach((u, k) => {
-      if (u.druh !== "autobus") return;
+      if (u.druh !== "autobus" && u.druh !== "vuz-osobni") return;
       this.#autobusy.push(k);
       karoserieAutobusu.push(...u.karoserie);
     });

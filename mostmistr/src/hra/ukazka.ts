@@ -234,10 +234,19 @@ export class Ukazka {
       strana.zvetsene = zvetsiPohyb(stavba, strana.vychozi, snimek.polohy, this.#zvetseni, strana.zvetsene);
       kresleny = { ...snimek, polohy: strana.zvetsene };
     }
-    nakresliKonstrukci(ctx, kamera, rozmer, stavba, kresleny, 0, (e) => {
-      const prut = navrh.pruty[stavba.prut[e]!];
-      return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
-    });
+    nakresliKonstrukci(
+      ctx,
+      kamera,
+      rozmer,
+      stavba,
+      kresleny,
+      0,
+      (e) => {
+        const prut = navrh.pruty[stavba.prut[e]!];
+        return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
+      },
+      (e) => navrh.pruty[stavba.prut[e]!]?.prvek === "kolejiste",
+    );
     nakresliProvoz(ctx, kamera, rozmer, strana.ucastnici, kresleny);
 
     // Pod plátnem: během děje okamžité kmitání, na konci verdikt.

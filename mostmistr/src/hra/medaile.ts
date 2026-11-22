@@ -1,7 +1,7 @@
 // Medaile úrovně na stránce: seznam s podmínkami a krátký zápis značkami.
 
 import type { Medaile } from "../data/ulozeni";
-import type { Uroven } from "../data/uroven";
+import { cestujiVlakem, type Uroven } from "../data/uroven";
 import { MEZE_KOMFORTU } from "../jadro/komfort";
 import { cislo, koruny, procenta } from "../ui/formaty";
 import { jeClovek } from "../zkouska/provoz";
@@ -42,7 +42,7 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
           : bonus.druh === "komfort-chodcu"
             ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
             : bonus.druh === "komfort-cestujicich"
-              ? t("medaile.mistrovska.cestujici", { limit: cislo(bonus.limit, 2) })
+              ? t(cestujiVlakem(uroven) ? "medaile.mistrovska.cestujiciVlaku" : "medaile.mistrovska.cestujici", { limit: cislo(bonus.limit, 2) })
               : t("medaile.mistrovska.jina"),
       ziskana: medaile.mistrovska,
     });

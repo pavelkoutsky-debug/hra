@@ -382,6 +382,11 @@ function zkontrolujSouvislosti(u: Uroven, c: string): void {
   }
 }
 
+/** Jede v úrovni osobní vůz? Pohodlí cestujících se pak týká vlaku, ne autobusu. */
+export function cestujiVlakem(u: Uroven): boolean {
+  return u.jizdniRad.some((p) => p.vozy?.some((skupina) => skupina.druh === "vuz-osobni"));
+}
+
 /** Výška terénu v místě x; mimo zadané body pokračuje terén vodorovně. */
 export function vyskaTerenu(u: Uroven, x: number): number {
   const body = u.teren;
