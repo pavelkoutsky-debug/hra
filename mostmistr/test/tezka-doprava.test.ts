@@ -274,3 +274,58 @@ describe("brzdění na mostě", () => {
     expect(zkouska.ucastnici[0]!.brzdeni).toBeUndefined();
   });
 });
+
+describe("pohodlí cestujících v autobusu", () => {
+  const autobus: PolozkaJizdnihoRadu = { cas: 0, trasa: "silnice", smer: 1, druh: "autobus" };
+  /** Nízká příhrada z lehké oceli: unese, ale je měkká. */
+  const mekky = (): NavrhMostu => {
+    const k = new Kreslic();
+    for (let x = 0; x < 24; x += 6) {
+      k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+      k.prut("ocel-lehka", [x, 2], [x + 6, 2]);
+      const kStredu = x < 12;
+      k.prut("ocel-lehka", kStredu ? [x, 2] : [x, 0], kStredu ? [x + 6, 0] : [x + 6, 2]);
+    }
+    for (let x = 0; x <= 24; x += 6) k.prut("ocel-lehka", [x, 0], [x, 2]);
+    return k.navrh();
+  };
+  const jed = (navrh: NavrhMostu, uprava: Partial<Uroven> = {}, jizdniRad = [autobus]): VysledekZkousky =>
+    dojed(new Zkouska({ ...silnice(jizdniRad), ...uprava }, navrh, 1));
+
+  it("bez autobusu se neměří; s autobusem je to zrychlení jeho karoserie na mostě", () => {
+    expect(jed(prihradovyMost(), {}, [{ cas: 0, trasa: "silnice", smer: 1, druh: "nakladni" }]).komfortCestujicich).toBeNull();
+    const vysledek = jed(prihradovyMost());
+    expect(vysledek.komfortCestujicich).not.toBeNull();
+    expect(vysledek.komfortCestujicich!.zrychleni).toBeGreaterThan(0.02);
+    expect(vysledek.komfortCestujicich!.zrychleni).toBeLessThan(0.3);
+    expect(vysledek.komfortCestujicich!.trida).toBe(1);
+    expect(vysledek.komfortCestujicich!.cas).toBeGreaterThan(0);
+    // Chodci na mostě nejsou, takže komfort chodců se nehodnotí.
+    expect(vysledek.komfort).toBeNull();
+  }, 60_000);
+
+  it("na rovné vozovce rozhoduje most: měkký houpe autobusem víc než tuhý", () => {
+    const tuhy = jed(prihradovyMost()).komfortCestujicich!.zrychleni;
+    const houpavy = jed(mekky()).komfortCestujicich!.zrychleni;
+    expect(houpavy).toBeGreaterThan(1.5 * tuhy);
+  }, 60_000);
+
+  it("hrbolatá vozovka pohodlí zhorší, ať je most jakýkoli", () => {
+    const rovna = jed(prihradovyMost()).komfortCestujicich!.zrychleni;
+    const bezna = jed(prihradovyMost(), { nerovnost: "B" }).komfortCestujicich!.zrychleni;
+    const rozbita = jed(prihradovyMost(), { nerovnost: "C" }).komfortCestujicich!.zrychleni;
+    expect(bezna).toBeGreaterThan(2 * rovna);
+    expect(rozbita).toBeGreaterThan(1.5 * bezna);
+  }, 60_000);
+
+  it("mistrovskou medaili za pohodlí cestujících dostane jen most pod limitem úrovně", () => {
+    const tuhy = jed(prihradovyMost()).komfortCestujicich!.zrychleni;
+    const houpavy = jed(mekky()).komfortCestujicich!.zrychleni;
+    const limit = (tuhy + houpavy) / 2;
+    const bonus: Partial<Uroven> = { mistrovska: { druh: "komfort-cestujicich", limit } };
+    expect(jed(prihradovyMost(), bonus).medaile).toMatchObject({ pruchod: true, mistrovska: true });
+    expect(jed(mekky(), bonus).medaile).toMatchObject({ pruchod: true, mistrovska: false });
+    // Bez autobusu bonus získat nejde.
+    expect(jed(prihradovyMost(), bonus, [{ cas: 0, trasa: "silnice", smer: 1, druh: "dodavka" }]).medaile.mistrovska).toBe(false);
+  }, 60_000);
+});

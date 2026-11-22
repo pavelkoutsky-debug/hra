@@ -509,6 +509,21 @@ export class Provoz implements Zatizeni {
     return false;
   }
 
+  /** Je právě na mostě (aspoň jedním kolem mezi konci své trasy) některý z daných účastníků? */
+  nekdoNaMoste(s: Soustava, kteri: readonly number[]): boolean {
+    const { ucastnici } = this.#plan;
+    for (const k of kteri) {
+      if (this.stavy[k] !== JEDE) continue;
+      const u = ucastnici[k]!;
+      const trasa = this.#uroven.trasy[u.trasa]!;
+      for (const i of u.kola) {
+        const x = s.x[i]!;
+        if (x >= trasa.zacatek.x && x <= trasa.konec.x) return true;
+      }
+    }
+    return false;
+  }
+
   /** Jsou všichni, kdo spadli, už ve vodě nebo na zemi? */
   spadliDopadli(s: Soustava): boolean {
     if (!this.#nekdoSpadl) return true;
