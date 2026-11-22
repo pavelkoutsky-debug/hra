@@ -69,7 +69,7 @@ export class BehZkousky {
       return;
     }
     try {
-      const zkouska = new Zkouska(vstup.uroven, vstup.navrh, vstup.nasada, vstup.brnknuti);
+      const zkouska = new Zkouska(vstup.uroven, vstup.navrh, vstup.nasada, vstup.brnknuti, vstup.budic);
       this.#zkouska = zkouska;
       this.#posli({
         typ: "zacatek",

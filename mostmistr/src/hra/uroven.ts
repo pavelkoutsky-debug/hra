@@ -27,11 +27,12 @@ import { pripojOvladani } from "../vykres/ovladani";
 import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
 import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
-import { nakresliKrivku, stropGrafu, vrcholyKrivky } from "../vykres/grafy";
+import { nakresliKrivku, stropGrafu, vrcholyKrivky, type BodKrivky } from "../vykres/grafy";
 import { nakresliVykres } from "../vykres/vykres";
+import { frekvenceBudice, jeStaly } from "../zkouska/budic";
 import { KlientZkousky } from "../zkouska/klient";
 import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
-import type { RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
+import type { BudicZkousky, RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
 import { lidiVRade, rytmusLidi } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
@@ -62,6 +63,11 @@ const ROZSAH_OSY = 6;
 const PASMO_SHODY = 0.08;
 /** Prodleva mezi úpravou návrhu a žádostí o rozbor, v milisekundách. */
 const PRODLEVA_ROZBORU = 200;
+/** Budič: amplituda síly v newtonech, rozsah a doba přelaďování, doba stálého rytmu a krok nastavení. */
+const SILA_BUDICE = 2000;
+const ROZSAH_BUDICE = { od: 0.5, do: 6, trvani: 80 };
+const TRVANI_STALEHO_RYTMU = 14;
+const KROK_BUDICE = 0.05;
 /** Animace tvaru kmitání při stavbě: kolikrát za sekundu se most zhoupne a jak daleko (podíl rozpětí). */
 const FREKVENCE_ANIMACE = 0.8;
 const VYCHYLKA_ANIMACE = 0.035;
@@ -84,8 +90,10 @@ interface Beh {
   naKonecPoVypoctu: boolean;
   /** Prut, na který hráč při přehrávání klikl (pořadí v návrhu). */
   oznaceny: number | null;
-  /** Pokus s brnknutím, ne zkouška: nepočítá se do medailí ani do obálky. */
-  brnknuti: boolean;
+  /** Pokus (brnknutí nebo budič), ne zkouška: nepočítá se do medailí ani do obálky. */
+  pokus: boolean;
+  /** Budič, kterým se most při pokusu rozkmitával; null u zkoušky a u brnknutí. */
+  budic: BudicZkousky | null;
 }
 
 function nazevZpusobu(zpusob: number): KlicTextu {
@@ -160,7 +168,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let kurzor: Bod | null = null;
 
   let rezim: "stavba" | "zkouska" = "stavba";
-  let nastroj: "kresleni" | "vyber" | "brnknuti" = "kresleni";
+  let nastroj: "kresleni" | "vyber" | "brnknuti" | "budic" = "kresleni";
+  /** Rytmus, ve kterém budič bije, v Hz; null znamená přeladit celý rozsah. */
+  let rytmusBudice: number | null = null;
+  /** Co budič na mostě naměřil: křivka z přelaďování a body ze stálých rytmů. Platí pro `navrh`. */
+  let zmereno: { navrh: NavrhMostu; cara: BodKrivky[]; body: BodKrivky[] } | null = null;
   /** Rozdělané brnknutí: styčník (pořadí v návrhu), místo stisku a kurzoru v pixelech plátna. */
   let brnk: { stycnik: number; od: Bod; k: Bod } | null = null;
   /** Poslední rozbor mostu; undefined, dokud se počítá, null, když most rozebrat nejde. */
@@ -219,7 +231,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   /** Platí obálka namáhání z poslední zkoušky pro návrh, který je právě na výkresu? */
   function platnaObalka(): VysledekZkousky | null {
-    return beh !== null && !beh.brnknuti && beh.vysledek !== null && beh.navrh === editor.navrh ? beh.vysledek : null;
+    return beh !== null && !beh.pokus && beh.vysledek !== null && beh.navrh === editor.navrh ? beh.vysledek : null;
   }
 
   function kresli(ctx: CanvasRenderingContext2D, rozmer: { sirka: number; vyska: number }): void {
@@ -700,6 +712,22 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     tlacitkoBrnknuti.hidden = !uroven.osaFrekvenci;
     tlacitkoBrnknuti.disabled = !stavi || navrh.pruty.length === 0;
     tlacitkoBrnknuti.setAttribute("aria-pressed", String(nastroj === "brnknuti"));
+    const tlacitkoBudice = prvek('[data-akce="budic"]', HTMLButtonElement);
+    tlacitkoBudice.hidden = !uroven.budic;
+    tlacitkoBudice.disabled = !stavi || navrh.pruty.length === 0;
+    tlacitkoBudice.setAttribute("aria-pressed", String(nastroj === "budic"));
+    const nastavujeBudic = stavi && uroven.budic && nastroj === "budic";
+    prvek('[data-nastaveni="budic"]', HTMLElement).hidden = !nastavujeBudic;
+    if (nastavujeBudic) {
+      udaj("budic-rytmus").textContent =
+        rytmusBudice === null
+          ? t("paleta.budic.celyRozsah", { od: cislo(ROZSAH_BUDICE.od, 1), do: cislo(ROZSAH_BUDICE.do, 0) })
+          : t("paleta.budic.staly", { f: cislo(rytmusBudice, 2) });
+      const rozsah = prvek('[data-akce="budic-rozsah"]', HTMLButtonElement);
+      rozsah.setAttribute("aria-pressed", String(rytmusBudice === null));
+      rozsah.title = t("paleta.budic.rozsah.popis", { od: cislo(ROZSAH_BUDICE.od, 1), do: cislo(ROZSAH_BUDICE.do, 0) });
+    }
+    document.body.dataset.rytmusBudice = rytmusBudice === null ? "rozsah" : rytmusBudice.toFixed(2);
 
     // Nastavení toho, co je vybrané: závaží styčníků a síla tlumičů.
     const zavazi = stavi && uroven.nejvetsiZavazi > 0 ? editor.zavaziVyberu : null;
@@ -803,7 +831,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       let nejvic = 0;
       for (const hodnota of krivka.prazdny) nejvic = Math.max(nejvic, hodnota);
       for (const hodnota of krivka.obsazeny ?? []) nejvic = Math.max(nejvic, hodnota);
+      // Měření budičem platí jen pro most, na kterém vzniklo.
+      const mereni = zmereno?.navrh === editor.navrh ? zmereno : null;
+      for (const bod of [...(mereni?.cara ?? []), ...(mereni?.body ?? [])]) nejvic = Math.max(nejvic, bod.a);
       stropKrivky = Math.max(stropKrivky, stropGrafu(nejvic));
+      platnoKrivky.dataset.zmereno = String((mereni?.cara.length ?? 0) + (mereni?.body.length ?? 0));
       const hustota = window.devicePixelRatio || 1;
       const obrys = platnoKrivky.getBoundingClientRect();
       const sirka = Math.max(1, obrys.width);
@@ -818,13 +850,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           kroky: krokyLidi(),
           rozsah: ROZSAH_OSY,
           strop: stropKrivky,
+          ...(mereni ? { zmereno: mereni } : {}),
         });
       }
       platnoKrivky.dataset.vrcholu = String(vrcholy.length);
       platnoKrivky.dataset.nejvyssi = nejvyssi.hodnota.toFixed(4);
       platnoKrivky.dataset.strop = String(stropKrivky);
       const klic = krivka.obsazeny ? "analyza.krivka.spickaSLidmi" : "analyza.krivka.spicka";
-      udaj("krivka-popis").textContent = t(klic, { hodnota: cislo(nejvyssi.hodnota, 2), f: cislo(nejvyssi.f, 2) });
+      udaj("krivka-popis").textContent =
+        t(klic, { hodnota: cislo(nejvyssi.hodnota, 2), f: cislo(nejvyssi.f, 2) }) + (mereni ? ` ${t("analyza.krivka.zmereno")}` : "");
     }
 
     const frekvence = rozbor?.stabilni ? rozbor.frekvence : [];
@@ -932,17 +966,47 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovStavbu();
   }
 
+  function prepniBudic(): void {
+    if (rezim !== "stavba" || !uroven.budic || editor.navrh.pruty.length === 0) return;
+    nastroj = nastroj === "budic" ? "kresleni" : "budic";
+    editor.zrusVyber();
+    if (nastroj === "budic") ukazHlaseni(t("budic.navod"), "info", false);
+    else skryjHlaseni();
+    obnovStavbu();
+  }
+
+  /** Posune stálý rytmus budiče o `kroku` kroků; z přelaďování začíná na vlastní frekvenci mostu. */
+  function zmenRytmusBudice(kroku: number): void {
+    const vychozi = rytmusBudice ?? rozbor?.frekvenceObsazeneho[0] ?? rozbor?.frekvence[0] ?? 2;
+    const novy = Math.round((vychozi + (rytmusBudice === null ? 0 : kroku * KROK_BUDICE)) / KROK_BUDICE) * KROK_BUDICE;
+    rytmusBudice = Math.round(100 * Math.max(ROZSAH_BUDICE.od, Math.min(ROZSAH_BUDICE.do, novy))) / 100;
+    obnovStavbu();
+  }
+
+  /** Pustí budič do styčníku návrhu (pořadí v návrhu) v nastaveném rytmu. */
+  function spustBudic(stycnik: number): void {
+    const staly = rytmusBudice !== null;
+    spustZkousku(undefined, {
+      stycnik,
+      sila: SILA_BUDICE,
+      od: rytmusBudice ?? ROZSAH_BUDICE.od,
+      do: rytmusBudice ?? ROZSAH_BUDICE.do,
+      trvani: staly ? TRVANI_STALEHO_RYTMU : ROZSAH_BUDICE.trvani,
+    });
+  }
+
   // ---- Zkouška ----
 
   function delkaDeje(b: Beh): number {
     return b.spocitanoVse ? b.trvani : Math.max(b.trvani, b.zaznam.konec);
   }
 
-  function spustZkousku(brnknuti?: { stycnik: number; sila: number }): void {
+  function spustZkousku(brnknuti?: { stycnik: number; sila: number }, budic?: BudicZkousky): void {
     if (rezim !== "stavba") return;
     editor.zrusTah();
-    // Brnknout se dá i mostem dražším, než je rozpočet; zkoušet ne.
-    const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(brnknuti && p.druh === "nad-rozpocet"))[0];
+    // Brnknout a rozkmitat budičem se dá i most dražší, než je rozpočet; zkoušet ne.
+    const pokus = brnknuti !== undefined || budic !== undefined;
+    const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(pokus && p.druh === "nad-rozpocet"))[0];
     if (prekazka) {
       ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
       return;
@@ -963,7 +1027,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       vysledekUkazan: false,
       naKonecPoVypoctu: false,
       oznaceny: null,
-      brnknuti: brnknuti !== undefined,
+      pokus,
+      budic: budic ?? null,
     };
     beh = novy;
     // Zkoušku pouští gesto hráče, takže smí vzniknout zvuk.
@@ -986,6 +1051,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         nasada: nasadaUrovne(uroven),
         verzeFyziky: VERZE_FYZIKY,
         ...(brnknuti ? { brnknuti } : {}),
+        ...(budic ? { budic } : {}),
       },
     });
 
@@ -1043,7 +1109,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         b.spocitanoVse = true;
         klient?.ukonci();
         klient = null;
-        if (!b.brnknuti) {
+        if (!b.pokus) {
           predchoziVysledek = posledniVysledek;
           posledniVysledek = vysledek;
           if (!vysledek.rozpad) {
@@ -1206,18 +1272,37 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       ? "vysledek.rozpad"
       : vysledek.brnknuti
         ? "vysledek.brnknuti"
-        : vysledek.pruchod
+        : vysledek.budic
+          ? "vysledek.budic"
+          : vysledek.pruchod
           ? "vysledek.obstal"
           : "vysledek.neobstal";
     udaj("vysledek-nadpis").textContent = t(nadpis);
-    panelVysledku.dataset.stav = vysledek.rozpad ? "rozpad" : vysledek.brnknuti ? "brnknuti" : vysledek.pruchod ? "obstal" : "neobstal";
-    udaj("vysledek-medaile").hidden = vysledek.brnknuti !== null;
+    const jePokus = vysledek.brnknuti !== null || vysledek.budic !== null;
+    panelVysledku.dataset.stav = vysledek.rozpad ? "rozpad" : jePokus ? "brnknuti" : vysledek.pruchod ? "obstal" : "neobstal";
+    udaj("vysledek-medaile").hidden = jePokus;
 
     const vety: string[] = [];
     if (vysledek.rozpad) vety.push(t("vysledek.shrnuti.rozpad"));
     else if (vysledek.brnknuti) {
       const f = vysledek.brnknuti.frekvence;
       vety.push(f === null ? t("vysledek.brnknuti.nic") : t("vysledek.brnknuti.frekvence", { f: cislo(f, 2) }));
+    } else if (vysledek.budic) {
+      const { frekvence, zrychleni, krivka } = vysledek.budic;
+      const staly = b.budic !== null && jeStaly(b.budic);
+      if (frekvence === null) vety.push(t("vysledek.budic.nic"));
+      else if (staly) vety.push(t("vysledek.budic.staly", { f: cislo(frekvence, 2), a: cislo(zrychleni, 2) }));
+      else {
+        // Po přeladění se budič sám nastaví na rytmus, kde most odpovídal nejvíc.
+        rytmusBudice = Math.round(100 * Math.round(frekvence / KROK_BUDICE) * KROK_BUDICE) / 100;
+        vety.push(t("vysledek.budic.rozmitani", { f: cislo(rytmusBudice, 2), a: cislo(zrychleni, 2) }));
+      }
+      // Měření se ukládá k návrhu, na kterém vzniklo, a kreslí se přes spočítanou křivku.
+      if (zmereno?.navrh !== b.navrh) zmereno = { navrh: b.navrh, cara: [], body: [] };
+      if (staly) zmereno.body.push(...krivka);
+      else zmereno.cara = krivka;
+      document.body.dataset.budic = frekvence?.toFixed(3) ?? "";
+      document.body.dataset.budicZrychleni = zrychleni.toFixed(3);
     }
     else if (vysledek.ucastniku === 0) vety.push(t("vysledek.shrnuti.bezProvozu"));
     else if (vysledek.prejelo === vysledek.ucastniku && vysledek.spadlo === 0) {
@@ -1333,7 +1418,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const odkaz = prvek('[data-akce="dalsi"]', HTMLAnchorElement);
     const dalsi = kampan[kampan.findIndex((u) => u.id === uroven.id) + 1];
     const projita = rekord?.medaile.pruchod === true;
-    odkaz.hidden = !(dalsi && projita && !vysledek.brnknuti && kampan.some((u) => u.id === uroven.id));
+    odkaz.hidden = !(dalsi && projita && !jePokus && kampan.some((u) => u.id === uroven.id));
     odkaz.classList.toggle("tlacitko--hlavni", vysledek.pruchod);
     if (dalsi) odkaz.href = `?uroven=${dalsi.id}`;
 
@@ -1472,9 +1557,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           klikniVeZkousce(misto);
           return;
         }
-        if (nastroj === "brnknuti") {
+        if (nastroj === "brnknuti" || nastroj === "budic") {
           const id = editor.stycnikU(obrazNaSvet(kamera, platno.rozmer, misto));
           const poradi = id === null ? -1 : editor.navrh.stycniky.findIndex((st) => st.id === id);
+          if (nastroj === "budic") {
+            if (poradi >= 0) {
+              skryjHlaseni();
+              spustBudic(poradi);
+            }
+            return;
+          }
           brnk = poradi >= 0 ? { stycnik: poradi, od: misto, k: misto } : null;
           return;
         }
@@ -1531,6 +1623,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("zkouska", () => (rezim === "stavba" ? spustZkousku() : zpetKeStavbe()));
   priKliknuti("vyber", prepniVyber);
   priKliknuti("brnknout", prepniBrnknuti);
+  priKliknuti("budic", prepniBudic);
+  priKliknuti("budic-rozsah", () => {
+    rytmusBudice = null;
+    obnovStavbu();
+  });
+  for (const [akce, smer] of [["budic-min", -1], ["budic-plus", 1]] as const) {
+    prvek(`[data-akce="${akce}"]`, HTMLElement).addEventListener("click", (udalost) => {
+      // Se Shiftem po pěti krocích, tedy o 0,25 Hz.
+      if (rezim === "stavba") zmenRytmusBudice(smer * (udalost.shiftKey ? 5 : 1));
+    });
+  }
   priKliknuti("zavazi-min", () => rezim === "stavba" && editor.zmenZavazi(-1));
   priKliknuti("zavazi-plus", () => rezim === "stavba" && editor.zmenZavazi(1));
   priKliknuti("ladeny-prepnout", prepniLadenyTlumic);
@@ -1665,6 +1768,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       case "a":
         prepniAnalyzu();
         break;
+      case "u":
+        prepniBudic();
+        break;
       default: {
         const poradi = Number(klavesa) - 1;
         const id = Number.isInteger(poradi) ? uroven.povolenePrvky[poradi] : undefined;
@@ -1706,8 +1812,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         ozvuceni.valeni(prehravani.bezi ? poslech.valeni : 0, panorama(poslech.valeniX, 0));
       }
       // Okamžité kmitání mostovky v právě přehrávaném okamžiku.
-      const meri = maLidi && !b.brnknuti && b.zaznam.stavV(prehravani.cas, snimek) !== null;
-      const text = meri ? t("legenda.kmitani", { zrychleni: cislo(snimek.kmitani, 2) }) : "";
+      let text = "";
+      if (b.budic && b.zaznam.stavV(prehravani.cas, snimek) !== null) {
+        // Budič: v jakém rytmu právě bije a jak moc se pod ním mostovka houpe.
+        text = t("legenda.budic", {
+          f: cislo(frekvenceBudice(b.budic, prehravani.cas), 2),
+          zrychleni: cislo(snimek.kmitani, 2),
+        });
+      } else if (maLidi && !b.pokus && b.zaznam.stavV(prehravani.cas, snimek) !== null) {
+        text = t("legenda.kmitani", { zrychleni: cislo(snimek.kmitani, 2) });
+      }
       if (poleKmitani.textContent !== text) poleKmitani.textContent = text;
     } else {
       if (poleKmitani.textContent !== "") poleKmitani.textContent = "";

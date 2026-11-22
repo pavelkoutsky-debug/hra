@@ -12,7 +12,7 @@ import {
   ZTRATA_OD,
 } from "../src/jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
-import { sestavSoustavu } from "../src/jadro/soustava";
+import { NOSNIK, sestavSoustavu } from "../src/jadro/soustava";
 import { vytvorTrasu } from "../src/jadro/trasa";
 import { JEDE, PREJEL } from "../src/zkouska/provoz";
 import { Kreslic, urovenRegrese } from "../src/zkouska/regrese";
@@ -293,7 +293,7 @@ describe("ztráta kroku", () => {
         // Chodec stojí o kousek níž, než kde je pružina kontaktu volná: nese jeho tíhu.
         { x: 5, y: 1 - (80 * g) / 2e5, pevneX: true, hmota: 80 },
       ],
-      prvky: [{ a: 0, b: 1, EA: 1e9, EI: 1e8, GAs: 0, hmotnostNaMetr: 100, prut: 0 }],
+      prvky: [{ a: 0, b: 1, druh: NOSNIK, EA: 1e9, EI: 1e8, GAs: Infinity, hmotnostNaMetr: 100, polomerSetrvacnosti: 0, prut: 0 }],
     });
     const trasa = vytvorTrasu(s, [0], { xLevy: 0, yLevy: 0, xPravy: 10, yPravy: 0 });
     const bremena = vytvorBremena(trasa, [

@@ -22,6 +22,21 @@ export interface VstupZkousky {
    * se nepočítá do medailí.
    */
   brnknuti?: { stycnik: number; sila: number };
+  /**
+   * Budič místo provozu: ve styčníku návrhu (pořadí v návrhu) působí svislá harmonická
+   * síla o amplitudě `sila` (N). Její frekvence první polovinu doby `trvani` (s) plynule roste
+   * z `od` na `do` Hz a druhou polovinu se vrací; se stejným `od` a `do` drží stálý rytmus.
+   * Výsledek se nepočítá do medailí.
+   */
+  budic?: BudicZkousky;
+}
+
+export interface BudicZkousky {
+  stycnik: number;
+  sila: number;
+  od: number;
+  do: number;
+  trvani: number;
 }
 
 /** Rozbor mostu ve stavebním režimu: maticový výpočet bez časové simulace. */
@@ -105,6 +120,12 @@ export interface VysledekZkousky {
    * nerozkmital). U běžné zkoušky null.
    */
   brnknuti: { frekvence: number | null } | null;
+  /**
+   * Výsledek pokusu s budičem: změřená odezva mostovky (zrychlení v m/s² na 1 kN síly pro
+   * frekvence buzení v Hz, v pořadí, v jakém budič frekvence procházel) a frekvence, při které
+   * most odpovídal nejsilněji; null, když se nerozkmital. U běžné zkoušky null.
+   */
+  budic: { frekvence: number | null; zrychleni: number; krivka: { f: number; a: number }[] } | null;
   medaile: Medaile;
   /** Obálka namáhání; pořadí odpovídá prutům návrhu. */
   obalka: ObalkaPrutu[];

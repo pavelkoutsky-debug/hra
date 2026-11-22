@@ -293,7 +293,7 @@ describe("editor", () => {
     expect(e.ladenyTlumicVyberu).toBeNull();
     expect(e.prepniLadenyTlumic(300, 2.31)).toBe(false);
     e.stiskni({ x: 16, y: 0 }, { bezKresleni: true });
-    e.pust({ x: 16, y: 0 });
+    e.pust();
     expect(e.vybraneStycniky.has(stred.id)).toBe(true);
     expect(e.ladenyTlumicVyberu).toBeUndefined();
     expect(e.prepniLadenyTlumic(300, 2.31)).toBe(true);
@@ -308,7 +308,7 @@ describe("editor", () => {
   it("závaží se krokuje po padesáti kilogramech v mezích úrovně, frekvence po pěti setinách hertzu", () => {
     const e = editor(sTlumicem(950, 2.3));
     e.stiskni({ x: 16, y: 0 }, { bezKresleni: true });
-    e.pust({ x: 16, y: 0 });
+    e.pust();
     expect(e.zmenHmotuTlumice(1)).toBe(true);
     expect(e.ladenyTlumicVyberu!.hmota).toBe(1000);
     expect(e.zmenHmotuTlumice(1)).toBe(false);
@@ -327,7 +327,7 @@ describe("editor", () => {
   it("úroveň bez laděného tlumiče ho zavěsit nedovolí", () => {
     const e = new Editor({ ...uroven, nejvetsiTlumic: 0 }, lavka, () => undefined);
     e.stiskni({ x: 16, y: 0 }, { bezKresleni: true });
-    e.pust({ x: 16, y: 0 });
+    e.pust();
     expect(e.prepniLadenyTlumic(300, 2.3)).toBe(false);
     expect(e.navrh).toBe(lavka);
   });

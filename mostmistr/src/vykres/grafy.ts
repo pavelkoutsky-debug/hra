@@ -42,6 +42,14 @@ export interface DataKrivky {
   /** Pravý okraj vodorovné osy v Hz a horní okraj svislé osy (m/s² na 1 kN). */
   rozsah: number;
   strop: number;
+  /** Měření budičem: křivka z přelaďování a jednotlivé body změřené stálým rytmem. */
+  zmereno?: { cara: readonly BodKrivky[]; body: readonly BodKrivky[] };
+}
+
+/** Bod změřené křivky: frekvence v Hz a zrychlení mostovky v m/s² na 1 kN. */
+export interface BodKrivky {
+  f: number;
+  a: number;
 }
 
 function zaokrouhliNahoru(hodnota: number): number {
@@ -142,6 +150,26 @@ export function nakresliKrivku(ctx: Kontext, sirka: number, vyska: number, data:
   ctx.strokeStyle = BARVY.caraSilna;
   ctx.lineWidth = 2;
   cara(data.obsazeny ?? data.prazdny);
+
+  // Měření budičem přes spočítanou křivku.
+  if (data.zmereno) {
+    ctx.strokeStyle = BARVY.voda;
+    ctx.fillStyle = BARVY.voda;
+    ctx.lineWidth = 1;
+    if (data.zmereno.cara.length > 1) {
+      ctx.beginPath();
+      data.zmereno.cara.forEach((bod, i) => {
+        if (i === 0) ctx.moveTo(naX(bod.f), naY(bod.a));
+        else ctx.lineTo(naX(bod.f), naY(bod.a));
+      });
+      ctx.stroke();
+    }
+    for (const bod of data.zmereno.body) {
+      ctx.beginPath();
+      ctx.arc(naX(bod.f), naY(bod.a), 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
 }
 
 export interface DataPrubehu {

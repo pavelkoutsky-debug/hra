@@ -76,6 +76,9 @@
           <button type="button" class="paleta__tlacitko" data-akce="brnknout" data-popis="paleta.brnknout.popis" aria-pressed="false" hidden>
             <kbd>B</kbd><span data-text="paleta.brnknout"></span>
           </button>
+          <button type="button" class="paleta__tlacitko" data-akce="budic" data-popis="paleta.budic.popis" aria-pressed="false" hidden>
+            <kbd>U</kbd><span data-text="paleta.budic"></span>
+          </button>
           <div class="paleta__dvojice">
             <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
               <kbd>Del</kbd><span data-text="paleta.smazat"></span>
@@ -98,6 +101,17 @@
               <output data-udaj="zavazi"></output>
               <button type="button" class="paleta__tlacitko" data-akce="zavazi-plus" data-popis="paleta.zavazi.plus">+</button>
             </div>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="budic" hidden>
+            <h2 data-text="paleta.budic.rytmus"></h2>
+            <div class="paleta__krokovac">
+              <button type="button" class="paleta__tlacitko" data-akce="budic-min" data-popis="paleta.budic.niz">&minus;</button>
+              <output data-udaj="budic-rytmus"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="budic-plus" data-popis="paleta.budic.vys">+</button>
+            </div>
+            <button type="button" class="paleta__tlacitko" data-akce="budic-rozsah" data-popis="paleta.budic.rozsah.popis" aria-pressed="true">
+              <span data-text="paleta.budic.rozsah"></span>
+            </button>
           </div>
           <div class="paleta__nastaveni" data-nastaveni="ladeny" hidden>
             <h2 data-text="paleta.ladeny"></h2>
