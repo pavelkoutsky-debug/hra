@@ -144,9 +144,10 @@ describe("zvuk ve hře", () => {
     await stranka.locator('#okno-zadani[open] [data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 30_000 });
     await stranka.waitForTimeout(600);
     expect(await spion()).toEqual({ __kontextu: 0, __startu: 0 });
-    expect(await telo("zvuk")).toBe("nahlas");
+    // Zvuky jsou zatím pracovní, proto hra začíná potichu.
+    expect(await telo("zvuk")).toBe("potichu");
     expect(await telo("zvuk-kontext")).toBe("zadny");
-    expect(await akce("zvuk").innerText()).toBe("Zvuk: nahlas");
+    expect(await akce("zvuk").innerText()).toBe("Zvuk: potichu");
     for (const druh of DRUHY_ZVUKU) expect(await zaznelo(druh)).toBe(0);
   });
 
@@ -184,14 +185,8 @@ describe("zvuk ve hře", () => {
     expect((await spion()).__startu).toBe(pred.__startu);
   });
 
-  it("klávesa Z ztiší a pak vypne; vypnutý zvuk nic nehraje", async () => {
+  it("klávesa Z zvuk vypne; vypnutý zvuk nic nehraje", async () => {
     await stranka.locator("#obrazovka-uroven canvas").focus();
-    await stranka.keyboard.press("z");
-    expect(await telo("zvuk")).toBe("potichu");
-    expect(await akce("zvuk").innerText()).toBe("Zvuk: potichu");
-    // Nová hlasitost se předvede vrznutím.
-    await expect.poll(() => zaznelo("vrzani")).toBeGreaterThanOrEqual(1);
-    await stranka.waitForTimeout(300);
     await stranka.keyboard.press("z");
     expect(await telo("zvuk")).toBe("vypnuto");
     expect(await akce("zvuk").innerText()).toBe("Zvuk: vypnutý");
@@ -229,6 +224,13 @@ describe("zvuk ve hře", () => {
     await stranka.locator(".vysledek").waitFor({ state: "visible", timeout: 90_000 });
     expect(await zaznelo("zlom")).toBeGreaterThanOrEqual(1);
     expect(await zaznelo("splouchnuti")).toBeGreaterThanOrEqual(2);
+    // Další stisk klávesy Z ztiší; i tichou hlasitost hra předvede vrznutím.
+    const vrznuti = await zaznelo("vrzani");
+    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.keyboard.press("z");
+    expect(await telo("zvuk")).toBe("potichu");
+    expect(await akce("zvuk").innerText()).toBe("Zvuk: potichu");
+    await expect.poll(() => zaznelo("vrzani")).toBe(vrznuti + 1);
   });
 
   it("pevný most s chodci: jsou slyšet kroky a nic se neláme", async () => {

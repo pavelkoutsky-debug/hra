@@ -100,22 +100,22 @@ describe("úložiště postupu", () => {
     expect(sklad.getItem(KLIC_ULOZENI)).toBeNull();
   });
 
-  it("hlasitost je nahlas, dokud ji hráč nezmění, a ztlumení se pamatuje", () => {
+  it("hlasitost je potichu, dokud ji hráč nezmění, a ztlumení se pamatuje", () => {
     const sklad = new SkladVPameti();
     const uloziste = new Uloziste(sklad);
-    expect(uloziste.hlasitost).toBe("nahlas");
+    expect(uloziste.hlasitost).toBe("potichu");
     uloziste.hlasitost = "vypnuto";
     expect(sklad.getItem(KLIC_ZVUKU)).toBe("vypnuto");
     expect(new Uloziste(sklad).hlasitost).toBe("vypnuto");
-    uloziste.hlasitost = "potichu";
-    expect(new Uloziste(sklad).hlasitost).toBe("potichu");
+    uloziste.hlasitost = "nahlas";
+    expect(new Uloziste(sklad).hlasitost).toBe("nahlas");
     // Nesmysl v paměti se bere jako výchozí hlasitost; hra kvůli němu nespadne ani neoněmí.
     sklad.setItem(KLIC_ZVUKU, "nejvic");
-    expect(new Uloziste(sklad).hlasitost).toBe("nahlas");
-    // Bez paměti prohlížeče hra hraje nahlas a volbu si jen nepamatuje.
+    expect(new Uloziste(sklad).hlasitost).toBe("potichu");
+    // Bez paměti prohlížeče hra hraje výchozí hlasitostí a volbu si jen nepamatuje.
     const bezPameti = new Uloziste(null);
     bezPameti.hlasitost = "vypnuto";
-    expect(bezPameti.hlasitost).toBe("nahlas");
+    expect(bezPameti.hlasitost).toBe("potichu");
     expect(sklad.getItem(KLIC_ULOZENI)).toBeNull();
   });
 

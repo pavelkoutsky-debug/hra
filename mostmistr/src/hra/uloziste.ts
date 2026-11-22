@@ -31,6 +31,7 @@ export const KLIC_ZVUKU = "mostmistr.zvuk";
 
 export const HLASITOSTI = ["nahlas", "potichu", "vypnuto"] as const;
 export type Hlasitost = (typeof HLASITOSTI)[number];
+export const VYCHOZI_HLASITOST: Hlasitost = "potichu";
 
 /**
  * Paměť prohlížeče, nebo null, když ji prohlížeč nedá (soukromé okno, zakázaná data webu).
@@ -119,10 +120,13 @@ export class Uloziste {
     this.#pis(KLIC_CISEL, ukazovat ? "1" : "0");
   }
 
-  /** Hlasitost zvuku. Dokud hráč nezvolí jinak, hraje hra nahlas. */
+  /**
+   * Hlasitost zvuku. Dokud hráč nezvolí jinak, hraje hra potichu: zvuky jsou zatím pracovní
+   * (rozhodnutí zadavatele), mají být slyšet, ale nerušit.
+   */
   get hlasitost(): Hlasitost {
     const zapis = this.#cti(KLIC_ZVUKU);
-    return HLASITOSTI.find((h) => h === zapis) ?? "nahlas";
+    return HLASITOSTI.find((h) => h === zapis) ?? VYCHOZI_HLASITOST;
   }
 
   set hlasitost(hlasitost: Hlasitost) {
