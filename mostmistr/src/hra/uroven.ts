@@ -43,7 +43,7 @@ import type {
   VysledekZkousky,
   ZpravaZeZkousky,
 } from "../zkouska/protokol";
-import { jeVozidlo, lidiVRade, rytmusLidi } from "../zkouska/vozidla";
+import { lidiVRade, rytmusLidi, umiBrzdit } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
@@ -614,7 +614,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (polozka.rychlost !== undefined && !jeClovek(polozka.druh)) {
       kdo = t("provoz.rychlost", { kdo, rychlost: cislo(3.6 * polozka.rychlost, 0) });
     }
-    const brzdi = polozka.brzdeni !== undefined && jeVozidlo(polozka.druh);
+    const brzdi = polozka.brzdeni !== undefined && umiBrzdit(polozka.druh);
     const stani = polozka.brzdeni ? cislo(polozka.brzdeni.stani, Number.isInteger(polozka.brzdeni.stani) ? 0 : 1) : "";
     const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
     if (vetou) {

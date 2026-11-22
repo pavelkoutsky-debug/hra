@@ -10,6 +10,10 @@
 // Vzorky jsou po čtvrt metru a vyhlazené přes tři sousedy: kratší vlny pneumatika stejně
 // přejede celou stopou. Mezi vzorky se prokládá kubickou křivkou, takže profil má spojitý sklon.
 //
+// Kolej je proti silnici hladká: náhodné nerovnosti má v milimetrech. Zato má styky kolejnic.
+// Stykovaná kolej je z kolejnic dlouhých 25 m a konce kolejnic ve styku poklesnou, takže každé
+// kolo do styku zapadne a udeří. Styk je tu propad tvaru V dlouhý metr.
+//
 // Počítá se jen sčítáním, násobením, dělením a odmocninou a náhoda je z násady, takže
 // stejná úroveň má ve všech prohlížečích bitově stejnou silnici.
 
@@ -41,16 +45,36 @@ export function odchylkaNerovnosti(trida: TridaVozovky): number {
 }
 
 /**
+ * Kolej dané třídy: směrodatná odchylka výšky (m) a hloubka propadu ve styku kolejnic (m).
+ * A je bezstyková kolej v dobrém stavu (svařené kolejnice, 0,7 mm), B stykovaná kolej
+ * v běžném stavu (1,4 mm, styky 3 mm), C zanedbaná trať (2,8 mm, styky 6 mm).
+ */
+export const KOLEJ: Readonly<Record<TridaVozovky, { odchylka: number; styk: number }>> = {
+  A: { odchylka: 0.0007, styk: 0 },
+  B: { odchylka: 0.0014, styk: 0.003 },
+  C: { odchylka: 0.0028, styk: 0.006 },
+};
+/** Délka kolejnice (vzdálenost styků) a polovina délky propadu ve styku, m. */
+export const DELKA_KOLEJNICE = 25;
+const PUL_STYKU = 0.5;
+
+/**
  * Vyrobí profil vozovky třídy `trida` mezi `od` a `po` (m). Stejná násada dá stejný profil.
  * Vyšší třída má stejný tvar jako nižší se stejnou násadou, jen dvakrát vyšší: tatáž silnice,
  * jen víc rozbitá.
  */
-export function vytvorNerovnost(od: number, po: number, trida: TridaVozovky, nasada: number): Nerovnost {
+export function vytvorNerovnost(
+  od: number,
+  po: number,
+  trida: TridaVozovky,
+  nasada: number,
+  povrch: "silnice" | "kolej" = "silnice",
+): Nerovnost {
   const pocet = Math.max(4, Math.ceil((po - od) / KROK) + 1);
   const nahodne = nahoda(nasada);
   /** Přibližně normální náhodné číslo: součet čtyř rovnoměrných, střed 0, rozptyl 1. */
   const normalni = (): number => (nahodne() + nahodne() + nahodne() + nahodne() - 2) * Math.sqrt(3);
-  const sigma = odchylkaNerovnosti(trida);
+  const sigma = povrch === "kolej" ? KOLEJ[trida].odchylka : odchylkaNerovnosti(trida);
   // Zeslabení za jeden krok: e^(−k) ≈ 1 − k + k²/2 pro k = KROK/DELKA_NAVRATU = 1/40.
   const k = KROK / DELKA_NAVRATU;
   const zeslabeni = 1 - k + (k * k) / 2;
@@ -62,6 +86,20 @@ export function vytvorNerovnost(od: number, po: number, trida: TridaVozovky, nas
   for (let i = 1; i < surove.length; i++) surove[i] = zeslabeni * surove[i - 1]! + sum * normalni();
   const vysky = new Float64Array(pocet);
   for (let i = 0; i < pocet; i++) vysky[i] = 0.25 * surove[i]! + 0.5 * surove[i + 1]! + 0.25 * surove[i + 2]!;
+  if (povrch === "kolej" && KOLEJ[trida].styk > 0) {
+    // Styky po délce kolejnice; kde leží první, určí náhoda (až po profilu, aby profil tříd
+    // se stejnou násadou zůstal stejného tvaru). Styk leží na vzorku profilu, takže propad
+    // má vždy plnou hloubku; sousední vzorky klesnou podle vzdálenosti od styku.
+    const hloubka = KOLEJ[trida].styk;
+    const vzorkuNaKolejnici = DELKA_KOLEJNICE / KROK;
+    const dosah = PUL_STYKU / KROK;
+    for (let styk = Math.floor(nahodne() * vzorkuNaKolejnici); styk - dosah < pocet; styk += vzorkuNaKolejnici) {
+      for (let i = Math.max(0, styk - dosah); i <= styk + dosah && i < pocet; i++) {
+        const vzdalenost = i < styk ? styk - i : i - styk;
+        vysky[i] = vysky[i]! - hloubka * (1 - vzdalenost / dosah);
+      }
+    }
+  }
   return { x0: od, krok: KROK, vysky };
 }
 

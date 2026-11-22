@@ -1,6 +1,6 @@
 import type { Bod, Obdelnik } from "./geometrie";
 import { jeUvnitr } from "./geometrie";
-import { ID_PROVOZU, ID_PRVKU, type IdProvozu, type IdPrvku } from "./katalog";
+import { ID_PROVOZU, ID_PRVKU, ID_VOZU, jeKolejove, type IdProvozu, type IdPrvku, type IdVozu } from "./katalog";
 import {
   ChybaDat,
   cislo,
@@ -15,7 +15,7 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 4;
+export const VERZE_UROVNE = 5;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
@@ -28,6 +28,9 @@ const PREVODY_UROVNE: readonly Prevod[] = [
   // jsou vyladěné na dokonale rovné vozovce a tak zůstávají. Položky jízdního řádu nově
   // umějí rozestup, rychlost a brzdění; starší je nemají.
   (stara) => ({ ...stara, nerovnost: "zadna" }),
+  // 4 → 5: vlak. Položka jízdního řádu s lokomotivou smí nést seznam vozů a kolejová vozidla
+  // jezdí jen po trase druhu „kolej“. Starší úrovně vlaky nemají, takže se na nich nic nemění.
+  (stara) => stara,
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
@@ -92,7 +95,21 @@ export interface PolozkaJizdnihoRadu {
   rychlost?: number;
   /** Vozidla na mostě zabrzdí, postojí a rozjedou se. */
   brzdeni?: Brzdeni;
+  /**
+   * Vlak: vozy za lokomotivou, od prvního za ní. Jen u položky druhu „lokomotiva“;
+   * `pocet` té položky je počet lokomotiv v čele.
+   */
+  vozy?: SkupinaVozu[];
 }
+
+/** Několik stejných vozů za sebou ve vlaku. */
+export interface SkupinaVozu {
+  druh: IdVozu;
+  pocet: number;
+}
+
+/** Nejvíc vozidel v jednom vlaku (lokomotivy i vozy dohromady). */
+export const NEJVIC_VOZU_VLAKU = 40;
 
 export interface Uroven {
   verze: typeof VERZE_UROVNE;
@@ -243,6 +260,19 @@ function polozkaJizdnihoRadu(h: unknown, cesta: string): PolozkaJizdnihoRadu {
     return vysledek;
   });
   if (brzdeni !== undefined) p.brzdeni = brzdeni;
+  const vozy = volitelne(o.vozy, (v) =>
+    polozky(v, `${cesta}.vozy`, (skupina, c): SkupinaVozu => {
+      const s = objekt(skupina, c);
+      return { druh: jedenZ(s.druh, `${c}.druh`, ID_VOZU), pocet: cislo(s.pocet, `${c}.pocet`, { min: 1, cele: true }) };
+    }),
+  );
+  if (vozy !== undefined) {
+    if (p.druh !== "lokomotiva") throw new ChybaDat(`${cesta}.vozy`, "vozy smí táhnout jen lokomotiva");
+    p.vozy = vozy;
+  }
+  let vozidel = p.druh === "lokomotiva" ? (p.pocet ?? 1) : 0;
+  for (const skupina of p.vozy ?? []) vozidel += skupina.pocet;
+  if (vozidel > NEJVIC_VOZU_VLAKU) throw new ChybaDat(cesta, `vlak smí mít nejvýš ${NEJVIC_VOZU_VLAKU} vozidel`);
   return p;
 }
 
@@ -329,8 +359,18 @@ function zkontrolujSouvislosti(u: Uroven, c: string): void {
   });
 
   u.jizdniRad.forEach((p, i) => {
-    if (!u.trasy.some((t) => t.id === p.trasa)) {
-      throw new ChybaDat(`${c}.jizdniRad[${i}].trasa`, `trasa "${p.trasa}" v úrovni není`);
+    const trasa = u.trasy.find((t) => t.id === p.trasa);
+    if (!trasa) throw new ChybaDat(`${c}.jizdniRad[${i}].trasa`, `trasa "${p.trasa}" v úrovni není`);
+    // Vlak jede po koleji a nic jiného po ní nejezdí.
+    if (jeKolejove(p.druh) !== (trasa.druh === "kolej")) {
+      throw new ChybaDat(
+        `${c}.jizdniRad[${i}].druh`,
+        trasa.druh === "kolej" ? "po koleji jezdí jen lokomotiva s vozy" : "kolejové vozidlo potřebuje trasu druhu „kolej“",
+      );
+    }
+    // Vozy samy nejedou: do jízdního řádu patří jako vozy lokomotivy.
+    if (p.druh !== "lokomotiva" && jeKolejove(p.druh)) {
+      throw new ChybaDat(`${c}.jizdniRad[${i}].druh`, "vůz bez lokomotivy nejede; zapiš ho mezi vozy lokomotivy");
     }
   });
 

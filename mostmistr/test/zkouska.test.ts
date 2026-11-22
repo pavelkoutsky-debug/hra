@@ -104,10 +104,10 @@ describe("rozhraní zkoušky", () => {
   it("druh provozu, který hra neumí, ohlásí jako chybu výpočtu", () => {
     const zpravy: ZpravaZeZkousky[] = [];
     const beh = new BehZkousky((z) => zpravy.push(z));
-    const u = uroven([{ cas: 0, trasa: "silnice", smer: 1, druh: "lokomotiva" }]);
+    const u = uroven([{ cas: 0, trasa: "silnice", smer: 1, druh: "traktor" }]);
     beh.prijmi({ typ: "start", vstup: { uroven: u, navrh: prihrada(), nasada: 1, verzeFyziky: VERZE_FYZIKY } });
     expect(zpravy[0]).toMatchObject({ typ: "chyba", kod: "vypocet-selhal" });
-    expect((zpravy[0] as { podrobnosti: string }).podrobnosti).toContain("lokomotiva");
+    expect((zpravy[0] as { podrobnosti: string }).podrobnosti).toContain("traktor");
   });
 
   it("zastavení zkoušku ukončí bez výsledku", () => {
