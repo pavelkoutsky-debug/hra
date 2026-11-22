@@ -19,7 +19,7 @@ import {
 import { nahoda, nahodnaFaze } from "../jadro/nahoda";
 import type { Zatizeni } from "../jadro/simulace";
 import { popisPruziny, type PopisSoustavy, type Soustava } from "../jadro/soustava";
-import { pridejKontaktSTerenem, type Teren } from "../jadro/teren";
+import { pridejKontaktSTerenem, vyskaTerenuV, type Teren } from "../jadro/teren";
 import { prestavTrasu, type Trasa } from "../jadro/trasa";
 import { modelUcastnika, SIRKA_NA_OSOBU, vedleSebe } from "./vozidla";
 
@@ -48,6 +48,8 @@ export function jeClovek(druh: string): boolean {
 const HLOUBKA_PADU = 1.5;
 /** Jak daleko za konec mostu musí účastník dojet, aby se počítal za přejetého, m. */
 const DOJEZD = 2;
+/** Do jaké výšky nad zemí se spadlý účastník počítá za dopadlého, m. */
+const DOTYK_ZEME = 0.05;
 /** Odpor vody: zpomalení úměrné rychlosti, 1/s. Potopený kus klesá ustálenou rychlostí g/odpor. */
 const ODPOR_VODY = 3;
 /**
@@ -264,6 +266,24 @@ export class Provoz implements Zatizeni {
       if (x >= trasa.zacatek.x && x <= trasa.konec.x) return true;
     }
     return false;
+  }
+
+  /** Jsou všichni, kdo spadli, už ve vodě nebo na zemi? */
+  spadliDopadli(s: Soustava): boolean {
+    if (!this.#nekdoSpadl) return true;
+    const hladina = this.#uroven.hladina;
+    const { ucastnici } = this.#plan;
+    for (let k = 0; k < ucastnici.length; k++) {
+      if (this.stavy[k] !== SPADL) continue;
+      const u = ucastnici[k]!;
+      for (const i of u.kola) {
+        const y = s.y[i]!;
+        if (hladina !== null && y < hladina) continue;
+        if (y - u.vyska - vyskaTerenuV(this.#teren, s.x[i]!) <= DOTYK_ZEME) continue;
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Všichni účastníci dojeli nebo spadli. */

@@ -389,7 +389,7 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 - **Výkresové konvence.** Kóty rozpětí a výšek, osy čerchovaně, terén v řezu se šrafováním, značky podpor jako ve statických schématech, rohové popisové pole s názvem úrovně, měřítkem, verzí hry a medailemi.
 - **Vozidla a lidé** jako čárové bokorysy v témže stylu. Chodci jsou panáčci, jejichž krok odpovídá skutečné fázi jejich zatížení.
 - **Zkouška** běží na stejném výkresu, jen „oživne“: pruty se obarví podle využití.
-- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Původně až v posledním milníku; na přání zadavatele předsunuto do samostatného milníku M3z hned po M3a.
+- **Zvuk:** procedurálně generované vrzání, praskání, šplouchnutí a dunění vlaku. Původně až v posledním milníku; na přání zadavatele předsunuto do samostatného milníku M3z hned po M3a. *(M3z: hra nemá žádné nahrávky; zvuky se odvozují ze záznamu zkoušky, takže znějí i při zpomaleném přehrávání a krokování, a skok po časové ose je potichu. Dunění vlaku přijde s vlakem.)* *(22. 11. 2026: zadavatel bere tyto zvuky jako pracovní; načisto se udělají pomocí ElevenLabs až po dokončení ostatních milníků, viz M9.)*
 
 **Ovládání editoru**
 
@@ -409,6 +409,7 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Brnknout do mostu | B a tažení styčníku dolů |
 | Závaží ve styčníku, síla tlumiče | výběr a tlačítka − a + v paletě |
 | Zapnout a vypnout čísla využití u prutů | C |
+| Hlasitost zvuku: nahlas, potichu, vypnuto | Z nebo tlačítko v liště |
 
 ---
 
@@ -499,7 +500,8 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M5 Železnice** | Kolejiště, lokomotiva, vagóny, dvoupatrové mosty, kapitola 6 | Nákladní vlak přejede referenční most; úrovně projdou |
 | **M6 Pohyblivé mosty** | Písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 | Most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou |
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |
-| **M8 Doladění** | Výkon, dotykové ovládání, angličtina, doladění zvuku pro prvky a provoz z pozdějších kapitol | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
+| **M8 Doladění** | Výkon, dotykové ovládání, angličtina | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
+| **M9 Zvuk načisto** | Zvuky z M3z jsou pracovní. Po dokončení všech ostatních milníků se předělají pomocí ElevenLabs, včetně zvuků pro prvky a provoz z pozdějších kapitol (vlak, těžká vozidla, písty). *(Rozhodnutí zadavatele z 22. 11. 2026.)* | Zadavatel zvuky poslechl a schválil; testy z M3z (správný okamžik, sílení s využitím, ztlumení, ticho bez gesta) dál procházejí |
 
 Tuhé spoje a plasticitu umí jádro od M1b, hráči se zpřístupní v M4b.
 

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Mostmistr – zvuky</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #103f78;
+        color: #cfe3ff;
+        font: 13px/1.5 "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+      }
+      h1 { margin: 0 0 4px; color: #fff; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; }
+      h2 { margin: 20px 0 6px; color: #8fb4e6; font-size: 12px; font-weight: normal; letter-spacing: 2px; text-transform: uppercase; }
+      p { max-width: 76ch; margin: 0 0 12px; }
+      button, select {
+        padding: 5px 14px;
+        border: 1px solid #cfe3ff;
+        border-radius: 2px;
+        background: transparent;
+        color: #cfe3ff;
+        font: inherit;
+        cursor: pointer;
+      }
+      select option { background: #103f78; }
+      button:hover:not(:disabled) { background: #1d5aa3; color: #fff; }
+      button:disabled { opacity: 0.45; cursor: default; }
+      button[aria-pressed="true"] { background: #cfe3ff; color: #103f78; }
+      .zvuky { display: flex; flex-wrap: wrap; gap: 8px; max-width: 980px; }
+      .volby { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+      .volby label { display: inline-flex; align-items: center; gap: 8px; }
+      input[type="range"] { width: 160px; accent-color: #cfe3ff; }
+      .tabulka { overflow-x: auto; margin-top: 8px; }
+      table { border-collapse: collapse; white-space: nowrap; }
+      th, td { padding: 4px 10px; border: 1px solid rgb(207 227 255 / 0.45); text-align: right; }
+      th { color: #8fb4e6; font-weight: normal; text-align: center; }
+      td:first-child, th:first-child { text-align: left; }
+      td[data-v-poradku="ne"] { color: #ffd166; }
+      #stav { color: #8fb4e6; }
+      a { color: #fff; }
+    </style>
+  </head>
+  <body>
+    <h1>Mostmistr – zvuky</h1>
+    <p>
+      Hra nemá žádné nahrávky: každý zvuk se skládá za běhu z šumu a jednoduchých tónů. Tady si
+      je můžeš pustit jednotlivě. Když ti některý nesedí, napiš mi jeho název a co na něm vadí.
+    </p>
+    <div class="volby">
+      <label>Síla <input type="range" id="sila" min="0.2" max="1" step="0.05" value="1" /></label>
+      <label>
+        Rychlost přehrávání
+        <select id="tempo">
+          <option value="0.1">⅒×</option>
+          <option value="0.25">¼×</option>
+          <option value="1" selected>1×</option>
+          <option value="4">4×</option>
+        </select>
+      </label>
+      <label>Kola na mostovce <input type="range" id="valeni" min="0" max="1" step="0.05" value="0" /></label>
+    </div>
+
+    <h2>Jednotlivé zvuky</h2>
+    <div class="zvuky" id="zvuky"></div>
+
+    <h2>Děje</h2>
+    <div class="zvuky">
+      <button type="button" data-dej="zatizeni">Most pod rostoucím zatížením</button>
+      <button type="button" data-dej="zriceni">Zřícení dřevěného mostu do vody</button>
+      <button type="button" data-dej="pochod">Útvar pochoduje přes lávku</button>
+    </div>
+
+    <h2>Měření</h2>
+    <p>
+      Každý zvuk spočítaný do paměti: jak je hlasitý, jak dlouho zní a jak je ostrý. Podle těchto
+      čísel se zvuky ladí a testy podle nich hlídají, že žádný není němý ani přebuzený.
+    </p>
+    <p id="stav" role="status"></p>
+    <div class="tabulka">
+      <table id="mereni">
+        <thead>
+          <tr>
+            <th>Zvuk</th>
+            <th>Špička</th>
+            <th>Hlasitost [dB]</th>
+            <th>Délka [s]</th>
+            <th>Střední kmitočet [Hz]</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p style="margin-top: 16px">
+      <a href="/zkusebna.html">Zkušebna</a> · <a href="/otisky.html">Shoda výpočtu</a> · <a href="/">Zpět do hry</a>
+    </p>
+    <noscript>Stránka potřebuje zapnutý JavaScript.</noscript>
+    <script type="module" src="/mereni/zvuky.ts"></script>
+  </body>
+</html>
