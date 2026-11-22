@@ -13,10 +13,25 @@
 //   GET  /api/sprava?co=den&den=RRRR-MM-DD    sezení toho dne
 //   GET  /api/sprava?co=sezeni&den=…&hrac=…&sezeni=…   události jednoho sezení
 //   GET  /api/sprava?co=souhrn&den=…          souhrn dne po úrovních
-//   GET  /api/sprava?co=export&den=…          všechny dávky dne tak, jak přišly
+//   GET  /api/sprava?co=souhrn&od=…&do=…      souhrn za období (dny včetně krajních)
+//   GET  /api/sprava?co=export&den=…&preskocit=N   dávky dne tak, jak přišly, po částech
+//   POST /api/sprava?co=smazat                { vazba: id } smaže zpětnou vazbu,
+//                                             { den } smaže deník toho dne
+//
+// Souhrn se počítá z „výtahů“ dnů (viz `denik/souhrn.ts`). Den, do kterého už nic nepřibude,
+// má výtah uložený pod klíčem `vytah/<den>.json`; když má den víc dávek, než se stihne
+// přečíst na jednu žádost, uloží se rozpracovaný výtah a příští žádost v něm pokračuje.
 
 import { ChybaDat } from "../data/kontrola";
-import { souhrnDeniku } from "../denik/souhrn";
+import {
+  jeVytah,
+  prazdnyVytah,
+  slucVytahy,
+  souhrnZVytahu,
+  vytahDeniku,
+  type SouhrnDeniku,
+  type VytahDeniku,
+} from "../denik/souhrn";
 import {
   nactiDavku,
   nactiVazbu,
@@ -31,8 +46,10 @@ import type { SkladZaznamu } from "./sklad";
 /** Největší tělo žádosti v bajtech: dávka deníku a zpětná vazba s přiloženým mostem. */
 export const NEJVETSI_DAVKA = 96 * 1024;
 export const NEJVETSI_VAZBA = 400 * 1024;
-/** Nejvíc dávek deníku, které správa přečte na jednu žádost (souhrn, export). */
+/** Nejvíc dávek deníku, které správa přečte nebo smaže na jednu žádost (souhrn, export, mazání). */
 export const NEJVIC_DAVEK_NAJEDNOU = 1500;
+/** Jak dlouho po půlnoci (UTC) se den ještě nepokládá za uzavřený, ms: dávka z 23:59 se může opozdit. */
+const ODKLAD_UZAVERKY = 10 * 60 * 1000;
 /** Nejvíc zpětných vazeb v seznamu. */
 export const NEJVIC_VAZEB_V_SEZNAMU = 500;
 /** Kolik záznamů se z úložiště čte souběžně. */
@@ -69,6 +86,36 @@ export interface SezeniDne {
   hrac: string;
   sezeni: string;
   davek: number;
+}
+
+/** Odpověď na souhrn dne nebo období. */
+export interface OdpovedSouhrnu {
+  od: string;
+  do: string;
+  /** Dny období, ze kterých nějaký deník je. */
+  dny: string[];
+  souhrn: SouhrnDeniku;
+  /** Kolik dávek deníku je v souhrnu započteno. */
+  davek: number;
+  /** Souhrn není celý: dny v `nedokonceno` mají víc dávek, než se stihlo přečíst. */
+  neuplne: boolean;
+  nedokonceno: string[];
+  /** Dny, které lze dopočítat opakováním žádosti (uzavřené dny si pamatují, kam došly). */
+  dopocitatelne: string[];
+}
+
+/** Výtah dne uložený na serveru. */
+interface UlozenyVytah {
+  vytah: VytahDeniku;
+  /** Kolik dávek dne (v pořadí klíčů) je ve výtahu započteno a zda jsou to všechny. */
+  zpracovano: number;
+  hotovo: boolean;
+}
+
+function jeUlozenyVytah(h: unknown): h is UlozenyVytah {
+  if (typeof h !== "object" || h === null) return false;
+  const u = h as Partial<UlozenyVytah>;
+  return typeof u.zpracovano === "number" && u.zpracovano >= 0 && typeof u.hotovo === "boolean" && jeVytah(u.vytah);
 }
 
 function odpoved(stav: number, telo?: unknown): Response {
@@ -195,18 +242,23 @@ async function overSpravce(zadost: Request, p: ProstrediServeru): Promise<Respon
   return null;
 }
 
-/** Přečte záznamy pod danými klíči, několik souběžně, v pořadí klíčů. */
-async function prectiVse(sklad: SkladZaznamu, klice: readonly string[]): Promise<unknown[]> {
-  const vysledky: unknown[] = new Array<unknown>(klice.length).fill(null);
+/** Provede práci pro každý klíč, několik souběžně; výsledky vrací v pořadí klíčů. */
+async function provedVse<T>(klice: readonly string[], prace: (klic: string) => Promise<T>): Promise<T[]> {
+  const vysledky = new Array<T>(klice.length);
   let dalsi = 0;
   const pracuj = async (): Promise<void> => {
     while (dalsi < klice.length) {
       const i = dalsi++;
-      vysledky[i] = await sklad.cti(klice[i]!);
+      vysledky[i] = await prace(klice[i]!);
     }
   };
   await Promise.all(Array.from({ length: Math.min(SOUBEZNE, klice.length) }, pracuj));
   return vysledky;
+}
+
+/** Přečte záznamy pod danými klíči, několik souběžně, v pořadí klíčů. */
+function prectiVse(sklad: SkladZaznamu, klice: readonly string[]): Promise<unknown[]> {
+  return provedVse(klice, (klic) => sklad.cti(klic));
 }
 
 /** Záznam, který vypadá jako evidovaná zpětná vazba; poškozený nebo cizí se přeskočí. */
@@ -228,12 +280,78 @@ function jeDavka(h: unknown): h is DavkaDeniku & { prijato: string; prostredi: s
   return typeof h === "object" && h !== null && Array.isArray((h as DavkaDeniku).udalosti) && typeof (h as DavkaDeniku).hlavicka === "object";
 }
 
-/** Dávky deníku jednoho dne (nejvýš `NEJVIC_DAVEK_NAJEDNOU`) a údaj, zda jich bylo víc. */
-async function davkyDne(sklad: SkladZaznamu, den: string, predpona = ""): Promise<{ davky: DavkaDeniku[]; neuplne: boolean }> {
+/** Dávky deníku jednoho dne (nejvýš `NEJVIC_DAVEK_NAJEDNOU`, od `preskocit`-té) a údaj, zda jich je víc. */
+async function davkyDne(
+  sklad: SkladZaznamu,
+  den: string,
+  predpona = "",
+  preskocit = 0,
+): Promise<{ davky: DavkaDeniku[]; neuplne: boolean; celkem: number }> {
   const klice = await sklad.klice(`denik/${den}/${predpona}`);
-  const vybrane = klice.slice(0, NEJVIC_DAVEK_NAJEDNOU);
+  const vybrane = klice.slice(preskocit, preskocit + NEJVIC_DAVEK_NAJEDNOU);
   const davky = (await prectiVse(sklad, vybrane)).filter(jeDavka);
-  return { davky, neuplne: klice.length > vybrane.length };
+  return { davky, neuplne: klice.length > preskocit + vybrane.length, celkem: klice.length };
+}
+
+const klicVytahu = (den: string): string => `vytah/${den}.json`;
+
+/**
+ * Výtah jednoho dne. Uzavřený den ho má uložený; jinak se spočítá z dávek, nejvýš z tolika,
+ * kolik zbývá v `rozpocet`. Rozpracovaný výtah uzavřeného dne se uloží, takže příští žádost
+ * pokračuje tam, kde tahle skončila. `ulozeny` je to, co o dni server už ví (null = nic).
+ */
+async function vytahDne(
+  p: ProstrediServeru,
+  den: string,
+  ulozeny: UlozenyVytah | null,
+  rozpocet: { zbyva: number },
+): Promise<UlozenyVytah & { uzavreny: boolean }> {
+  const uzavreny = den < denZ(new Date(p.ted().getTime() - ODKLAD_UZAVERKY));
+  if (uzavreny && ulozeny?.hotovo) return { ...ulozeny, uzavreny };
+  const klice = await p.sklad.klice(`denik/${den}/`);
+  // Dnešek se počítá vždy od začátku: nové dávky přibývají i doprostřed pořadí klíčů.
+  const zaklad = uzavreny && ulozeny && ulozeny.zpracovano <= klice.length ? ulozeny : null;
+  const od = zaklad?.zpracovano ?? 0;
+  const kolik = Math.max(0, Math.min(klice.length - od, rozpocet.zbyva));
+  rozpocet.zbyva -= kolik;
+  const davky = (await prectiVse(p.sklad, klice.slice(od, od + kolik))).filter(jeDavka);
+  const vysledek: UlozenyVytah = {
+    vytah: slucVytahy([zaklad?.vytah ?? prazdnyVytah(), vytahDeniku(davky)]),
+    zpracovano: od + kolik,
+    hotovo: od + kolik >= klice.length,
+  };
+  if (uzavreny && (kolik > 0 || vysledek.hotovo)) await p.sklad.zapis(klicVytahu(den), vysledek);
+  return { ...vysledek, uzavreny };
+}
+
+/** Souhrn za dny od–do (včetně). Počítá se z výtahů dnů; co se nestihne, hlásí jako nedokončené. */
+async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promise<OdpovedSouhrnu> {
+  const dny = (await p.sklad.slozky("denik/")).filter((d) => DEN.test(d) && d >= od && d <= po).sort();
+  const ulozene = (await prectiVse(p.sklad, dny.map(klicVytahu))).map((u) => (jeUlozenyVytah(u) ? u : null));
+  const rozpocet = { zbyva: NEJVIC_DAVEK_NAJEDNOU };
+  const vytahy: VytahDeniku[] = [];
+  const nedokonceno: string[] = [];
+  const dopocitatelne: string[] = [];
+  let davek = 0;
+  for (const [i, den] of dny.entries()) {
+    const v = await vytahDne(p, den, ulozene[i] ?? null, rozpocet);
+    vytahy.push(v.vytah);
+    davek += v.zpracovano;
+    if (!v.hotovo) {
+      nedokonceno.push(den);
+      if (v.uzavreny) dopocitatelne.push(den);
+    }
+  }
+  return {
+    od,
+    do: po,
+    dny,
+    souhrn: souhrnZVytahu(slucVytahy(vytahy)),
+    davek,
+    neuplne: nedokonceno.length > 0,
+    nedokonceno,
+    dopocitatelne,
+  };
 }
 
 /** Správa: čtení zpětné vazby a deníku a změna stavu řešení. Vše jen s heslem správce. */
@@ -296,11 +414,40 @@ export async function spravuj(zadost: Request, p: ProstrediServeru): Promise<Res
     return odpoved(200, { vazba });
   }
 
+  if (cesta === "smazat" && zadost.method === "POST") {
+    const telo = await teloJson(zadost, 16 * 1024);
+    if (telo instanceof Response) return telo;
+    const co = telo.data as { vazba?: unknown; den?: unknown } | null;
+    if (typeof co !== "object" || co === null) return chyba(400, "chybí, co se má smazat");
+    if (typeof co.vazba === "string" && ID_VAZBY.test(co.vazba)) {
+      const klic = `vazba/${co.vazba}.json`;
+      if ((await sklad.cti(klic)) === null) return chyba(404, "taková zpětná vazba není");
+      await sklad.smaz(klic);
+      return odpoved(200, { smazano: 1, zbyva: 0 });
+    }
+    if (typeof co.den === "string" && DEN.test(co.den)) {
+      const klice = await sklad.klice(`denik/${co.den}/`);
+      const ted = klice.slice(0, NEJVIC_DAVEK_NAJEDNOU);
+      await provedVse(ted, (klic) => sklad.smaz(klic));
+      // Výtah dne už neplatí; smaže se hned, ať se z něj nepočítá souhrn smazaného dne.
+      await sklad.smaz(klicVytahu(co.den));
+      return odpoved(200, { smazano: ted.length, zbyva: klice.length - ted.length });
+    }
+    return chyba(400, "chybí platné číslo zpětné vazby nebo den ve tvaru RRRR-MM-DD");
+  }
+
   if (zadost.method !== "GET") return chyba(405, "tuto adresu lze jen číst");
 
   if (cesta === "dny") {
     const dny = (await sklad.slozky("denik/")).filter((d) => DEN.test(d)).reverse();
     return odpoved(200, { dny });
+  }
+
+  if (cesta === "souhrn") {
+    const od = dotaz.get("od") ?? dotaz.get("den") ?? "";
+    const po = dotaz.get("do") ?? dotaz.get("den") ?? "";
+    if (!DEN.test(od) || !DEN.test(po) || od > po) return chyba(400, "chybí den nebo období (od, do) ve tvaru RRRR-MM-DD");
+    return odpoved(200, await souhrnObdobi(p, od, po));
   }
 
   const den = dotaz.get("den") ?? "";
@@ -328,14 +475,10 @@ export async function spravuj(zadost: Request, p: ProstrediServeru): Promise<Res
     return odpoved(200, { den, hlavicka: davky[0]!.hlavicka, udalosti, neuplne });
   }
 
-  if (cesta === "souhrn") {
-    const { davky, neuplne } = await davkyDne(sklad, den);
-    return odpoved(200, { den, souhrn: souhrnDeniku(davky), davek: davky.length, neuplne });
-  }
-
   if (cesta === "export") {
-    const { davky, neuplne } = await davkyDne(sklad, den);
-    return odpoved(200, { den, davky, neuplne });
+    const preskocit = Math.max(0, Math.floor(Number(dotaz.get("preskocit") ?? "0")) || 0);
+    const { davky, neuplne, celkem } = await davkyDne(sklad, den, "", preskocit);
+    return odpoved(200, { den, davky, neuplne, celkem, dalsi: neuplne ? preskocit + NEJVIC_DAVEK_NAJEDNOU : null });
   }
 
   return chyba(404, "neznámá adresa správy");

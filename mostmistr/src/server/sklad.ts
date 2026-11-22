@@ -6,6 +6,8 @@ export interface SkladZaznamu {
   /** Záznam pod klíčem (rozebraný JSON); null, když tam žádný není. */
   cti(klic: string): Promise<unknown>;
   zapis(klic: string, hodnota: unknown): Promise<void>;
+  /** Smaže záznam pod klíčem; když tam žádný není, nestane se nic. */
+  smaz(klic: string): Promise<void>;
   /** Všechny klíče začínající předponou, vzestupně podle abecedy. */
   klice(predpona: string): Promise<string[]>;
   /**
@@ -30,6 +32,11 @@ export class SkladVPameti implements SkladZaznamu {
 
   zapis(klic: string, hodnota: unknown): Promise<void> {
     this.#zaznamy.set(klic, JSON.stringify(hodnota));
+    return Promise.resolve();
+  }
+
+  smaz(klic: string): Promise<void> {
+    this.#zaznamy.delete(klic);
     return Promise.resolve();
   }
 

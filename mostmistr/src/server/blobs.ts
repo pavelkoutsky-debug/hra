@@ -28,6 +28,9 @@ export function skladNadBlobs(bezne: Store, silne: Store | null = null): SkladZa
     zapis: async (klic, hodnota) => {
       await bezne.setJSON(klic, hodnota);
     },
+    smaz: async (klic) => {
+      await bezne.delete(klic);
+    },
     klice: async (predpona) => {
       const { blobs } = await cti((u) => u.list({ prefix: predpona }));
       return blobs.map((b) => b.key).sort();
