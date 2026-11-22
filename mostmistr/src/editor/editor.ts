@@ -76,6 +76,12 @@ export class Editor {
   tah: Tah | null = null;
   /** Proč se poslední pokus o úpravu nepovedl; hra to ukáže hráči. */
   posledniDuvod: DruhProblemu | null = null;
+  /**
+   * Čím se návrh naposledy změnil („prut“, „smazani“, „zpet“…) a u nového prutu i čím a odkud
+   * kam vede. Slouží deníku hraní; na chování editoru nemá vliv.
+   */
+  posledniAkce = "";
+  posledniPrut: { prvek: IdPrvku; od: Bod; k: Bod } | null = null;
 
   #navrh: NavrhMostu;
   readonly #zpet: NavrhMostu[] = [];
@@ -103,9 +109,11 @@ export class Editor {
     return this.#znovu.length > 0;
   }
 
-  /** Nahradí návrh novým a zapíše krok do historie. Stejný návrh nic nezmění. */
-  #zmen(novy: NavrhMostu): boolean {
+  /** Nahradí návrh novým a zapíše krok do historie. Stejný návrh nic nezmění. `akce` říká čím. */
+  #zmen(novy: NavrhMostu, akce: string): boolean {
     if (novy === this.#navrh) return false;
+    this.posledniAkce = akce;
+    if (akce !== "prut") this.posledniPrut = null;
     this.#zpet.push(this.#navrh);
     if (this.#zpet.length > DELKA_HISTORIE) this.#zpet.shift();
     this.#znovu.length = 0;
@@ -126,7 +134,7 @@ export class Editor {
   /** Nahradí celý návrh (načtení uloženého mostu, import); jde vzít zpět. */
   nahrad(navrh: NavrhMostu): void {
     this.zrusVyber();
-    this.#zmen(navrh);
+    this.#zmen(navrh, "import");
   }
 
   zpet(): void {
@@ -134,6 +142,8 @@ export class Editor {
     if (!predchozi) return;
     this.#znovu.push(this.#navrh);
     this.#navrh = predchozi;
+    this.posledniAkce = "zpet";
+    this.posledniPrut = null;
     this.tah = null;
     this.#ocistiVyber();
     this.#poZmene();
@@ -144,6 +154,8 @@ export class Editor {
     if (!dalsi) return;
     this.#zpet.push(this.#navrh);
     this.#navrh = dalsi;
+    this.posledniAkce = "znovu";
+    this.posledniPrut = null;
     this.tah = null;
     this.#ocistiVyber();
     this.#poZmene();
@@ -241,7 +253,8 @@ export class Editor {
         return false;
       }
       this.zrusVyber();
-      const zmeneno = this.#zmen(pridejPrut(this.#navrh, tah.od, tah.k, this.prvek));
+      this.posledniPrut = { prvek: this.prvek, od: tah.od, k: tah.k };
+      const zmeneno = this.#zmen(pridejPrut(this.#navrh, tah.od, tah.k, this.prvek), "prut");
       // Nové lano zůstane vybrané, aby se mu dal hned nastavit napínák.
       if (zmeneno && KATALOG[this.prvek].druh === "lano") {
         const a = stycnikV(this.#navrh, tah.od);
@@ -267,7 +280,7 @@ export class Editor {
         return false;
       }
       const posunuty = posunStycnik(this.#navrh, tah.stycnik, tah.k);
-      return posunuty ? this.#zmen(posunuty) : false;
+      return posunuty ? this.#zmen(posunuty, "posun") : false;
     }
 
     // Obdélník: nepatrný pohyb je kliknutí.
@@ -350,14 +363,14 @@ export class Editor {
   /** Smaže vybrané pruty a styčníky. */
   smazVybrane(): boolean {
     if (!this.neconiJeVybrano) return false;
-    return this.#zmen(smaz(this.#navrh, this.vybranePruty, this.vybraneStycniky));
+    return this.#zmen(smaz(this.#navrh, this.vybranePruty, this.vybraneStycniky), "smazani");
   }
 
   /** Smaže celý most. */
   smazVse(): boolean {
     if (this.#navrh.pruty.length === 0) return false;
     this.zrusVyber();
-    return this.#zmen({ ...this.#navrh, stycniky: [], pruty: [] });
+    return this.#zmen({ ...this.#navrh, stycniky: [], pruty: [] }, "vse-pryc");
   }
 
   /**
@@ -386,7 +399,7 @@ export class Editor {
       }
       navrh = zmenPrvek(navrh, [id], prvek);
     }
-    if (!this.#zmen(navrh)) {
+    if (!this.#zmen(navrh, "prvek")) {
       this.#poZmene();
       return false;
     }
@@ -411,7 +424,7 @@ export class Editor {
     const dosavadni = this.zavaziVyberu;
     if (dosavadni === null) return false;
     const nove = Math.max(0, Math.min(this.uroven.nejvetsiZavazi, dosavadni + smer * KROK_ZAVAZI));
-    return this.#zmen(nastavZavazi(this.#navrh, this.vybraneStycniky, () => nove));
+    return this.#zmen(nastavZavazi(this.#navrh, this.vybraneStycniky, () => nove), "zavazi");
   }
 
   /**
@@ -431,7 +444,7 @@ export class Editor {
     const dosavadni = this.ladenyTlumicVyberu;
     if (dosavadni === null || this.uroven.nejvetsiTlumic < LADENY_TLUMIC.nejmensiHmota) return false;
     const novy = dosavadni ? undefined : { hmota: this.#hmotaTlumice(hmota), frekvence: frekvenceTlumice(frekvence) };
-    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, () => novy));
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, () => novy), "ladeny");
   }
 
   /** Přidá nebo ubere závaží laděných tlumičů ve vybraných styčnících o jeden krok. */
@@ -439,7 +452,7 @@ export class Editor {
     const dosavadni = this.ladenyTlumicVyberu;
     if (!dosavadni) return false;
     const hmota = this.#hmotaTlumice(dosavadni.hmota + smer * LADENY_TLUMIC.krokHmoty);
-    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, hmota } : t)));
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, hmota } : t)), "ladeny");
   }
 
   /** Přeladí laděné tlumiče ve vybraných styčnících o `kroku` kroků frekvence výš nebo níž. */
@@ -447,7 +460,7 @@ export class Editor {
     const dosavadni = this.ladenyTlumicVyberu;
     if (!dosavadni) return false;
     const frekvence = frekvenceTlumice(dosavadni.frekvence + kroku * LADENY_TLUMIC.krokFrekvence);
-    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence } : t)));
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence } : t)), "ladeny");
   }
 
   #hmotaTlumice(hmota: number): number {
@@ -486,7 +499,7 @@ export class Editor {
       if (Math.abs(stupen - dosavadni) < Math.abs(STUPNE_TLUMENI[nejblizsi]! - dosavadni)) nejblizsi = i;
     });
     const novy = STUPNE_TLUMENI[Math.max(0, Math.min(STUPNE_TLUMENI.length - 1, nejblizsi + smer))]!;
-    return this.#zmen(nastavTlumeni(this.#navrh, this.#vybraneTlumice(), () => novy));
+    return this.#zmen(nastavTlumeni(this.#navrh, this.#vybraneTlumice(), () => novy), "tlumeni");
   }
 
   /** Vybraná lana (id prutů). */
@@ -552,12 +565,16 @@ export class Editor {
         const zarovnano = kroku > 0 ? Math.floor(dilku + 1e-6) : Math.ceil(dilku - 1e-6);
         return predpetiZeZkraceni(lano.prvek, lano.delka, (zarovnano + kroku) * krok);
       }),
+      "napinak",
     );
   }
 
   /** Nastaví lanům předpětí podle `hodnoty` (id prutu → podíl pevnosti); jeden krok historie. */
   nastavPredpetiLan(hodnoty: ReadonlyMap<number, number>): boolean {
-    return this.#zmen(nastavPredpeti(this.#navrh, new Set(hodnoty.keys()), (id, dosavadni) => hodnoty.get(id) ?? dosavadni));
+    return this.#zmen(
+      nastavPredpeti(this.#navrh, new Set(hodnoty.keys()), (id, dosavadni) => hodnoty.get(id) ?? dosavadni),
+      "dopnuti",
+    );
   }
 
   /**
@@ -573,7 +590,7 @@ export class Editor {
   prepniSvar(): boolean {
     const dosavadni = this.svarVyberu;
     if (dosavadni === null || !this.uroven.povoleneSvary) return false;
-    return this.#zmen(nastavSvar(this.#navrh, this.vybraneStycniky, !dosavadni));
+    return this.#zmen(nastavSvar(this.#navrh, this.vybraneStycniky, !dosavadni), "svar");
   }
 
   /** Doplní zrcadlový obraz mostu (nebo výběru) podle osy hlavní trasy. */
@@ -633,7 +650,7 @@ export class Editor {
       if (tlumic) postupny = nastavLadenyTlumic(postupny, new Set([obraz.id]), (dosavadni) => dosavadni ?? tlumic);
     }
     this.posledniDuvod = duvod;
-    if (!this.#zmen(postupny)) {
+    if (!this.#zmen(postupny, "zrcadleni")) {
       this.#poZmene();
       return false;
     }

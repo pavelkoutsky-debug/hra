@@ -9,6 +9,9 @@ import { ChybaDat } from "../data/kontrola";
 import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
+import type { Denik } from "../denik/denik";
+import { predOdchodem } from "../denik/prohlizec";
+import type { HodnotaDeniku } from "../denik/udalosti";
 import { Editor } from "../editor/editor";
 import { prekazkyZkousky } from "../editor/pravidla";
 import { prazdnyNavrh } from "../editor/upravy";
@@ -46,6 +49,8 @@ import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
 import { nasadaUrovne } from "../../urovne/index";
 import { ukazkaUrovne } from "../../urovne/ukazky";
+import { pripojVazbu } from "./vazba";
+import { pripojZaznam } from "./zaznam";
 import { Ukazka } from "./ukazka";
 import { vypisMedaile, znackyMedaili } from "./medaile";
 import { HLASITOSTI, type Uloziste } from "./uloziste";
@@ -167,8 +172,21 @@ function jePsaciPole(cil: EventTarget | null): boolean {
  * Spustí obrazovku úrovně. `kampan` je pořadí úrovní pro odkaz na další; úroveň mimo
  * kampaň (zkušební výkres) další nemá.
  */
-export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste: Uloziste): void {
+export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste: Uloziste, denik: Denik): void {
   prvek("#obrazovka-uroven", HTMLElement).hidden = false;
+
+  // ---- Deník hraní: co hráč v úrovni dělá (viz src/denik/) ----
+  const otevrenoV = Date.now();
+  const sekundVUrovni = (): number => Math.round((Date.now() - otevrenoV) / 1000);
+  const zapis = (druh: string, data?: { [klic: string]: HodnotaDeniku }): void => denik.zapis(druh, data, uroven.id);
+  /** Kolik úprav mostu hráč udělal od poslední zkoušky a kolik zkoušek s provozem už pustil. */
+  let upravOdZkousky = 0;
+  let zkousekVUrovni = 0;
+  /** Kdy začal výpočet běžící zkoušky a kdy se otevřelo okno se zadáním, ms. */
+  let vypocetOd = 0;
+  let zadaniOtevrenoV = Date.now();
+  /** Nástroj a prvek, které byly zvolené naposledy; do deníku jde jen změna. */
+  let zapsanyNastroj = "";
   const canvas = prvek("#obrazovka-uroven .vykres__platno", HTMLCanvasElement);
   const poleSouradnic = udaj("souradnice");
   const poleMeritka = udaj("meritko");
@@ -277,6 +295,23 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const ulozeny = uloziste.navrh(uroven.id);
   let naposledUlozeny: NavrhMostu | null = ulozeny ?? null;
   const editor = new Editor(uroven, ulozeny ?? prazdnyNavrh(uroven.id), poZmeneNavrhu);
+  {
+    const medaile = uloziste.rekord(uroven.id)?.medaile;
+    zapis("uroven.otevrena", {
+      navrh: ulozeny !== undefined && ulozeny.pruty.length > 0,
+      prutu: ulozeny?.pruty.length ?? 0,
+      medaili: medaile ? Number(medaile.pruchod) + Number(medaile.rozpocet) + Number(medaile.mistrovska) : 0,
+    });
+    predOdchodem(() => {
+      const ted = uloziste.rekord(uroven.id)?.medaile;
+      zapis("uroven.opustena", {
+        sekund: sekundVUrovni(),
+        zkousek: zkousekVUrovni,
+        prutu: editor.navrh.pruty.length,
+        medaili: ted ? Number(ted.pruchod) + Number(ted.rozpocet) + Number(ted.mistrovska) : 0,
+      });
+    });
+  }
 
   // ---- Výkres ----
 
@@ -731,18 +766,26 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const puvodni = dopinani.navrh;
     dopinani = null;
     if (rezim !== "stavba" || editor.navrh !== puvodni) {
+      zapis("dopnuti", { vysledek: "zahozeno" });
       document.body.dataset.dopnuti = "zahozeno";
       skryjHlaseni();
       obnovStavbu();
       return;
     }
     if (!vysledek) {
+      zapis("dopnuti", { vysledek: "nejde" });
       document.body.dataset.dopnuti = "nejde";
       ukazHlaseni(t("dopnuti.nejde"), "varovani", true);
       obnovStavbu();
       return;
     }
     editor.nastavPredpetiLan(new Map(vysledek.predpeti));
+    zapis("dopnuti", {
+      vysledek: vysledek.po > 0.02 ? "zbylo" : "hotovo",
+      predMm: Number.isFinite(vysledek.pred) ? Math.round(1000 * vysledek.pred) : null,
+      poMm: Math.round(10000 * vysledek.po) / 10,
+      lan: vysledek.predpeti.length,
+    });
     document.body.dataset.dopnuti = "hotovo";
     document.body.dataset.dopnutiOdchylka = (1000 * vysledek.po).toFixed(1);
     const mm = (metry: number): string => cislo(1000 * metry, metry < 0.01 ? 1 : 0);
@@ -818,8 +861,28 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       naposledUlozeny = editor.navrh;
       uloziste.ulozNavrh(editor.navrh);
       naplanujRozbor();
+      zapisUpravu();
     }
     obnovStavbu();
+  }
+
+  /** Zapíše do deníku, čím se most právě změnil a jak teď vypadá. */
+  function zapisUpravu(): void {
+    upravOdZkousky += 1;
+    const navrh = editor.navrh;
+    const data: { [klic: string]: HodnotaDeniku } = {
+      co: editor.posledniAkce || "jine",
+      prutu: navrh.pruty.length,
+      stycniku: navrh.stycniky.length,
+      cena: cenaNavrhu(navrh),
+    };
+    const prut = editor.posledniPrut;
+    if (prut && editor.posledniAkce === "prut") {
+      data.prvek = prut.prvek;
+      data.od = [prut.od.x, prut.od.y];
+      data.k = [prut.k.x, prut.k.y];
+    }
+    zapis("stavba.zmena", data);
   }
 
   /** Po úpravě návrhu požádá s malou prodlevou o nový rozbor mostu (osa frekvencí, tahy lan). */
@@ -935,6 +998,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const navrh = editor.navrh;
     const cena = cenaNavrhu(navrh);
     const stavi = rezim === "stavba";
+    // Deník: jaký nástroj a prvek má hráč v ruce (jen když se to změní).
+    const vRuce = nastroj === "kresleni" ? `kresleni:${editor.prvek}` : nastroj;
+    if (stavi && vRuce !== zapsanyNastroj) {
+      if (zapsanyNastroj !== "") zapis("nastroj", nastroj === "kresleni" ? { ktery: nastroj, prvek: editor.prvek } : { ktery: nastroj });
+      zapsanyNastroj = vRuce;
+    }
 
     // Rozpočet.
     const plneni = prvek(".rozpocet__plneni", HTMLElement);
@@ -1067,6 +1136,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function prepniCisla(): void {
     cisla = !cisla;
+    zapis("ovladani", { co: "cisla", stav: cisla });
     uloziste.cislaVyuziti = cisla;
     prepinacCisel.setAttribute("aria-pressed", String(cisla));
     platno.prekresli();
@@ -1076,6 +1146,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function prepniAnalyzu(): void {
     analyzaOtevrena = !analyzaOtevrena;
+    zapis("ovladani", { co: "analyza", stav: analyzaOtevrena });
     obnovAnalyzu();
   }
 
@@ -1535,6 +1606,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       ukazHlaseni(t("zkouska.chyba", { duvod: chyba instanceof Error ? chyba.message : String(chyba) }), "varovani", false);
       return;
     }
+    if (!pokus) zkousekVUrovni += 1;
+    vypocetOd = Date.now();
+    zapis("zkouska.start", {
+      navrh: navrhNaText(editor.navrh),
+      cena: cenaNavrhu(editor.navrh),
+      prutu: editor.navrh.pruty.length,
+      pokus: brnknuti ? "brnknuti" : budic ? "budic" : null,
+      uprav: upravOdZkousky,
+      sekund: sekundVUrovni(),
+    });
+    upravOdZkousky = 0;
     klient.poslouchej((zprava) => prijmi(novy, zprava));
     klient.posli({
       typ: "start",
@@ -1562,6 +1644,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function zpetKeStavbe(): void {
     if (rezim !== "zkouska") return;
+    zapis("zkouska.zavrena", { hotova: beh?.vysledek != null, prehrano: Math.round(prehravani.cas * 10) / 10 });
     klient?.ukonci();
     klient = null;
     // Nedopočítaná zkouška nemá výsledek ani obálku; zahodí se.
@@ -1613,6 +1696,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           }
         }
         if (prehravani.cas > b.trvani || b.naKonecPoVypoctu) prehravani = { ...prehravani, cas: b.trvani, bezi: false };
+        zapisVysledek(b, vysledek);
         document.body.dataset.zkouska = "hotovo";
         document.body.dataset.otisk = vysledek.otisk;
         obnovZnacky();
@@ -1623,6 +1707,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       }
       case "chyba": {
         const duvod = t(`zkouska.chyba.${zprava.kod}`) + (zprava.podrobnosti ? ` (${zprava.podrobnosti})` : "");
+        zapis("zkouska.chyba", { kod: zprava.kod, podrobnosti: (zprava.podrobnosti ?? "").slice(0, 300) });
         document.body.dataset.zkouska = "chyba";
         zpetKeStavbe();
         ukazHlaseni(t("zkouska.chyba", { duvod }), "varovani", false);
@@ -1632,6 +1717,45 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       case "rozbor":
         break;
     }
+  }
+
+  /** Zapíše do deníku, jak zkouška dopadla, a deník hned odešle: výsledek je to nejcennější, co v něm je. */
+  function zapisVysledek(b: Beh, vysledek: VysledekZkousky): void {
+    const prvni = b.udalosti.find((u) => u.druh === "poruseni");
+    const zpusoby: Record<number, string> = {
+      [ZPUSOB_TAH]: "tah",
+      [ZPUSOB_TLAK]: "tlak",
+      [ZPUSOB_OHYB]: "ohyb",
+      [ZPUSOB_SMYK]: "smyk",
+    };
+    zapis("zkouska.konec", {
+      pruchod: vysledek.pruchod,
+      pokus: b.budic ? "budic" : b.pokus ? "brnknuti" : null,
+      sekund: sekundVUrovni(),
+      zkouska: zkousekVUrovni,
+      ucastniku: vysledek.ucastniku,
+      prejelo: vysledek.prejelo,
+      spadlo: vysledek.spadlo,
+      poruseni: vysledek.poruseni,
+      vyuziti: Math.round(vysledek.nejvetsiVyuziti * 1000) / 1000,
+      cena: vysledek.cena,
+      medaile: { ...vysledek.medaile },
+      kmitani: vysledek.komfort ? Math.round(vysledek.komfort.zrychleni * 100) / 100 : null,
+      autobus: vysledek.komfortCestujicich ? Math.round(vysledek.komfortCestujicich.zrychleni * 100) / 100 : null,
+      bezRovnovahy: vysledek.bezRovnovahy,
+      rozpad: vysledek.rozpad,
+      trvani: Math.round(vysledek.trvani * 10) / 10,
+      vypocetMs: Date.now() - vypocetOd,
+      prvni:
+        prvni && prvni.druh === "poruseni"
+          ? {
+              prvek: b.navrh.pruty[prvni.prut]?.prvek ?? "?",
+              zpusob: zpusoby[prvni.zpusob] ?? "vzper",
+              cas: Math.round(prvni.cas * 10) / 10,
+            }
+          : null,
+    });
+    void denik.odesli();
   }
 
   /** Promítne stav zkoušky a přehrávání do lišty a časové osy a překreslí výkres. */
@@ -1802,6 +1926,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function ukazVysledek(b: Beh, vysledek: VysledekZkousky): void {
     b.vysledekUkazan = true;
+    zapis("vysledek.zobrazen", { pruchod: vysledek.pruchod, sekund: sekundVUrovni() });
     // Medaile se v popisovém poli objeví až s výsledkem, ne už během přehrávání.
     obnovMedaile();
     const nadpis = vysledek.rozpad
@@ -1988,6 +2113,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     odkaz.hidden = !(dalsi && projita && !jePokus && kampan.some((u) => u.id === uroven.id));
     odkaz.classList.toggle("tlacitko--hlavni", vysledek.pruchod);
     if (dalsi) odkaz.href = `?uroven=${dalsi.id}`;
+    odkaz.onclick = () => zapis("ovladani", { co: "dalsi-uroven" });
 
     udaj("otisk").textContent = t("vysledek.otisk", { otisk: vysledek.otisk });
     panelVysledku.hidden = false;
@@ -2062,6 +2188,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function otevriZadani(): void {
     if (oknoZadani.open) return;
+    zadaniOtevrenoV = Date.now();
     vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
     oknoZadani.showModal();
     // Okno se otevírá odshora, i když je vyšší než obrazovka; mezerník a Enter ho zavřou.
@@ -2255,7 +2382,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("zpet", () => rezim === "stavba" && editor.zpet());
   priKliknuti("znovu", () => rezim === "stavba" && editor.znovu());
   priKliknuti("smazat-vse", () => rezim === "stavba" && editor.smazVse());
-  priKliknuti("export", () => otevriOkno("export", navrhNaText(editor.navrh)));
+  priKliknuti("export", () => {
+    zapis("ovladani", { co: "export" });
+    otevriOkno("export", navrhNaText(editor.navrh));
+  });
   priKliknuti("import", () => rezim === "stavba" && otevriOkno("import", ""));
   priKliknuti("prehrat", prepniPrehravani);
   priKliknuti("na-konec", skocNaKonec);
@@ -2271,8 +2401,14 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovAnalyzu();
   });
   priKliknuti("zadani", otevriZadani);
+  oknoZadani.addEventListener("close", () => {
+    zapis("zadani.zavreno", { sekund: Math.round((Date.now() - zadaniOtevrenoV) / 1000), ukazka: udaj("ukazka").dataset.stav ?? "zadna" });
+  });
   priKliknuti("upravit", zpetKeStavbe);
-  priKliknuti("prehrat-poruseni", prehrajPrvniPoruseni);
+  priKliknuti("prehrat-poruseni", () => {
+    zapis("ovladani", { co: "prehrat-poruseni" });
+    prehrajPrvniPoruseni();
+  });
   priKliknuti("prehrat-znovu", () => {
     if (!beh) return;
     panelVysledku.hidden = true;
@@ -2282,7 +2418,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     prehravani = { ...prehravani, cas: 0, bezi: true };
     obnovOsu();
   });
-  priKliknuti("diagnostika", () => otevriOkno("diagnostika", textDiagnostiky()));
+  priKliknuti("diagnostika", () => {
+    zapis("ovladani", { co: "diagnostika" });
+    otevriOkno("diagnostika", textDiagnostiky());
+  });
   priKliknuti("okno-kopirovat", () => void zkopirujObsahOkna());
   priKliknuti("okno-nacist", nactiMostZOkna);
 
@@ -2297,7 +2436,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   // Po kliknutí myší na tlačítko se pozornost vrací na výkres, aby mezerník dál pouštěl
   // zkoušku a nemačkal znovu poslední tlačítko.
-  const otevreneOkno = (): boolean => okno.open || oknoZadani.open;
+  // Jakékoli otevřené okno (text mostu, zadání, zpětná vazba) bere klávesy a kliknutí sobě.
+  const otevreneOkno = (): boolean => document.querySelector("dialog[open]") !== null;
   prvek("#obrazovka-uroven", HTMLElement).addEventListener("click", (udalost) => {
     if (udalost.detail === 0 || otevreneOkno()) return;
     if (udalost.target instanceof Element && udalost.target.closest("button")) canvas.focus({ preventScroll: true });
@@ -2488,6 +2628,14 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   obnovStavbu();
   obnovOsu();
   ukazCelyVykres();
+  // Zpětná vazba hráče: ke zprávě jde přiložit rozestavěný most. Upozornění na deník hraní
+  // je i v okně se zadáním, protože hráč může přijít rovnou do úrovně.
+  pripojVazbu(denik, {
+    uroven: () => uroven.id,
+    navrh: () => (editor.navrh.pruty.length > 0 ? navrhNaText(editor.navrh) : undefined),
+  });
+  pripojZaznam(denik);
+
   // Před stavbou si má hráč přečíst, co ho čeká; k rozestavěnému mostu se zadání nevnucuje.
   if (editor.navrh.pruty.length === 0) otevriZadani();
 

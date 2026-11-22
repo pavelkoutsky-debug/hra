@@ -990,6 +990,120 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   gap: 8px;
 }
 
+/* Okno se zpětnou vazbou */
+
+.okno--vazba {
+  width: min(560px, 94vw);
+}
+
+.vazba__druhy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 10px;
+  padding: 6px 10px 8px;
+  border: 1px solid rgb(207 227 255 / 0.4);
+}
+
+.vazba__druhy legend {
+  padding: 0 4px;
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+.vazba__druhy label,
+.vazba__volba {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.vazba__druhy input,
+.vazba__volba input {
+  accent-color: var(--cara-silna);
+}
+
+.vazba__popisek {
+  display: block;
+  margin: 8px 0 3px;
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+.okno--vazba input[type="email"] {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.vazba__hodnoceni {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.vazba__kraj {
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+.vazba__volba {
+  display: flex;
+  margin: 4px 0;
+}
+
+/* Past na roboty: pole, které člověk nevidí ani se do něj nedostane klávesnicí. */
+.vazba__past {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.vazba__zaznam {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px !important;
+  padding-top: 10px;
+  border-top: 1px solid rgb(207 227 255 / 0.3);
+  color: var(--popisek);
+  font-size: 12px;
+}
+
+/* Upozornění na deník hraní v přehledu kampaně */
+
+.zaznam {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  max-width: 1100px;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px solid rgb(207 227 255 / 0.6);
+  background: rgb(11 47 92 / 0.6);
+}
+
+.zaznam span {
+  flex: 1 1 420px;
+}
+
+.zaznam--vOkne {
+  max-width: none;
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
 /* Přehled kampaně */
 
 .prehled {

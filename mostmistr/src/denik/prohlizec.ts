@@ -56,6 +56,13 @@ function zdrojChyby(adresa: string | undefined): string {
 }
 
 let denik: Denik | null = null;
+/** Co se má stihnout zapsat, než se při zavírání stránky deník odešle. */
+const predOdeslanim: (() => void)[] = [];
+
+/** Přihlásí obsluhu, která se zavolá při opouštění stránky těsně před odesláním deníku. */
+export function predOdchodem(obsluha: () => void): void {
+  predOdeslanim.push(obsluha);
+}
 
 /** Deník této stránky; při prvním volání ho založí a napojí na události prohlížeče. */
 export function denikHry(): Denik {
@@ -89,7 +96,16 @@ export function denikHry(): Denik {
     stav();
   }, 5000);
   const naOdchodu = (): void => void novy.odesli(true);
-  window.addEventListener("pagehide", naOdchodu);
+  window.addEventListener("pagehide", () => {
+    for (const obsluha of predOdeslanim) {
+      try {
+        obsluha();
+      } catch {
+        // Zápis na rozloučenou nesmí zabránit odeslání toho, co už v deníku je.
+      }
+    }
+    naOdchodu();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") naOdchodu();
   });
