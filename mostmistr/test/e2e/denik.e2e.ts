@@ -334,6 +334,16 @@ describe("stránka správce", () => {
     await stranka.locator('#filtr-stavu [data-filtr="nova"]').click();
     expect(await radky.count()).toBe(1);
     expect(await radky.nth(0).innerText()).toContain("víc úrovní");
+    // Zpětnou vazbu jde po potvrzení smazat (spam, omyl).
+    await radky.nth(0).click();
+    await detail.waitFor({ state: "visible" });
+    stranka.once("dialog", (dialog) => void dialog.accept());
+    await stranka.locator("#vazba-smazat").click();
+    await expect.poll(() => stranka.locator("#hlaseni").innerText()).toMatch(/^Smazáno: \d{8}T\d{6}-[0-9a-f]{6}\.$/);
+    expect(await radky.count()).toBe(0);
+    await stranka.locator('#filtr-stavu [data-filtr="vse"]').click();
+    expect(await radky.count()).toBe(1);
+    expect(await sklad.klice("vazba/")).toHaveLength(1);
   });
 
   it("deník ukáže souhrn dne po úrovních a jednotlivá sezení s mosty, které hráč zkoušel", async () => {
@@ -341,8 +351,18 @@ describe("stránka správce", () => {
     const dnes = new Date().toISOString().slice(0, 10);
     expect(await stranka.locator("#den").inputValue()).toBe(dnes);
     expect(await stranka.locator("#den-pocty").innerText()).toMatch(/^1 hráčů \(1 nových, 0 na dotyku\) · 1 sezení/);
+    expect(await stranka.locator("#den-pocty").innerText()).toContain("záznam si vypnulo 1");
     const souhrn = stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td');
-    expect((await souhrn.allInnerTexts()).slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
+    const bunky = await souhrn.allInnerTexts();
+    expect(bunky.slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
+    // Cena průchodu proti rozpočtům úrovně a z čeho hráč stavěl.
+    expect(bunky[9]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 33 500 Kč");
+    expect(bunky[10]).toBe("drevo-lehke 4×, mostovka-drevo 2×");
+    // Souhrn za delší období: sčítá dny, ze kterých deník je.
+    await stranka.locator("#obdobi").selectOption("30");
+    await expect.poll(() => stranka.locator("#souhrn-nadpis").innerText()).toContain("(1 dní s deníkem)");
+    expect((await stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td').allInnerTexts()).slice(0, 5)).toEqual(bunky.slice(0, 5));
+    await stranka.locator("#obdobi").selectOption("1");
     const sezeni = stranka.locator("#sezeni tbody tr");
     expect(await sezeni.count()).toBe(1);
     await sezeni.first().click();
@@ -354,6 +374,12 @@ describe("stránka správce", () => {
     await start.click();
     expect(await stranka.locator("#sezeni-most").isVisible()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/a3-sprava-denik.png` });
+    // Deník dne jde po potvrzení smazat celý.
+    stranka.once("dialog", (dialog) => void dialog.accept());
+    await stranka.locator("#smazat-den").click();
+    await expect.poll(() => stranka.locator("#hlaseni").innerText()).toMatch(/^Smazáno: deník \d{4}-\d{2}-\d{2} \(\d+ dávek\)\.$/);
+    expect(await sklad.klice("denik/")).toEqual([]);
+    expect(await stranka.locator("#den-pocty").innerText()).toBe("Deník je zatím prázdný.");
   });
 
   it("během celého průchodu prohlížeč nehlásil žádnou chybu", () => {

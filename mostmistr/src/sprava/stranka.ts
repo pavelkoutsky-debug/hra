@@ -4,9 +4,8 @@
 
 import { navrhZTextu, type NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
-import type { SouhrnDeniku } from "../denik/souhrn";
 import { STAVY_VAZBY, type EvidovanaVazba, type HlavickaDeniku, type StavVazby, type UdalostDeniku } from "../denik/udalosti";
-import type { PolozkaSeznamuVazeb, SezeniDne } from "../server/obsluha";
+import type { OdpovedSouhrnu, PolozkaSeznamuVazeb, SezeniDne } from "../server/obsluha";
 import { celyVyrez } from "../vykres/kamera";
 import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
@@ -321,6 +320,22 @@ prvek("#vazba-ulozit").addEventListener("click", () => {
   })();
 });
 
+prvek("#vazba-smazat").addEventListener("click", () => {
+  const v = vybrana;
+  if (!v || !window.confirm(`Smazat zpětnou vazbu ${v.id}? Nejde to vrátit.`)) return;
+  void (async () => {
+    try {
+      await sprava("co=smazat", { vazba: v.id });
+      vybrana = null;
+      prvek("#detail-vazby").hidden = true;
+      await nactiVazby();
+      ohlas(`Smazáno: ${v.id}.`);
+    } catch (chyba) {
+      ohlas(`Smazat se nepodařilo: ${(chyba as Error).message}`);
+    }
+  })();
+});
+
 prvek("#vazba-kopirovat").addEventListener("click", () => {
   const zapis = vybrana?.navrh;
   if (!zapis) return;
@@ -338,19 +353,29 @@ function cislo(hodnota: number | null, mist = 0): string {
   return hodnota === null ? "—" : hodnota.toLocaleString("cs-CZ", { maximumFractionDigits: mist });
 }
 
-function vykresliSouhrn(souhrn: SouhrnDeniku, davek: number, neuplne: boolean): void {
+const koruny = (hodnota: number | null): string => (hodnota === null ? "—" : `${hodnota.toLocaleString("cs-CZ")} Kč`);
+
+function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
+  const { souhrn, davek, neuplne } = odpoved;
+  const obdobi = odpoved.od === odpoved.do ? odpoved.do : `${odpoved.dny[0] ?? odpoved.od} až ${odpoved.do} (${odpoved.dny.length} dní s deníkem)`;
+  prvek("#souhrn-nadpis").textContent = `Souhrn po úrovních · ${obdobi}`;
   prvek("#den-pocty").textContent =
     `${souhrn.hracu} hráčů (${souhrn.novych} nových, ${souhrn.dotykovych} na dotyku) · ${souhrn.sezeni} sezení · ` +
-    `${souhrn.udalosti} událostí v ${davek} dávkách${neuplne ? " · NEÚPLNÉ: den má víc dávek, než se načte najednou" : ""}`;
+    `${souhrn.udalosti} událostí v ${davek} dávkách · záznam si vypnulo ${souhrn.vypnuli}` +
+    (neuplne ? ` · NEÚPLNÉ: ${odpoved.nedokonceno.join(", ")} má víc dávek, než se stihlo přečíst` : "");
   const telo = prvek<HTMLTableSectionElement>("#souhrn tbody");
   telo.replaceChildren(
     ...souhrn.urovne.map((u) => {
       const radek = document.createElement("tr");
       radek.dataset.uroven = u.uroven;
-      const selhani = Object.entries(u.selhani)
-        .slice(0, 4)
-        .map(([duvod, pocet]) => `${duvod} ${pocet}×`)
-        .join(", ");
+      const vypis = (pocty: Record<string, number>): string =>
+        Object.entries(pocty)
+          .slice(0, 4)
+          .map(([co, pocet]) => `${co} ${pocet}×`)
+          .join(", ");
+      const zadani = urovne.get(u.uroven);
+      const rozpocty = zadani?.rozpocet ? ` · rozpočet ${koruny(zadani.rozpocet)}${zadani.inzenyrskyRozpocet ? `, inž. ${koruny(zadani.inzenyrskyRozpocet)}` : ""}` : "";
+      const ceny = u.nejlevnejsiPruchod === null ? "—" : `${koruny(u.nejlevnejsiPruchod)} · ${koruny(u.cenaPruchodu)}${rozpocty}`;
       radek.append(
         bunka(`${u.uroven} ${urovne.get(u.uroven)?.nazev ?? ""}`),
         bunka(cislo(u.hracu), "cislo"),
@@ -361,14 +386,16 @@ function vykresliSouhrn(souhrn: SouhrnDeniku, davek: number, neuplne: boolean): 
         bunka(cislo(u.zkousekDoPruchodu, 1), "cislo"),
         bunka(cislo(u.minutDoPruchodu, 1), "cislo"),
         bunka(`${u.medaile.pruchod} / ${u.medaile.rozpocet} / ${u.medaile.mistrovska}`, "cislo"),
-        bunka(selhani),
+        bunka(ceny),
+        bunka(vypis(u.prvky)),
+        bunka(vypis(u.selhani)),
       );
       return radek;
     }),
   );
   prvek("#souhrn-chyby").textContent =
     souhrn.chyb === 0
-      ? `Prohlížeče ten den neohlásily žádnou chybu. Zpětných vazeb odesláno: ${souhrn.vazeb}.`
+      ? `Prohlížeče neohlásily žádnou chybu. Zpětných vazeb odesláno: ${souhrn.vazeb}.`
       : `Chyby ohlášené prohlížeči (${souhrn.chyb}): ${souhrn.chyby.map((c) => `${c.zprava} (${c.pocet}×)`).join(" · ")}. Zpětných vazeb odesláno: ${souhrn.vazeb}.`;
 }
 
@@ -395,13 +422,35 @@ async function otevriSezeni(den: string, s: SezeniDne, radek: HTMLTableRowElemen
   }
 }
 
+const vyberObdobi = prvek<HTMLSelectElement>("#obdobi");
+
+/** První den období, které končí dnem `den` a trvá zvolený počet dní (0 = od začátku). */
+function zacatekObdobi(den: string): string {
+  const dni = Number(vyberObdobi.value);
+  if (dni === 0) return "2000-01-01";
+  const zacatek = new Date(`${den}T00:00:00Z`);
+  zacatek.setUTCDate(zacatek.getUTCDate() - (dni - 1));
+  return zacatek.toISOString().slice(0, 10);
+}
+
+/**
+ * Souhrn za období. Server na jednu žádost přečte jen omezený počet dávek a uzavřeným dnům
+ * si ukládá, kam došel; žádost se proto opakuje, dokud má co dopočítat.
+ */
+async function nactiSouhrn(den: string): Promise<void> {
+  const dotaz = `co=souhrn&od=${zacatekObdobi(den)}&do=${den}`;
+  let odpoved = await sprava<OdpovedSouhrnu>(dotaz);
+  for (let kolo = 0; kolo < 60 && odpoved.dopocitatelne.length > 0; kolo++) {
+    ohlas(`Počítám souhrn: zbývá ${odpoved.dopocitatelne.length} dní…`);
+    odpoved = await sprava<OdpovedSouhrnu>(dotaz);
+  }
+  vykresliSouhrn(odpoved);
+  ohlas("");
+}
+
 async function nactiDen(den: string): Promise<void> {
   prvek("#detail-sezeni").hidden = true;
-  const [souhrn, seznam] = await Promise.all([
-    sprava<{ souhrn: SouhrnDeniku; davek: number; neuplne: boolean }>(`co=souhrn&den=${den}`),
-    sprava<{ sezeni: SezeniDne[] }>(`co=den&den=${den}`),
-  ]);
-  vykresliSouhrn(souhrn.souhrn, souhrn.davek, souhrn.neuplne);
+  const [, seznam] = await Promise.all([nactiSouhrn(den), sprava<{ sezeni: SezeniDne[] }>(`co=den&den=${den}`)]);
   prvek<HTMLTableSectionElement>("#sezeni tbody").replaceChildren(
     ...seznam.sezeni.map((s) => {
       const radek = document.createElement("tr");
@@ -425,6 +474,10 @@ async function nactiDny(): Promise<void> {
   );
   if (dny.length === 0) {
     prvek("#den-pocty").textContent = "Deník je zatím prázdný.";
+    prvek("#souhrn tbody").replaceChildren();
+    prvek("#sezeni tbody").replaceChildren();
+    prvek("#souhrn-chyby").textContent = "";
+    prvek("#detail-sezeni").hidden = true;
     return;
   }
   await nactiDen(dny[0]!);
@@ -434,14 +487,48 @@ vyberDne.addEventListener("change", () => {
   void nactiDen(vyberDne.value).catch((chyba: unknown) => ohlas(`Den se nepodařilo načíst: ${(chyba as Error).message}`));
 });
 
+vyberObdobi.addEventListener("change", () => {
+  if (!vyberDne.value) return;
+  void nactiSouhrn(vyberDne.value).catch((chyba: unknown) => ohlas(`Souhrn se nepodařilo načíst: ${(chyba as Error).message}`));
+});
+
+prvek("#smazat-den").addEventListener("click", () => {
+  const den = vyberDne.value;
+  if (!den || !window.confirm(`Smazat celý deník hraní ze dne ${den}? Nejde to vrátit.`)) return;
+  void (async () => {
+    try {
+      let smazano = 0;
+      for (let kolo = 0; kolo < 200; kolo++) {
+        const odpoved = await sprava<{ smazano: number; zbyva: number }>("co=smazat", { den });
+        smazano += odpoved.smazano;
+        if (odpoved.zbyva === 0) break;
+        ohlas(`Mažu deník ${den}: zbývá ${odpoved.zbyva} dávek…`);
+      }
+      await nactiDny();
+      ohlas(`Smazáno: deník ${den} (${smazano} dávek).`);
+    } catch (chyba) {
+      ohlas(`Smazat se nepodařilo: ${(chyba as Error).message}`);
+    }
+  })();
+});
+
 prvek("#export").addEventListener("click", () => {
   const den = vyberDne.value;
   if (!den) return;
   void (async () => {
     try {
-      const data = await sprava<unknown>(`co=export&den=${den}`);
+      // Den s mnoha dávkami server vydává po částech.
+      const davky: unknown[] = [];
+      let preskocit: number | null = 0;
+      while (preskocit !== null) {
+        const cast: { davky: unknown[]; dalsi: number | null } = await sprava(`co=export&den=${den}&preskocit=${preskocit}`);
+        davky.push(...cast.davky);
+        preskocit = cast.dalsi;
+        if (preskocit !== null) ohlas(`Stahuji deník ${den}: ${davky.length} dávek…`);
+      }
+      ohlas("");
       const odkaz = document.createElement("a");
-      odkaz.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
+      odkaz.href = URL.createObjectURL(new Blob([JSON.stringify({ den, davky })], { type: "application/json" }));
       odkaz.download = `mostmistr-denik-${den}.json`;
       odkaz.click();
       URL.revokeObjectURL(odkaz.href);
