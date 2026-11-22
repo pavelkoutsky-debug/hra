@@ -408,8 +408,8 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Krokovat záznam zpět a vpřed | čárka, tečka |
 | Brnknout do mostu | B a tažení styčníku dolů |
 | Závaží ve styčníku, síla tlumiče | výběr a tlačítka − a + v paletě |
-| Laděný tlumič pod styčník | výběr styčníku a L; závaží a ladění tlačítky − a + |
-| Budič | U a kliknutí na styčník; rytmus tlačítky − a + |
+| Závaží a laděný tlumič | položka v paletě prvků (nebo její číslo, tlumič i L) a kliknutí na styčník; hodnoty tlačítky − a +. Jde to i výběrem styčníku. *(Po M3b na přání zadavatele: co úroveň dovoluje, je vidět mezi prvky.)* |
+| Budič | U nebo položka ve skupině Pokusy a kliknutí na styčník; rytmus tlačítky − a + |
 | Analytický panel | A nebo tlačítko Analýza |
 | Zapnout a vypnout čísla využití u prutů | C |
 | Hlasitost zvuku: nahlas, potichu, vypnuto | Z nebo tlačítko v liště |

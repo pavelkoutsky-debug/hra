@@ -27,6 +27,9 @@ export interface StavNavrhu {
   obalka: readonly { vyuziti: number; tah: boolean }[] | null;
 }
 
+/** Šířka popisku laděného tlumiče („1000 kg · 2,50 Hz“) na obrazovce, px. */
+const SIRKA_POPISKU_TLUMICE = 110;
+
 function mezi(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
@@ -119,9 +122,15 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
     ctx.fillText(`${st.zavazi} kg`, p.x, p.y + 0.6 * sirka + 9);
   }
   // Laděný tlumič: závaží na pružině pod styčníkem; popisek říká, kolik váží a na kolik hertzů je naladěné.
-  for (const st of s.navrh.stycniky) {
+  // Popisky sousedních tlumičů by se překryly, proto každý druhý z těsné řady stojí o řádek níž.
+  const sTlumicem = s.navrh.stycniky.filter((st) => st.tlumic).sort((a, b) => a.x - b.x || b.y - a.y);
+  let minuleX = Number.NEGATIVE_INFINITY;
+  let nize = false;
+  for (const st of sTlumicem) {
     if (!st.tlumic) continue;
     const p = naObraz(st);
+    nize = p.x - minuleX < SIRKA_POPISKU_TLUMICE ? !nize : false;
+    minuleX = p.x;
     const zavazi = { x: p.x, y: p.y + LADENY_TLUMIC.zaves * m };
     nakresliPruzinu(ctx, p, zavazi, m);
     nakresliZavazi(ctx, zavazi, m);
@@ -130,7 +139,11 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillStyle = spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.cara;
-    ctx.fillText(`${st.tlumic.hmota} kg · ${cislo(st.tlumic.frekvence, 2)} Hz`, zavazi.x, zavazi.y + 0.6 * sirka + 9);
+    ctx.fillText(
+      `${st.tlumic.hmota} kg · ${cislo(st.tlumic.frekvence, 2)} Hz`,
+      zavazi.x,
+      zavazi.y + 0.6 * sirka + 9 + (nize ? 13 : 0),
+    );
   }
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";

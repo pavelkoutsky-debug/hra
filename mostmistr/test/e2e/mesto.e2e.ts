@@ -163,6 +163,68 @@ describe("ukázky v okně se zadáním", () => {
   }
 });
 
+describe("paleta: laděný tlumič mezi prvky a pokusy", () => {
+  it("laděný tlumič je mezi stavebními prvky a pokusy jsou vidět i na prázdném výkresu", async () => {
+    await otevri("5-02");
+    const prvky = await stranka.locator(".paleta__prvky button").allInnerTexts();
+    expect(prvky).toHaveLength(3);
+    expect(prvky[2]).toContain("Laděný tlumič");
+    expect(prvky[2]).toContain("30\u202f000\u00a0Kč + 30\u00a0Kč/kg · do 1000 kg");
+    // Budič a brnknutí nejsou zašedlé; bez mostu poradí, co jim chybí.
+    for (const [jmeno, rada] of [
+      ["budic", "Budič potřebuje most, do kterého může bušit. Nejdřív ho nakresli."],
+      ["brnknout", "Brnknout jde až do postaveného mostu. Nejdřív ho nakresli."],
+    ] as const) {
+      expect(await akce(jmeno).isVisible()).toBe(true);
+      expect(await akce(jmeno).isDisabled()).toBe(false);
+      await akce(jmeno).click();
+      expect(await udaj("hlaseni")).toBe(rada);
+      expect(await akce(jmeno).getAttribute("aria-pressed")).toBe("false");
+    }
+    await stranka.screenshot({ path: `${SLOZKA}/76-paleta-mesto.png` });
+  });
+
+  it("kliknutí na položku a pak na styčník zavěsí tlumič a nabídne jeho ladění", async () => {
+    await nactiMost(navrhNaText(RESENI["5-02"]!.pady[1]!.navrh));
+    await expect.poll(frekvenceMostu, { timeout: 10_000 }).toBeGreaterThan(2);
+    const polozka = stranka.locator('[data-pridavek="ladeny"]');
+    const nastaveni = stranka.locator('[data-nastaveni="ladeny"]');
+    await polozka.click();
+    expect(await polozka.getAttribute("aria-pressed")).toBe("true");
+    expect(await udaj("hlaseni")).toContain("Klikni na styčník, pod který chceš laděný tlumič zavěsit");
+    expect(await nastaveni.isVisible()).toBe(false);
+    const cenaBez = await udaj("cena");
+    await klikni([16, 0]);
+    expect(await nastaveni.isVisible()).toBe(true);
+    expect(await udaj("ladeny-prepnout")).toBe("Odebrat");
+    expect(await udaj("ladeny-hmota")).toBe("300 kg");
+    const ladeni = await udaj("ladeny-frekvence");
+    expect(ladeni).toMatch(/^2,[3-7]\d? Hz$/);
+    const cenaSJednim = await udaj("cena");
+    expect(cenaSJednim).not.toBe(cenaBez);
+    // Druhé kliknutí na tentýž styčník tlumič jen vybere, další styčník dostane vlastní,
+    // stejně těžký a stejně naladěný jako ten první.
+    await klikni([16, 0]);
+    expect(await udaj("cena")).toBe(cenaSJednim);
+    await klikni([12, 0]);
+    expect(await udaj("cena")).not.toBe(cenaSJednim);
+    expect(await udaj("ladeny-hmota")).toBe("300 kg");
+    expect(await udaj("ladeny-frekvence")).toBe(ladeni);
+    await stranka.screenshot({ path: `${SLOZKA}/77-tlumic-z-palety.png` });
+    // Tlačítko Odebrat tlumič vybraného styčníku sundá; Escape věšení ukončí.
+    await akce("ladeny-prepnout").click();
+    expect(await udaj("cena")).toBe(cenaSJednim);
+    await stranka.keyboard.press("Escape");
+    expect(await polozka.getAttribute("aria-pressed")).toBe("false");
+    expect(await nastaveni.isVisible()).toBe(false);
+    // Klávesa s číslem položky (3) dělá totéž co kliknutí na ni.
+    await stranka.keyboard.press("3");
+    expect(await polozka.getAttribute("aria-pressed")).toBe("true");
+    await stranka.keyboard.press("3");
+    expect(await polozka.getAttribute("aria-pressed")).toBe("false");
+  });
+});
+
 describe("laděný tlumič a analytický panel při stavbě", () => {
   let spickaBez = 0;
   let vrcholuBez = 0;

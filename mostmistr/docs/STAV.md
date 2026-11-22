@@ -12,7 +12,7 @@ Poslední aktualizace: 22. 11. 2026
 | M2 První hratelná verze | Hotovo, zadavatel vyzkoušel a schválil sloučení do `main` (21. 11. 2026) |
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
-| M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026). Oprava ukázky 5-04 je v samostatném pull requestu |
+| M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
 | M4a Těžká doprava | Rozpracováno (zatím jen průzkum kódu a návrh postupu, žádný kód) |
 | M4b až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
@@ -90,6 +90,21 @@ V přehledu kampaně je pátá kapitola hned za druhou; třetí a čtvrtá (siln
 - Jak se s panelem a budičem pracuje člověku, který je vidí poprvé. Testy ověřují, že fungují, ne že jsou srozumitelné.
 - Obtížnost páté kapitoly: je nastavená z referenčních mostů stejně jako dřív, ale úrovně s tlumičem jsou první, kde hráč ladí dvě čísla najednou.
 - Jiné prohlížeče než Chromium.
+
+## Úprava po M3b: paleta prvků
+
+Zadavatel po sloučení M3b: „ve stavebních prvcích nikde nevidím laděný tlumič a budič; vlevo nahoře jsou jen dvě věci, mostovka a lehký ocelový profil“. Měl pravdu: laděný tlumič (a v druhé kapitole závaží) se objevil až po výběru styčníku nástrojem Výběr a budič byl mezi nástroji zašedlý, dokud nestál most.
+
+**Co se změnilo**
+
+- **Laděný tlumič a závaží jsou položky palety** mezi stavebními prvky, s cenou a mezí úrovně. Kliknutí na položku (nebo její číslo; tlumič i klávesa L) zapne věšení: kliknutí na styčník do něj přídavek pověsí a rovnou ho vybere, takže se vlevo dole objeví jeho nastavení. Kliknutí na styčník, který přídavek už má, ho jen vybere. Escape věšení ukončí.
+- Dosavadní cesta (vybrat styčník nástrojem Výběr a nastavit) funguje dál.
+- **Další tlumič je stejný jako ten, který most už má** (stejné závaží i ladění). Dřív se druhý tlumič položený hned po prvním naladil na výchozí 2 Hz, protože rozbor mostu se zrovna přepočítával.
+- **Brnknutí a budič mají vlastní skupinu „Pokusy“** hned pod prvky, s krátkým popisem, a nejsou zašedlé: bez mostu poradí, že ho nejdřív potřebují.
+- Popisky sousedních tlumičů se na výkresu nepřekrývají (každý druhý z těsné řady je o řádek níž).
+- Okno se zadáním vypisuje mezi tím, z čeho se staví, i závaží.
+
+**Poučení.** Co úroveň nově dovoluje, musí být vidět na prázdném výkresu, ne až po kroku, o kterém hráč neví. Platí to i pro prvky dalších kapitol (napínák lana, svar, píst).
 
 ## Oprava po M3b: ukázka úrovně 5-04
 
@@ -326,7 +341,7 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Schválit sloučení opravy ukázky 5-04 (viz „Oprava po M3b“).
+1. Schválit sloučení úpravy palety (laděný tlumič mezi prvky, skupina Pokusy).
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
@@ -353,7 +368,9 @@ M4a Těžká doprava: nákladní vozidla, autobus, souprava, obousměrný provoz
 
 - 22. 11. 2026: zadavatel rozhodl **M3z sloučit a pokračovat na M3b**; pracovní zvuky mají být ve výchozím stavu **zapnuté potichu**.
 
-- 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“.
+- 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“; zadavatel opravu nechal sloučit hned.
+
+- 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“.
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 

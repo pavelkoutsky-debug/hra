@@ -66,18 +66,26 @@
           <h2 data-text="paleta.prvky"></h2>
           <div class="paleta__prvky"></div>
 
+          <div class="paleta__skupina" data-cast="pokusy" hidden>
+            <h2 data-text="paleta.pokusy"></h2>
+            <div class="paleta__pokusy">
+              <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek" data-akce="brnknout" data-popis="paleta.brnknout.popis" aria-pressed="false" hidden>
+                <kbd>B</kbd><span class="paleta__nazev" data-text="paleta.brnknout"></span>
+                <span class="paleta__cena" data-text="paleta.brnknout.kratce"></span>
+              </button>
+              <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek" data-akce="budic" data-popis="paleta.budic.popis" aria-pressed="false" hidden>
+                <kbd>U</kbd><span class="paleta__nazev" data-text="paleta.budic"></span>
+                <span class="paleta__cena" data-text="paleta.budic.kratce"></span>
+              </button>
+            </div>
+          </div>
+
           <h2 data-text="paleta.nastroje"></h2>
           <button type="button" class="paleta__tlacitko" data-akce="vyber" aria-pressed="false">
             <kbd>V</kbd><span data-text="paleta.vyber"></span>
           </button>
           <button type="button" class="paleta__tlacitko" data-akce="zrcadlit">
             <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
-          </button>
-          <button type="button" class="paleta__tlacitko" data-akce="brnknout" data-popis="paleta.brnknout.popis" aria-pressed="false" hidden>
-            <kbd>B</kbd><span data-text="paleta.brnknout"></span>
-          </button>
-          <button type="button" class="paleta__tlacitko" data-akce="budic" data-popis="paleta.budic.popis" aria-pressed="false" hidden>
-            <kbd>U</kbd><span data-text="paleta.budic"></span>
           </button>
           <div class="paleta__dvojice">
             <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
