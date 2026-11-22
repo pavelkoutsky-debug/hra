@@ -3,7 +3,7 @@
 
 import type { Bod } from "../data/geometrie";
 import type { IdPrvku } from "../data/katalog";
-import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu } from "../data/navrh";
+import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu, type TlumicStycniku } from "../data/navrh";
 
 export function prazdnyNavrh(idUrovne: string): NavrhMostu {
   return { verze: VERZE_NAVRHU, uroven: idUrovne, stycniky: [], pruty: [] };
@@ -92,6 +92,27 @@ export function nastavZavazi(
   return zmena ? { ...navrh, stycniky: nove } : navrh;
 }
 
+/**
+ * Nastaví laděný tlumič daným styčníkům; `novy` dostane dosavadní (nebo undefined) a vrátí
+ * nový, případně undefined, když má tlumič zmizet.
+ */
+export function nastavLadenyTlumic(
+  navrh: NavrhMostu,
+  stycniky: ReadonlySet<number>,
+  novy: (dosavadni: TlumicStycniku | undefined) => TlumicStycniku | undefined,
+): NavrhMostu {
+  let zmena = false;
+  const nove = navrh.stycniky.map((s) => {
+    if (!stycniky.has(s.id)) return s;
+    const tlumic = novy(s.tlumic);
+    if (tlumic?.hmota === s.tlumic?.hmota && tlumic?.frekvence === s.tlumic?.frekvence) return s;
+    zmena = true;
+    const { tlumic: _stary, ...bez } = s;
+    return tlumic ? { ...bez, tlumic: { hmota: tlumic.hmota, frekvence: tlumic.frekvence } } : bez;
+  });
+  return zmena ? { ...navrh, stycniky: nove } : navrh;
+}
+
 /** Nastaví součinitel tlumení daným prutům; `hodnota` dostane dosavadní (nebo undefined) a vrátí novou. */
 export function nastavTlumeni(
   navrh: NavrhMostu,
@@ -148,6 +169,8 @@ export function zrcadli(navrh: NavrhMostu, osa: number, jen?: ReadonlySet<number
     for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
       const zavazi = vzor.zavazi;
       if (zavazi) vysledek = nastavZavazi(vysledek, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
+      const tlumic = vzor.tlumic;
+      if (tlumic) vysledek = nastavLadenyTlumic(vysledek, new Set([obraz]), (dosavadni) => dosavadni ?? tlumic);
     }
   }
   return vysledek;

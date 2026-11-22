@@ -2,11 +2,21 @@
 // Neví nic o plátně ani o prohlížeči; dostává body ve světových souřadnicích a hlásí změny.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, KROK_ZAVAZI, STUPNE_TLUMENI, type IdPrvku } from "../data/katalog";
-import type { DruhProblemu, NavrhMostu } from "../data/navrh";
+import { KATALOG, KROK_ZAVAZI, LADENY_TLUMIC, STUPNE_TLUMENI, type IdPrvku } from "../data/katalog";
+import type { DruhProblemu, NavrhMostu, TlumicStycniku } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPrutu, lzeZacit } from "./pravidla";
-import { nastavTlumeni, nastavZavazi, posunStycnik, pridejPrut, smaz, stycnikV, zmenPrvek, zrcadli } from "./upravy";
+import {
+  nastavLadenyTlumic,
+  nastavTlumeni,
+  nastavZavazi,
+  posunStycnik,
+  pridejPrut,
+  smaz,
+  stycnikV,
+  zmenPrvek,
+  zrcadli,
+} from "./upravy";
 
 /** Jak daleko od styčníku nebo prutu se ještě počítá kliknutí na něj, v metrech. */
 const DOSAH_STYCNIKU = 0.38;
@@ -34,6 +44,15 @@ function vzdalenostOdUsecky(p: Bod, a: Bod, b: Bod): number {
   let t = delka2 > 0 ? ((p.x - a.x) * ux + (p.y - a.y) * uy) / delka2 : 0;
   t = Math.max(0, Math.min(1, t));
   return Math.hypot(p.x - (a.x + t * ux), p.y - (a.y + t * uy));
+}
+
+/** Frekvence laděného tlumiče zaokrouhlená na krok ladění a omezená na vyrobitelný rozsah. */
+function frekvenceTlumice(frekvence: number): number {
+  const krok = LADENY_TLUMIC.krokFrekvence;
+  const zaokrouhlena = Math.round(frekvence / krok) * krok;
+  const omezena = Math.max(LADENY_TLUMIC.nejmensiFrekvence, Math.min(LADENY_TLUMIC.nejvetsiFrekvence, zaokrouhlena));
+  // Zápis na setiny, aby opakované krokování nehromadilo zaokrouhlovací chyby.
+  return Math.round(omezena * 100) / 100;
 }
 
 export class Editor {
@@ -358,6 +377,48 @@ export class Editor {
     return this.#zmen(nastavZavazi(this.#navrh, this.vybraneStycniky, () => nove));
   }
 
+  /**
+   * Laděný tlumič vybraných styčníků: první, který nějaký má. Null, když není vybraný žádný
+   * styčník; undefined, když vybrané styčníky tlumič nemají.
+   */
+  get ladenyTlumicVyberu(): TlumicStycniku | null | undefined {
+    if (this.vybraneStycniky.size === 0) return null;
+    return this.#navrh.stycniky.find((s) => this.vybraneStycniky.has(s.id) && s.tlumic)?.tlumic;
+  }
+
+  /**
+   * Zavěsí pod vybrané styčníky laděný tlumič, nebo ho odebere, když ho už mají. Nový je
+   * naladěný na `frekvence` Hz (typicky vlastní frekvence mostu) se závažím `hmota` kg.
+   */
+  prepniLadenyTlumic(hmota: number, frekvence: number): boolean {
+    const dosavadni = this.ladenyTlumicVyberu;
+    if (dosavadni === null || this.uroven.nejvetsiTlumic < LADENY_TLUMIC.nejmensiHmota) return false;
+    const novy = dosavadni ? undefined : { hmota: this.#hmotaTlumice(hmota), frekvence: frekvenceTlumice(frekvence) };
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, () => novy));
+  }
+
+  /** Přidá nebo ubere závaží laděných tlumičů ve vybraných styčnících o jeden krok. */
+  zmenHmotuTlumice(smer: 1 | -1): boolean {
+    const dosavadni = this.ladenyTlumicVyberu;
+    if (!dosavadni) return false;
+    const hmota = this.#hmotaTlumice(dosavadni.hmota + smer * LADENY_TLUMIC.krokHmoty);
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, hmota } : t)));
+  }
+
+  /** Přeladí laděné tlumiče ve vybraných styčnících o `kroku` kroků frekvence výš nebo níž. */
+  zmenFrekvenciTlumice(kroku: number): boolean {
+    const dosavadni = this.ladenyTlumicVyberu;
+    if (!dosavadni) return false;
+    const frekvence = frekvenceTlumice(dosavadni.frekvence + kroku * LADENY_TLUMIC.krokFrekvence);
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence } : t)));
+  }
+
+  #hmotaTlumice(hmota: number): number {
+    const krok = LADENY_TLUMIC.krokHmoty;
+    const nejvic = Math.floor(this.uroven.nejvetsiTlumic / krok) * krok;
+    return Math.max(LADENY_TLUMIC.nejmensiHmota, Math.min(nejvic, Math.round(hmota / krok) * krok));
+  }
+
   /** Vybrané tlumiče (id prutů). */
   #vybraneTlumice(): Set<number> {
     const tlumice = new Set<number>();
@@ -434,9 +495,13 @@ export class Editor {
     }
     for (const vzor of this.#navrh.stycniky) {
       const zavazi = vzor.zavazi;
-      if (!zavazi || !zrcadlene.has(vzor.id)) continue;
+      const tlumic = vzor.tlumic;
+      if ((!zavazi && !tlumic) || !zrcadlene.has(vzor.id)) continue;
       const obraz = stycnikV(postupny, { x: 2 * osa - vzor.x, y: vzor.y });
-      if (obraz) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
+      if (!obraz) continue;
+      if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
+      // Laděný tlumič v ose mostu má obraz sám v sobě; jinde ho obraz dostane, pokud žádný nemá.
+      if (tlumic) postupny = nastavLadenyTlumic(postupny, new Set([obraz.id]), (dosavadni) => dosavadni ?? tlumic);
     }
     this.posledniDuvod = duvod;
     if (!this.#zmen(postupny)) {

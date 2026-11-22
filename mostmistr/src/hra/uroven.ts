@@ -4,7 +4,7 @@
 import { cenaNavrhu, hmotnostNavrhu } from "../data/cena";
 import type { Bod } from "../data/geometrie";
 import { jeUvnitr } from "../data/geometrie";
-import { KATALOG, type IdPrvku } from "../data/katalog";
+import { KATALOG, LADENY_TLUMIC, type IdPrvku } from "../data/katalog";
 import { ChybaDat } from "../data/kontrola";
 import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
@@ -675,6 +675,25 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       prvek('[data-akce="zavazi-min"]', HTMLButtonElement).disabled = zavazi <= 0;
       prvek('[data-akce="zavazi-plus"]', HTMLButtonElement).disabled = zavazi >= uroven.nejvetsiZavazi;
     }
+    const ladeny = stavi && uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota ? editor.ladenyTlumicVyberu : null;
+    prvek('[data-nastaveni="ladeny"]', HTMLElement).hidden = ladeny === null;
+    if (ladeny !== null) {
+      const prepinac = prvek('[data-akce="ladeny-prepnout"]', HTMLButtonElement);
+      prepinac.setAttribute("aria-pressed", String(ladeny !== undefined));
+      udaj("ladeny-prepnout").textContent = t(ladeny ? "paleta.ladeny.odebrat" : "paleta.ladeny.pridat");
+      for (const cast of ["ladeny-hmota", "ladeny-frekvence"]) prvek(`[data-cast="${cast}"]`, HTMLElement).hidden = !ladeny;
+      if (ladeny) {
+        udaj("ladeny-hmota").textContent = t("paleta.ladeny.hmota", { kg: cislo(ladeny.hmota, 0) });
+        udaj("ladeny-frekvence").textContent = t("paleta.ladeny.frekvence", { f: cislo(ladeny.frekvence, 2) });
+        prvek('[data-akce="ladeny-hmota-min"]', HTMLButtonElement).disabled = ladeny.hmota <= LADENY_TLUMIC.nejmensiHmota;
+        prvek('[data-akce="ladeny-hmota-plus"]', HTMLButtonElement).disabled =
+          ladeny.hmota + LADENY_TLUMIC.krokHmoty > uroven.nejvetsiTlumic;
+        prvek('[data-akce="ladeny-frekvence-min"]', HTMLButtonElement).disabled =
+          ladeny.frekvence <= LADENY_TLUMIC.nejmensiFrekvence;
+        prvek('[data-akce="ladeny-frekvence-plus"]', HTMLButtonElement).disabled =
+          ladeny.frekvence >= LADENY_TLUMIC.nejvetsiFrekvence;
+      }
+    }
     const tlumeni = stavi ? editor.tlumeniVyberu : null;
     prvek('[data-nastaveni="tlumeni"]', HTMLElement).hidden = tlumeni === null;
     if (tlumeni !== null) {
@@ -756,6 +775,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const misto = svetNaObraz(kamera, platno.rozmer, { x, y });
     const podil = (2 * misto.x) / platno.rozmer.sirka - 1;
     return SIRKA_ZVUKU * Math.max(-1, Math.min(1, podil));
+  }
+
+  /**
+   * Zavěsí pod vybrané styčníky laděný tlumič, nebo ho odebere. Nový se naladí na první
+   * vlastní frekvenci mostu s lidmi, pokud je známá; tu má tlumič krotit nejčastěji.
+   */
+  function prepniLadenyTlumic(): void {
+    if (rezim !== "stavba") return;
+    const frekvence = rozbor?.frekvenceObsazeneho[0] ?? rozbor?.frekvence[0] ?? 2;
+    editor.prepniLadenyTlumic(Math.min(300, uroven.nejvetsiTlumic), frekvence);
   }
 
   function smazVybrane(): void {
@@ -1378,6 +1407,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("brnknout", prepniBrnknuti);
   priKliknuti("zavazi-min", () => rezim === "stavba" && editor.zmenZavazi(-1));
   priKliknuti("zavazi-plus", () => rezim === "stavba" && editor.zmenZavazi(1));
+  priKliknuti("ladeny-prepnout", prepniLadenyTlumic);
+  priKliknuti("ladeny-hmota-min", () => rezim === "stavba" && editor.zmenHmotuTlumice(-1));
+  priKliknuti("ladeny-hmota-plus", () => rezim === "stavba" && editor.zmenHmotuTlumice(1));
+  for (const [akce, smer] of [["ladeny-frekvence-min", -1], ["ladeny-frekvence-plus", 1]] as const) {
+    prvek(`[data-akce="${akce}"]`, HTMLElement).addEventListener("click", (udalost) => {
+      // Se Shiftem po čtyřech krocích, tedy o 0,2 Hz.
+      if (rezim === "stavba") editor.zmenFrekvenciTlumice(smer * (udalost.shiftKey ? 4 : 1));
+    });
+  }
   priKliknuti("tlumeni-min", () => rezim === "stavba" && editor.zmenTlumeni(-1));
   priKliknuti("tlumeni-plus", () => rezim === "stavba" && editor.zmenTlumeni(1));
   priKliknuti("smazat", smazVybrane);
@@ -1487,6 +1525,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         break;
       case "z":
         prepniZvuk();
+        break;
+      case "l":
+        prepniLadenyTlumic();
         break;
       default: {
         const poradi = Number(klavesa) - 1;

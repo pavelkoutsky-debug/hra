@@ -185,7 +185,7 @@ interface BodObrazu {
 }
 
 /** Pružina s tlumičem: pilovitá čára mezi krátkými rovnými konci. */
-function nakresliPruzinu(ctx: CanvasRenderingContext2D, a: BodObrazu, b: BodObrazu, m: number): void {
+export function nakresliPruzinu(ctx: CanvasRenderingContext2D, a: BodObrazu, b: BodObrazu, m: number): void {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const delka = Math.hypot(dx, dy);

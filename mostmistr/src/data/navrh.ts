@@ -1,14 +1,23 @@
 import { cenaNavrhu } from "./cena";
 import { jeUvnitr, type Bod, type Obdelnik } from "./geometrie";
-import { ID_PRVKU, KATALOG, NEJMENSI_DELKA, type IdPrvku } from "./katalog";
+import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, type IdPrvku } from "./katalog";
 import { ChybaDat, cislo, jedenZ, jenZnameKlice, logicka, polozky, text, objekt, volitelne } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 import { vyskaTerenu, type Uroven } from "./uroven";
 
-export const VERZE_NAVRHU = 1;
+export const VERZE_NAVRHU = 2;
 
 /** Převody ze starších verzí formátu návrhu; viz `prevedNaAktualni`. */
-const PREVODY_NAVRHU: readonly Prevod[] = [];
+const PREVODY_NAVRHU: readonly Prevod[] = [
+  // 1 → 2: styčník může nést laděný tlumič. Starší návrhy ho neznaly a nic se v nich nemění.
+  (stary) => stary,
+];
+
+/** Laděný tlumič zavěšený pod styčníkem: hmotnost závaží v kg a frekvence ladění v Hz. */
+export interface TlumicStycniku {
+  hmota: number;
+  frekvence: number;
+}
 
 export interface StycnikNavrhu {
   id: number;
@@ -21,6 +30,8 @@ export interface StycnikNavrhu {
   zamek?: boolean;
   /** Přidaná hmota v kg. */
   zavazi?: number;
+  /** Laděný tlumič zavěšený pod styčníkem. */
+  tlumic?: TlumicStycniku;
 }
 
 export interface PrutNavrhu {
@@ -50,7 +61,7 @@ export interface NavrhMostu {
 
 function stycnik(h: unknown, cesta: string): StycnikNavrhu {
   const o = objekt(h, cesta);
-  jenZnameKlice(o, cesta, ["id", "x", "y", "svar", "zamek", "zavazi"]);
+  jenZnameKlice(o, cesta, ["id", "x", "y", "svar", "zamek", "zavazi", "tlumic"]);
   const s: StycnikNavrhu = {
     id: cislo(o.id, `${cesta}.id`, { min: 0, cele: true }),
     x: cislo(o.x, `${cesta}.x`, { cele: true }),
@@ -62,6 +73,15 @@ function stycnik(h: unknown, cesta: string): StycnikNavrhu {
   if (zamek !== undefined) s.zamek = zamek;
   const zavazi = volitelne(o.zavazi, (v) => cislo(v, `${cesta}.zavazi`, { min: 0 }));
   if (zavazi !== undefined) s.zavazi = zavazi;
+  const tlumic = volitelne(o.tlumic, (v) => {
+    const t = objekt(v, `${cesta}.tlumic`);
+    jenZnameKlice(t, `${cesta}.tlumic`, ["hmota", "frekvence"]);
+    return {
+      hmota: cislo(t.hmota, `${cesta}.tlumic.hmota`, { min: 0 }),
+      frekvence: cislo(t.frekvence, `${cesta}.tlumic.frekvence`, { min: 0 }),
+    };
+  });
+  if (tlumic !== undefined) s.tlumic = tlumic;
   return s;
 }
 
@@ -145,6 +165,8 @@ export type DruhProblemu =
   | "stycnik-v-terenu"
   | "prut-v-zakazane-zone"
   | "zavazi-nepovolene"
+  | "ladeny-tlumic-nepovoleny"
+  | "ladeny-tlumic-mimo-rozsah"
   | "tlumeni-mimo-rozsah"
   | "nad-rozpocet";
 
@@ -177,6 +199,15 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     else obsazeno.set(klic, s.id);
     if (s.svar && !uroven.povoleneSvary) problemy.push({ druh: "svar-nepovoleny", stycnik: s.id });
     if ((s.zavazi ?? 0) > uroven.nejvetsiZavazi) problemy.push({ druh: "zavazi-nepovolene", stycnik: s.id });
+    if (s.tlumic) {
+      const { hmota, frekvence } = s.tlumic;
+      if (hmota > uroven.nejvetsiTlumic) problemy.push({ druh: "ladeny-tlumic-nepovoleny", stycnik: s.id });
+      const mimo =
+        hmota < LADENY_TLUMIC.nejmensiHmota ||
+        frekvence < LADENY_TLUMIC.nejmensiFrekvence - 1e-9 ||
+        frekvence > LADENY_TLUMIC.nejvetsiFrekvence + 1e-9;
+      if (mimo) problemy.push({ druh: "ladeny-tlumic-mimo-rozsah", stycnik: s.id });
+    }
     // Pod povrchem terénu se staví jen v kotvách a na základech.
     const vOpore = uroven.kotvy.some((k) => k.x === s.x && k.y === s.y) || uroven.zaklady.some((z) => z.x === s.x && z.y === s.y);
     if (!vOpore && s.y < vyskaTerenu(uroven, s.x) - 1e-9) problemy.push({ druh: "stycnik-v-terenu", stycnik: s.id });

@@ -2,13 +2,13 @@
 // rozdělaný tah myší a po zkoušce obálka namáhání.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, type IdPrvku } from "../data/katalog";
+import { KATALOG, LADENY_TLUMIC, type IdPrvku } from "../data/katalog";
 import type { NavrhMostu, ProblemNavrhu } from "../data/navrh";
 import type { Tah } from "../editor/editor";
-import { delka as zapisDelky } from "../ui/formaty";
+import { cislo, delka as zapisDelky } from "../ui/formaty";
 import { BARVY, PISMO, cara } from "./barvy";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
-import { nakresliTlumic, nakresliZavazi } from "./konstrukce";
+import { nakresliPruzinu, nakresliTlumic, nakresliZavazi } from "./konstrukce";
 import { barvaVyuziti } from "./skala";
 
 export interface StavNavrhu {
@@ -117,6 +117,20 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
     ctx.textBaseline = "top";
     ctx.fillStyle = spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.cara;
     ctx.fillText(`${st.zavazi} kg`, p.x, p.y + 0.6 * sirka + 9);
+  }
+  // Laděný tlumič: závaží na pružině pod styčníkem; popisek říká, kolik váží a na kolik hertzů je naladěné.
+  for (const st of s.navrh.stycniky) {
+    if (!st.tlumic) continue;
+    const p = naObraz(st);
+    const zavazi = { x: p.x, y: p.y + LADENY_TLUMIC.zaves * m };
+    nakresliPruzinu(ctx, p, zavazi, m);
+    nakresliZavazi(ctx, zavazi, m);
+    const sirka = mezi(0.7 * m, 16, 44);
+    ctx.font = `10px ${PISMO}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.cara;
+    ctx.fillText(`${st.tlumic.hmota} kg · ${cislo(st.tlumic.frekvence, 2)} Hz`, zavazi.x, zavazi.y + 0.6 * sirka + 9);
   }
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";

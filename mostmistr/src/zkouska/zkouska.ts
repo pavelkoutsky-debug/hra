@@ -161,6 +161,9 @@ export class Zkouska {
     navrh.stycniky.forEach((st, i) => {
       if (st.zavazi) zavazi.push(i);
     });
+    // Závaží laděných tlumičů se kreslí stejně; vodorovně je drží vedení, dokud most stojí.
+    this.#zavaziTlumicu = stavba.tlumice.map((t) => t.zavazi);
+    zavazi.push(...this.#zavaziTlumicu);
     this.#kresleni = { mostovka: this.trasyMostovky, skryte, zavazi };
     this.#obalka = navrh.pruty.map(() => ({ vyuziti: 0, zpusob: ZPUSOB_ZADNY, cas: 0 }));
     const bezProvozu = brnknuti ? TRVANI_BRNKNUTI : TRVANI_BEZ_PROVOZU;
@@ -198,11 +201,30 @@ export class Zkouska {
         void cas;
       },
       posun: (s, cas) => provoz.posun(s, cas),
-      poZmene: (s) => provoz.poZmene(s),
+      poZmene: (s) => {
+        provoz.poZmene(s);
+        this.#uvolniZavaziTlumicu(s);
+      },
       zmenaKroku: (dt) => provoz.zmenaKroku(dt),
       pridavnaFrekvence: (s) => provoz.pridavnaFrekvence(s),
     };
   }
+
+  /**
+   * Po prvním porušení mostu přestane vedení držet závaží laděných tlumičů ve svislici:
+   * padají s troskami jako volná tělesa.
+   */
+  #uvolniZavaziTlumicu(s: Soustava): void {
+    if (this.#zavaziUvolnena || this.#zavaziTlumicu.length === 0 || !this.simulace?.porusena) return;
+    this.#zavaziUvolnena = true;
+    for (const i of this.#zavaziTlumicu) {
+      s.podpora[i] = s.podpora[i]! & ~1;
+      s.invHmotaX[i] = 1 / s.hmota[i]!;
+    }
+  }
+
+  readonly #zavaziTlumicu: number[];
+  #zavaziUvolnena = false;
 
   /** Index prvního styčníku, který vznikl až porušením (za mostem a provozem). */
   get #prvniTroska(): number {

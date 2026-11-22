@@ -99,6 +99,22 @@
               <button type="button" class="paleta__tlacitko" data-akce="zavazi-plus" data-popis="paleta.zavazi.plus">+</button>
             </div>
           </div>
+          <div class="paleta__nastaveni" data-nastaveni="ladeny" hidden>
+            <h2 data-text="paleta.ladeny"></h2>
+            <button type="button" class="paleta__tlacitko" data-akce="ladeny-prepnout" data-popis="paleta.ladeny.popis" aria-pressed="false">
+              <kbd>L</kbd><span data-udaj="ladeny-prepnout"></span>
+            </button>
+            <div class="paleta__krokovac" data-cast="ladeny-hmota">
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-hmota-min" data-popis="paleta.ladeny.lehci">&minus;</button>
+              <output data-udaj="ladeny-hmota"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-hmota-plus" data-popis="paleta.ladeny.tezsi">+</button>
+            </div>
+            <div class="paleta__krokovac" data-cast="ladeny-frekvence">
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-frekvence-min" data-popis="paleta.ladeny.niz">&minus;</button>
+              <output data-udaj="ladeny-frekvence"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="ladeny-frekvence-plus" data-popis="paleta.ladeny.vys">+</button>
+            </div>
+          </div>
           <div class="paleta__nastaveni" data-nastaveni="tlumeni" hidden>
             <h2 data-text="paleta.tlumeni"></h2>
             <div class="paleta__krokovac">
