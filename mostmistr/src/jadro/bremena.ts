@@ -10,6 +10,7 @@
 // je předepsaná včetně znaménka. Mimo okraje trasy jede břemeno po pevné zemi; kde
 // mostovka chybí, ztrácí oporu a padá.
 
+import { vyskaNerovnosti, type Nerovnost } from "./nerovnost";
 import type { Zatizeni } from "./simulace";
 import type { Soustava } from "./soustava";
 import { mistoNaPrvku, najdiPrvekTrasy, prestavTrasu, vyskaNaPrvku, vyskaSpojnice, type Trasa } from "./trasa";
@@ -52,6 +53,8 @@ export interface PopisBremene {
   tlumeni?: number;
   /** Výška styčníku nad povrchem, při které je pružina kontaktu bez napětí. */
   vyskaNad?: number;
+  /** Kolo jede po nerovnostech vozovky (když je trasa má); chodci ne. */
+  poNerovnostech?: boolean;
   /** Budicí síla: frekvence v Hz a amplitudy harmonických složek v newtonech. */
   buzeni?: {
     frekvence: number;
@@ -64,6 +67,10 @@ export interface PopisBremene {
 
 export interface Bremena {
   trasa: Trasa;
+  /** Výškový profil vozovky, po kterém jedou kola; null je dokonale rovná vozovka. */
+  profil: Nerovnost | null;
+  /** Pro každé břemeno: 1, když jede po nerovnostech (kola), 0, když ne (chodci, síly). */
+  poNerovnostech: Uint8Array;
   pocet: number;
   stycnik: Int32Array;
   x: Float64Array;
@@ -100,10 +107,12 @@ export interface Bremena {
   dt: number;
 }
 
-export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[]): Bremena {
+export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[], profil: Nerovnost | null = null): Bremena {
   const n = popisy.length;
   const b: Bremena = {
     trasa,
+    profil,
+    poNerovnostech: new Uint8Array(n),
     pocet: n,
     stycnik: new Int32Array(n).fill(-1),
     x: new Float64Array(n),
@@ -136,6 +145,7 @@ export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[]): Br
     b.tuhost[i] = p.tuhost ?? 0;
     b.tlumeni[i] = p.tlumeni ?? 0;
     b.vyskaNad[i] = p.vyskaNad ?? 0;
+    b.poNerovnostech[i] = p.poNerovnostech && p.stycnik !== undefined ? 1 : 0;
     if (p.buzeni) {
       b.frekvence[i] = p.buzeni.frekvence;
       for (let k = 0; k < 6; k++) b.amplitudy[6 * i + k] = p.buzeni.amplitudy[k] ?? 0;
@@ -249,14 +259,16 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
     }
     const uzel = stycnik[i]!;
     const x = uzel >= 0 ? s.x[uzel]! : b.x[i]!;
+    // Hrbol vozovky pod kolem: zvedá povrch na zemi i na mostovce.
+    const hrbol = b.profil !== null && b.poNerovnostech[i] === 1 ? vyskaNerovnosti(b.profil, x) : 0;
 
     // Co je pod břemenem.
     let e = NA_ZEMI;
     let xi = 0;
     let povrch: number;
     let naSpojnici: number;
-    if (x < trasa.xLevy) povrch = naSpojnici = trasa.yLevy;
-    else if (x > trasa.xPravy) povrch = naSpojnici = trasa.yPravy;
+    if (x < trasa.xLevy) povrch = naSpojnici = trasa.yLevy + hrbol;
+    else if (x > trasa.xPravy) povrch = naSpojnici = trasa.yPravy + hrbol;
     else {
       const j = najdiPrvekTrasy(s, trasa, x, pole[i]!);
       povrch = naSpojnici = Number.NaN;
@@ -272,6 +284,9 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
       if (!(povrch === povrch) || stlaceni > NEJVETSI_STLACENI) {
         e = BEZ_OPORY;
         povrch = naSpojnici = Number.NaN;
+      } else if (hrbol !== 0) {
+        povrch += hrbol;
+        naSpojnici += hrbol;
       }
     }
     vyska[i] = povrch;

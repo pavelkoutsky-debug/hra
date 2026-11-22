@@ -216,4 +216,52 @@ describe("verze formátu úrovně", () => {
     expect(druha).toHaveLength(4);
     expect(druha.every((u) => u.osaFrekvenci)).toBe(true);
   });
+  it("verze 3 se převede: nerovnost vozovky žádná, i když ji soubor uváděl", () => {
+    // Starší úrovně třídu nerovnosti nesly, ale hra ji nepočítala; jsou vyladěné na rovné vozovce.
+    const treti = {
+      ...platna(),
+      verze: 3,
+      nerovnost: "C",
+      nejvetsiZavazi: 0,
+      osaFrekvenci: false,
+      nejvetsiTlumic: 0,
+      rezonancniKrivka: false,
+      budic: false,
+      nejhorsiKomfort: 3,
+    };
+    const u = nactiUroven(treti);
+    expect(u.verze).toBe(VERZE_UROVNE);
+    expect(u.nerovnost).toBe("zadna");
+  });
+
+  it("verze 4 nese nerovnost vozovky a u vozidel rozestup, rychlost a brzdění", () => {
+    const zaklad = {
+      ...platna(),
+      verze: 4,
+      nejvetsiZavazi: 0,
+      osaFrekvenci: false,
+      nejvetsiTlumic: 0,
+      rezonancniKrivka: false,
+      budic: false,
+      nejhorsiKomfort: 3,
+    };
+    const trasa = (zaklad.trasy as { id: string }[])[0]!.id;
+    const jizda = { cas: 0, trasa, smer: 1, druh: "nakladni" };
+    const u = nactiUroven({
+      ...zaklad,
+      nerovnost: "B",
+      jizdniRad: [{ ...jizda, pocet: 3, rozestup: 12, rychlost: 5, brzdeni: { misto: 2, stani: 3, zpomaleni: 4 } }],
+    });
+    expect(u.nerovnost).toBe("B");
+    expect(u.jizdniRad[0]).toMatchObject({ rozestup: 12, rychlost: 5, brzdeni: { misto: 2, stani: 3, zpomaleni: 4 } });
+    expect(nactiUroven({ ...zaklad, nerovnost: "zadna" }).nerovnost).toBe("zadna");
+    ocekavejChybu({ ...zaklad, nerovnost: "D" }, "uroven.nerovnost");
+    ocekavejChybu({ ...zaklad, jizdniRad: [{ ...jizda, rychlost: 0 }] }, "uroven.jizdniRad[0].rychlost");
+    ocekavejChybu({ ...zaklad, jizdniRad: [{ ...jizda, rozestup: 1 }] }, "uroven.jizdniRad[0].rozestup");
+    ocekavejChybu({ ...zaklad, jizdniRad: [{ ...jizda, brzdeni: { misto: 2 } }] }, "uroven.jizdniRad[0].brzdeni.stani");
+    ocekavejChybu(
+      { ...zaklad, jizdniRad: [{ ...jizda, brzdeni: { misto: 2, stani: 1, zpomaleni: 20 } }] },
+      "uroven.jizdniRad[0].brzdeni.zpomaleni",
+    );
+  });
 });

@@ -15,7 +15,7 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 3;
+export const VERZE_UROVNE = 4;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
@@ -24,6 +24,10 @@ const PREVODY_UROVNE: readonly Prevod[] = [
   // 2 → 3: laděný tlumič, rezonanční křivka, budič a požadovaný komfort. Starší úrovně je
   // neznaly; neobstál v nich jen most s nepřijatelným kmitáním.
   (stara) => ({ ...stara, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false, nejhorsiKomfort: 3 }),
+  // 3 → 4: nerovnost vozovky začala platit. Starší úrovně třídu uváděly, ale hra ji nepočítala:
+  // jsou vyladěné na dokonale rovné vozovce a tak zůstávají. Položky jízdního řádu nově
+  // umějí rozestup, rychlost a brzdění; starší je nemají.
+  (stara) => ({ ...stara, nerovnost: "zadna" }),
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
@@ -45,9 +49,22 @@ export interface Trasa {
   konec: Bod;
 }
 
-export const TRIDY_NEROVNOSTI = ["A", "B", "C"] as const;
-/** Třída nerovnosti vozovky podle normového profilu: A nová, C rozbitá. */
+export const TRIDY_NEROVNOSTI = ["zadna", "A", "B", "C"] as const;
+/**
+ * Nerovnost vozovky: žádná (dokonale rovná, jako v úrovních do verze 3), nebo třída podle
+ * normového profilu: A nová hladká, B běžná, C rozbitá.
+ */
 export type TridaNerovnosti = (typeof TRIDY_NEROVNOSTI)[number];
+
+/** Brzdění vozidla na mostě: zastaví, postojí a zase se rozjede. */
+export interface Brzdeni {
+  /** Souřadnice x světa, kde má vozidlo po zastavení stát čelem, m. */
+  misto: number;
+  /** Jak dlouho stojí, s. */
+  stani: number;
+  /** Zpomalení při brzdění, m/s²; bez údaje prudké brzdění 5 m/s². */
+  zpomaleni?: number;
+}
 
 export const DRUHY_BONUSU = ["rezerva", "komfort-chodcu", "komfort-cestujicich"] as const;
 /** Podmínka mistrovské medaile: největší využití, nebo největší zrychlení v m/s². */
@@ -69,6 +86,12 @@ export interface PolozkaJizdnihoRadu {
   kadence?: number;
   /** Jak dlouho skákající dav na mostě skáče, v sekundách. */
   trvani?: number;
+  /** Rozestup vozidel ve skupině, čelo od čela, m; bez údaje podle druhu vozidla. */
+  rozestup?: number;
+  /** Rychlost vozidel v m/s; bez údaje podle druhu vozidla. */
+  rychlost?: number;
+  /** Vozidla na mostě zabrzdí, postojí a rozjedou se. */
+  brzdeni?: Brzdeni;
 }
 
 export interface Uroven {
@@ -205,6 +228,21 @@ function polozkaJizdnihoRadu(h: unknown, cesta: string): PolozkaJizdnihoRadu {
   if (kadence !== undefined) p.kadence = kadence;
   const trvani = volitelne(o.trvani, (v) => cislo(v, `${cesta}.trvani`, { min: 1, max: 120 }));
   if (trvani !== undefined) p.trvani = trvani;
+  const rozestup = volitelne(o.rozestup, (v) => cislo(v, `${cesta}.rozestup`, { min: 2, max: 200 }));
+  if (rozestup !== undefined) p.rozestup = rozestup;
+  const rychlost = volitelne(o.rychlost, (v) => cislo(v, `${cesta}.rychlost`, { min: 0.5, max: 40 }));
+  if (rychlost !== undefined) p.rychlost = rychlost;
+  const brzdeni = volitelne(o.brzdeni, (v) => {
+    const b = objekt(v, `${cesta}.brzdeni`);
+    const vysledek: Brzdeni = {
+      misto: cislo(b.misto, `${cesta}.brzdeni.misto`),
+      stani: cislo(b.stani, `${cesta}.brzdeni.stani`, { min: 0, max: 60 }),
+    };
+    const zpomaleni = volitelne(b.zpomaleni, (z) => cislo(z, `${cesta}.brzdeni.zpomaleni`, { min: 1, max: 8 }));
+    if (zpomaleni !== undefined) vysledek.zpomaleni = zpomaleni;
+    return vysledek;
+  });
+  if (brzdeni !== undefined) p.brzdeni = brzdeni;
   return p;
 }
 

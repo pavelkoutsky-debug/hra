@@ -18,6 +18,7 @@ import {
   type PopisBremene,
 } from "../jadro/bremena";
 import { nahoda, nahodnaFaze } from "../jadro/nahoda";
+import { vyskaNerovnosti, vytvorNerovnost, type Nerovnost } from "../jadro/nerovnost";
 import type { Zatizeni } from "../jadro/simulace";
 import { popisPruziny, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { pridejKontaktSTerenem, vyskaTerenuV, type Teren } from "../jadro/teren";
@@ -151,9 +152,25 @@ function odchylka(nahodne: () => number): number {
   return z < -2 ? -2 : z > 2 ? 2 : z;
 }
 
+/**
+ * Model jednoho účastníka položky jízdního řádu. U vozidel smí úroveň předepsat jinou
+ * rychlost a jiný rozestup ve skupině (pomalá kolona nárazník na nárazník).
+ */
+function modelPolozky(polozka: Uroven["jizdniRad"][number]): ModelUcastnika | null {
+  const model = modelUcastnika(polozka.druh, polozka.kadence);
+  if (!model || jeClovek(polozka.druh)) return model;
+  if (polozka.rychlost === undefined && polozka.rozestup === undefined) return model;
+  return {
+    ...model,
+    rychlost: polozka.rychlost ?? model.rychlost,
+    // Vozy se nesmějí překrývat, ať úroveň chce cokoli.
+    rozestup: Math.max(polozka.rozestup ?? model.rozestup, model.delka + 1),
+  };
+}
+
 /** Rozloží položku jízdního řádu na řady: kdo jde vedle koho, jak daleko za sebou a v jakém rytmu. */
 function radySkupiny(polozka: Uroven["jizdniRad"][number], uroven: Uroven, nahodne: () => number): Rada[] | null {
-  const jeden = modelUcastnika(polozka.druh, polozka.kadence);
+  const jeden = modelPolozky(polozka);
   if (!jeden) return null;
   const lidi = polozka.pocet ?? 1;
   const vRade = lidiVRade(polozka.druh, uroven.sirkaMostovky);
@@ -228,6 +245,8 @@ export interface PlanProvozu {
   ucastnici: PlanUcastnika[];
   /** Kontakty břemen pro každou trasu úrovně. */
   kontakty: PopisBremene[][];
+  /** Výškový profil vozovky každé trasy; null, když je vozovka dokonale rovná. */
+  nerovnosti: (Nerovnost | null)[];
   /** Index prvního styčníku provozu; styčníky mostu jsou před ním. */
   prvniStycnik: number;
   /** Čas, kdy by měl poslední účastník dojet, kdyby nikdo nespadl. */
@@ -246,20 +265,49 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
   const plan: PlanProvozu = {
     ucastnici: [],
     kontakty: uroven.trasy.map(() => []),
+    nerovnosti: uroven.trasy.map(() => null),
     prvniStycnik: popis.stycniky.length,
     konec: 0,
   };
 
-  uroven.jizdniRad.forEach((polozka, cisloPolozky) => {
+  // Nejdřív se každá položka rozloží na řady (to spotřebovává náhodu ve stálém pořadí)
+  // a zjistí se, jak daleko před mostem bude kdo stát; podle toho se pak vyrobí vozovka.
+  const skupiny = uroven.jizdniRad.map((polozka) => {
     const cisloTrasy = uroven.trasy.findIndex((t) => t.id === polozka.trasa);
     const trasa = uroven.trasy[cisloTrasy];
     if (!trasa) throw new Error(`Jízdní řád odkazuje na trasu „${polozka.trasa}“, která v úrovni není.`);
     const rady = radySkupiny(polozka, uroven, nahodne);
     if (!rady || rady.length === 0) throw new Error(`Provoz druhu „${polozka.druh}“ hra zatím neumí.`);
-    const rychlost = rady[0]!.model.rychlost;
     // Před mostem je rozjezd dlouhý sekundu jízdy, aby bylo vidět, kdo přijíždí.
-    const nabeh = Math.max(2, rychlost);
+    const nabeh = Math.max(2, rady[0]!.model.rychlost);
+    return { cisloTrasy, trasa, rady, nabeh };
+  });
+  if (uroven.nerovnost !== "zadna") {
+    uroven.trasy.forEach((trasa, cisloTrasy) => {
+      // Vozovka sahá tak daleko před most a za něj, kam dosáhne nejvzdálenější čekající vůz.
+      let presah = 30;
+      for (const skupina of skupiny) {
+        if (skupina.cisloTrasy !== cisloTrasy) continue;
+        const posledni = skupina.rady[skupina.rady.length - 1]!;
+        presah = Math.max(presah, skupina.nabeh + posledni.zaCelem + posledni.model.delka + 10);
+      }
+      // Vlastní řada náhodných čísel, aby nerovnosti neposunuly fáze kroků lidí.
+      const nasadaVozovky = (Math.imul(nasada ^ 0x9e3779b9, 0x85ebca6b) + cisloTrasy) >>> 0;
+      plan.nerovnosti[cisloTrasy] = vytvorNerovnost(
+        trasa.zacatek.x - presah,
+        trasa.konec.x + presah,
+        uroven.nerovnost as Exclude<Uroven["nerovnost"], "zadna">,
+        nasadaVozovky,
+      );
+    });
+  }
+
+  uroven.jizdniRad.forEach((polozka, cisloPolozky) => {
+    const { cisloTrasy, trasa, rady, nabeh } = skupiny[cisloPolozky]!;
+    const rychlost = rady[0]!.model.rychlost;
     const delkaMostu = trasa.konec.x - trasa.zacatek.x;
+    // Po nerovnostech jedou kola; chodec je překročí.
+    const profil = jeClovek(polozka.druh) ? null : plan.nerovnosti[cisloTrasy]!;
 
     // Skákající dav dojde doprostřed mostu, zastaví, skáče a zase odejde. Řady jdou stejně
     // rychle a zastaví ve stejných rozestupech, takže na místo dojdou všechny naráz.
@@ -308,9 +356,10 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
 
       for (const naprava of model.napravy) {
         const x = celo - polozka.smer * naprava.odstup;
-        // Výchozí poloha je klidová: kontakt stlačený tíhou všeho, co nese.
+        // Výchozí poloha je klidová: kontakt stlačený tíhou všeho, co nese, na hrbolu, kde kolo stojí.
         const nesena = naprava.odpruzena + naprava.neodpruzena;
-        const yKola = zem + naprava.kontakt.vyska - (nesena * tiha) / naprava.kontakt.tuhost;
+        const hrbol = profil ? vyskaNerovnosti(profil, x) : 0;
+        const yKola = zem + hrbol + naprava.kontakt.vyska - (nesena * tiha) / naprava.kontakt.tuhost;
         const kolo = popis.stycniky.length;
         const bremeno: PopisBremene = {
           stycnik: kolo,
@@ -318,6 +367,7 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
           tlumeni: naprava.kontakt.tlumeni,
           vyskaNad: naprava.kontakt.vyska,
         };
+        if (profil) bremeno.poNerovnostech = true;
         if (model.buzeni && ucastnik.faze) bremeno.buzeni = { ...model.buzeni, faze: ucastnik.faze };
 
         if (naprava.perovani && naprava.neodpruzena > 0) {
@@ -385,7 +435,7 @@ export class Provoz implements Zatizeni {
     this.stavy = new Uint8Array(plan.ucastnici.length);
     this.#castSkoku = new Uint8Array(plan.ucastnici.length);
     this.#nedokonceno = plan.ucastnici.length;
-    this.bremena = trasy.map((trasa, i) => vytvorBremena(trasa, plan.kontakty[i] ?? []));
+    this.bremena = trasy.map((trasa, i) => vytvorBremena(trasa, plan.kontakty[i] ?? [], plan.nerovnosti[i] ?? null));
     this.#naTerenu = new Uint8Array(s.pocetStycniku);
     this.#vysky = new Float64Array(s.pocetStycniku);
     for (const u of plan.ucastnici) {
