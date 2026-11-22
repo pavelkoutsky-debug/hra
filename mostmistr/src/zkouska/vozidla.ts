@@ -109,10 +109,66 @@ function clenUtvaru(kadence: number): ModelUcastnika {
 }
 
 /**
- * Sloučí `lidi` stejných lidí jdoucích vedle sebe do jednoho účastníka: hmota, tuhost,
- * tlumení i síly se násobí. V bokorysu jsou na stejném místě a mostovku zatěžují společně.
+ * Skákající člověk: tentýž chodec (80 kg, tělo na pružině), jen místo kroků skáče. Síla
+ * doskoků má tvar půlvln sinusu jako při běhu, ale skupina se do rytmu hudby netrefí přesně,
+ * takže její společná síla je menší než součet jednotlivců: první harmonická 1,2 váhy,
+ * druhá 0,4, třetí 0,12 (řádově podle měření skupin desítek lidí; jednotlivec má kolem
+ * 1,6, 0,7 a 0,1 až 0,4). Kadence je rytmus hudby v Hz. Rychlost je rychlost chůze, kterou
+ * dav na místo přijde a zase odejde.
  */
-export function vedleSebe(model: ModelUcastnika, lidi: number): ModelUcastnika {
+export function skokan(kadence: number): ModelUcastnika {
+  const vaha = HMOTA_CHODCE * g;
+  return {
+    ...chodec(KADENCE_DAVU),
+    rychlost: RYCHLOST_DAVU,
+    rozestup: 1,
+    buzeni: { frekvence: kadence, amplitudy: [1.2 * vaha, 0, 0, -0.4 * vaha, -0.12 * vaha, 0] },
+  };
+}
+
+/** Rychlost hustého davu, m/s: lidé si překážejí a jdou pomaleji, než by šli sami. */
+export const RYCHLOST_DAVU = 1.1;
+/** Rychlost průvodu s kapelou, m/s. */
+export const RYCHLOST_PRUVODU = 1.2;
+/** Střední kadence volně jdoucího davu a její směrodatná odchylka mezi lidmi, Hz. */
+export const KADENCE_DAVU = 1.7;
+export const ROZPTYL_DAVU = 0.15;
+/** Střední kadence běžeckého závodu a její směrodatná odchylka, Hz: pásmo je úzké. */
+export const KADENCE_ZAVODU = 2.8;
+export const ROZPTYL_ZAVODU = 0.07;
+/** Kadence pochodující kapely a rytmus skákajícího davu, když je úroveň neurčí, Hz. */
+export const KADENCE_KAPELY = 2;
+export const KADENCE_SKAKANI = 2.2;
+
+/**
+ * Kolik lidí daného druhu provozu jde vedle sebe na mostovce dané šířky. Útvar, dav a průvod
+ * zaplní celou šířku, běžci potřebují víc místa, ostatní jdou po jednom.
+ */
+export function lidiVRade(druh: IdProvozu, sirkaMostovky: number): number {
+  if (druh === "utvar" || druh === "dav" || druh === "pruvod" || druh === "skakajici-dav") {
+    return Math.max(1, Math.floor(sirkaMostovky / SIRKA_NA_OSOBU));
+  }
+  if (druh === "bezecky-zavod") return Math.max(1, Math.min(3, Math.floor(sirkaMostovky)));
+  return 1;
+}
+
+/** Chodec v davu nebo průvodu: krok podle své kadence, rychlost podle skupiny. */
+export function chodecVeSkupine(kadence: number, rychlost: number, rozestup: number): ModelUcastnika {
+  return { ...chodec(kadence), rychlost, rozestup };
+}
+
+/** Běžec v závodě: kadence podle běžce, rozestup řad podle závodu. */
+export function bezecVZavode(kadence: number, rozestup: number): ModelUcastnika {
+  return { ...bezec(kadence), rozestup };
+}
+
+/**
+ * Sloučí `lidi` stejných lidí jdoucích vedle sebe do jednoho účastníka: hmota, tuhost
+ * a tlumení se násobí. V bokorysu jsou na stejném místě a mostovku zatěžují společně.
+ * Když jdou `vTaktu` (útvar, kapela), sčítají se i jejich krokové síly. Když jde každý
+ * po svém, sčítají se jen energie a společná síla roste s odmocninou počtu.
+ */
+export function vedleSebe(model: ModelUcastnika, lidi: number, vTaktu = true): ModelUcastnika {
   if (lidi === 1) return model;
   const vysledek: ModelUcastnika = {
     ...model,
@@ -130,7 +186,8 @@ export function vedleSebe(model: ModelUcastnika, lidi: number): ModelUcastnika {
     }),
   };
   if (model.buzeni) {
-    vysledek.buzeni = { ...model.buzeni, amplitudy: model.buzeni.amplitudy.map((a) => a * lidi) };
+    const nasobek = vTaktu ? lidi : Math.sqrt(lidi);
+    vysledek.buzeni = { ...model.buzeni, amplitudy: model.buzeni.amplitudy.map((a) => a * nasobek) };
   }
   return vysledek;
 }
@@ -186,9 +243,27 @@ export function modelUcastnika(druh: IdProvozu, kadence?: number): ModelUcastnik
   if (druh === "chodec") return chodec(kadence ?? VYCHOZI_KADENCE);
   if (druh === "bezec") return bezec(kadence ?? VYCHOZI_KADENCE_BEHU);
   if (druh === "utvar") return clenUtvaru(kadence ?? VYCHOZI_KADENCE);
+  if (druh === "dav") return chodecVeSkupine(kadence ?? KADENCE_DAVU, RYCHLOST_DAVU, 1.3);
+  if (druh === "bezecky-zavod") return bezecVZavode(kadence ?? KADENCE_ZAVODU, 2.2);
+  if (druh === "pruvod") return chodecVeSkupine(kadence ?? KADENCE_KAPELY, RYCHLOST_PRUVODU, 1.5);
+  if (druh === "skakajici-dav") return chodecVeSkupine(KADENCE_DAVU, RYCHLOST_DAVU, 1);
   if (druh === "cyklista") return cyklista();
   if (druh === "auto") return auto();
   return null;
+}
+
+/**
+ * V jakém rytmu skupina lidí most budí: hlavní frekvence v Hz a její rozptyl mezi lidmi
+ * (směrodatná odchylka; nula, když všichni drží jeden rytmus). U průvodu je to takt kapely,
+ * u skákajícího davu rytmus skákání. Null u provozu, který nejsou lidé.
+ */
+export function rytmusLidi(druh: IdProvozu, kadence?: number): { f: number; rozptyl: number } | null {
+  if (druh === "dav") return { f: kadence ?? KADENCE_DAVU, rozptyl: ROZPTYL_DAVU };
+  if (druh === "bezecky-zavod") return { f: kadence ?? KADENCE_ZAVODU, rozptyl: ROZPTYL_ZAVODU };
+  if (druh === "pruvod") return { f: kadence ?? KADENCE_KAPELY, rozptyl: 0 };
+  if (druh === "skakajici-dav") return { f: kadence ?? KADENCE_SKAKANI, rozptyl: 0 };
+  const f = modelUcastnika(druh, kadence)?.buzeni?.frekvence;
+  return f === undefined ? null : { f, rozptyl: 0 };
 }
 
 /** Celková hmotnost účastníka v kilogramech. */

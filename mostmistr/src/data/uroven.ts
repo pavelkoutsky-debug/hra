@@ -15,12 +15,14 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 2;
+export const VERZE_UROVNE = 3;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
   // 1 → 2: přibylo největší závaží na styčník a osa frekvencí. Starší úrovně je neznaly.
   (stara) => ({ ...stara, nejvetsiZavazi: 0, osaFrekvenci: false }),
+  // 2 → 3: laděný tlumič, rezonanční křivka a budič. Starší úrovně je neznaly.
+  (stara) => ({ ...stara, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false }),
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
@@ -62,8 +64,10 @@ export interface PolozkaJizdnihoRadu {
   druh: IdProvozu;
   /** Počet lidí nebo vozidel ve skupině. */
   pocet?: number;
-  /** Kroková frekvence v Hz u lidí. */
+  /** Kroková frekvence v Hz u lidí; u skákajícího davu rytmus skákání. */
   kadence?: number;
+  /** Jak dlouho skákající dav na mostě skáče, v sekundách. */
+  trvani?: number;
 }
 
 export interface Uroven {
@@ -99,6 +103,12 @@ export interface Uroven {
   nejvetsiZavazi: number;
   /** Ukazuje úroveň osu frekvencí (vlastní frekvence mostu proti krokům lidí) a brnknutí? */
   osaFrekvenci: boolean;
+  /** Největší závaží laděného tlumiče v kg; 0 = úroveň laděný tlumič nedovoluje. */
+  nejvetsiTlumic: number;
+  /** Kreslí se nad osou frekvencí rezonanční křivka? Má smysl jen s osou frekvencí. */
+  rezonancniKrivka: boolean;
+  /** Dovoluje úroveň budič (zkoušku mostu rozmítanou silou)? */
+  budic: boolean;
   jizdniRad: PolozkaJizdnihoRadu[];
 }
 
@@ -123,6 +133,9 @@ const KLICE_UROVNE = [
   "povoleneSvary",
   "nejvetsiZavazi",
   "osaFrekvenci",
+  "nejvetsiTlumic",
+  "rezonancniKrivka",
+  "budic",
   "jizdniRad",
 ] as const;
 
@@ -183,6 +196,8 @@ function polozkaJizdnihoRadu(h: unknown, cesta: string): PolozkaJizdnihoRadu {
   if (pocet !== undefined) p.pocet = pocet;
   const kadence = volitelne(o.kadence, (v) => cislo(v, `${cesta}.kadence`, { min: 0.5, max: 5 }));
   if (kadence !== undefined) p.kadence = kadence;
+  const trvani = volitelne(o.trvani, (v) => cislo(v, `${cesta}.trvani`, { min: 1, max: 120 }));
+  if (trvani !== undefined) p.trvani = trvani;
   return p;
 }
 
@@ -229,6 +244,9 @@ export function nactiUroven(data: unknown): Uroven {
     povoleneSvary: logicka(o.povoleneSvary, `${c}.povoleneSvary`),
     nejvetsiZavazi: cislo(o.nejvetsiZavazi, `${c}.nejvetsiZavazi`, { min: 0 }),
     osaFrekvenci: logicka(o.osaFrekvenci, `${c}.osaFrekvenci`),
+    nejvetsiTlumic: cislo(o.nejvetsiTlumic, `${c}.nejvetsiTlumic`, { min: 0 }),
+    rezonancniKrivka: logicka(o.rezonancniKrivka, `${c}.rezonancniKrivka`),
+    budic: logicka(o.budic, `${c}.budic`),
     jizdniRad: polozky(o.jizdniRad, `${c}.jizdniRad`, polozkaJizdnihoRadu),
   };
 

@@ -180,6 +180,32 @@ describe("verze formátu úrovně", () => {
     ocekavejChybu({ ...platna(), verze: 2, nejvetsiZavazi: -1, osaFrekvenci: true }, "uroven.nejvetsiZavazi");
   });
 
+  it("verze 2 se převede: laděný tlumič nedovoluje, rezonanční křivku a budič nemá", () => {
+    const druha = nactiUroven({ ...platna(), verze: 2, nejvetsiZavazi: 1500, osaFrekvenci: true });
+    expect(druha.verze).toBe(VERZE_UROVNE);
+    expect(druha.nejvetsiTlumic).toBe(0);
+    expect(druha.rezonancniKrivka).toBe(false);
+    expect(druha.budic).toBe(false);
+  });
+
+  it("verze 3 nese laděný tlumič, rezonanční křivku a budič sama a bez nich neprojde", () => {
+    const zaklad = { ...platna(), verze: 3, nejvetsiZavazi: 0, osaFrekvenci: true };
+    const u = nactiUroven({ ...zaklad, nejvetsiTlumic: 800, rezonancniKrivka: true, budic: true });
+    expect(u).toMatchObject({ nejvetsiTlumic: 800, rezonancniKrivka: true, budic: true });
+    ocekavejChybu({ ...zaklad, rezonancniKrivka: true, budic: true }, "uroven.nejvetsiTlumic");
+    ocekavejChybu({ ...zaklad, nejvetsiTlumic: -1, rezonancniKrivka: true, budic: true }, "uroven.nejvetsiTlumic");
+    ocekavejChybu({ ...zaklad, nejvetsiTlumic: 0, budic: true }, "uroven.rezonancniKrivka");
+    ocekavejChybu({ ...zaklad, nejvetsiTlumic: 0, rezonancniKrivka: false }, "uroven.budic");
+  });
+
+  it("skákající dav může mít zadanou dobu skákání", () => {
+    const zaklad = { ...platna(), verze: 3, nejvetsiZavazi: 0, osaFrekvenci: false, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false };
+    const polozka = { cas: 0, trasa: (platna().trasy as { id: string }[])[0]!.id, smer: 1, druh: "skakajici-dav", pocet: 30, kadence: 2.4, trvani: 8 };
+    const u = nactiUroven({ ...zaklad, jizdniRad: [polozka] });
+    expect(u.jizdniRad[0]).toMatchObject({ druh: "skakajici-dav", trvani: 8, kadence: 2.4 });
+    ocekavejChybu({ ...zaklad, jizdniRad: [{ ...polozka, trvani: 0 }] }, "uroven.jizdniRad[0].trvani");
+  });
+
   it("úrovně druhé kapitoly jsou ve verzi 2 a ukazují osu frekvencí", () => {
     const druha = nactiUrovne().filter((u) => u.id.startsWith("2-"));
     expect(druha).toHaveLength(4);

@@ -8,6 +8,7 @@
 import type { IdProvozu } from "../data/katalog";
 import type { Uroven } from "../data/uroven";
 import {
+  nastavBuzeni,
   nastavKrokBremen,
   posunBremena,
   pridavnaFrekvenceBremen,
@@ -21,7 +22,23 @@ import type { Zatizeni } from "../jadro/simulace";
 import { popisPruziny, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { pridejKontaktSTerenem, vyskaTerenuV, type Teren } from "../jadro/teren";
 import { prestavTrasu, type Trasa } from "../jadro/trasa";
-import { modelUcastnika, SIRKA_NA_OSOBU, vedleSebe } from "./vozidla";
+import {
+  bezecVZavode,
+  chodecVeSkupine,
+  KADENCE_DAVU,
+  KADENCE_KAPELY,
+  KADENCE_SKAKANI,
+  KADENCE_ZAVODU,
+  lidiVRade,
+  modelUcastnika,
+  ROZPTYL_DAVU,
+  ROZPTYL_ZAVODU,
+  RYCHLOST_DAVU,
+  RYCHLOST_PRUVODU,
+  skokan,
+  vedleSebe,
+  type ModelUcastnika,
+} from "./vozidla";
 
 export const CEKA = 0;
 export const JEDE = 1;
@@ -80,8 +97,15 @@ export interface PopisUcastnika {
   /** Kroková frekvence v Hz a výchozí fáze (cos, sin); jen u lidí. */
   kadence?: number;
   faze?: [number, number];
-  /** Kolik lidí jde v tomto členu vedle sebe (řada útvaru); bez údaje jeden. */
+  /** Kolik lidí jde v tomto členu vedle sebe (řada útvaru nebo davu); bez údaje jeden. */
   lidi?: number;
+  /** Řada drží krok s ostatními řadami své skupiny (útvar, kapela). */
+  vTaktu?: boolean;
+  /**
+   * Skákající dav: kdy řada dojde na místo a zastaví, odkdy dokdy skáče, kdy se zase
+   * rozejde (časy děje v sekundách) a v jakém rytmu skáče (Hz). Skáčou všichni naráz.
+   */
+  skok?: { prichod: number; od: number; do: number; odchod: number; kadence: number };
 }
 
 interface KontaktUcastnika {
@@ -95,6 +119,108 @@ interface PlanUcastnika extends PopisUcastnika {
   kontakty: KontaktUcastnika[];
   /** Všechny styčníky účastníka. */
   stycniky: number[];
+  /** Skákající dav: amplitudy krokové síly při chůzi a síly doskoků. */
+  chuze?: number[];
+  skakani?: number[];
+}
+
+/** Řada lidí nebo jedno vozidlo ze skupiny v jízdním řádu. */
+interface Rada {
+  /** Model řady; lidé vedle sebe jsou v něm už sloučení. */
+  model: ModelUcastnika;
+  /** Jak daleko za čelem skupiny řada jde, m. */
+  zaCelem: number;
+  faze: [number, number] | null;
+  lidi: number;
+  vTaktu: boolean;
+}
+
+/** Pauza mezi příchodem skákajícího davu na místo a prvním skokem a po posledním skoku, s. */
+const PAUZA_SKAKANI = 1;
+const VYCHOZI_TRVANI_SKAKANI = 10;
+/** Mezera mezi kapelou a davem, který jde za ní, m. */
+const MEZERA_ZA_KAPELOU = 3;
+
+/**
+ * Náhodné číslo s rozdělením blízkým normálnímu (střed 0, směrodatná odchylka 1), oříznuté
+ * na dvě odchylky. Součet čtyř rovnoměrných čísel: jen sčítání a násobení, takže vyjde ve
+ * všech prohlížečích stejně.
+ */
+function odchylka(nahodne: () => number): number {
+  const z = (nahodne() + nahodne() + nahodne() + nahodne() - 2) * Math.sqrt(3);
+  return z < -2 ? -2 : z > 2 ? 2 : z;
+}
+
+/** Rozloží položku jízdního řádu na řady: kdo jde vedle koho, jak daleko za sebou a v jakém rytmu. */
+function radySkupiny(polozka: Uroven["jizdniRad"][number], uroven: Uroven, nahodne: () => number): Rada[] | null {
+  const jeden = modelUcastnika(polozka.druh, polozka.kadence);
+  if (!jeden) return null;
+  const lidi = polozka.pocet ?? 1;
+  const vRade = lidiVRade(polozka.druh, uroven.sirkaMostovky);
+  const rady: Rada[] = [];
+  /** Přidá řady volně jdoucích lidí: každá řada má svou kadenci a fázi. */
+  const volne = (
+    pocet: number,
+    od: number,
+    model: (kadence: number) => ModelUcastnika,
+    stred: number,
+    rozptyl: number,
+  ): number => {
+    let zaCelem = od;
+    for (let zbyva = pocet; zbyva > 0; zbyva -= vRade) {
+      const vTetoRade = Math.min(vRade, zbyva);
+      const rada = vedleSebe(model(stred + rozptyl * odchylka(nahodne)), vTetoRade, false);
+      rady.push({ model: rada, zaCelem, faze: nahodnaFaze(nahodne), lidi: vTetoRade, vTaktu: false });
+      zaCelem += rada.rozestup;
+    }
+    return zaCelem;
+  };
+  /** Přidá řady lidí, kteří drží krok: jedna kadence a jedna fáze pro všechny. */
+  const vTaktu = (pocet: number, od: number, model: ModelUcastnika): number => {
+    const faze = model.buzeni ? nahodnaFaze(nahodne) : null;
+    let zaCelem = od;
+    for (let zbyva = pocet; zbyva > 0; zbyva -= vRade) {
+      const vTetoRade = Math.min(vRade, zbyva);
+      const rada = vedleSebe(model, vTetoRade);
+      rady.push({ model: rada, zaCelem, faze, lidi: vTetoRade, vTaktu: true });
+      zaCelem += rada.rozestup;
+    }
+    return zaCelem;
+  };
+
+  switch (polozka.druh) {
+    case "utvar":
+      vTaktu(lidi, 0, jeden);
+      break;
+    case "dav":
+      volne(lidi, 0, (k) => chodecVeSkupine(k, RYCHLOST_DAVU, jeden.rozestup), polozka.kadence ?? KADENCE_DAVU, ROZPTYL_DAVU);
+      break;
+    case "bezecky-zavod":
+      volne(lidi, 0, (k) => bezecVZavode(k, jeden.rozestup), polozka.kadence ?? KADENCE_ZAVODU, ROZPTYL_ZAVODU);
+      break;
+    case "pruvod": {
+      // Vpředu kapela v taktu (třetina průvodu, aspoň jedna řada), za ní volně jdoucí dav.
+      const kapela = Math.min(lidi, Math.max(vRade, Math.round(lidi / 3)));
+      const zaKapelou = vTaktu(kapela, 0, chodecVeSkupine(polozka.kadence ?? KADENCE_KAPELY, RYCHLOST_PRUVODU, jeden.rozestup));
+      volne(lidi - kapela, zaKapelou - jeden.rozestup + MEZERA_ZA_KAPELOU, (k) => chodecVeSkupine(k, RYCHLOST_PRUVODU, 1.3), KADENCE_DAVU, ROZPTYL_DAVU);
+      break;
+    }
+    case "skakajici-dav":
+      volne(lidi, 0, (k) => chodecVeSkupine(k, RYCHLOST_DAVU, jeden.rozestup), KADENCE_DAVU, ROZPTYL_DAVU);
+      break;
+    default:
+      // Jednotlivci a vozidla za sebou; chodci a běžci každý se svou fází kroku.
+      for (let clen = 0; clen < lidi; clen++) {
+        rady.push({
+          model: jeden,
+          zaCelem: clen * jeden.rozestup,
+          faze: jeden.buzeni ? nahodnaFaze(nahodne) : null,
+          lidi: 1,
+          vTaktu: false,
+        });
+      }
+  }
+  return rady;
 }
 
 /** Co se má přidat do soustavy a jak to pak řídit. */
@@ -128,22 +254,29 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
     const cisloTrasy = uroven.trasy.findIndex((t) => t.id === polozka.trasa);
     const trasa = uroven.trasy[cisloTrasy];
     if (!trasa) throw new Error(`Jízdní řád odkazuje na trasu „${polozka.trasa}“, která v úrovni není.`);
-    const jeden = modelUcastnika(polozka.druh, polozka.kadence);
-    if (!jeden) throw new Error(`Provoz druhu „${polozka.druh}“ hra zatím neumí.`);
-    const lidi = polozka.pocet ?? 1;
-    // Útvar jde v řadách přes celou šířku mostovky a všichni ve stejné fázi kroku;
-    // ostatní jdou po jednom a každý má fázi svou.
-    const utvar = polozka.druh === "utvar";
-    const vRade = utvar ? Math.max(1, Math.floor(uroven.sirkaMostovky / SIRKA_NA_OSOBU)) : 1;
-    const pocet = Math.ceil(lidi / vRade);
-    const spolecnaFaze = utvar && jeden.buzeni ? nahodnaFaze(nahodne) : null;
+    const rady = radySkupiny(polozka, uroven, nahodne);
+    if (!rady || rady.length === 0) throw new Error(`Provoz druhu „${polozka.druh}“ hra zatím neumí.`);
+    const rychlost = rady[0]!.model.rychlost;
     // Před mostem je rozjezd dlouhý sekundu jízdy, aby bylo vidět, kdo přijíždí.
-    const nabeh = Math.max(2, jeden.rychlost);
+    const nabeh = Math.max(2, rychlost);
+    const delkaMostu = trasa.konec.x - trasa.zacatek.x;
 
-    for (let clen = 0; clen < pocet; clen++) {
-      const vTetoRade = Math.min(vRade, lidi - clen * vRade);
-      const model = vedleSebe(jeden, vTetoRade);
-      const odCela = nabeh + clen * model.rozestup;
+    // Skákající dav dojde doprostřed mostu, zastaví, skáče a zase odejde. Řady jdou stejně
+    // rychle a zastaví ve stejných rozestupech, takže na místo dojdou všechny naráz.
+    let skok: PopisUcastnika["skok"];
+    let skakani: ModelUcastnika | null = null;
+    if (polozka.druh === "skakajici-dav") {
+      const delkaSkupiny = rady[rady.length - 1]!.zaCelem;
+      const prichod = polozka.cas + (nabeh + (delkaMostu + delkaSkupiny) / 2) / rychlost;
+      const od = prichod + PAUZA_SKAKANI;
+      const konecSkakani = od + (polozka.trvani ?? VYCHOZI_TRVANI_SKAKANI);
+      skok = { prichod, od, do: konecSkakani, odchod: konecSkakani + PAUZA_SKAKANI, kadence: polozka.kadence ?? KADENCE_SKAKANI };
+      skakani = skokan(skok.kadence);
+    }
+
+    rady.forEach((rada, clen) => {
+      const model = rada.model;
+      const odCela = nabeh + rada.zaCelem;
       const celo = polozka.smer === 1 ? trasa.zacatek.x - odCela : trasa.konec.x + odCela;
       const zem = polozka.smer === 1 ? trasa.zacatek.y : trasa.konec.y;
       const ucastnik: PlanUcastnika = {
@@ -161,11 +294,17 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
         kontakty: [],
         stycniky: [],
       };
-      if (model.buzeni) {
+      if (model.buzeni && rada.faze) {
         ucastnik.kadence = model.buzeni.frekvence;
-        ucastnik.faze = spolecnaFaze ?? nahodnaFaze(nahodne);
+        ucastnik.faze = rada.faze;
       }
-      if (vTetoRade > 1) ucastnik.lidi = vTetoRade;
+      if (rada.lidi > 1) ucastnik.lidi = rada.lidi;
+      if (rada.vTaktu) ucastnik.vTaktu = true;
+      if (skok && skakani && model.buzeni) {
+        ucastnik.skok = skok;
+        ucastnik.chuze = model.buzeni.amplitudy;
+        ucastnik.skakani = vedleSebe(skakani, rada.lidi).buzeni!.amplitudy;
+      }
 
       for (const naprava of model.napravy) {
         const x = celo - polozka.smer * naprava.odstup;
@@ -208,9 +347,10 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
         popis.prvky.push(popisPruziny(spojovane[i]!, spojovane[i + 1]!, TUHOST_SPOJENI_NAPRAV, TLUMENI_SPOJENI_NAPRAV));
       }
       plan.ucastnici.push(ucastnik);
-      const draha = odCela + (trasa.konec.x - trasa.zacatek.x) + model.delka + DOJEZD;
-      plan.konec = Math.max(plan.konec, polozka.cas + draha / model.rychlost);
-    }
+      const draha = odCela + delkaMostu + model.delka + DOJEZD;
+      const stani = skok ? skok.odchod - skok.prichod : 0;
+      plan.konec = Math.max(plan.konec, polozka.cas + draha / model.rychlost + stani);
+    });
   });
   return plan;
 }
@@ -232,6 +372,8 @@ export class Provoz implements Zatizeni {
   readonly #vysky: Float64Array;
   /** Styčníky spadlých účastníků: jen ty se opírají o terén, ostatní nese trasa. */
   readonly #naTerenu: Uint8Array;
+  /** Skákající dav: kolikátou část svého vystoupení má která řada za sebou (viz `#veSkoku`). */
+  readonly #castSkoku: Uint8Array;
   #nedokonceno: number;
 
   constructor(s: Soustava, plan: PlanProvozu, trasy: Trasa[], uroven: Uroven, teren: Teren) {
@@ -241,6 +383,7 @@ export class Provoz implements Zatizeni {
     this.#trasy = trasy;
     this.ucastnici = plan.ucastnici;
     this.stavy = new Uint8Array(plan.ucastnici.length);
+    this.#castSkoku = new Uint8Array(plan.ucastnici.length);
     this.#nedokonceno = plan.ucastnici.length;
     this.bremena = trasy.map((trasa, i) => vytvorBremena(trasa, plan.kontakty[i] ?? []));
     this.#naTerenu = new Uint8Array(s.pocetStycniku);
@@ -328,6 +471,7 @@ export class Provoz implements Zatizeni {
           for (const i of u.stycniky) s.vx[i] = u.smer * u.rychlost;
         }
       } else if (stav === JEDE) {
+        if (u.skok) this.#veSkoku(s, k, u, cas);
         const trasa = this.#uroven.trasy[u.trasa]!;
         // Úroveň trasy pod účastníkem; trasa může být ve sklonu.
         const sklon = (trasa.konec.y - trasa.zacatek.y) / (trasa.konec.x - trasa.zacatek.x);
@@ -361,6 +505,33 @@ export class Provoz implements Zatizeni {
   }
 
   #nekdoSpadl = false;
+
+  /**
+   * Vystoupení skákajícího davu má čtyři zlomy: řada dojde na místo a zastaví (1), začne
+   * skákat (2), přestane (3) a rozejde se (4). Všechny řady skáčou od stejného okamžiku
+   * se stejnou fází, tedy naráz.
+   */
+  #veSkoku(s: Soustava, k: number, u: PlanUcastnika, cas: number): void {
+    const skok = u.skok!;
+    const cil = cas < skok.prichod ? 0 : cas < skok.od ? 1 : cas < skok.do ? 2 : cas < skok.odchod ? 3 : 4;
+    while (this.#castSkoku[k]! < cil) {
+      const cast = (this.#castSkoku[k] = this.#castSkoku[k]! + 1);
+      const ticho = cast === 1 || cast === 3;
+      if (cast === 1) for (const i of u.stycniky) s.vx[i] = 0;
+      else if (cast === 4) for (const i of u.stycniky) s.vx[i] = u.smer * u.rychlost;
+      for (const kontakt of u.kontakty) {
+        const b = this.bremena[kontakt.trasa]!;
+        if (ticho) {
+          // Kdo stojí, nebudí; frekvence zůstává, aby se dál sledovalo houpání mostovky pod ním.
+          nastavBuzeni(b, kontakt.bremeno, b.frekvence[kontakt.bremeno]!, [], 1, 0);
+        } else if (cast === 2) {
+          nastavBuzeni(b, kontakt.bremeno, skok.kadence, u.skakani ?? [], 1, 0);
+        } else {
+          nastavBuzeni(b, kontakt.bremeno, u.kadence ?? skok.kadence, u.chuze ?? [], u.faze?.[0] ?? 1, u.faze?.[1] ?? 0);
+        }
+      }
+    }
+  }
 
   #ukonci(k: number, stav: number, cas: number, druh: "prujezd" | "pad"): void {
     const u = this.#plan.ucastnici[k]!;

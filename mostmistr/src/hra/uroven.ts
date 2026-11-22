@@ -30,7 +30,7 @@ import { nakresliVykres } from "../vykres/vykres";
 import { KlientZkousky } from "../zkouska/klient";
 import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
 import type { RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
-import { modelUcastnika } from "../zkouska/vozidla";
+import { lidiVRade, rytmusLidi } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
@@ -444,15 +444,22 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const klic = `provoz.${polozka.druh}`;
     const nazev = jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
     const pocet = polozka.pocet ?? 1;
+    const skupina = lidiVRade(polozka.druh, uroven.sirkaMostovky) > 1 || polozka.druh === "bezecky-zavod";
     let kdo =
       polozka.druh === "utvar"
         ? t("provoz.utvar.popis", { pocet })
-        : pocet > 1
-          ? t("rad.vice", { pocet, kdo: nazev })
-          : nazev;
+        : skupina
+          ? t("provoz.skupina.popis", { kdo: nazev, pocet })
+          : pocet > 1
+            ? t("rad.vice", { pocet, kdo: nazev })
+            : nazev;
     // Kde se hraje o rezonanci, patří ke každému člověku i frekvence jeho kroku.
-    const krok = jeClovek(polozka.druh) ? modelUcastnika(polozka.druh, polozka.kadence)?.buzeni?.frekvence : undefined;
-    if (uroven.osaFrekvenci && krok !== undefined) kdo = t("provoz.krok", { kdo, f: cislo(krok, 1) });
+    const rytmus = jeClovek(polozka.druh) ? rytmusLidi(polozka.druh, polozka.kadence) : null;
+    if (uroven.osaFrekvenci && rytmus) {
+      const klicRytmu =
+        polozka.druh === "skakajici-dav" ? "provoz.skoky" : rytmus.rozptyl > 0 ? "provoz.krokKolem" : "provoz.krok";
+      kdo = t(klicRytmu, { kdo, f: cislo(rytmus.f, 1) });
+    }
     const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
     if (vetou) {
       const odkud = t(polozka.smer === 1 ? "zadani.provoz.zleva" : "zadani.provoz.zprava");
@@ -520,17 +527,21 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovOsuFrekvenci();
   }
 
-  /** Kroky lidí z jízdního řádu: frekvence v Hz a kdo tak jde; každá frekvence jednou. */
-  function krokyLidi(): { f: number; kdo: string }[] {
-    const kroky = new Map<number, string>();
+  /**
+   * Kroky lidí z jízdního řádu: frekvence v Hz, kdo tak jde a jak široké pásmo jeho krok
+   * zabírá (dav nejde jedním rytmem); každá frekvence jednou.
+   */
+  function krokyLidi(): { f: number; kdo: string; pasmo: number }[] {
+    const kroky = new Map<number, { kdo: string; pasmo: number }>();
     for (const polozka of uroven.jizdniRad) {
       if (!jeClovek(polozka.druh)) continue;
-      const f = modelUcastnika(polozka.druh, polozka.kadence)?.buzeni?.frekvence;
-      if (f === undefined || kroky.has(f)) continue;
+      const rytmus = rytmusLidi(polozka.druh, polozka.kadence);
+      if (!rytmus || kroky.has(rytmus.f)) continue;
       const klic = `provoz.${polozka.druh}`;
-      kroky.set(f, jeKlicTextu(klic) ? t(klic) : t("provoz.jiny"));
+      // Dvě směrodatné odchylky na každou stranu pokryjí skoro všechny lidi ve skupině.
+      kroky.set(rytmus.f, { kdo: jeKlicTextu(klic) ? t(klic) : t("provoz.jiny"), pasmo: 2 * rytmus.rozptyl });
     }
-    return [...kroky].map(([f, kdo]) => ({ f, kdo })).sort((a, b) => a.f - b.f);
+    return [...kroky].map(([f, krok]) => ({ f, ...krok })).sort((a, b) => a.f - b.f);
   }
 
   /** Překreslí osu frekvencí: stupnici, kroky lidí a vlastní frekvence mostu. */
@@ -558,8 +569,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const kroky = krokyLidi();
     for (const krok of kroky) {
       const popis = t("frekvence.znacka.krok", { kdo: krok.kdo, f: cislo(krok.f, 1) });
-      uzly.push(znacka("frekvence__krok", krok.f, popis));
-      if (2 * krok.f <= ROZSAH_OSY) uzly.push(znacka("frekvence__krok frekvence__krok--dvojnasobek", 2 * krok.f, popis));
+      for (const nasobek of [1, 2]) {
+        if (nasobek * krok.f > ROZSAH_OSY) continue;
+        const trida = nasobek === 1 ? "frekvence__krok" : "frekvence__krok frekvence__krok--dvojnasobek";
+        uzly.push(znacka(trida, nasobek * krok.f, popis));
+        if (krok.pasmo > 0) {
+          // Skupina, která nejde jedním rytmem, zabírá na ose pásmo.
+          const pasmo = znacka("frekvence__pasmo", nasobek * (krok.f - krok.pasmo), popis);
+          pasmo.style.width = `${((100 * 2 * nasobek * krok.pasmo) / ROZSAH_OSY).toFixed(1)}%`;
+          uzly.push(pasmo);
+        }
+      }
     }
 
     let text = "";
@@ -585,12 +605,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       const dolni = (obsazeny ?? prazdny) * (1 - PASMO_SHODY);
       const horni = prazdny * (1 + PASMO_SHODY);
       for (const krok of kroky) {
-        if (krok.f >= dolni && krok.f <= horni) {
+        if (krok.f + krok.pasmo >= dolni && krok.f - krok.pasmo <= horni) {
           text = t("frekvence.shoda", { krok: cislo(krok.f, 1) });
           shoda = true;
           break;
         }
-        if (2 * krok.f >= dolni && 2 * krok.f <= horni) {
+        if (2 * (krok.f + krok.pasmo) >= dolni && 2 * (krok.f - krok.pasmo) <= horni) {
           text = t("frekvence.shodaDvojnasobku", { krok: cislo(krok.f, 1) });
           shoda = true;
         }

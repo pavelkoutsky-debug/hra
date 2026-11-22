@@ -1299,6 +1299,15 @@ body[data-rezim="stavba"] .uroven .legenda {
   border-left: 1px dashed var(--popisek);
 }
 
+/* Pásmo kroku skupiny, která nejde jedním rytmem (dav, běžecký závod). */
+.frekvence__pasmo {
+  position: absolute;
+  top: 6px;
+  height: 8px;
+  background: rgb(143 208 255 / 0.28);
+  border-radius: 1px;
+}
+
 /* Vlastní frekvence mostu: trojúhelník pod osou; obsazený most jen obrysem. */
 .frekvence__most {
   position: absolute;

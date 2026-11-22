@@ -11,7 +11,7 @@ import { volneStupne } from "../jadro/stupne";
 import { jeClovek } from "./provoz";
 import type { RozborMostu } from "./protokol";
 import { sestavMost } from "./stavba";
-import { hmotnostUcastnika, modelUcastnika } from "./vozidla";
+import { hmotnostUcastnika, lidiVRade, modelUcastnika } from "./vozidla";
 
 /** Kolik nejnižších vlastních frekvencí rozbor vrací. */
 export const POCET_FREKVENCI = 3;
@@ -38,8 +38,8 @@ function hmotnostLidiNaMoste(uroven: Uroven, delkaMostu: number): number {
     const model = modelUcastnika(polozka.druh, polozka.kadence);
     if (!model) continue;
     const lidi = polozka.pocet ?? 1;
-    // Útvar jde v řadách přes šířku mostovky; ostatní po jednom za sebou.
-    const vRade = polozka.druh === "utvar" ? Math.max(1, Math.floor(uroven.sirkaMostovky / 0.75)) : 1;
+    // Útvar, dav a průvod jdou v řadách přes šířku mostovky; ostatní po jednom za sebou.
+    const vRade = lidiVRade(polozka.druh, uroven.sirkaMostovky);
     const vejdeSe = (Math.floor(delkaMostu / model.rozestup) + 1) * vRade;
     nejvic = Math.max(nejvic, Math.min(lidi, vejdeSe) * hmotnostUcastnika(model));
   }
