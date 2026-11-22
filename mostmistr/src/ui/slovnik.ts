@@ -309,6 +309,27 @@ const CS = {
     "v dubnu 1831 se pod vojáky pochodujícími ve stejném kroku zřítil řetězový most v Broughtonu u Manchesteru. Praskl v něm šroub, který by časem povolil i tak, ale rytmus pochodu to uspíšil. Britská armáda od té doby na mostech velí „zrušit krok“.",
   "skutecnost.2-04":
     "londýnská lávka Millennium Bridge se v červnu 2000 pod davem rozhoupala tak, že ji pár dní po otevření zavřeli. Kmitala do stran, ne nahoru a dolů, ale lék byl stejný: 37 viskózních tlumičů a k nim 52 laděných závaží. Od února 2002 je klidná.",
+  "ukazka.zrychleni": "Děj je {nasobek}× zrychlený.",
+  "ukazka.5-01.a": "Dva metry vysoká příhrada",
+  "ukazka.5-01.b": "Tři metry vysoká příhrada",
+  "ukazka.5-01.popis": "Oba mosty jsou prázdné mimo rytmus chůze. Sto dvacet lidí ale váží skoro deset tun a těžší most kmitá pomaleji: nižší z nich s davem sjede přímo do pásma kroků, vyšší zůstane nad ním.",
+  "ukazka.5-02.a": "Bez tlumiče",
+  "ukazka.5-02.b": "S laděným tlumičem",
+  "ukazka.5-02.popis": "Laděný tlumič je závaží na pružině zavěšené pod mostovkou. Když je naladěné na frekvenci mostu, rozhoupe se místo něj: most stojí skoro v klidu a kmitá závaží.",
+  "ukazka.5-03.a": "Tlumič naladěný vedle (3,2 Hz)",
+  "ukazka.5-03.b": "Tlumič naladěný na most s lidmi (2,0 Hz)",
+  "ukazka.5-03.popis": "Stejný most, stejné závaží, jen jinak naladěné. Laděný tlumič pomáhá jen kolem frekvence, na kterou je nastavený. A ladí se na most s lidmi: prázdný kmitá na 2,2 Hz, s průvodem na 2,0 Hz.",
+  "ukazka.5-04.a": "Bez tlumičů",
+  "ukazka.5-04.b": "Tlumiče naladěné na dvojnásobek rytmu",
+  "ukazka.5-04.popis": "Lidé skáčou 2,2krát za sekundu, ale doskoky jsou krátké a tvrdé, takže most budí i dvakrát a třikrát rychleji. Tenhle most kmitá na 4,5 Hz, přesně na dvojnásobku; tlumiče jsou proto naladěné na 4,4 Hz.",
+  "skutecnost.5-01":
+    "24. května 1987, při oslavě padesátin mostu Golden Gate, se na jeho vozovku natlačilo asi 300 000 lidí. Vyklenutá mostovka se pod nimi narovnala a uprostřed klesla zhruba o dva metry. Most to vydržel, ale ukázal, kolik dav váží.",
+  "skutecnost.5-02":
+    "v mrakodrapu Tchaj-pej 101 visí pod vrcholem ocelová koule o hmotnosti 660 tun. Je to laděný tlumič: když vítr věž rozhoupe, koule se houpe proti ní a pohyb věže zmenší až o 40 %. Na lávkách dělají totéž závaží o stovkách kilogramů pod mostovkou.",
+  "skutecnost.5-03":
+    "pařížskou lávku Solférino zavřeli v roce 1999 týden po otevření, protože se pod lidmi houpala. Znovu se otevřela až za rok, s laděnými tlumiči pod mostovkou. Tlumiče se dolaďují až na hotovém mostě podle měření a počítá se u toho s lidmi: jejich váha frekvenci mostu posune a tlumič rozladí.",
+  "skutecnost.5-04":
+    "před silvestrovským koncertem 1999 na Millennium Stadium v Cardiffu se úřady bály, co s vyloženými tribunami udělají tisíce fanoušků skákajících v rytmu. Stadion dostal povolení, až když prostřední tribunu podepřel ocelovými stojkami. Lidé, kteří skáčou spolu s hudbou, jsou pro konstrukci horší než jakýkoli pochod.",
   "paleta.vyber": "Výběr a posun",
   "paleta.smazat": "Smazat",
   "paleta.zrcadlit": "Zrcadlit",
@@ -438,6 +459,8 @@ const CS = {
   "kapitola.1.tema": "Trojúhelník drží. Dřevo, chodci, cyklisté a první auto.",
   "kapitola.2.nazev": "Lávka",
   "kapitola.2.tema": "Most, který se houpe. Ocel, běžci, pochodující útvar a rezonance.",
+  "kapitola.5.nazev": "Lávka ve městě",
+  "kapitola.5.tema": "Město v pohybu. Dav, běžecký závod, průvod s kapelou, skákající dav a laděný tlumič.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
   "prehled.nejlepsiCena": "nejlevnější most {cena}",
   "prehled.rozpracovano": "rozpracováno",
@@ -464,6 +487,14 @@ const CS = {
     "Čtyři běžci poklusem ve stejném rytmu, tři doskoky za sekundu. Most, který kmitá stejně rychle nebo přesně dvakrát rychleji, rozhoupou tak, že se po něm nedá jít. Nepomůže víc oceli, pomůže jiná frekvence: uprav výšku příhrady tak, aby vlastní frekvence na ose padla mezi krok běžců a jeho dvojnásobek, nebo vysoko nad oba.",
   "zadani.2-03":
     "Čestná jednotka, čtyřiadvacet lidí rychlým pochodem. Nad mostovkou vede vedení a pod ní je plavební profil, takže vyšší příhradu postavit nejde a nízká kmitá skoro v rytmu pochodu. Když most nejde vyztužit, dá se zpomalit: zavěs do styčníků mostovky závaží (vyber styčník a přidej kilogramy vlevo v paletě). Těžší most kmitá pomaleji.",
+  "zadani.5-01":
+    "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Nikdo nepochoduje, takže most nerozhoupou tolik jako útvar, ale je jich skoro deset tun a těžší most kmitá pomaleji. Na ose frekvencí proto sleduj i druhý trojúhelník, most s lidmi. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s². Tlačítkem Analýza dole otevřeš rezonanční křivku, která ukazuje, jak silně most na který rytmus odpoví.",
+  "zadani.5-02":
+    "Městský běh: čtyřicet běžců, každý svým tempem kolem 2,6 doskoku za sekundu. Nad lávkou vede trolej, výš než metr stavět nejde, a tak nízký most kmitá právě v jejich rytmu. Nově máš laděný tlumič: vyber styčník mostovky a klávesou L pod něj zavěs závaží na pružině. Nalaď ho na frekvenci, na které most kmitá s lidmi. V analytickém panelu uvidíš, jak se špička rezonanční křivky rozdělí na dvě nižší. Budičem (U) si most můžeš rozkmitat sám a rezonanci najít pokusem.",
+  "zadani.5-03":
+    "Slavnostní průvod: vpředu kapela, šestnáct lidí pochodem v taktu 2,0 Hz, za ní volně jdoucí dav. Prázdný most kmitá o kus rychleji než kapela, ale s osmačtyřiceti lidmi zpomalí přesně do jejího taktu. Laděný tlumič proto nelaď podle prázdného mostu. Průchod zvládne i přibližně naladěný; mistrovskou medaili dostaneš jen za tlumič naladěný na most s lidmi.",
+  "zadani.5-04":
+    "Koncert na mostě: třicet lidí dojde doprostřed a osm sekund skáče v rytmu 2,2 Hz. Doskoky jsou krátké a tvrdé, takže most budí i na dvojnásobku a trojnásobku rytmu, tedy na 4,4 a 6,6 Hz. Výš než dva metry stavět nejde. Najdi, který z těch tří rytmů tvůj most trefí, a nalaď tlumič na něj. Mostovka z dlouhých polí se pod doskoky rozdrnčí sama; postav ji z krátkých.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem. Každý rytmus rozhoupe jinak vysoký most. Buď najdeš výšku, která se vyhne všem třem, nebo postavíš most, kterému rezonance nevadí: mezi mostovku a kotvy ve svazích dej viskózní tlumiče. Tlumič nenese žádnou váhu, jen brzdí pohyb; jeho sílu nastavíš po výběru v paletě.",
 } as const;

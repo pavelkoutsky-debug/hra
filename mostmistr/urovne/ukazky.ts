@@ -14,11 +14,26 @@ export interface StranaUkazky {
 export interface UkazkaUrovne {
   a: StranaUkazky;
   b: StranaUkazky;
+  /** Kolikrát rychleji než ve skutečnosti se ukázka přehrává; bez údaje stejně rychle. */
+  rychlost?: number;
 }
 
 /** Stejný most s jinou silou všech tlumičů. */
 function sTlumenim(navrh: NavrhMostu, tlumeni: number): NavrhMostu {
   return { ...navrh, pruty: navrh.pruty.map((p) => (p.prvek === "tlumic" ? { ...p, tlumeni } : p)) };
+}
+
+/** Stejný most, jehož laděné tlumiče mají jiné závaží a ladění. */
+function sLadenymTlumicem(navrh: NavrhMostu, hmota: number, frekvence: number): NavrhMostu {
+  return { ...navrh, stycniky: navrh.stycniky.map((s) => (s.tlumic ? { ...s, tlumic: { hmota, frekvence } } : s)) };
+}
+
+/** Stejný most s laděnými tlumiči ve styčnících mostovky na daných místech. */
+function sTlumiciV(navrh: NavrhMostu, mista: readonly number[], hmota: number, frekvence: number): NavrhMostu {
+  return {
+    ...navrh,
+    stycniky: navrh.stycniky.map((s) => (s.y === 0 && mista.includes(s.x) ? { ...s, tlumic: { hmota, frekvence } } : s)),
+  };
 }
 
 function sProvozem(uroven: Uroven, jizdniRad: PolozkaJizdnihoRadu[]): Uroven {
@@ -54,6 +69,24 @@ export function ukazkaUrovne(uroven: Uroven): UkazkaUrovne | null {
         a: { uroven: pochod, navrh: reseni.pady[1]!.navrh },
         b: { uroven: pochod, navrh: sTlumenim(reseni.mistrovska, 100_000) },
       };
+    }
+
+    // Stejný dav, dva mosty: nižší s lidmi sjede do pásma jejich kroků, vyšší zůstane nad ním.
+    case "5-01":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet }, rychlost: 3 };
+
+    // Stejná nízká lávka pod běžci: bez laděného tlumiče a s ním.
+    case "5-02":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: sLadenymTlumicem(reseni.pruchod, 1000, 2.5) } };
+
+    // Stejný most i závaží, jiné ladění: daleko od mostu a na most s lidmi.
+    case "5-03":
+      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.mistrovska }, rychlost: 2 };
+
+    // Stejný most pod skákajícím davem: bez tlumičů a se třemi naladěnými na dvojnásobek rytmu.
+    case "5-04": {
+      const bez = reseni.pady[1]!.navrh;
+      return { a: { uroven, navrh: bez }, b: { uroven, navrh: sTlumiciV(bez, [12, 16, 20], 1000, 4.4) }, rychlost: 2 };
     }
 
     default:

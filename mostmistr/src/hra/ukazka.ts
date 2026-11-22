@@ -65,6 +65,8 @@ export class Ukazka {
   #minuly: number | null = null;
   #zvetseni = 1;
   #delka = 0;
+  /** Kolikrát rychleji než ve skutečnosti se děj přehrává. */
+  readonly #rychlost: number;
 
   /**
    * `koren` je oddíl okna s ukázkou: obsahuje dva prvky `[data-strana]`, každý s plátnem
@@ -72,6 +74,7 @@ export class Ukazka {
    */
   constructor(koren: HTMLElement, zadani: UkazkaUrovne) {
     this.#koren = koren;
+    this.#rychlost = zadani.rychlost ?? 1;
     this.#poznamka = koren.querySelector<HTMLElement>("[data-poznamka]")!;
     this.#strany = (["a", "b"] as const).map((ktera) => {
       const uzel = koren.querySelector<HTMLElement>(`[data-strana="${ktera}"]`)!;
@@ -159,7 +162,10 @@ export class Ukazka {
     }
     this.#zvetseni = cely ? hezkeZvetseni(vychylka, VIDITELNA_VYCHYLKA) : 1;
     this.#delka = Math.max(...this.#strany.map((s) => s.vysledek!.trvani));
-    this.#poznamka.textContent = this.#zvetseni > 1 ? t("ukazka.zvetseni", { nasobek: this.#zvetseni }) : "";
+    const poznamky: string[] = [];
+    if (this.#zvetseni > 1) poznamky.push(t("ukazka.zvetseni", { nasobek: this.#zvetseni }));
+    if (this.#rychlost !== 1) poznamky.push(t("ukazka.zrychleni", { nasobek: this.#rychlost }));
+    this.#poznamka.textContent = poznamky.join(" ");
     for (const strana of this.#strany) {
       const v = strana.vysledek!;
       strana.koren.dataset.pruchod = String(v.pruchod);
@@ -173,8 +179,8 @@ export class Ukazka {
       if (!this.#bezi) return;
       const uplynulo = this.#minuly === null ? 0 : Math.min(0.1, (ted - this.#minuly) / 1000);
       this.#minuly = ted;
-      this.#cas += uplynulo;
-      if (this.#cas > this.#delka + PAUZA) this.#cas = 0;
+      this.#cas += uplynulo * this.#rychlost;
+      if (this.#cas > this.#delka + PAUZA * this.#rychlost) this.#cas = 0;
       this.#nakresli();
       this.#snimekObrazu = requestAnimationFrame(krok);
     };
