@@ -337,12 +337,14 @@ describe("stránka správce", () => {
     // Zpětnou vazbu jde po potvrzení smazat (spam, omyl).
     await radky.nth(0).click();
     await detail.waitFor({ state: "visible" });
+    expect(await stranka.locator("#vazba-text").innerText()).toContain("víc úrovní");
     stranka.once("dialog", (dialog) => void dialog.accept());
     await stranka.locator("#vazba-smazat").click();
     await expect.poll(() => stranka.locator("#hlaseni").innerText()).toMatch(/^Smazáno: \d{8}T\d{6}-[0-9a-f]{6}\.$/);
-    expect(await radky.count()).toBe(0);
+    expect(await radky.allInnerTexts()).toEqual(["V tomto stavu žádná zpětná vazba není."]);
     await stranka.locator('#filtr-stavu [data-filtr="vse"]').click();
     expect(await radky.count()).toBe(1);
+    expect(await radky.nth(0).innerText()).toContain("táhnout z kotvy");
     expect(await sklad.klice("vazba/")).toHaveLength(1);
   });
 
@@ -357,10 +359,11 @@ describe("stránka správce", () => {
     expect(bunky.slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
     // Cena průchodu proti rozpočtům úrovně a z čeho hráč stavěl.
     expect(bunky[9]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 33 500 Kč");
-    expect(bunky[10]).toBe("drevo-lehke 4×, mostovka-drevo 2×");
+    // (Čtvrtý trám hráč nakreslil s vypnutým záznamem, takže o něm deník neví.)
+    expect(bunky[10]).toBe("drevo-lehke 3×, mostovka-drevo 2×");
     // Souhrn za delší období: sčítá dny, ze kterých deník je.
     await stranka.locator("#obdobi").selectOption("30");
-    await expect.poll(() => stranka.locator("#souhrn-nadpis").innerText()).toContain("(1 dní s deníkem)");
+    await expect.poll(() => stranka.locator("#souhrn-nadpis").textContent()).toContain("(1 dní s deníkem)");
     expect((await stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td').allInnerTexts()).slice(0, 5)).toEqual(bunky.slice(0, 5));
     await stranka.locator("#obdobi").selectOption("1");
     const sezeni = stranka.locator("#sezeni tbody tr");

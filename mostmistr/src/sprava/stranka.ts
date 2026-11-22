@@ -290,6 +290,10 @@ function vykresliDetailVazby(v: EvidovanaVazba): void {
 }
 
 async function otevriVazbu(id: string): Promise<void> {
+  // Než se nová zpráva načte, detail té předchozí zmizí: tlačítka Uložit a Smazat se tak
+  // nemůžou splést a zasáhnout zprávu, na kterou se už nikdo nedívá.
+  vybrana = null;
+  prvek("#detail-vazby").hidden = true;
   try {
     const { vazba } = await sprava<{ vazba: EvidovanaVazba }>(`co=vazba&id=${encodeURIComponent(id)}`);
     vykresliDetailVazby(vazba);

@@ -485,6 +485,17 @@ Každá moje session začíná bez paměti. Proto v repozitáři povedu `mostmis
 
 ---
 
+**Zpětná vazba a deník hraní** *(M4c)*
+
+Hra má od M4c i malou serverovou část na Netlify: funkce, které přijímají zpětnou vazbu hráčů a anonymní deník hraní, a úložiště Netlify Blobs. Hraní na ní nezávisí; když server neodpovídá, hra to po třech pokusech vzdá a běží dál.
+
+- **Zpětná vazba** je výslovná zpráva hráče s volitelným mostem a posledními kroky. Eviduje se se stavem řešení (nová, řeší se, vyřešeno, zamítnuto) a poznámkou.
+- **Deník hraní** zapisuje, co hráč dělá: úrovně, stavbu prut po prutu, zkoušky s celým mostem a výsledkem, chyby. Je anonymní (náhodné číslo v prohlížeči), zapnutý s viditelným upozorněním a jde vypnout.
+- **K čemu slouží:** ladění obtížnosti a zábavnosti podle skutečného hraní. Kde hráči končí, na kolikátý pokus projdou, za kolik staví proti rozpočtu, z čeho staví a na čem jim mosty padají.
+- **Stránka správce** je za heslem (proměnná prostředí na Netlify) a je to nástroj zadavatele, ne součást hry.
+
+Podrobnosti a postup nastavení jsou v `docs/ZPETNA-VAZBA.md`.
+
 ## 12. Plán vývoje
 
 Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na Netlify.

@@ -3,6 +3,7 @@
 import { mkdirSync } from "node:fs";
 import { chromium, type Browser, type Page } from "playwright";
 import { preview, type PreviewServer } from "vite";
+import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
@@ -83,6 +84,7 @@ async function nastavCas(sekundy: number): Promise<void> {
 beforeAll(async () => {
   mkdirSync(SLOZKA, { recursive: true });
   server = await preview({ preview: { port: 4197, strictPort: false, host: "127.0.0.1" }, logLevel: "silent" });
+  prijimejDenik(server);
   const mistni = server.resolvedUrls?.local[0];
   if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
   adresa = mistni;
