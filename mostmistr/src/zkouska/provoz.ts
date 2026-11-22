@@ -434,6 +434,13 @@ export class Provoz implements Zatizeni {
     return this.#nedokonceno === 0;
   }
 
+  /** Kolik lidí a vozidel má přejít; řada lidí vedená jako jeden účastník se počítá po lidech. */
+  get celkem(): number {
+    let pocet = 0;
+    for (const u of this.ucastnici) pocet += u.lidi ?? 1;
+    return pocet;
+  }
+
   get prejelo(): number {
     return this.#pocet(PREJEL);
   }
@@ -444,7 +451,7 @@ export class Provoz implements Zatizeni {
 
   #pocet(stav: number): number {
     let pocet = 0;
-    for (const s of this.stavy) if (s === stav) pocet++;
+    for (let k = 0; k < this.stavy.length; k++) if (this.stavy[k] === stav) pocet += this.ucastnici[k]!.lidi ?? 1;
     return pocet;
   }
 

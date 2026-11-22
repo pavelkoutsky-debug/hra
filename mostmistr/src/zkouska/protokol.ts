@@ -127,6 +127,10 @@ export interface KomfortZkousky {
 export interface VysledekZkousky {
   /** Všichni přešli a přejeli, nikdo nespadl. */
   pruchod: boolean;
+  /**
+   * Kolik lidí a vozidel mělo přejít, kolik jich přešlo a kolik spadlo. Řada lidí, kterou
+   * simulace vede jako jednoho účastníka, se počítá po lidech.
+   */
   ucastniku: number;
   prejelo: number;
   spadlo: number;

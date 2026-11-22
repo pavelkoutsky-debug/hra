@@ -1004,7 +1004,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         const casti = [t("analyza.reakce.svisla", { sila: cislo(r.svisla / 1000, 1) })];
         if (r.vodorovna > 50) casti.push(t("analyza.reakce.vodorovna", { sila: cislo(r.vodorovna / 1000, 1) }));
         if (r.nadzvednuti < -50) casti.push(t("analyza.reakce.nadzvednuti", { sila: cislo(-r.nadzvednuti / 1000, 1) }));
-        return radek(t("analyza.reakce.kde", { x: cislo(st?.x ?? 0, 0) }), casti.join(" · "));
+        return radek(t("analyza.reakce.kde", { x: cislo(st?.x ?? 0, 0) }), casti.join("\n"));
       }),
     );
   }
@@ -1538,6 +1538,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const jePokus = vysledek.brnknuti !== null || vysledek.budic !== null;
     panelVysledku.dataset.stav = vysledek.rozpad ? "rozpad" : jePokus ? "brnknuti" : vysledek.pruchod ? "obstal" : "neobstal";
     udaj("vysledek-medaile").hidden = jePokus;
+    // Pokus se s minulou zkouškou neporovnává: neměří totéž.
+    const minule = jePokus ? null : predchoziVysledek;
 
     const vety: string[] = [];
     if (vysledek.rozpad) vety.push(t("vysledek.shrnuti.rozpad"));
@@ -1596,7 +1598,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         });
         skok.addEventListener("click", () => skocNa(komfort.cas));
         const zapisZrychleni = (hodnota: number): string => `${cislo(hodnota, 2)} m/s²`;
-        poleKmitani.replaceChildren(...bezNull([skok, rozdil(komfort.zrychleni, predchoziVysledek?.komfort?.zrychleni, zapisZrychleni)]));
+        poleKmitani.replaceChildren(...bezNull([skok, rozdil(komfort.zrychleni, minule?.komfort?.zrychleni, zapisZrychleni)]));
       } else {
         poleKmitani.textContent = t("vysledek.kmitaniZadne");
       }
@@ -1605,7 +1607,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
     vypisMedaile(udaj("vysledek-medaile"), uroven, vysledek.medaile);
     udaj("vysledek-cena").replaceChildren(
-      ...bezNull([document.createTextNode(koruny(vysledek.cena)), rozdil(vysledek.cena, predchoziVysledek?.cena, koruny)]),
+      ...bezNull([document.createTextNode(koruny(vysledek.cena)), rozdil(vysledek.cena, minule?.cena, koruny)]),
     );
 
     // Největší využití s odkazem na prut a okamžik, kdy nastalo.
@@ -1614,7 +1616,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     vysledek.obalka.forEach((o, i) => {
       if (o.vyuziti > 0 && (nejvic < 0 || o.vyuziti > vysledek.obalka[nejvic]!.vyuziti)) nejvic = i;
     });
-    const zmena = rozdil(vysledek.nejvetsiVyuziti, predchoziVysledek?.nejvetsiVyuziti, procenta);
+    const zmena = rozdil(vysledek.nejvetsiVyuziti, minule?.nejvetsiVyuziti, procenta);
     if (nejvic >= 0) {
       const o = vysledek.obalka[nejvic]!;
       const skok = document.createElement("button");
@@ -1710,6 +1712,18 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const stavba = uroven.povolenePrvky
       .filter((id) => KATALOG[id].hotovo)
       .map((id) => polozka(t("zadani.stavba.prvek", { prvek: nazevPrvku(id), cena: zapisCenyPrvku(id) })));
+    if (uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota) {
+      stavba.push(
+        polozka(
+          t("zadani.stavba.ladeny", {
+            zaKus: koruny(LADENY_TLUMIC.cenaZaKus),
+            zaKg: koruny(LADENY_TLUMIC.cenaZaKg),
+            kg: cislo(uroven.nejvetsiTlumic, 0),
+          }),
+        ),
+      );
+    }
+    if (uroven.budic) stavba.push(polozka(t("zadani.stavba.budic")));
     if (uroven.rozpocet !== null) {
       stavba.push(polozka(t("zadani.stavba.rozpocet", { castka: koruny(uroven.rozpocet) })));
     }

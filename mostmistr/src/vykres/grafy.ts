@@ -5,7 +5,7 @@ import { BARVY, PISMO } from "./barvy";
 
 type Kontext = CanvasRenderingContext2D;
 
-/** Okraje grafu v pixelech: vlevo a dole je místo na popisky os. */
+/** Okraje grafu v pixelech: vlevo a dole je místo na popisky os. Levý okraj se rozšíří podle popisků. */
 const VLEVO = 30;
 const DOLE = 14;
 const NAHORE = 5;
@@ -65,15 +65,24 @@ export function stropGrafu(nejvic: number): number {
 }
 
 function zapis(hodnota: number): string {
+  if (hodnota === 0) return "0";
   const text = Math.abs(hodnota) >= 10 ? hodnota.toFixed(0) : Math.abs(hodnota) >= 1 ? hodnota.toFixed(1) : hodnota.toFixed(2);
   return text.replace(".", ",").replace("-", "−");
 }
 
-function ram(ctx: Kontext, sirka: number, vyska: number): { x0: number; y0: number; w: number; h: number } {
+function ram(
+  ctx: Kontext,
+  sirka: number,
+  vyska: number,
+  popisky: readonly string[],
+): { x0: number; y0: number; w: number; h: number } {
   ctx.clearRect(0, 0, sirka, vyska);
-  const x0 = VLEVO;
+  ctx.font = `9px ${PISMO}`;
+  // Popisky svislé osy se musí vejít celé, i když jde o tisíce (průhyb zříceného mostu).
+  let x0 = VLEVO;
+  for (const popisek of popisky) x0 = Math.max(x0, Math.ceil(ctx.measureText(popisek).width) + 8);
   const y0 = NAHORE;
-  const w = sirka - VLEVO - VPRAVO;
+  const w = sirka - x0 - VPRAVO;
   const h = vyska - NAHORE - DOLE;
   ctx.strokeStyle = BARVY.popisek;
   ctx.lineWidth = 1;
@@ -83,7 +92,6 @@ function ram(ctx: Kontext, sirka: number, vyska: number): { x0: number; y0: numb
   ctx.lineTo(x0 + 0.5, y0 + h + 0.5);
   ctx.lineTo(x0 + w, y0 + h + 0.5);
   ctx.stroke();
-  ctx.font = `9px ${PISMO}`;
   ctx.fillStyle = BARVY.popisek;
   return { x0, y0, w, h };
 }
@@ -94,7 +102,7 @@ function ram(ctx: Kontext, sirka: number, vyska: number): { x0: number; y0: numb
  * přerušovaná prázdný most. Svislé pruhy jsou kroky lidí a jejich dvojnásobky.
  */
 export function nakresliKrivku(ctx: Kontext, sirka: number, vyska: number, data: DataKrivky): void {
-  const { x0, y0, w, h } = ram(ctx, sirka, vyska);
+  const { x0, y0, w, h } = ram(ctx, sirka, vyska, [zapis(data.strop)]);
   const naX = (f: number): number => x0 + (w * Math.min(f, data.rozsah)) / data.rozsah;
   const naY = (hodnota: number): number => y0 + h - h * Math.min(1, hodnota / data.strop);
 
@@ -188,7 +196,7 @@ export interface DataPrubehu {
 
 /** Průběh veličiny v čase s ukazatelem právě přehrávaného okamžiku. */
 export function nakresliPrubeh(ctx: Kontext, sirka: number, vyska: number, data: DataPrubehu): void {
-  const { x0, y0, w, h } = ram(ctx, sirka, vyska);
+  const { x0, y0, w, h } = ram(ctx, sirka, vyska, [zapis(data.strop), zapis(data.dno)]);
   const trvani = data.trvani > 0 ? data.trvani : 1;
   const rozpeti = data.strop - data.dno || 1;
   const naX = (cas: number): number => x0 + (w * Math.min(cas, trvani)) / trvani;

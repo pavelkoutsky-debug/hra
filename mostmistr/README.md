@@ -51,15 +51,15 @@ Vedle hry se sestavují čtyři pomocné stránky:
 | Složka | Obsah | Zná prohlížeč? |
 |---|---|---|
 | `src/jadro/` | Fyzika | Ne |
-| `src/zkouska/` | Rozhraní zkoušky, stavba mostu z návrhu, provoz a vozidla, zkouška úrovně, rozbor vlastních frekvencí, záznam, regresní sada | Jen `klient.ts` a `pracovnik.ts` |
+| `src/zkouska/` | Rozhraní zkoušky, stavba mostu z návrhu, provoz a vozidla, zkouška úrovně, budič, rozbor vlastních frekvencí a rezonanční křivky, záznam, regresní sada | Jen `klient.ts` a `pracovnik.ts` |
 | `src/data/` | Formáty úrovní, návrhů mostů a uloženého postupu, katalog prvků, ceny | Ne |
 | `src/zkusebna/` | Ověřovací případy jádra a stránka `zkusebna.html` | Jen `stranka.ts` a `pracovnik.ts` |
 | `src/editor/` | Stavební režim: úpravy návrhu, pravidla kreslení, výběr, historie | Ne (neví nic o plátně) |
 | `src/hra/` | Obrazovka úrovně, přehled kampaně, ukládání do paměti prohlížeče | Ano |
 | `src/zvuk/` | Zvuk: co má při přehrávání záznamu zaznít (`deje.ts`), syntezátor a zvukový kontext | `deje.ts` ne, zbytek ano |
-| `src/vykres/` | Kreslení výkresu, kamera, ovládání | Ano |
+| `src/vykres/` | Kreslení výkresu a grafů analytického panelu, kamera, ovládání | Ano |
 | `src/ui/` | Texty, formátování, panely | Ano |
-| `urovne/` | Data úrovní a jejich referenční řešení | — |
+| `urovne/` | Data úrovní, jejich referenční řešení a ukázky do okna se zadáním | — |
 | `mereni/` | Měření výkonu, stránky `mereni.html`, `otisky.html` a `zvuky.html` | Jen stránky a jejich pracovní vlákna |
 | `test/` | Jednotkové testy a průchod hrou | — |
 

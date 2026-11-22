@@ -23,7 +23,7 @@ const osa = () => stranka.locator('[data-udaj="osa-frekvenci"]');
 async function bodSveta(x: number, y: number): Promise<{ x: number; y: number }> {
   return stranka.evaluate(
     ([sx, sy]) => {
-      const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas")!;
+      const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas.vykres__platno")!;
       const [kx, ky, m] = platno.dataset.kamera!.split(";").map(Number) as [number, number, number];
       const o = platno.getBoundingClientRect();
       return { x: o.left + o.width / 2 + (sx! - kx) * m, y: o.top + o.height / 2 - (sy! - ky) * m };
@@ -55,7 +55,7 @@ async function frekvenceMostu(): Promise<number | null> {
 
 async function otevri(id: string): Promise<void> {
   await stranka.goto(`${adresa}?uroven=${id}`);
-  await stranka.locator("#obrazovka-uroven canvas").waitFor();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
   const tlacitko = stranka.locator('#okno-zadani[open] button[value="zavrit"]');
   if ((await tlacitko.count()) > 0) await tlacitko.click();
 }
@@ -68,7 +68,7 @@ async function nactiMost(text: string): Promise<void> {
 }
 
 async function vyzkousej(): Promise<string> {
-  await stranka.locator("#obrazovka-uroven canvas").focus();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
   await stranka.keyboard.press("Space");
   await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 90_000 });
   expect(await telo("zkouska")).toBe("hotovo");
@@ -105,11 +105,15 @@ afterAll(async () => {
 });
 
 describe("přehled s druhou kapitolou", () => {
-  it("ukáže obě kapitoly; druhá je zamčená, dokud není dohraná první", async () => {
+  it("ukáže všechny kapitoly; druhá je zamčená, dokud není dohraná první", async () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
-    expect(await stranka.locator(".kapitola h1").allInnerTexts()).toEqual(["Kapitola 1 · Potok", "Kapitola 2 · Lávka"]);
-    expect(await stranka.locator(".karta").count()).toBe(8);
+    expect(await stranka.locator(".kapitola h1").allInnerTexts()).toEqual([
+      "Kapitola 1 · Potok",
+      "Kapitola 2 · Lávka",
+      "Kapitola 5 · Lávka ve městě",
+    ]);
+    expect(await stranka.locator(".karta").count()).toBe(12);
     expect(await stranka.locator('.karta[data-uroven="2-01"]').getAttribute("data-zamceno")).toBe("true");
     await stranka.locator("#odemknout-vse").check();
     expect(await stranka.locator('.karta[data-uroven="2-04"]').getAttribute("data-zamceno")).toBe("false");
@@ -250,7 +254,7 @@ describe("kmitání mostovky rozhoduje", () => {
 
   it("stejná lávka s tlumiči projde a získá mistrovskou medaili", async () => {
     await nactiMost(navrhNaText(RESENI["2-04"]!.mistrovska));
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 90_000 });
     await nastavCas(62);
@@ -274,7 +278,7 @@ describe("kmitání mostovky rozhoduje", () => {
   it("běžci v taktu: úroveň 2-02 s referenčním mostem", async () => {
     await otevri("2-02");
     await nactiMost(navrhNaText(RESENI["2-02"]!.pruchod));
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 90_000 });
     await nastavCas(5);

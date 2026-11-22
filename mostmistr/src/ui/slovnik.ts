@@ -271,6 +271,8 @@ const CS = {
   "zadani.stavba": "Z čeho stavíš",
   "zadani.stavba.prvek": "{prvek}: {cena}",
   "zadani.stavba.rozpocet": "rozpočet {castka}",
+  "zadani.stavba.ladeny": "Laděný tlumič: {zaKus} za kus a {zaKg} za kilogram závaží, nejvýš {kg} kg",
+  "zadani.stavba.budic": "Budič: zkušební zařízení zdarma, do medailí se nepočítá",
   "zadani.medaile": "Medaile",
   "zadani.ovladani":
     "Prut nakreslíš tažením myší z kotvy nebo ze styčníku. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",

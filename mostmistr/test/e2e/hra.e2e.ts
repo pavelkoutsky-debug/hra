@@ -25,7 +25,7 @@ const telo = (atribut: string): Promise<string | null> => stranka.locator("body"
 async function bodSveta(x: number, y: number): Promise<{ x: number; y: number }> {
   return stranka.evaluate(
     ([sx, sy]) => {
-      const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas")!;
+      const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas.vykres__platno")!;
       const [kx, ky, m] = platno.dataset.kamera!.split(";").map(Number) as [number, number, number];
       const o = platno.getBoundingClientRect();
       return { x: o.left + o.width / 2 + (sx! - kx) * m, y: o.top + o.height / 2 - (sy! - ky) * m };
@@ -54,7 +54,7 @@ const pocetPrutu = async (): Promise<number> => Number(await telo("pruty"));
 
 /** Pustí zkoušku mezerníkem, počká na výpočet a přeskočí přehrávání na konec. */
 async function vyzkousej(): Promise<{ nadpis: string; otisk: string }> {
-  await stranka.locator("#obrazovka-uroven canvas").focus();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
   await stranka.keyboard.press("Space");
   await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 60_000 });
   expect(await telo("zkouska")).toBe("hotovo");
@@ -79,7 +79,7 @@ async function zavriZadani(): Promise<void> {
 
 async function otevriUroven(id: string): Promise<void> {
   await stranka.goto(`${adresa}?uroven=${id}`);
-  await stranka.locator("#obrazovka-uroven canvas").waitFor();
+  await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
   await expect.poll(() => udaj("fyzika"), { timeout: 5000 }).toMatch(/^v\d+$/);
   await zavriZadani();
 }
@@ -132,7 +132,7 @@ describe("přehled kampaně", () => {
 
   it("kliknutí na kartu otevře úroveň a ta přivítá oknem se zadáním", async () => {
     await stranka.locator('.karta[data-uroven="1-01"] a').click();
-    await stranka.locator("#obrazovka-uroven canvas").waitFor();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
     const okno = stranka.locator("#okno-zadani");
     await okno.waitFor({ state: "visible" });
     expect(await udaj("zadani-list")).toBe("ÚROVEŇ 1-01");
@@ -254,7 +254,7 @@ describe("stavba myší", () => {
     await tahni([4, 2], [6, 4]);
     await tahni([6, 4], [8, 0]);
     expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("nad");
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("hlaseni")).toBe("Most je dražší než rozpočet. Před zkouškou ho zlevni.");
@@ -268,7 +268,7 @@ describe("zkouška a vyhodnocení", () => {
   let otisk = "";
 
   it("věšadlo zkouškou projde a získá medaile", async () => {
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 60_000 });
     await nastavCas(4);
@@ -321,7 +321,7 @@ describe("zkouška a vyhodnocení", () => {
     /** Kolik pixelů plátna má barvu pozadí; rámečky čísel jich pár přikryjí a pár přidají. */
     const otiskPlatna = (): Promise<string> =>
       stranka.evaluate(() => {
-        const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas")!;
+        const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas.vykres__platno")!;
         return platno.toDataURL().slice(-64);
       });
     await nastavCas(5.7);
@@ -356,7 +356,7 @@ describe("zkouška a vyhodnocení", () => {
   });
 
   it("po návratu ke stavbě ukazuje výkres obálku namáhání a medaile jsou v popisovém poli", async () => {
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("medaile")).toContain("◆");
@@ -367,7 +367,7 @@ describe("zkouška a vyhodnocení", () => {
 
   it("po novém načtení stránky je most zpátky a zkouška dá stejný otisk", async () => {
     await stranka.reload();
-    await stranka.locator("#obrazovka-uroven canvas").waitFor();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
     // K rozestavěnému mostu se zadání nevnucuje.
     expect(await stranka.locator("#okno-zadani").isVisible()).toBe(false);
     expect(await pocetPrutu()).toBe(5);
@@ -417,7 +417,7 @@ describe("další úrovně kapitoly", () => {
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-03"]!.pruchod));
     await akce("okno-nacist").click();
     expect(await pocetPrutu()).toBeGreaterThan(10);
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 60_000 });
     await nastavCas(1.1);
@@ -434,7 +434,7 @@ describe("další úrovně kapitoly", () => {
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-04"]!.pruchod));
     await akce("okno-nacist").click();
-    await stranka.locator("#obrazovka-uroven canvas").focus();
+    await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 60_000 });
     await nastavCas(2.2);

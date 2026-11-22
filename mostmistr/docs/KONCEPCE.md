@@ -127,7 +127,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Viskózní tlumič | Prut, který klade odpor rychlosti. Tlumí kmitání. Rozsah nastavení je omezený. *(M3a: 5 až 200 kN·s/m v devíti stupních.)* |
 | Pružina | Prut s volitelnou tuhostí. |
 | Závaží | Hmota ve styčníku. Protizávaží zvedacích mostů a hmota laděných tlumičů. |
-| Laděný tlumič | Závaží + pružina + tlumič. Hráč ho ladí v hertzech na vlastní frekvenci mostu. |
+| Laděný tlumič | Závaží + pružina + tlumič. Hráč ho ladí v hertzech na vlastní frekvenci mostu. *(M3b: zavěšuje se pod styčník mostovky; závaží po 50 kg do meze úrovně, ladění po 0,05 Hz v rozsahu 0,8–6 Hz, poměrný útlum 0,1.)* |
 | Hydraulický píst | Prut se dvěma stavy (zasunutý, vysunutý), které se přepínají na časové ose zkoušky. Zvedá a sklápí most. |
 
 **Styčníky a podpory**
@@ -282,9 +282,9 @@ Bez nerovností vozovky by vozidla most dynamicky téměř nezatížila: recenze
 
 - Chodec je hmota na pružině s tlumičem (lidské tělo) a k tomu budicí síla kroku složená z několika harmonických složek. Dav tak mostu přidává hmotu i tlumení.
 - Běh a skákání mají letovou fázi a větší dynamické účinky.
-- Při silném kmitání lidé zpomalí a ztratí krok, takže síla, kterou do mostu vnášejí, neroste donekonečna. *(V M3a zatím ne; přijde s davem v M3b.)*
+- Při silném kmitání lidé zpomalí a ztratí krok, takže síla, kterou do mostu vnášejí, neroste donekonečna. *(M3b: nad 2,5 m/s² budicí síla slábne, nad 6 m/s² z ní zbývá čtvrtina. Rychlost chůze se nemění.)*
 - **Dav se na kmitající most neladí.** U svislého kmitání to není spolehlivě doložené, takže synchronní zatížení dělají jen zdroje z kapitoly 6.
-- **Komfort** se hodnotí třídami podle zrychlení mostovky (do 0,5 m/s² výborný, do 1 střední, do 2,5 nízký, nad 2,5 nepřijatelný). Zrychlení se měří v pásmu 0,5–10 Hz a vyhlazené přes jednu sekundu, aby o výsledku nerozhodl jediný náraz.
+- **Komfort** se hodnotí třídami podle zrychlení mostovky (do 0,5 m/s² výborný, do 1 střední, do 2,5 nízký, nad 2,5 nepřijatelný). *(M3b: úroveň může chtít lepší třídu než jen „ne nepřijatelný“; promenáda na nábřeží smí kmitat nejvýš 0,5 m/s².)* Zrychlení se měří v pásmu 0,5–10 Hz a vyhlazené přes jednu sekundu, aby o výsledku nerozhodl jediný náraz.
 
 ### 7.8 Výpočty ve stavebním režimu
 
@@ -363,7 +363,7 @@ Rozdíl ceny, největšího využití a největšího zrychlení proti předchoz
 **Hraní s dynamikou**
 
 - **Brnknutí:** mostovku lze myší stáhnout a pustit. Most se rozkmitá ve své vlastní frekvenci.
-- **Budič:** v sandboxu a ve výukových úrovních zařízení s táhlem frekvence. Hráč rezonanci najde rukou.
+- **Budič:** v sandboxu a ve výukových úrovních zařízení s táhlem frekvence. Hráč rezonanci najde rukou. *(M3b: zkouška se počítá napřed a pak přehrává, takže budič nemá živé táhlo. Buď přeladí celý rozsah 0,5–6 Hz tam a zpět a rezonanci ukáže, nebo buší ve stálém rytmu, který hráč nastaví po 0,05 Hz. Naměřené hodnoty se kreslí přes spočítanou rezonanční křivku.)*
 
 **Analytický panel (rozbalovací)**
 
@@ -408,6 +408,9 @@ Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí pru
 | Krokovat záznam zpět a vpřed | čárka, tečka |
 | Brnknout do mostu | B a tažení styčníku dolů |
 | Závaží ve styčníku, síla tlumiče | výběr a tlačítka − a + v paletě |
+| Laděný tlumič pod styčník | výběr styčníku a L; závaží a ladění tlačítky − a + |
+| Budič | U a kliknutí na styčník; rytmus tlačítky − a + |
+| Analytický panel | A nebo tlačítko Analýza |
 | Zapnout a vypnout čísla využití u prutů | C |
 | Hlasitost zvuku: nahlas, potichu, vypnuto | Z nebo tlačítko v liště |
 

@@ -144,7 +144,8 @@ describe("dav", () => {
   it("celý přejde a rozbor počítá s hmotou lidí, kteří se na most vejdou", () => {
     dojed(zkouska);
     const vysledek = zkouska.vysledek();
-    expect(vysledek).toMatchObject({ pruchod: true, prejelo: 10, spadlo: 0 });
+    // Výsledek počítá lidi, ne řady, ve kterých je simulace vede.
+    expect(vysledek).toMatchObject({ pruchod: true, ucastniku: 38, prejelo: 38, spadlo: 0 });
     expect(vysledek.komfort).not.toBeNull();
     // Na dvanáct metrů se při rozestupu 1,3 m vejde deset řad po čtyřech: celý dav.
     const u = uroven([polozka]);
@@ -169,7 +170,7 @@ describe("běžecký závod", () => {
     // Pásmo je mnohem užší než u davu.
     expect(ROZPTYL_ZAVODU).toBeLessThan(ROZPTYL_DAVU / 2);
     dojed(zkouska);
-    expect(zkouska.vysledek()).toMatchObject({ prejelo: 7, spadlo: 0 });
+    expect(zkouska.vysledek()).toMatchObject({ ucastniku: 20, prejelo: 20, spadlo: 0 });
   }, 60_000);
 });
 
@@ -274,7 +275,7 @@ describe("skákající dav", () => {
     dojed(zkouska);
     expect([...zkouska.provoz.stavy].every((stav) => stav === PREJEL)).toBe(true);
     const vysledek = zkouska.vysledek();
-    expect(vysledek).toMatchObject({ prejelo: 6, spadlo: 0, poruseni: 0 });
+    expect(vysledek).toMatchObject({ ucastniku: 24, prejelo: 24, spadlo: 0, poruseni: 0 });
     expect(vysledek.trvani).toBeGreaterThan(skok.odchod + 5);
     // Skákání mostovku rozhoupe víc, než kdyby dav jen prošel.
     const prochazka = new Zkouska(uroven([{ cas: 1, trasa: "silnice", smer: 1, druh: "dav", pocet: 24 }], 16), tuhyMost(16), 8);

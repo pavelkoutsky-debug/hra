@@ -422,7 +422,7 @@ export class Zkouska {
 
   vysledek(): VysledekZkousky {
     const provoz = this.provoz;
-    const ucastniku = provoz.ucastnici.length;
+    const ucastniku = provoz.celkem;
     const prejelo = provoz.prejelo;
     const spadlo = provoz.spadlo;
     const rozpad = this.simulace.rozpadla;

@@ -760,6 +760,12 @@ a.tlacitko {
   display: none;
 }
 
+/* S otevřeným analytickým panelem má hlášení jen řádek nad ním: smí být širší a zůstává navrchu. */
+body[data-analyza="otevrena"] .vykres__hlaseni {
+  z-index: 2;
+  max-width: calc(100% - 20px);
+}
+
 .vykres__hlaseni[data-druh="varovani"] {
   border-color: var(--varovani);
   color: var(--varovani);
@@ -1383,6 +1389,8 @@ body[data-rezim="stavba"] .uroven .legenda {
   margin: 0;
   color: var(--cara-silna);
   text-align: right;
+  /* Reakce podpory mají každou složku na vlastním řádku. */
+  white-space: pre-line;
 }
 
 /* Osa frekvencí: vlastní frekvence mostu proti krokům lidí */
