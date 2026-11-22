@@ -1,0 +1,116 @@
+{
+  "verze": 5,
+  "id": "6-01",
+  "nazev": "První vlak",
+  "vyrez": {
+    "xMin": -12,
+    "yMin": -14,
+    "xMax": 42,
+    "yMax": 14
+  },
+  "teren": [
+    {
+      "x": -12,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -6
+    },
+    {
+      "x": 8,
+      "y": -11
+    },
+    {
+      "x": 22,
+      "y": -11
+    },
+    {
+      "x": 27,
+      "y": -6
+    },
+    {
+      "x": 30,
+      "y": 0
+    },
+    {
+      "x": 42,
+      "y": 0
+    }
+  ],
+  "hladina": -9,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 30,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": 0.5,
+      "yMin": -11,
+      "xMax": 29.5,
+      "yMax": -0.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "kolej",
+      "druh": "kolej",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 30,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 5,
+  "hmotnostVybaveni": 0,
+  "nerovnost": "A",
+  "rozpocet": 1050000,
+  "inzenyrskyRozpocet": 800000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.5
+  },
+  "povolenePrvky": [
+    "kolejiste",
+    "ocel-lehka",
+    "ocel-tezka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "vozy": [
+        {
+          "druh": "vuz-nakladni",
+          "pocet": 3
+        }
+      ]
+    }
+  ]
+}

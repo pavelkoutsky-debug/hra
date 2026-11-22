@@ -13,7 +13,15 @@
 import { vyskaNerovnosti, type Nerovnost } from "./nerovnost";
 import type { Zatizeni } from "./simulace";
 import type { Soustava } from "./soustava";
-import { mistoNaPrvku, najdiPrvekTrasy, prestavTrasu, vyskaNaPrvku, vyskaSpojnice, type Trasa } from "./trasa";
+import {
+  mistoNaPrvku,
+  najdiPrvekTrasy,
+  prestavTrasu,
+  vDilatacniSpare,
+  vyskaNaPrvku,
+  vyskaSpojnice,
+  type Trasa,
+} from "./trasa";
 import { pridejSiluNaPrvek } from "./zatizeni";
 
 /** Břemeno jede po pevné zemi před mostem nebo za ním. */
@@ -286,6 +294,11 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
         povrch = vyskaNaPrvku(s, e, x);
         naSpojnici = vyskaSpojnice;
         xi = mistoNaPrvku;
+      } else {
+        // Dilatační spára: kraj mostovky se od předmostí o kousek odsunul. Kolo ji přejede
+        // po předmostí, jako by sahalo až k mostovce.
+        const spara = vDilatacniSpare(s, trasa, x);
+        if (spara !== 0) povrch = naSpojnici = spara < 0 ? trasa.yLevy : trasa.yPravy;
       }
       // Povrch vysoko nad styčníkem není opora, ale kus mostovky, pod kterým břemeno je.
       const stlaceni = uzel >= 0 ? povrch + b.vyskaNad[i]! - s.y[uzel]! : 0;

@@ -359,6 +359,81 @@ const OBLOUK_16 = [11, 9, 7, 5, 4, 4, 4, 5, 7, 9, 11];
 const OBLOUK_12 = [9, 7, 5, 4, 3, 3, 3, 4, 5, 7, 9];
 const OBLOUK_20 = [14, 11, 8, 6, 5, 4, 5, 6, 8, 11, 14];
 
+// ---- Pomůcky kapitoly 6: trať ----
+
+const KOLEJ: IdPrvku = "kolejiste";
+
+/** Kolejiště z polí po šesti metrech od x = `od` do x = `po` ve výšce `y`. */
+function kolej(k: Kreslic, od: number, po: number, y = 0): void {
+  for (let x = od; x < po; x += 6) k.prut(KOLEJ, [x, y], [x + 6, y]);
+}
+
+/**
+ * Příhrada jednoho pole trati mezi x = `od` a x = `po` s poli 6 m: nad kolejí (`h` kladné)
+ * nebo pod ní (záporné). Krajní šikminy a pás z prvku `pas`, svislice a diagonály z prvku
+ * `vypln`; diagonály klesají ke středu pole.
+ */
+function prihradaTrate(k: Kreslic, od: number, po: number, h: number, pas: IdPrvku, vypln: IdPrvku): void {
+  k.prut(pas, [od, 0], [od + 6, h]);
+  k.prut(pas, [po - 6, h], [po, 0]);
+  for (let x = od + 6; x < po - 6; x += 6) k.prut(pas, [x, h], [x + 6, h]);
+  for (let x = od + 6; x <= po - 6; x += 6) k.prut(vypln, [x, 0], [x, h]);
+  for (let x = od + 6; x < po - 6; x += 6) {
+    const dolu = (x < (od + po) / 2) === h > 0;
+    k.prut(vypln, dolu ? [x, h] : [x, 0], dolu ? [x + 6, 0] : [x + 6, h]);
+  }
+}
+
+/** Železniční most o jednom poli: kolejiště a příhrada nad ním (`h` kladné) nebo pod ním. */
+function trat(uroven: string, rozpeti: number, h: number, pas: IdPrvku, vypln: IdPrvku): NavrhMostu {
+  return navrh(uroven, (k) => {
+    kolej(k, 0, rozpeti);
+    if (h !== 0) prihradaTrate(k, 0, rozpeti, h, pas, vypln);
+  });
+}
+
+/**
+ * Viadukt úrovně 6-03: tři pole po 24 m, pod každým lehká příhrada hluboká `hloubka`
+ * (0 = žádná), a betonové pilíře na základech v údolí (když `pilire`).
+ */
+function viadukt(hloubka: number, pilire = true, uprava?: (k: Kreslic) => void): NavrhMostu {
+  return navrh("6-03", (k) => {
+    kolej(k, 0, 72);
+    if (pilire) for (const x of [24, 48]) pilir(k, x, -18, 0, [-6]);
+    if (hloubka > 0) for (const od of [0, 24, 48]) prihradaTrate(k, od, od + 24, -hloubka, O, O);
+    uprava?.(k);
+  });
+}
+
+/** Vzpěry z půlky výšky pilířů viaduktu do sousedních styčníků kolejiště. */
+function vzperyPiliru(prvek: IdPrvku): (k: Kreslic) => void {
+  return (k) => {
+    for (const x of [24, 48]) {
+      k.prut(prvek, [x, -6], [x - 6, 0]);
+      k.prut(prvek, [x, -6], [x + 6, 0]);
+    }
+  };
+}
+
+/**
+ * Dvoupatrový most úrovně 6-04: dole kolej, osm metrů nad ní silnice. Mezi patry svislice
+ * a diagonály klesající ke středu; `svislice` a `diagonaly` určí prvek podle místa
+ * (u diagonály levý konec). Bez nich jsou obě mostovky nespojené.
+ */
+function dvePatra(svislice?: (x: number) => IdPrvku, diagonaly?: (x: number) => IdPrvku): NavrhMostu {
+  return navrh("6-04", (k) => {
+    kolej(k, 0, 48);
+    for (let x = 0; x < 48; x += 6) k.prut(BETON, [x, 8], [x + 6, 8]);
+    if (svislice) for (let x = 6; x <= 42; x += 6) k.prut(svislice(x), [x, 0], [x, 8]);
+    if (diagonaly) {
+      for (let x = 0; x < 48; x += 6) {
+        const kStredu = x < 24;
+        k.prut(diagonaly(x), kStredu ? [x, 8] : [x, 0], kStredu ? [x + 6, 0] : [x + 6, 8]);
+      }
+    }
+  });
+}
+
 export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
   "1-01": {
     pruchod: navrh("1-01", (k) => {
@@ -723,6 +798,65 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "jen mostovka", navrh: navrh("5-04", (k) => mostovka(k, 32, 4)) },
       { nazev: "dvoumetrová příhrada bez tlumiče", navrh: lavka("5-04", 32, 2, rovne(32, 2, 2)) },
       { nazev: "dlouhá pole mostovky", navrh: lavka("5-04", 32, 4, rovne(32, 4, 2), tlumice([16], 1000, 4.4)) },
+    ],
+  },
+  // ---- Kapitola 6: Trať ----
+
+  // První vlak, 30 m: lokomotiva (88 t) a tři ložené vozy po 90 t. Vlak je delší než most
+  // a zatíží ho celý najednou, přes šest tun na metr. Pod mostem se stavět nesmí. Lehká
+  // příhrada to unese od tří metrů výšky; nižší vybočí v tlačeném pásu.
+  "6-01": {
+    pruchod: trat("6-01", 30, 5, O, O),
+    rozpocet: trat("6-01", 30, 3, O, O),
+    // Tlačený horní pás a krajní šikminy z těžkého profilu mají ve vzpěru velkou rezervu.
+    mistrovska: trat("6-01", 30, 3, TO, O),
+    pady: [
+      { nazev: "jen kolejiště", navrh: trat("6-01", 30, 0, O, O) },
+      { nazev: "dvoumetrová příhrada z lehké oceli", navrh: trat("6-01", 30, 2, O, O) },
+    ],
+  },
+
+  // Rychlík, 36 m, stovkou; nad kolejí je trolej, staví se jen pod ní. Unést vlak je snadné,
+  // jde o tuhost: mělký most se pod vozem prohne a cestující to cítí. Šestimetrová příhrada
+  // se prohne o milimetry.
+  "6-02": {
+    pruchod: trat("6-02", 36, -3, O, O),
+    rozpocet: trat("6-02", 36, -2, O, O),
+    mistrovska: trat("6-02", 36, -6, O, O),
+    pady: [
+      { nazev: "jen kolejiště", navrh: trat("6-02", 36, 0, O, O) },
+      { nazev: "metrová příhrada", navrh: trat("6-02", 36, -1, O, O) },
+    ],
+  },
+
+  // Uhelný vlak, viadukt 72 m na dvou vysokých pilířích, oba konce na posuvných ložiskách.
+  // Vlak s deseti loženými vozy na mostě nouzově zabrzdí a tlačí ho dopředu pětinou své tíhy;
+  // tu sílu nesou jen pilíře. Samotné se ohnou a zlomí. Pomůže svar hlavy pilíře s kolejištěm
+  // (rám), nebo vzpěry z půlky pilíře do kolejiště (trojúhelník).
+  "6-03": {
+    pruchod: viadukt(3, true, vzperyPiliru(O)),
+    rozpocet: viadukt(3, true, (k) => {
+      for (const x of [24, 48]) k.bod(x, 0, { svar: true });
+    }),
+    mistrovska: viadukt(3, true, vzperyPiliru(TO)),
+    pady: [
+      { nazev: "jen kolejiště", navrh: viadukt(0, false) },
+      { nazev: "kolejiště na pilířích bez příhrad", navrh: viadukt(0) },
+      { nazev: "příhrady bez pilířů", navrh: viadukt(4, false) },
+      { nazev: "pilíře bez vzpěr a svarů", navrh: viadukt(3) },
+    ],
+  },
+
+  // Dvě patra, 48 m: dole kolej s nákladním vlakem, osm metrů nad ní silnice. Dvě mostovky
+  // nad sebou jsou pásy jedné vysoké příhrady; stačí je spojit svislicemi a diagonálami.
+  // Svislice u podpor jsou tlačené a osm metrů dlouhé: z lehkého profilu vybočí.
+  "6-04": {
+    pruchod: dvePatra((x) => (x === 6 || x === 42 ? TO : O), () => O),
+    rozpocet: dvePatra((x) => (x === 6 || x === 42 ? TO : O), () => O),
+    mistrovska: dvePatra((x) => (x <= 12 || x >= 36 ? TO : O), (x) => (x === 0 || x === 42 ? TO : O)),
+    pady: [
+      { nazev: "jen dvě mostovky", navrh: dvePatra() },
+      { nazev: "jen svislice, bez diagonál", navrh: dvePatra(() => O) },
     ],
   },
 };

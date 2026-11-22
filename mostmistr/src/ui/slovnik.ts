@@ -487,6 +487,26 @@ const CS = {
     "pařížskou lávku Solférino zavřeli v roce 1999 týden po otevření, protože se pod lidmi houpala. Znovu se otevřela až za rok, s laděnými tlumiči pod mostovkou. Tlumiče se dolaďují až na hotovém mostě podle měření a počítá se u toho s lidmi: jejich váha frekvenci mostu posune a tlumič rozladí.",
   "skutecnost.5-04":
     "před silvestrovským koncertem 1999 na Millennium Stadium v Cardiffu se úřady bály, co s vyloženými tribunami udělají tisíce fanoušků skákajících v rytmu. Stadion dostal povolení, až když prostřední tribunu podepřel ocelovými stojkami. Lidé, kteří skáčou spolu s hudbou, jsou pro konstrukci horší než jakýkoli pochod.",
+  "ukazka.6-01.a": "Lehká příhrada dva metry vysoká",
+  "ukazka.6-01.b": "Tatáž ocel, pět metrů vysoká",
+  "ukazka.6-01.popis": "Vlak váží šest tun na metr a je delší než most. V nízké příhradě vyjdou síly v pásech obrovské: tlačený horní pás vybočí a most se pod lokomotivou zlomí. Stejné pruty o tři metry výš nesou tentýž vlak s rezervou.",
+  "ukazka.6-02.a": "Příhrada metr hluboká",
+  "ukazka.6-02.b": "Příhrada šest metrů hluboká",
+  "ukazka.6-02.popis": "Stejná lehká ocel pod stejným rychlíkem. Mělká příhrada se pod vlakem prohýbá, až se zlomí. Šestimetrová se prohne o pár milimetrů: vlak přejede a cestující o mostě skoro nevědí.",
+  "ukazka.6-03.a": "Pilíře bez vzpěr",
+  "ukazka.6-03.b": "Se vzpěrami do kolejiště",
+  "ukazka.6-03.popis": "Vlak na mostě nouzově brzdí a tlačí ho dopředu silou přes sto tun. Konce mostu leží na posuvných ložiskách, takže celou sílu nesou hlavy pilířů: osmnáct metrů vysoký pilíř se ohne a u paty zlomí. Vzpěry z půlky pilíře do kolejiště z něj udělají trojúhelník, který se neohýbá, jen táhne a tlačí.",
+  "ukazka.6-04.a": "Jen svislice",
+  "ukazka.6-04.b": "Svislice a diagonály",
+  "ukazka.6-04.popis": "Dvě mostovky spojené jen svislicemi jsou žebřík: příčky se v kloubech natočí, žebřík se zkosí a složí. Diagonály rozdělí každé pole na trojúhelníky a z obou mostovek udělají pásy jedné osm metrů vysoké příhrady.",
+  "skutecnost.6-01":
+    "nejstarší železniční most v Praze je Negrelliho viadukt. První pravidelný vlak po něm přejel 1. června 1850. Měří přes 1 100 metrů a až do roku 1910 byl nejdelším mostem v Evropě. Je kamenný a po opravě z let 2017 až 2020 po něm vlaky jezdí dál.",
+  "skutecnost.6-02":
+    "mosty pro rychlé vlaky se navrhují hlavně na tuhost. Evropská norma omezuje jejich průhyb tak, aby svislé zrychlení ve voze nepřekročilo asi 1 m/s²; tomu říká velmi dobré pohodlí. Mostovka se štěrkovým ložem navíc nesmí kmitat se zrychlením nad 3,5 m/s², jinak se štěrk pod pražci začne rozpadat.",
+  "skutecnost.6-03":
+    "most přes záliv Firth of Forth ve Skotsku otevřeli 4. března 1890. Měří dva a půl kilometru a jeho dvě hlavní pole mají každé přes 500 metrů. Navrhli ho po zřícení mostu přes řeku Tay v roce 1879 a úřady žádaly, aby byl tuhý a unesl nejtěžší nákladní vlaky. Proto je tak mohutný; vlaky po něm jezdí dodnes.",
+  "skutecnost.6-04":
+    "most přes Øresund mezi Dánskem a Švédskem má dvě patra: nahoře čtyřpruhovou dálnici, dole dvoukolejnou trať. Je dlouhý 7 845 metrů a jeho hlavní pole, zavěšené na lanech, měří 490 metrů. Otevřeli ho 1. července 2000.",
   "paleta.vyber": "Výběr a posun",
   "paleta.smazat": "Smazat",
   "paleta.zrcadlit": "Zrcadlit",
@@ -642,6 +662,8 @@ const CS = {
   "kapitola.4.tema": "Velké rozpětí. Pilíře, svary, lana a napínáky; tahač s návěsem a nadměrný náklad.",
   "kapitola.5.nazev": "Lávka ve městě",
   "kapitola.5.tema": "Město v pohybu. Dav, běžecký závod, průvod s kapelou, skákající dav a laděný tlumič.",
+  "kapitola.6.nazev": "Trať",
+  "kapitola.6.tema": "Vlak. Kolejiště, lokomotiva a vozy, styky kolejnic, pohodlí cestujících, brzdící vlak a most o dvou patrech.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
   "prehled.nejlepsiCena": "nejlevnější most {cena}",
   "prehled.rozpracovano": "rozpracováno",
@@ -692,6 +714,14 @@ const CS = {
     "Slavnostní průvod: vpředu kapela, šestnáct lidí pochodem v taktu 2,0 Hz, za ní volně jdoucí dav. Prázdný most kmitá o kus rychleji než kapela, ale s osmačtyřiceti lidmi zpomalí přesně do jejího taktu. Laděný tlumič proto nelaď podle prázdného mostu. Průchod zvládne i přibližně naladěný; mistrovskou medaili dostaneš jen za tlumič naladěný na most s lidmi.",
   "zadani.5-04":
     "Koncert na mostě: třicet lidí dojde doprostřed a osm sekund skáče v rytmu 2,2 Hz. Doskoky jsou krátké a tvrdé, takže most budí i na dvojnásobku a trojnásobku rytmu, tedy na 4,4 a 6,6 Hz. Výš než dva metry stavět nejde. Najdi, který z těch tří rytmů tvůj most trefí, a nalaď tlumič na něj. Mostovka z dlouhých polí se pod doskoky rozdrnčí sama; postav ji z krátkých.",
+  "zadani.6-01":
+    "Třicet metrů přes řeku a poprvé koleje. Kolejiště je kolej na dvou ocelových podélnících: v paletě je nové a jeho pole měří nejvýš šest metrů. Pojede lokomotiva a tři ložené vozy, dohromady 358 tun. Vlak je delší než most a zatíží ho celý najednou, šesti tunami na každý metr; nákladní auto z okresní silnice vážilo na metr sotva tři. Pod mostem je plavební dráha, staví se jen nad kolejí. Kolej je svařená, bez styků, takže vlak jede klidně a most nese hlavně jeho tíhu.",
+  "zadani.6-02":
+    "Šestatřicet metrů a rychlík: lokomotiva a čtyři osobní vozy stovkou. Nad kolejí vede trolej, takže příhrada musí pod most; údolí je hluboké dost. Unést osobní vlak není těžké, vůz váží polovinu toho co ložený nákladní. Jde o tuhost. Most se pod každým vozem prohne, skříň vozu na měkkých pružinách se na tom rozhoupe a cestující to cítí. Čím hlubší příhrada, tím menší průhyb. Mistrovská medaile chce jízdu, při které se káva nerozlije.",
+  "zadani.6-03":
+    "Viadukt, dvaasedmdesát metrů, a v údolí osmnáct metrů pod kolejí dva základy. Pojede uhelný vlak: lokomotiva a deset ložených vozů, skoro tisíc tun a sto šedesát metrů. Na mostě nouzově zabrzdí, tři sekundy stojí a rozjede se. Brzdící vlak tlačí most dopředu pětinou své tíhy. Oba konce mostu leží na posuvných ložiskách, takže tu sílu musí odvést pilíře, a vysoký pilíř, do kterého se nahoře tlačí vodorovně, se ohne jako prut zapíchnutý do země. Pomoz mu: svař hlavu pilíře s kolejištěm, nebo veď z půlky pilíře vzpěry do kolejiště.",
+  "zadani.6-04":
+    "Osmačtyřicet metrů a dvě patra: dole trať z tunelu do tunelu, osm metrů nad ní silnice. Po kolejích pojede lokomotiva se čtyřmi loženými vozy, po silnici dvě nákladní auta a autobus. Každou mostovku polož na její niveletu: na kolej patří kolejiště, na silnici ocelobetonová mostovka. Vlak po silniční mostovce nepojede a auto po pražcích taky ne. Dvě mostovky nad sebou jsou jako pásy jedné vysoké příhrady. Stačí je spojit, ale pozor: svislice u podpor jsou tlačené a osm metrů dlouhé.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem. Každý rytmus rozhoupe jinak vysoký most. Buď najdeš výšku, která se vyhne všem třem, nebo postavíš most, kterému rezonance nevadí: mezi mostovku a kotvy ve svazích dej viskózní tlumiče. Tlumič nenese žádnou váhu, jen brzdí pohyb; jeho sílu nastavíš po výběru v paletě.",
 } as const;

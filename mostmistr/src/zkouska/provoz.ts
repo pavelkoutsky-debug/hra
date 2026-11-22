@@ -153,9 +153,9 @@ interface Rada {
 /** Zpomalení při brzdění, když ho úroveň neurčí, a zrychlení při rozjezdu, m/s². */
 const VYCHOZI_ZPOMALENI = 5;
 const ZRYCHLENI_ROZJEZDU = 1.5;
-/** Totéž pro vlak: provozní brzdění kolem 1 m/s², rozjezd těžkého vlaku 0,3 m/s². */
+/** Totéž pro vlak: provozní brzdění kolem 1 m/s², rozjezd 0,5 m/s². */
 const ZPOMALENI_VLAKU = 1;
-const ROZJEZD_VLAKU = 0.3;
+const ROZJEZD_VLAKU = 0.5;
 
 /** Pauza mezi příchodem skákajícího davu na místo a prvním skokem a po posledním skoku, s. */
 const PAUZA_SKAKANI = 1;

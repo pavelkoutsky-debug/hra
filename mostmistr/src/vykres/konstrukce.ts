@@ -15,6 +15,7 @@ import {
   type Topologie,
 } from "../zkouska/zaznam";
 import { BARVY, PISMO } from "./barvy";
+import { nakresliPrazce } from "./kolej";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
 import { barvaVyuziti } from "./skala";
 import { nakresliZnackuPodpory } from "./vykres";
@@ -234,37 +235,6 @@ interface BodObrazu {
 }
 
 /** Pružina s tlumičem: pilovitá čára mezi krátkými rovnými konci. */
-/**
- * Pražce kolejiště: krátké příčné čárky v barvě pozadí přes čáru mostovky, po 0,6 m
- * (při malém měřítku řidší, aby nesplynuly). Kolej je podle nich na výkresu poznat na první pohled.
- */
-export function nakresliPrazce(ctx: CanvasRenderingContext2D, a: BodObrazu, b: BodObrazu, m: number, tloustka: number): void {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const delka = Math.hypot(dx, dy);
-  if (delka < 1) return;
-  const ex = dx / delka;
-  const ey = dy / delka;
-  // Rozteč je celý násobek 0,6 m a aspoň pět pixelů; pražce jsou od začátku prvku souměrně.
-  const roztec = 0.6 * m * Math.max(1, Math.ceil(5 / (0.6 * m)));
-  const pocet = Math.max(1, Math.round(delka / roztec));
-  const krok = delka / pocet;
-  const pul = tloustka / 2;
-  ctx.save();
-  ctx.lineCap = "butt";
-  ctx.strokeStyle = BARVY.pozadi;
-  ctx.lineWidth = mezi(0.07 * m, 1, 2.4);
-  ctx.beginPath();
-  for (let i = 0; i < pocet; i++) {
-    const x = a.x + ex * krok * (i + 0.5);
-    const y = a.y + ey * krok * (i + 0.5);
-    ctx.moveTo(x - ey * pul, y + ex * pul);
-    ctx.lineTo(x + ey * pul, y - ex * pul);
-  }
-  ctx.stroke();
-  ctx.restore();
-}
-
 export function nakresliPruzinu(ctx: CanvasRenderingContext2D, a: BodObrazu, b: BodObrazu, m: number): void {
   const dx = b.x - a.x;
   const dy = b.y - a.y;

@@ -8,7 +8,8 @@ import type { Tah } from "../editor/editor";
 import { cislo, delka as zapisDelky } from "../ui/formaty";
 import { BARVY, PISMO, cara } from "./barvy";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
-import { nakresliPrazce, nakresliPruzinu, nakresliTlumic, nakresliZavazi } from "./konstrukce";
+import { nakresliPruzinu, nakresliTlumic, nakresliZavazi } from "./konstrukce";
+import { nakresliPrazce } from "./kolej";
 import { barvaVyuziti } from "./skala";
 
 export interface StavNavrhu {

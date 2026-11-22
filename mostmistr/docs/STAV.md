@@ -16,36 +16,55 @@ Poslední aktualizace: 22. 11. 2026
 | M4a Těžká doprava | Hotovo, sloučeno do `main` (22. 11. 2026) |
 | M4b Velká rozpětí | Hotovo, po třech nezávislých recenzích sloučeno do `main` (22. 11. 2026) |
 | M4c Zpětná vazba a deník hraní | Hotovo (přidáno na přání zadavatele 22. 11. 2026); čeká na nastavení hesla správce v Netlify |
-| M5 až M8 | Nezačato |
+| M5 Železnice | Hotovo: kolejiště, vlak, kapitola 6; čeká na nezávislé recenze a sloučení |
+| M6 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
-## M5 — rozpracováno (plán)
+## M5 — výsledek
 
-Pracuje se v místním pracovním stromu `/home/user/hra-m5` (větev `m5-priprava`, zatím neodeslaná), aby se práce nemíchala s opravami z recenzí M4c. Po sloučení M4c se větev sloučí do `claude/nice-galileo-lnfnk2`.
+Železnice: kolejiště, vlak, kapitola 6 „Trať“ a cestou dvě opravy fyziky. Verze hry 0.11.0, verze fyziky 6, formát úrovně 5.
 
-**Krok 1: vlastní tíha prutů s tuhými konci (nález A3 z kontroly fyziky M4b).** Tíha prutu se dnes dává jen do styčníků (polovina na každý konec). U prutu, který má aspoň jeden konec tuhý, k tomu patří i momenty vetknutí a přesun příčné síly; bez nich vycházejí podporové momenty spojité mostovky o 6 % menší. Jádro to pro břemena kol už umí (`pridejZatizeniPrvku` v `src/jadro/zatizeni.ts`, pole `zatMomentA/B`); pro rovnoměrnou tíhu `W = −hmotnost prutu · g · e_x` (příčná složka, `n = (−e_y, e_x)`) vychází integrací téhož vzorce oprava proti polovinám:
+**Opravy fyziky**
 
-| `kloub` prvku | změna příčné síly v a / v b | moment v a | moment v b |
-|---|---|---|---|
-| 0 (oba konce tuhé) | 0 / 0 | +W·L/12 | −W·L/12 |
-| 1 (kloub v a) | −W/(2(4+Φ)) / +W/(2(4+Φ)) | 0 | −W·L/(2(4+Φ)) |
-| 2 (kloub v b) | +W/(2(4+Φ)) / −W/(2(4+Φ)) | +W·L/(2(4+Φ)) | 0 |
-| 3 (oba klouby) | beze změny | 0 | 0 |
+- **Vlastní tíha prutů s tuhými konci** (nález z kontroly fyziky M4b). Tíha prutu se dřív dávala jen do styčníků; u svařeného nebo vetknutého prutu k ní patří i momenty vetknutí, bez kterých vycházely podporové momenty spojité mostovky o 6 % menší. Teď působí tíha po délce prutu (`pridejTihuPrvku` a `energieTihyPrvku` v `src/jadro/zatizeni.ts`, jako gradient polohové energie průhybu, takže se zachovává energie). Rám úrovně 4-02 sedí s rámovou teorií do 1 % (`test/vlastni-tiha.test.ts`).
+- **Dilatační spára.** Konec mostovky na posuvném ložisku se pod brzdícím vlakem odsune od předmostí i o deset centimetrů. Kola do vzniklé mezery propadala a vracela se rázem několika meganewtonů (falešný smyk v krajním poli, pětinásobná reakce opěry). Kolo teď spáru do půl metru přejede po předmostí, pokud kraj mostovky zůstal ve výšce předmostí (`vDilatacniSpare` v `src/jadro/trasa.ts`); utržený díl spáru netvoří. Hlídá to test s vlakem brzdícím na vysokém pilíři (`test/vlak.test.ts`).
+- Cestou nalezena a opravena příčina vzácného rozpadu výpočtu: tlumič kontaktu kola bral skok výšky mezi dvěma kusy utržené mostovky jako rychlost (`NEJVYSSI_RYCHLOST_POVRCHU` v `src/jadro/bremena.ts`).
 
-Tíha vstupuje na třech místech a oprava musí do všech: `spoctiSily` (`src/jadro/integrator.ts`), zbytek sil v `najdiRovnovahu` (`src/jadro/matice.ts`, i pro stupně natočení) a posudek (`vyhodnotNamahani` a `vnitrniSily` v `src/jadro/namahani.ts`: skutečný koncový moment = pružný − moment vetknutí od břemen − moment vetknutí od tíhy; parabola v poli tam už je). Nová pole soustavy (`tihaMomentA/B`) patří i do seznamu v `src/jadro/topologie.ts`. Ověření: momenty rámu 4-02 proti rámové teorii (−740,6 / −509,5 / −493,7 kNm nad pilíři, +378,2 a +246,9 kNm v polích), průhyb prostého nosníku ze dvou dílů 5wL⁴/384EI. Mění výsledky všech mostů: **verze fyziky 6**, nové otisky (`npm run otisky`), znovu test vyhratelnosti a otisky v testech prohlížeče.
+**Kolejiště** (`kolejiste` v katalogu): kolej na dubových mostnicích a dvou podélnících IPE 600 (2 × 92 080 cm⁴, 560 kg na metr i s kolejnicemi, 16 000 Kč/m, do 6 m). Je to jedna kolej: šířka mostovky ho nenásobí a hmotnost vybavení úrovně nenese. Patří jen k trase druhu „kolej“; vlak po silniční mostovce nejede a auto po pražcích také ne. Původně zamýšlené IPE 500 se pod podvozkem loženého vozu prohýbaly o centimetr a šestimetrová pole pak vozy rozhoupala v jejich vlastní frekvenci; s IPE 600 je průhyb 5 mm (1/1 200 rozpětí), jak se u železničních mostů žádá.
 
-**Krok 2: železnice podle koncepce (kap. 5, 6, 10, 12).** Kolejiště jako nový prvek mostovky (pojízdné jen pro kolejová vozidla, do 6 m), lokomotiva a vozy (skříň, podvozky, dvojkolí; nákladní a osobní), více mostovek v jedné úrovni (silnice a kolej v různých výškách: dvoupatrové mosty), rázy náprav a pohodlí cestujících ve vlaku, kapitola 6 „Trať“ s referenčními mosty, ukázkami a odstavci „Ve skutečnosti“ (fakta ověřit vyhledáním), jednoduchý pracovní zvuk vlaku. Kritérium: nákladní vlak přejede referenční most; úrovně projdou testem vyhratelnosti.
+**Vlak** (`src/zkouska/vozidla.ts`, `src/zkouska/provoz.ts`)
 
-Stav kroku 1: **hotovo** v `m5-priprava` (commity „vlastní tíha prutů s tuhými konci“): oprava je gradient polohové energie průhybu (`pridejTihuPrvku`, `energieTihyPrvku` v `src/jadro/zatizeni.ts`), utržené kusy se vynechávají, verze fyziky 6, otisky zapsané znovu, rám 4-02 sedí s teorií do 1 % (`test/vlastni-tiha.test.ts`). Cestou nalezena a opravena příčina vzácného rozpadu výpočtu (tlumič kontaktu kola a utržený díl mostovky; `NEJVYSSI_RYCHLOST_POVRCHU` v `src/jadro/bremena.ts`).
+- Položka jízdního řádu druhu „lokomotiva“ se seznamem vozů (`vozy`, formát úrovně 5). Lokomotiva a každý vůz jsou samostatní účastníci nárazník na nárazník, všichni jedou rychlostí lokomotivy. Kolejová vozidla smějí jen na trasu druhu „kolej“.
+- Lokomotiva 88 t (4 × 22 t), ložený nákladní vůz 90 t, prázdný 22 t, osobní vůz 45 t; každé vozidlo má čtyři dvojkolí ve dvou podvozcích. Lokomotiva a osobní vůz mají dvoustupňové vypružení (dvojkolí – rám podvozku – skříň), nákladní vůz jen prvotní. Hodnoty jsou typické, ne změřené.
+- Uložení koleje pod dvojkolím má tuhost 120 MN/m. Kolej má vlastní nerovnosti (`src/jadro/nerovnost.ts`): třída A je svařená kolej s milimetrovými vlnami, B má po 25 m styky hluboké 3 mm, C zanedbané styky 6 mm. Naměřeno na zkušebním mostě: na rovné a svařené koleji kolísá síla dvojkolí o procenta, na stycích třídy B přitlačí ložené dvojkolí asi o polovinu víc a prázdné více než dvojnásobkem, což odpovídá tomu, že ráz na styku skoro nezávisí na nákladu.
+- Vlak umí na mostě zabrzdit (výchozí zpomalení 1 m/s², úroveň smí předepsat jiné) a rozjet se.
+- Pohodlí cestujících se měří i na skříních osobních vozů; výsledek a mistrovská medaile pak mluví o vlaku.
 
-Rozhodnutí pro krok 2 (ještě neprovedeno):
+**Ve hře:** kolejiště se kreslí s pražci, lokomotiva se sběračem a vozy jako bokorysy, trasa vedená skálou má tunel s portálem, zadání má větu o stavu koleje, jízdní řád vypisuje složení vlaku. Zvuk je stávající obecné valení a klapání spár (ladění zvuků patří do M9).
 
-- **Kolejiště** (`kolejiste` v katalogu, zatím `hotovo: false`): kolej na mostnicích a dvou podélnících IPE 500 (I = 2 × 48 200 cm⁴, W = 2 × 1 928 cm³, Wpl = 2 × 2 194 cm³, kolem 480 kg/m s kolejnicemi a mostnicemi), jedna kolej, bez násobení šířkou, do 6 m. Pojízdné jen pro kolejová vozidla: trasa úrovně dostane druh (`silnice` / `kolej`) a k trase patří jen mostovka správného druhu. Formát úrovně v5.
-- **Vlak** je položka jízdního řádu s lokomotivou a seznamem vozů za ní (řady skupiny mají každá svůj model, jako průvod s kapelou). Lokomotiva 88 t (4 × 22 t, podvozky s rozvorem 2,8 m), ložený nákladní vůz 90 t (4 × 22,5 t, rozvor podvozku 1,8 m), prázdný 22 t, osobní vůz 45 t (4 × 11,25 t, rozvor 2,5 m, měkké sekundární vypružení kolem 1 Hz). Dvojkolí je neodpružená hmota 1,5–2 t; kontakt kolo–kolej s tuhostí koleje kolem 120 MN/m na dvojkolí. Když to model náprav dovolí, dvoustupňové vypružení (dvojkolí – podvozek – skříň).
-- **Rázy náprav**: nová třída nerovnosti pro kolej se styky po 25 m (trojúhelníkový propad kolem 3 mm na délce 1 m), jen aritmetikou.
-- **Kapitola 6 „Trať“**, čtyři úrovně: první železniční most (lokomotiva a dva vozy, krátké rozpětí), osobní vlak a pohodlí cestujících, dlouhý ložený nákladní vlak přes více polí (vlak delší než most), dvoupatrový most (silnice a kolej v různých výškách). Fakta do odstavců „Ve skutečnosti“ ověřit vyhledáním.
+**Kapitola 6 „Trať“** (`urovne/6-0*.json`, řešení v `urovne/reseni.ts`, ukázky v `urovne/ukazky.ts`)
 
-**Krok 3:** interní testy, nezávislé recenze (kód, hraní kapitoly 6, kontrola fyziky vlaku a opravy tíhy), zapracování, pull request, sloučení.
+| Úroveň | Co učí | Referenční řešení |
+|---|---|---|
+| 6-01 První vlak, 30 m | Vlak je těžký (6 t/m) a delší než most; pod mostem se stavět nesmí | lehká příhrada od 3 m výšky; těžký tlačený pás pro mistrovskou |
+| 6-02 Rychlík, 36 m | Tuhost: průhyb mostu rozhoupe skříň vozu; nad kolejí je trolej | příhrada pod kolejí; 3 m unese, 6 m dá jízdu pod 0,3 m/s² |
+| 6-03 Uhelný vlak, 72 m | Vlak nouzově zabrzdí a sílu nesou jen vysoké pilíře | svar hlavy pilíře s kolejištěm, nebo vzpěry z půlky pilíře |
+| 6-04 Dvě patra, 48 m | Kolej a silnice nad sebou jsou pásy jedné příhrady | svislice a diagonály mezi patry, tlačené svislice z těžkého profilu |
+
+Fakta v odstavcích „Ve skutečnosti“ jsou ověřená vyhledáním (22. 11. 2026): Negrelliho viadukt, mez zrychlení ve voze a mostovky podle evropské normy, most přes Firth of Forth, most přes Øresund. Původně zamýšlený údaj o normové brzdné síle se ověřit nepodařilo, proto v textech není.
+
+**Jak je to ověřeno**
+
+- `test/vlak.test.ts`: kolejiště, hmotnosti a vypružení vozidel, kontrola jízdního řádu s vlakem, složení vlaku, nerovnost koleje, průjezd vlaku, rázy na stycích, pohodlí ve voze, spára při brzdění, opakovatelnost.
+- `test/vyhratelnost.test.ts` a `test/ukazky.test.ts`: všechna řešení, pády a ukázky kapitoly 6.
+- `test/e2e/trat.e2e.ts`: kapitola v prohlížeči od přehledu po dvoupatrový most.
+
+**Co ověřeno není / modelové volby**
+
+- Každá náprava nese svůj díl skříně samostatně (jako u silničních vozidel): kývání skříně mezi podvozky se nepočítá.
+- Vozy vlaku nejsou svisle spřažené; když jeden spadne, ostatní jedou dál.
+- Třecí tlumení nákladního podvozku je nahrazené viskózním (útlum 12 %).
+- Nouzové brzdění v 6-03 (2 m/s²) je víc, než dokáže skutečný nákladní vlak (kolem 1 m/s²); odpovídá tomu, že se mosty navrhují na brzdnou sílu blízkou mezi adheze.
 
 ## M4c — výsledek
 

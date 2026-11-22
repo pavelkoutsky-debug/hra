@@ -109,6 +109,37 @@ function levy(s: Soustava, e: number): number {
   return xa < xb ? xa : xb;
 }
 
+/**
+ * Největší šířka dilatační spáry, m. Konec mostovky na posuvném ložisku se pod brzdícím
+ * vlakem nebo při prohnutí mostu od předmostí o milimetry až centimetry odsune; kolo takovou
+ * spáru přejede, nepropadne jí. Širší mezera už spára není: tam mostovka chybí.
+ */
+export const NEJVETSI_SPARA = 0.5;
+/** O kolik smí být kraj mostovky výš nebo níž než předmostí, aby šlo o spáru a ne o utržený díl, m. */
+const NEJVETSI_SCHOD = 0.1;
+
+/**
+ * Leží `x` ve spáře mezi předmostím a krajem mostovky, který se od něj vodorovně odsunul?
+ * Vrací −1 pro spáru u levého předmostí, 1 u pravého a 0, když ve spáře neleží. Kraj
+ * mostovky musí zůstat ve výšce předmostí: díl, který se utrhl a klesl, spáru netvoří.
+ */
+export function vDilatacniSpare(s: Soustava, trasa: Trasa, x: number): -1 | 0 | 1 {
+  if (trasa.pocet === 0) return 0;
+  if (x - trasa.xLevy <= NEJVETSI_SPARA) {
+    const e = trasa.prvky[0]!;
+    const kraj = s.x[s.prvekA[e]!]! <= s.x[s.prvekB[e]!]! ? s.prvekA[e]! : s.prvekB[e]!;
+    const schod = s.y[kraj]! - trasa.yLevy;
+    if (x < s.x[kraj]! && schod <= NEJVETSI_SCHOD && schod >= -NEJVETSI_SCHOD) return -1;
+  }
+  if (trasa.xPravy - x <= NEJVETSI_SPARA) {
+    const e = trasa.prvky[trasa.pocet - 1]!;
+    const kraj = s.x[s.prvekA[e]!]! >= s.x[s.prvekB[e]!]! ? s.prvekA[e]! : s.prvekB[e]!;
+    const schod = s.y[kraj]! - trasa.yPravy;
+    if (x > s.x[kraj]! && schod <= NEJVETSI_SCHOD && schod >= -NEJVETSI_SCHOD) return 1;
+  }
+  return 0;
+}
+
 /** Poloha na prvku (0 na konci a, 1 na konci b), kterou naposledy určila `vyskaNaPrvku`. */
 export let mistoNaPrvku = 0;
 /** Výška spojnice styčníků v témže místě, bez průhybu prvku. */

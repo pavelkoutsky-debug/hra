@@ -173,6 +173,22 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
       return { a: { uroven, navrh: bez }, b: { uroven, navrh: sTlumiciV(bez, [12, 16, 20], 1000, 4.4) }, rychlost: 2 };
     }
 
+    // Stejné kolejiště pod vlakem: lehká příhrada dva a pět metrů vysoká.
+    case "6-01":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+
+    // Stejná ocel pod rychlíkem: příhrada metr a šest metrů hluboká.
+    case "6-02":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+
+    // Stejný viadukt pod brzdícím vlakem: pilíře samotné a se vzpěrami do kolejiště.
+    case "6-03":
+      return { a: { uroven, navrh: reseni.pady[3]!.navrh }, b: { uroven, navrh: reseni.pruchod }, rychlost: 3 };
+
+    // Stejné dvě mostovky: spojené jen svislicemi a spojené i diagonálami.
+    case "6-04":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+
     default:
       return null;
   }

@@ -321,6 +321,62 @@ describe("vlak na mostě", () => {
     expect(jizda("B", [{ druh: "vuz-nakladni", pocet: 2 }], 60 / 3.6, 2).skrin).toBeGreaterThan(stykovana.skrin);
   }, 120_000);
 
+  it("brzdící vlak odsune most na posuvných ložiskách od předmostí; kola spáru přejedou bez rázu", () => {
+    // Dvě pole po 24 m na vysokém betonovém pilíři; oba konce mostu jsou posuvné, takže
+    // brzdnou sílu nese jen pilíř, ohne se a most se o centimetry posune.
+    const zaklad = trat([], 48);
+    const u: Uroven = {
+      ...zaklad,
+      kotvy: [
+        { x: 0, y: 0, typ: "posuvna" },
+        { x: 48, y: 0, typ: "posuvna" },
+      ],
+      zaklady: [{ x: 24, y: -18 }],
+      povolenePrvky: ["kolejiste", "ocel-lehka", "pilir"],
+      jizdniRad: [{ ...VLAK, vozy: [{ druh: "vuz-nakladni", pocet: 6 }], brzdeni: { misto: 46, stani: 2 } }],
+    };
+    const k = new Kreslic();
+    for (let x = 0; x < 48; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
+    k.prut("pilir", [24, -18], [24, -6]);
+    k.prut("pilir", [24, -6], [24, 0]);
+    for (const od of [0, 24]) {
+      k.prut("ocel-lehka", [od, 0], [od + 6, -4]);
+      k.prut("ocel-lehka", [od + 6, -4], [od + 12, -4]);
+      k.prut("ocel-lehka", [od + 12, -4], [od + 18, -4]);
+      k.prut("ocel-lehka", [od + 18, -4], [od + 24, 0]);
+      for (const x of [6, 12, 18]) k.prut("ocel-lehka", [od + x, 0], [od + x, -4]);
+      k.prut("ocel-lehka", [od + 6, 0], [od + 12, -4]);
+      k.prut("ocel-lehka", [od + 18, 0], [od + 12, -4]);
+    }
+    const navrh = k.navrh();
+
+    const zkouska = new Zkouska(u, navrh, 3);
+    const s = zkouska.simulace.soustava;
+    const levyKonec = navrh.stycniky.findIndex((st) => st.x === 0 && st.y === 0);
+    const b = zkouska.provoz.bremena[0]!;
+    let spara = 0;
+    let nejvetsiSila = 0;
+    let bezOpory = 0;
+    for (let krok = 0; !zkouska.provoz.hotovo; krok++) {
+      zkouska.simulace.krok();
+      spara = Math.max(spara, s.x[levyKonec]!);
+      for (let i = 0; i < b.pocet; i++) {
+        nejvetsiSila = Math.max(nejvetsiSila, Math.abs(b.sila[i]!));
+        const x = s.x[b.stycnik[i]!]!;
+        // Kolo mezi konci trasy má pořád oporu: buď mostovku, nebo předmostí přes spáru.
+        if (x > 0 && x < 48 && b.sila[i] === 0) bezOpory += 1;
+      }
+      expect(krok).toBeLessThan(3e6);
+    }
+    expect(zkouska.provoz.spadlo).toBe(0);
+    // Most se při brzdění opravdu odsunul: u levého předmostí se otevřela spára několika centimetrů…
+    expect(spara).toBeGreaterThan(0.02);
+    expect(spara).toBeLessThan(0.3);
+    // …a žádné dvojkolí do ní nepropadlo ani pak neudeřilo víc než dvojnásobkem své tíhy (22,5 t).
+    expect(bezOpory).toBe(0);
+    expect(nejvetsiSila).toBeLessThan(2 * 22_500 * g);
+  }, 120_000);
+
   it("zkouška s vlakem dá se stejnou násadou pokaždé stejný výsledek", () => {
     const u = trat([{ ...VLAK, vozy: [{ druh: "vuz-osobni", pocet: 1 }] }], 24, { nerovnost: "B" });
     const prvni = zkousej(u, prihrada(), 11);
