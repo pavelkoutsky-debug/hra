@@ -17,7 +17,7 @@ Bez nastaveného hesla server správě nic nevydá (odpoví, že heslo chybí); 
 
 ## Zpětná vazba
 
-Tlačítko **Napiš nám** je v přehledu kampaně, v horní liště úrovně (v úzkém okně jen dole v paletě) a v panelu s výsledkem zkoušky. Hráč zvolí, o čem píše (něco nefunguje, obtížnost, nápad, pochvala, jiné), napíše text do 4 000 znaků, může říct, jak ho hra baví (1 až 5), a nechat e-mail pro odpověď. Když nechá zaškrtnuté přílohy, pošle se s textem i most, který má právě na výkresu, a posledních nejvýš 150 kroků z té stránky hry. Kdo má záznam hraní vypnutý, má přílohy předem odškrtnuté. Když server do 20 sekund neodpoví, hra to hráči řekne a text mu nechá.
+Tlačítko **Napiš nám** je v přehledu kampaně, v horní liště úrovně (v úzkém okně jen dole v paletě) a v panelu s výsledkem zkoušky. Hráč zvolí, o čem píše (něco nefunguje, obtížnost, nápad, pochvala, jiné), napíše text do 4 000 znaků, může říct, jak ho hra baví (1 až 5), a nechat e-mail pro odpověď. Když nechá zaškrtnuté přílohy, pošle se s textem i most, který má právě na výkresu, a posledních nejvýš 150 kroků z té stránky hry. Kdo má záznam hraní vypnutý, má přílohy předem odškrtnuté. Když server do minuty neodpoví, hra to hráči řekne a text mu nechá.
 
 Na stránce správce má každá zpráva stav **nová → řeší se → vyřešeno / zamítnuto** a poznámku k řešení. V detailu je most nakreslený na výkresu úrovně (jde zkopírovat a ve hře načíst tlačítkem Import) a seznam kroků před odesláním. Tlačítko **Ukázat sezení v deníku** přejde rovnou na sezení, ze kterého hráč zprávu poslal (pokud měl záznam zapnutý). Zprávu jde smazat.
 

@@ -3,7 +3,7 @@
 // společné přehledu kampaně i obrazovce úrovně.
 
 import type { Denik } from "../denik/denik";
-import { nastavZaznam, odesliVazbu } from "../denik/prohlizec";
+import { nastavZaznam, odesliVazbu, priZmeneVolby } from "../denik/prohlizec";
 import { DRUHY_VAZBY, NEJDELSI_VAZBA, type DruhVazby, type ZpetnaVazba } from "../denik/udalosti";
 import { prvek, udaj } from "../ui/dom";
 import { t } from "../ui/slovnik";
@@ -137,6 +137,8 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
     });
   };
 
+  // Hráč přepnul záznam jinde (vypínač v přehledu, jiný panel prohlížeče).
+  priZmeneVolby(obnov);
   obnov();
   return { otevri };
 }

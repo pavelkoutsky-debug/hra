@@ -79,6 +79,17 @@ Dvě recenze nad hotovým milníkem: recenze kódu se zaměřením na bezpečnos
 - *Věta „most nemá klidovou polohu“ se ukazovala i u mostu, který prošel.* Teď jen u neúspěchu.
 - *Lišta úrovně byla v úzkém okně přeplněná.* „Napiš nám“ je i dole v paletě a pod 1 180 px šířky zůstane jen tam; na telefonu zmizí z lišty přehledu nápis Kampaň.
 
+**Kontrola nového ukládání deníku** (třetí nezávislý pohled, jen na přestavbu úložiště a souhrnu)
+
+Náhodné zkoušky s tisícem dávek přes půlnoc, se souběžnými žádostmi správce a s mazáním po částech daly vždy stejný souhrn jako výpočet najednou; chybu, která by dávku na serveru započetla dvakrát nebo ji vynechala, kontrola nenašla. Zapracováno:
+
+- *Dvě dávky téže stránky se mohly cestou předběhnout* (výsledek zkoušky odešel, zatímco předchozí dávka ještě letěla) a souhrn je pak četl v opačném pořadí. Hra posílá dávky po jedné a souhrn si dávky jednoho sezení srovná podle čísla dávky.
+- *Dávka, kterou server uložil, ale odpověď se ke hře nedostala, se započetla dvakrát.* Hra ji posílá znovu beze změny pod stejným číslem a souhrn stejnou dávku podruhé přeskočí.
+- *Záznamy uložené starším tvarem klíče* (jen v úložišti náhledů) zdržovaly souhrn dneška; souhrn, seznam sezení a vývoz je vynechávají, smazání dne je odstraní.
+- *Potvrzení „záznam je vypnutý“ zůstalo viset, když hráč záznam zapnul jinde;* parametr `?zaznam=vypnout` zůstával v adrese a šířil by se se zkopírovaným odkazem. Opraveno; zpětná vazba má na odeslání minutu (s přiloženým mostem je větší).
+
+Zůstává: srovnání pořadí a přeskočení dvojí dávky fungují jen mezi dávkami, které souhrn čte najednou (nejvýš 400 za sebou). Dvojice rozdělená touto hranicí se započte, jak přišla; je to vzácné a týká se jednoho hráče.
+
 **Nezapracováno z vyzkoušení (a proč)**
 
 - **Obrazovka úrovně na šířku telefonu** se nedá pohodlně ovládat. Hra je stavěná pro počítač a tablet; telefon patří do M8 (doladění).

@@ -4,8 +4,8 @@
 //
 // Počítá se ve dvou krocích. Z dávek vznikne „výtah“: co se o kterém hráči ve které úrovni
 // ví. Výtahy jdou sloučit (víc dní, den zpracovaný po částech), a teprve z výtahu se dělá
-// souhrn s počty a mediány. Server si výtah uzavřeného dne ukládá, takže souhrn za delší
-// období nečte znovu všechny dávky.
+// souhrn s počty a mediány. Server si výtah každého dne ukládá i s tím, kam v dávkách došel,
+// takže souhrn nečte znovu to, co už započítal.
 //
 // Čisté funkce bez prohlížeče i serveru; události se čtou opatrně, protože deník starší
 // verze hry může mít jiná data.
@@ -204,8 +204,11 @@ const poradiTextu = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 
 /**
  * Výtah z dávek deníku. Dávky nemusejí být seřazené; řadí se podle času, kdy je server
  * přijal (dávky ze serveru ho nesou v `prijato`), pak podle hráče, začátku sezení (podle
- * hodin hráče) a pořadí. Je to pořadí, ve kterém se hrálo, a zároveň pořadí klíčů dávek
- * v úložišti. Záleží na něm u „zkoušek do prvního průchodu“ a u vypnutí záznamu.
+ * hodin hráče) a pořadí: tak jdou za sebou i klíče dávek v úložišti. Dávky jednoho sezení
+ * se navíc vrátí do pořadí, v jakém je hra číslovala (při odchodu ze stránky může pozdější
+ * dávka dorazit dřív), a dávka, která přišla dvakrát (server ji uložil, ale odpověď se ke
+ * hře nedostala, takže ji poslala znovu), se počítá jednou. Obojí jen mezi dávkami, které
+ * dostane tahle funkce najednou. Na pořadí záleží u „zkoušek do prvního průchodu“ a u vypnutí záznamu.
  */
 export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })[]): VytahDeniku {
   const serazene = [...davky].sort(
@@ -216,7 +219,22 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       poradiTextu(a.hlavicka.sezeni, b.hlavicka.sezeni) ||
       a.poradi - b.poradi,
   );
+  // Dávky téhož sezení do pořadí podle čísla dávky; místa v celkovém pořadí si sezení ponechá.
+  const mistaSezeni = new Map<string, number[]>();
+  serazene.forEach((d, i) => {
+    const klic = `${d.hlavicka.hrac}/${d.hlavicka.sezeni}`;
+    const mista = mistaSezeni.get(klic);
+    if (mista) mista.push(i);
+    else mistaSezeni.set(klic, [i]);
+  });
+  for (const mista of mistaSezeni.values()) {
+    if (mista.length < 2) continue;
+    const davkySezeni = mista.map((i) => serazene[i]!).sort((a, b) => a.poradi - b.poradi);
+    mista.forEach((misto, j) => (serazene[misto] = davkySezeni[j]!));
+  }
   const v = prazdnyVytah();
+  /** Otisky dávek, které už se započetly: stejné sezení, číslo, počet událostí a jejich časy. */
+  const zapoctene = new Set<string>();
 
   const zpracuj = (hrac: string, oHraci: HracVeVytahu, u: UdalostDeniku): void => {
     v.udalosti += 1;
@@ -267,6 +285,10 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
 
   for (const davka of serazene) {
     const { hrac, sezeni } = davka.hlavicka;
+    const udalosti = davka.udalosti;
+    const otisk = `${hrac}/${sezeni}/${davka.poradi}/${udalosti.length}/${udalosti[0]?.t ?? ""}/${udalosti[udalosti.length - 1]?.t ?? ""}`;
+    if (zapoctene.has(otisk)) continue;
+    zapoctene.add(otisk);
     const oHraci = (v.hraci[hrac] ??= novyHrac());
     if (!oHraci.sezeni.includes(sezeni)) oHraci.sezeni.push(sezeni);
     if (davka.hlavicka.dotyk) oHraci.dotyk = true;
