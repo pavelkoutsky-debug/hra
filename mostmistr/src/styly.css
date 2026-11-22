@@ -1260,6 +1260,12 @@ body[data-rezim="stavba"] .uroven .legenda {
   text-align: center;
 }
 
+.paleta__poznamka {
+  margin: 4px 0 0;
+  color: var(--popisek);
+  font-size: 12px;
+}
+
 /* Analytický panel: rozbalovací pruh při horním okraji výkresu, nad mostem */
 
 .analyza {

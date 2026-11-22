@@ -10,6 +10,7 @@ import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { tridaKomfortu, vytvorMereniKomfortu, zmerKomfort, type MereniKomfortu } from "../jadro/komfort";
 import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu } from "../jadro/matice";
+import { najdiKlid } from "../jadro/ustaleni";
 import { rozhodujiciVelicina, vnitrniSily, ZPUSOB_TAH, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { Simulace, type Zatizeni } from "../jadro/simulace";
 import { sestavSoustavu, type Soustava } from "../jadro/soustava";
@@ -21,7 +22,7 @@ import { jeClovek, naplanujProvoz, pridejOdporVody, Provoz, type PopisUcastnika 
 import { frekvenceBudice, jeStaly, vyhodnotBudic } from "./budic";
 import type { BudicZkousky, KomfortZkousky, ObalkaPrutu, ReakcePodpory, Udalost, VysledekZkousky } from "./protokol";
 import { sestavMost } from "./stavba";
-import { topologieSoustavy, type PopisKresleni, type Snimek, type Topologie } from "./zaznam";
+import { plastickeKlouby, topologieSoustavy, type PopisKresleni, type Snimek, type Topologie } from "./zaznam";
 
 /** Počet snímků záznamu na sekundu děje. */
 export const SNIMKU_ZA_SEKUNDU = 60;
@@ -112,7 +113,8 @@ export class Zkouska {
     const stupneMostu = (soustava: Soustava): Int32Array =>
       volneStupne(soustava).filter((kod) => kod < 3 * stycnikuMostu);
     let stupne = stupneMostu(s);
-    this.bezRovnovahy = stupne.length > 0 && najdiRovnovahu(s, stupne, new Float64Array(stupne.length), tiha) < 0;
+    // Most s povolenými lany přímý výpočet nenajde; ten se ustálí časovou simulací.
+    this.bezRovnovahy = !najdiKlid(s, stupne, tiha);
     if (this.bezRovnovahy) {
       s = sestavSoustavu(stavba.popis);
       stupne = stupneMostu(s);
@@ -548,6 +550,7 @@ export class Zkouska {
       sily: this.#silyKNakresleni(),
       provoz: this.provoz.stavy.slice(),
       kmitani: this.#komfort && !this.simulace.porusena ? this.#komfort.okamzite : 0,
+      klouby: plastickeKlouby(s),
     };
   }
 }

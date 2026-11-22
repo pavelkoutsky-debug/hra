@@ -1,0 +1,127 @@
+{
+  "verze": 4,
+  "id": "4-01",
+  "nazev": "Tři pole",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -17,
+    "xMax": 64,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 4,
+      "y": -9
+    },
+    {
+      "x": 12,
+      "y": -12
+    },
+    {
+      "x": 42,
+      "y": -12
+    },
+    {
+      "x": 50,
+      "y": -9
+    },
+    {
+      "x": 54,
+      "y": 0
+    },
+    {
+      "x": 64,
+      "y": 0
+    }
+  ],
+  "hladina": -9.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 54,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": 18,
+      "y": -12
+    },
+    {
+      "x": 36,
+      "y": -12
+    }
+  ],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 54,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 1500000,
+  "inzenyrskyRozpocet": 1330000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.32
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pilir"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "souprava",
+      "pocet": 2
+    },
+    {
+      "cas": 2,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "nakladni"
+    },
+    {
+      "cas": 12,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto",
+      "pocet": 2
+    }
+  ]
+}

@@ -3,12 +3,14 @@
 // odpovídá na buzení v různém rytmu (rezonanční křivka). Maticový výpočet bez časové
 // simulace; trvá milisekundy až desítky milisekund, takže se dá pouštět po každé úpravě návrhu.
 
+import { KATALOG } from "../data/katalog";
 import type { NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { najdiRovnovahu, vlastniTvarySoustavy } from "../jadro/matice";
+import { vlastniTvarySoustavy } from "../jadro/matice";
+import { najdiKlid } from "../jadro/ustaleni";
 import { rezonancniKrivka } from "../jadro/odezva";
-import { sestavSoustavu, type PopisSoustavy, type Soustava } from "../jadro/soustava";
+import { LANO, sestavSoustavu, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
 import { jeClovek } from "./provoz";
 import type { RozborMostu } from "./protokol";
@@ -34,7 +36,7 @@ export function frekvenceKrivky(): number[] {
 function vKlidu(popis: PopisSoustavy): { s: Soustava; stupne: Int32Array } | null {
   const s = sestavSoustavu(popis);
   const stupne = volneStupne(s);
-  if (stupne.length > 0 && najdiRovnovahu(s, stupne, new Float64Array(stupne.length), TIHOVE_ZRYCHLENI) < 0) return null;
+  if (!najdiKlid(s, stupne, TIHOVE_ZRYCHLENI)) return null;
   return { s, stupne };
 }
 
@@ -70,7 +72,33 @@ function stycnikyMostovky(stavba: StavbaMostu): number[] {
   return [...stycniky];
 }
 
-const BEZ_MOSTU: RozborMostu = { stabilni: false, frekvence: [], frekvenceObsazeneho: [], tvary: [], krivka: null };
+const BEZ_MOSTU: RozborMostu = {
+  stabilni: false,
+  frekvence: [],
+  frekvenceObsazeneho: [],
+  tvary: [],
+  krivka: null,
+  tahyLan: [],
+};
+
+/**
+ * Tah lan v soustavě `s` v N: pro každý prut návrhu průměr přes díly lana (0, když lano visí
+ * povolené); null u prutu, který lano není.
+ */
+export function tahyLan(s: Soustava, navrh: NavrhMostu): (number | null)[] {
+  const tahy: (number | null)[] = navrh.pruty.map((p) => (KATALOG[p.prvek].druh === "lano" ? 0 : null));
+  const dilu = new Float64Array(navrh.pruty.length);
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    const prut = s.prut[e]!;
+    if (s.druh[e] !== LANO || prut < 0 || tahy[prut] === null || tahy[prut] === undefined) continue;
+    const dx = s.x[s.prvekB[e]!]! - s.x[s.prvekA[e]!]!;
+    const dy = s.y[s.prvekB[e]!]! - s.y[s.prvekA[e]!]!;
+    const klidova = s.klidovaDelka[e]!;
+    tahy[prut] = (tahy[prut] as number) + Math.max(0, (s.EA[e]! * (Math.sqrt(dx * dx + dy * dy) - klidova)) / klidova);
+    dilu[prut] = dilu[prut]! + 1;
+  }
+  return tahy.map((tah, i) => (tah === null || !(dilu[i]! > 0) ? tah : tah / dilu[i]!));
+}
 
 /** Rozbor mostu z návrhu. Vyhodí chybu, když se most nedá sestavit. */
 export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
@@ -155,6 +183,7 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
     frekvence,
     frekvenceObsazeneho,
     tvary,
+    tahyLan: tahyLan(prazdny.s, navrh),
     krivka: krivkaPrazdneho
       ? {
           od: KRIVKA_OD,

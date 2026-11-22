@@ -9,6 +9,7 @@ import {
   type Snimek,
   type Topologie,
   type UdalostZaznamu,
+  plastickeKlouby,
 } from "../zkouska/zaznam";
 import type { BehPripadu, Overeni } from "./pripady";
 
@@ -161,6 +162,7 @@ export class BehZkusebny {
       sily: sipky,
       provoz: new Uint8Array(0),
       kmitani: 0,
+      klouby: plastickeKlouby(s),
     };
   }
 }

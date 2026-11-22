@@ -42,10 +42,12 @@ function zkousej(u: Uroven, navrh: NavrhMostu) {
 }
 
 describe("formát návrhu", () => {
-  it("návrh verze 1 se převede beze změny; verze 2 nese laděný tlumič", () => {
-    expect(VERZE_NAVRHU).toBe(2);
+  it("návrhy verze 1 a 2 se převedou beze změny; od verze 2 návrh nese laděný tlumič", () => {
+    expect(VERZE_NAVRHU).toBe(3);
     const stary = { ...JSON.parse(navrhNaText(lavka)), verze: 1 };
     expect(nactiNavrh(stary)).toEqual(lavka);
+    const starsi = { ...JSON.parse(navrhNaText(sTlumicem(600, 2.3))), verze: 2 };
+    expect(nactiNavrh(starsi)).toEqual(sTlumicem(600, 2.3));
     const novy = sTlumicem(600, 2.3);
     const zpet = navrhZTextu(navrhNaText(novy));
     expect(zpet).toEqual(novy);

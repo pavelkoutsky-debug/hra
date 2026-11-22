@@ -132,6 +132,7 @@ describe("závaží a rozbor mostu", () => {
       frekvenceObsazeneho: [],
       tvary: [],
       krivka: null,
+      tahyLan: [],
     });
     expect(rozeberMost(prehlidka, new Kreslic("2-04").navrh()).stabilni).toBe(false);
   });

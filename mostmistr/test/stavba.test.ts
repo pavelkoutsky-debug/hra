@@ -173,8 +173,12 @@ describe("most sestavený z návrhu", () => {
     expect(stavba.popis.stycniky[k.bod(0, -4)]).toMatchObject({ pevneX: true, pevneY: true, pevneNatoceni: true });
     const pata = stavba.popis.prvky.find((p) => p.prut === pilir && p.a === k.bod(12, -8))!;
     expect(pata.kloubA).toBe(false);
+    // Betonový pilíř je monolit: do styčníku je vetknutý i v hlavě, mostovka na něm leží kloubově.
     const hlava = stavba.popis.prvky.filter((p) => p.prut === pilir).at(-1)!;
-    expect(hlava.kloubB).toBe(true);
+    expect(hlava.kloubB).toBe(false);
+    for (const dil of stavba.popis.prvky.filter((p) => p.a === k.bod(12, 0) || p.b === k.bod(12, 0))) {
+      if (dil.prut !== pilir) expect(dil.a === k.bod(12, 0) ? dil.kloubA : dil.kloubB).toBe(true);
+    }
     expect(stavba.popis.prvky.find((p) => p.prut === vzpera)!.kloubA).toBe(false);
   });
 

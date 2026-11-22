@@ -2,7 +2,7 @@
 // které spadnout mají. Podle nich se ladí rozpočty a test vyhratelnosti hlídá, že každá
 // úroveň jde vyhrát a nejde vyhrát triviálně.
 
-import type { IdPrvku } from "../src/data/katalog";
+import { PREDPETI_LANA, type IdPrvku } from "../src/data/katalog";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
 
@@ -192,6 +192,172 @@ function nohy(prvek: IdPrvku, mista: readonly number[]): (k: Kreslic) => void {
     for (const x of mista) k.prut(prvek, [24, -10], [x, 0]);
   };
 }
+
+// ---- Pomůcky kapitoly 4: pilíře, svary a lana ----
+
+const LANO: IdPrvku = "lano";
+const NOSNE: IdPrvku = "lano-nosne";
+
+/** Betonový pilíř od paty k hlavě; `deleni` jsou výšky, ve kterých má mít styčník (díl měří nejvýš 12 m). */
+function pilir(k: Kreslic, x: number, pata: number, hlava: number, deleni: readonly number[] = []): void {
+  const vysky = [pata, ...deleni, hlava];
+  for (let i = 0; i + 1 < vysky.length; i++) {
+    for (let y = vysky[i]!; y < vysky[i + 1]!; y += 12) k.prut("pilir", [x, y], [x, Math.min(vysky[i + 1]!, y + 12)]);
+  }
+}
+
+/**
+ * Příhrada jednoho pole mostu mezi x = `od` a x = `po`: pod mostovkou (`hloubka` kladná) nebo
+ * nad ní (záporná). Krajní šikminy, pás, svislice a diagonály ke středu pole.
+ */
+function poleMostu(k: Kreslic, od: number, po: number, hloubka: number, pas: IdPrvku, vypln: IdPrvku): void {
+  const y = -hloubka;
+  k.prut(pas, [od, 0], [od + 6, y]);
+  k.prut(pas, [po - 6, y], [po, 0]);
+  for (let x = od + 6; x < po - 6; x += 6) k.prut(pas, [x, y], [x + 6, y]);
+  for (let x = od + 6; x <= po - 6; x += 6) k.prut(vypln, [x, 0], [x, y]);
+  for (let x = od + 6; x < po - 6; x += 6) {
+    const kStredu = x < (od + po) / 2;
+    k.prut(vypln, kStredu ? [x, 0] : [x, y], kStredu ? [x + 6, y] : [x + 6, 0]);
+  }
+}
+
+/**
+ * Nastaví napínáky lan v pořadí, v jakém byla lana nakreslena. Hodnoty jsou výsledek
+ * automatického dopnutí (`dopniLana`); test hlídá, že pro daný most pořád platí. Bez hodnot
+ * zůstanou lana tak, jak je editor pokládá.
+ */
+function napni(k: Kreslic, predpeti: readonly number[]): void {
+  const lana = k.pruty.filter((p) => p.prvek === LANO || p.prvek === NOSNE);
+  if (predpeti.length > 0 && predpeti.length !== lana.length) {
+    throw new Error(`Most má ${lana.length} lan, ale předpětí je zadáno pro ${predpeti.length}.`);
+  }
+  lana.forEach((lano, i) => {
+    lano.predpeti = predpeti[i] ?? PREDPETI_LANA.vychozi;
+  });
+}
+
+/** Tři pole po 18 m (úroveň 4-01): mostovka, dva pilíře a pod každým polem (nebo nad ním) příhrada. */
+function triPole(hloubka: number, pas: IdPrvku, vypln: IdPrvku, pilire = true): NavrhMostu {
+  return navrh("4-01", (k) => {
+    vozovka(k, 54);
+    if (pilire) for (const x of [18, 36]) pilir(k, x, -12, 0);
+    for (const od of [0, 18, 36]) poleMostu(k, od, od + 18, hloubka, pas, vypln);
+  });
+}
+
+/**
+ * Úroveň 4-01 úsporně: z půlky výšky každého pilíře vedou šikmé vzpěry do sousedních styčníků
+ * mostovky, takže příhradu potřebují jen krajní pole (nízké věšadlo pod mostovkou).
+ */
+function vzperyZPiliru(): NavrhMostu {
+  return navrh("4-01", (k) => {
+    vozovka(k, 54);
+    for (const x of [18, 36]) {
+      pilir(k, x, -12, 0, [-6]);
+      k.prut(O, [x, -6], [x - 6, 0]);
+      k.prut(O, [x, -6], [x + 6, 0]);
+    }
+    for (const od of [0, 42]) {
+      k.prut(O, [od, 0], [od + 6, -2]);
+      k.prut(O, [od + 6, -2], [od + 12, 0]);
+      k.prut(O, [od + 6, 0], [od + 6, -2]);
+    }
+  });
+}
+
+/** Úroveň 4-02: mostovka na pilířích v daných místech, svařená v daných styčnících. */
+function ramovy(svary: readonly number[], pilire: readonly number[] = [12, 24, 36], uprava?: (k: Kreslic) => void): NavrhMostu {
+  return navrh("4-02", (k) => {
+    vozovka(k, 48);
+    for (const x of pilire) pilir(k, x, -8, 0);
+    for (const x of svary) k.bod(x, 0, { svar: true });
+    uprava?.(k);
+  });
+}
+
+/** Nízké věšadlo pod každým dvanáctimetrovým polem úrovně 4-02. */
+function vesadlaPodPoli(k: Kreslic): void {
+  for (const od of [0, 12, 24, 36]) {
+    k.prut(O, [od, 0], [od + 6, -2]);
+    k.prut(O, [od + 6, -2], [od + 12, 0]);
+    k.prut(O, [od + 6, 0], [od + 6, -2]);
+  }
+}
+
+/**
+ * Zavěšený most úrovně 4-03: pylon na základu uprostřed údolí s hlavou ve výšce `vrchol`
+ * a z ní vějíř lan do styčníků mostovky na místech `lana` (0 a 60 jsou kotevní lana do opěr).
+ */
+function zaveseny(vrchol: number, lana: readonly number[], predpeti: readonly number[] = []): NavrhMostu {
+  return navrh("4-03", (k) => {
+    vozovka(k, 60);
+    pilir(k, 30, -10, vrchol, [0]);
+    for (const x of lana) k.prut(LANO, [30, vrchol], [x, 0]);
+    napni(k, predpeti);
+  });
+}
+
+const VEJIR = [0, 6, 12, 18, 24, 36, 42, 48, 54, 60];
+
+/**
+ * Visutý most úrovně 4-04: pylony na březích s hlavou ve výšce `vez`, mezi nimi nosné lano
+ * přes body ve výškách `vysky` nad styčníky mostovky (po 6 m), z každého závěs dolů a za pylony
+ * kotevní lana do kotev v zemi.
+ */
+function visuty(
+  vysky: readonly number[],
+  vez: number,
+  predpeti: readonly number[] = [],
+  volby: { nosne?: IdPrvku; kotevni?: boolean; svarit?: boolean } = {},
+): NavrhMostu {
+  const nosne = volby.nosne ?? NOSNE;
+  return navrh("4-04", (k) => {
+    vozovka(k, 72);
+    for (const x of [-2, 74]) pilir(k, x, 0, vez);
+    const body: [number, number][] = [[-2, vez], ...vysky.map((y, i): [number, number] => [6 * (i + 1), y]), [74, vez]];
+    for (let i = 0; i + 1 < body.length; i++) k.prut(nosne, body[i]!, body[i + 1]!);
+    vysky.forEach((y, i) => k.prut(LANO, [6 * (i + 1), y], [6 * (i + 1), 0]));
+    if (volby.kotevni !== false) {
+      k.prut(nosne, [-2, vez], [-18, 0]);
+      k.prut(nosne, [74, vez], [90, 0]);
+    }
+    if (volby.svarit) for (let x = 6; x < 72; x += 6) k.bod(x, 0, { svar: true });
+    napni(k, predpeti);
+  });
+}
+
+/**
+ * Napínáky referenčních mostů s lany, jak je nastavilo automatické dopnutí; v pořadí, v jakém
+ * `zaveseny` a `visuty` lana kreslí.
+ */
+const PREDPETI: Readonly<Record<string, readonly number[]>> = {
+  "4-03 pruchod": [0.047, 0.174, 0.146, 0.123, 0.108, 0.109, 0.126, 0.149, 0.177, 0.051],
+  "4-03 rozpocet": [0.046, 0.215, 0.174, 0.138, 0.111, 0.115, 0.142, 0.178, 0.218, 0.054],
+  "4-03 mistrovska": [0.047, 0.152, 0.132, 0.116, 0.106, 0.107, 0.118, 0.134, 0.153, 0.05],
+  "4-03 bez kotevnich": [0.178, 0.15, 0.127, 0.11, 0.106, 0.122, 0.145, 0.172],
+  "4-03 nizky": [0.046, 0.302, 0.235, 0.173, 0.122, 0.131, 0.182, 0.243, 0.308, 0.063],
+  "4-04 pruchod": [
+    0.659, 1.324, -0.523, 0.057, 0.732, 0.526, 0.526, 0.732, 0.057, -0.523, 1.324, 0.659, -3.719, 2.519, 5.467, -2.083,
+    -4.794, 3.196, -4.794, -2.083, 5.467, 2.519, -3.719, 0.338, 0.338,
+  ],
+  "4-04 rozpocet": [
+    0.517, -0.318, 0.187, 0.319, 0.684, 0.805, 0.805, 0.684, 0.319, 0.187, -0.318, 0.517, 3.375, 5.091, -1.413, 1.595,
+    -8.584, -1.294, -8.584, 1.595, -1.413, 5.091, 3.375, 0.4, 0.4,
+  ],
+  "4-04 mistrovska": [
+    0.439, 0.45, -0.204, 0.152, -0.112, 1.369, 1.369, -0.112, 0.152, -0.204, 0.45, 0.439, -1.181, 2.298, 0.394, -0.166,
+    3.569, -10.782, 3.569, -0.166, 0.394, 2.298, -1.181, 0.299, 0.299,
+  ],
+  "4-04 slabe": [
+    1.463, 2.106, 0.217, 0.776, 1.441, 1.226, 1.226, 1.441, 0.776, 0.217, 2.106, 1.463, -3.729, 2.509, 5.461, -2.079,
+    -4.779, 3.219, -4.779, -2.079, 5.461, 2.509, -3.729, 1.328, 1.328,
+  ],
+};
+
+const OBLOUK_16 = [11, 9, 7, 5, 4, 4, 4, 5, 7, 9, 11];
+const OBLOUK_12 = [9, 7, 5, 4, 3, 3, 3, 4, 5, 7, 9];
+const OBLOUK_20 = [14, 11, 8, 6, 5, 4, 5, 6, 8, 11, 14];
 
 export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
   "1-01": {
@@ -432,6 +598,76 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "jen mostovka", navrh: navrh("3-04", (k) => vozovka(k, 48)) },
       { nazev: "příhrada bez pilíře", navrh: silnicni("3-04", 48, 4, O, O) },
       { nazev: "pilíř z lehkého profilu", navrh: silnicni("3-04", 48, 4, O, O, 6, nohy(O, [18, 30])) },
+    ],
+  },
+
+  // ---- Kapitola 4: Údolí ----
+
+  // Tři pole, 54 m se dvěma pilíři v řece. Pilíře rozdělí most na tři pole po 18 m; ohyb roste
+  // s druhou mocninou rozpětí, takže každé pole unese lehká příhrada. Bez pilířů by 54 m
+  // potřebovalo těžkou šestimetrovou příhradu, která se do rozpočtu nevejde.
+  "4-01": {
+    pruchod: triPole(-3, O, O),
+    // Šikmé vzpěry z půlky pilíře podepřou sousední styčníky mostovky a ušetří příhradu středních polí.
+    rozpocet: vzperyZPiliru(),
+    // Příhrada pod mostovkou: tlak nese beton, ocel jen táhne.
+    mistrovska: triPole(3, O, O),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("4-01", (k) => vozovka(k, 54)) },
+      {
+        nazev: "mostovka na pilířích bez příhrad",
+        navrh: navrh("4-01", (k) => {
+          vozovka(k, 54);
+          for (const x of [18, 36]) pilir(k, x, -12, 0);
+        }),
+      },
+      { nazev: "lehké příhrady bez pilířů", navrh: triPole(3, O, O, false) },
+    ],
+  },
+
+  // Bez jediné vzpěry, 48 m se třemi pilíři; nad vozovkou se stavět nesmí. Mostovka z kloubově
+  // spojených polí je mezi pilíři mechanismus. Svary z ní udělají spojitý nosník, který se
+  // obejde bez příhrady; svařená i nad pilíři se o ně opře jako rám a ohyb v polích klesne.
+  "4-02": {
+    pruchod: ramovy([6, 18, 30, 42]),
+    rozpocet: ramovy([6, 18, 30, 42]),
+    mistrovska: ramovy([6, 12, 18, 24, 30, 36, 42]),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("4-02", (k) => vozovka(k, 48)) },
+      { nazev: "mostovka na pilířích bez svarů", navrh: ramovy([]) },
+      { nazev: "svary jen nad pilíři", navrh: ramovy([12, 24, 36]) },
+      { nazev: "svařená mostovka bez středního pilíře", navrh: ramovy([6, 12, 18, 24, 30, 36, 42], [12, 36]) },
+    ],
+  },
+
+  // Na lanech, 60 m s jedním základem uprostřed. Zavěšený most: z hlavy pylonu vějíř lan do
+  // mostovky. Kotevní lana do opěr drží hlavu pylonu, když je zatížená jen půlka mostu; bez
+  // nich se pylon ohne a zlomí. Vyšší pylon znamená strmější lana a menší síly, nižší je levnější.
+  "4-03": {
+    pruchod: zaveseny(16, VEJIR, PREDPETI["4-03 pruchod"]),
+    rozpocet: zaveseny(12, VEJIR, PREDPETI["4-03 rozpocet"]),
+    mistrovska: zaveseny(20, VEJIR, PREDPETI["4-03 mistrovska"]),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("4-03", (k) => vozovka(k, 60)) },
+      { nazev: "pylon bez lan", navrh: zaveseny(16, []) },
+      { nazev: "bez kotevních lan", navrh: zaveseny(16, VEJIR.slice(1, -1), PREDPETI["4-03 bez kotevnich"]) },
+      { nazev: "příliš nízký pylon", navrh: zaveseny(8, VEJIR, PREDPETI["4-03 nizky"]) },
+    ],
+  },
+
+  // Náklad století, 72 m přes rokli, 120 t na podvalníku. Visutý most: nosné lano přes pylony
+  // na březích, kotvené do země, a z něj závěsy k mostovce. Nosné lano se pod tíhou vyrovná do
+  // oblouku samo; závěsy se mu musí přizpůsobit délkou, jinak se mostovka prověsí o desítky
+  // centimetrů (automatické dopnutí). Vyšší pylony a větší průvěs zmenší tah v laně.
+  "4-04": {
+    pruchod: visuty(OBLOUK_16, 16, PREDPETI["4-04 pruchod"]),
+    rozpocet: visuty(OBLOUK_12, 12, PREDPETI["4-04 rozpocet"]),
+    mistrovska: visuty(OBLOUK_20, 20, PREDPETI["4-04 mistrovska"]),
+    pady: [
+      { nazev: "jen mostovka", navrh: navrh("4-04", (k) => vozovka(k, 72)) },
+      { nazev: "nedopnutá lana", navrh: visuty(OBLOUK_16, 16) },
+      { nazev: "závěsné lano místo nosného", navrh: visuty(OBLOUK_16, 16, PREDPETI["4-04 slabe"], { nosne: LANO }) },
+      { nazev: "bez kotevních lan", navrh: visuty(OBLOUK_16, 16, [], { kotevni: false }) },
     ],
   },
 

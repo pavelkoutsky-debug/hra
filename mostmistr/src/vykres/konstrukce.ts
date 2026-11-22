@@ -141,6 +141,22 @@ export function nakresliKonstrukci(
     }
   }
 
+  // Plastické klouby: prstenec kolem styčníku, ve kterém se ocel trvale ohnula. Barva jde
+  // po škále využití od žluté k červené podle toho, kolik mezního natočení už je pryč.
+  for (let k = 0; k + 1 < s.klouby.length; k += 2) {
+    const i = s.klouby[k]!;
+    if (!(i < t.stycniku) || t.znacky[i] !== STYCNIK_BEZNY) continue;
+    const podil = s.klouby[k + 1]!;
+    const p = bod(i);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, polomer + 4.5, 0, 2 * Math.PI);
+    ctx.strokeStyle = barvaVyuziti(0.4 + 0.6 * podil);
+    ctx.lineWidth = 2.6;
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = BARVY.caraSilna;
+
   for (let i = 0; i < t.stycniku; i++) {
     const typ = typPodpory(t.podpory[i]!);
     if (!typ) continue;

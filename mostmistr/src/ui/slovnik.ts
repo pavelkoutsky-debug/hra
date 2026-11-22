@@ -149,9 +149,43 @@ const CS = {
   "paleta.zavazi.cena": "{zaKg}/kg · do {kg} kg",
   "paleta.zavazi.prvek.popis": "Hmota ve styčníku: těžší most kmitá pomaleji",
   "paleta.zavazi.navod": "Klikni na styčník, do kterého chceš závaží. Kolik ho bude, nastavíš tlačítky − a + vlevo dole.",
+  "paleta.ladeny.nazev": "Laděný tlumič",
   "paleta.ladeny.cena": "{zaKus} + {zaKg}/kg · do {kg} kg",
   "paleta.ladeny.prvek.popis": "Závaží na pružině pod mostovkou. Naladěné na frekvenci mostu se rozhoupe místo něj (L)",
   "paleta.ladeny.navod": "Klikni na styčník, pod který chceš laděný tlumič zavěsit. Závaží a ladění pak nastavíš vlevo dole.",
+  "paleta.napinak.nazev": "Napínák lana",
+  "paleta.napinak.cena": "v ceně lana",
+  "paleta.napinak.prvek.popis": "Zkracuje nebo prodlužuje lano. Dotažené lano víc táhne a most je tužší",
+  "paleta.napinak.navod": "Klikni na lano, kterému chceš nastavit napínák. Dotáhneš ho a povolíš tlačítky − a + vlevo dole.",
+  "paleta.napinak.bezLan": "Napínák patří na lano. Nejdřív nějaké natáhni.",
+  "paleta.napinak": "Napínák lana",
+  "paleta.napinak.min": "Povolit lano o milimetr (se Shiftem o centimetr)",
+  "paleta.napinak.plus": "Dotáhnout lano o milimetr (se Shiftem o centimetr)",
+  "paleta.napinak.dotazeno": "dotaženo o {mm} mm",
+  "paleta.napinak.povoleno": "povoleno o {mm} mm",
+  "paleta.napinak.nula": "délka jako na výkresu",
+  "paleta.napinak.ruzne": "nejvíc {zapis}",
+  "paleta.napinak.tah": "Tah pod vlastní tíhou mostu: {kN} kN, {podil} pevnosti lana.",
+  "paleta.napinak.tah.visi": "Pod vlastní tíhou mostu lano visí povolené a nic nenese.",
+  "paleta.napinak.tah.pocitaSe": "Tah v laně se počítá…",
+  "paleta.napinak.tah.bezKlidu": "Most zatím nemá klidovou polohu, takže tah v laně nejde určit.",
+  "paleta.dopnout": "Dopnout lana",
+  "paleta.dopnout.popis": "Nastaví napínáky všech lan tak, aby mostovka pod vlastní tíhou držela nakreslený tvar (N)",
+  "dopnuti.bezLan": "Most zatím nemá žádné lano, které by šlo dopnout.",
+  "dopnuti.pocitaSe": "Dopínám lana…",
+  "dopnuti.hotovo": "Lana jsou dopnutá. Mostovka pod vlastní tíhou klesala nejvýš o {pred} mm, teď o {po} mm.",
+  "dopnuti.hotovo.bezPred": "Lana jsou dopnutá. Mostovka se pod vlastní tíhou od výkresu liší nejvýš o {po} mm.",
+  "dopnuti.zbylo":
+    "Lana jsou dopnutá, jak to šlo, ale mostovka se od výkresu pořád liší až o {po} mm. Nosné lano se pod tíhou vyrovná do oblouku; nakresli ho tak rovnou a dopni lana znovu.",
+  "dopnuti.nejde": "Lana se dopnout nepodařilo: most nemá klidovou polohu, nebo lana nemají na co působit.",
+  "paleta.svar.nazev": "Svar",
+  "paleta.svar.cena": "{zaPrut} za každý prut ve styčníku",
+  "paleta.svar.prvek.popis": "Tuhý spoj: pruty se ve styčníku nemůžou natáčet a přenášejí ohyb (S)",
+  "paleta.svar.navod": "Klikni na styčník, který chceš svařit. Dalším kliknutím svar zrušíš.",
+  "paleta.svar": "Spoj ve styčníku",
+  "paleta.svar.popis": "Svařit vybrané styčníky, nebo jim svar zrušit (S)",
+  "paleta.svar.svarit": "Svařit",
+  "paleta.svar.zrusit": "Zrušit svar",
   "paleta.most": "Most",
   "paleta.brnknout": "Brnknout",
   "paleta.brnknout.popis": "Stáhni styčník myší dolů a pusť: most se rozkmitá na své vlastní frekvenci (B)",
@@ -293,6 +327,8 @@ const CS = {
   "zadani.stavba.zavazi": "Závaží do styčníku: {zaKg} za kilogram, nejvýš {kg} kg",
   "zadani.stavba.ladeny": "Laděný tlumič: {zaKus} za kus a {zaKg} za kilogram závaží, nejvýš {kg} kg",
   "zadani.stavba.budic": "Budič: zkušební zařízení zdarma, do medailí se nepočítá",
+  "zadani.stavba.napinak": "Napínák lana: v ceně lana; tlačítko Dopnout lana nastaví všechny najednou",
+  "zadani.stavba.svar": "Svar: {zaPrut} za každý prut, který do svařeného styčníku vede",
   "zadani.medaile": "Medaile",
   "zadani.ovladani":
     "Prut nakreslíš tažením myší z kotvy nebo ze styčníku. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",
@@ -352,6 +388,26 @@ const CS = {
     "ocelobetonovým mostům se říká spřažené: betonová deska je s ocelovými nosníky spojená trny, takže pracují jako jeden celek. Beton umí tlak, ocel tah. Spojením vyjde nosník zhruba dvakrát únosnější a až třikrát tužší než samotná ocel.",
   "skutecnost.3-04":
     "skutečný most má obvykle jedno ložisko pevné a ostatní posuvná, aby se mohl teplem roztahovat. Všechny vodorovné síly, tedy i brzdění, pak jdou tím jedním pevným bodem. Evropská norma počítá brzdnou sílu jako 60 % tíhy nejtěžší dvojnápravy a k tomu desetinu rovnoměrného zatížení jízdního pruhu po celé délce mostu.",
+  "ukazka.4-01.a": "Tři lehké příhrady bez pilířů",
+  "ukazka.4-01.b": "Tytéž příhrady na pilířích",
+  "ukazka.4-01.popis": "Stejná ocel, stejná mostovka. Bez pilířů visí čtyřiapadesát metrů mostu na třech krátkých příhradách, které na sebe navazují jen klouby, a složí se dřív, než na most kdo vjede. Pilíře pod jejich styky udělají z jednoho dlouhého pole tři krátká.",
+  "ukazka.4-02.a": "Mostovka bez svarů",
+  "ukazka.4-02.b": "Svařená mostovka",
+  "ukazka.4-02.popis": "Mostovka je složená z šestimetrových polí spojených klouby. V kloubu mezi pilíři se prolomí. Svary z ní udělají jeden spojitý nosník: ohyb si rozdělí pole i pilíře a most stojí bez jediné vzpěry.",
+  "ukazka.4-03.a": "Lana jen do mostovky",
+  "ukazka.4-03.b": "S kotevními lany do opěr",
+  "ukazka.4-03.popis": "Kolona vjede na levou půlku mostu. Lana, která ji nesou, táhnou hlavu pylonu doleva a nic ji nedrží: betonový pylon se ohne a zlomí. Kotevní lana vedou z hlavy pylonu do opěr na koncích mostu a ten tah zachytí.",
+  "ukazka.4-04.a": "Lana, jak je položil výkres",
+  "ukazka.4-04.b": "Po automatickém dopnutí",
+  "ukazka.4-04.popis": "Stejný most, stejná lana. Nosné lano se pod tíhou mostovky vyrovná do oblouku, jaký odpovídá zatížení, a nedbá na to, jak je nakreslené. Závěsy dlouhé podle výkresu pak mostovku někde nadzvednou a jinde nechají klesnout skoro o metr. Dopnutí upraví každému závěsu délku tak, aby mostovka zůstala rovná.",
+  "skutecnost.4-01":
+    "viadukt Millau v jižní Francii nese dálnici přes údolí řeky Tarn na sedmi betonových pilířích. Nejvyšší z nich měří 245 metrů a s pylonem nad vozovkou 343 metrů, víc než Eiffelova věž. Otevřeli ho v prosinci 2004.",
+  "skutecnost.4-02":
+    "první svařovaný silniční most na světě stojí v polských Maurzycích. Navrhl ho Stefan Bryła, dokončili ho v prosinci 1928 a sloužil do roku 1977. Do té doby se ocelové mosty nýtovaly. Svar spojí pruty natuho, takže styčník přenáší ohyb; díky tomu se dnes staví rámové mosty bez příhrad a bez ložisek.",
+  "skutecnost.4-03":
+    "za první moderní zavěšený most se považuje most ve švédském Strömsundu z roku 1956 s hlavním polem 182 metrů. Zavěšené mosty se staví hlavně pro rozpětí od stovky metrů do jednoho kilometru: lana vedou přímo z pylonu do mostovky a krajní lana kotví pylon do opěr nebo do krajních polí.",
+  "skutecnost.4-04":
+    "největší rozpětí na světě mají visuté mosty. Rekord drží most 1915 Çanakkale přes Dardanely, otevřený v březnu 2022: mezi pylony měří 2 023 metrů. Předtím ho čtyřiadvacet let držel japonský Akaši Kaikjó s 1 991 metry. Závěsy visutých mostů se vyrábějí každý na jinou délku, přesně podle oblouku, do kterého se nosné lano prověsí.",
   "ukazka.5-01.a": "Dva metry vysoká příhrada",
   "ukazka.5-01.b": "Tři metry vysoká příhrada",
   "ukazka.5-01.popis": "Oba mosty jsou prázdné mimo rytmus chůze. Sto dvacet lidí ale váží skoro deset tun a těžší most kmitá pomaleji: nižší z nich s davem sjede přímo do pásma kroků, vyšší zůstane nad ním.",
@@ -394,6 +450,7 @@ const CS = {
   "prvek.ocel-lehka": "Lehký ocelový profil",
   "prvek.ocel-tezka": "Těžký ocelový profil",
   "prvek.lano": "Lano",
+  "prvek.lano-nosne": "Nosné lano",
   "prvek.pilir": "Pilíř",
   "prvek.tlumic": "Tlumič",
   "prvek.pruzina": "Pružina",
@@ -412,11 +469,13 @@ const CS = {
   "duvod.prvek-nepovoleny": "Tento prvek v úrovni není povolený.",
   "duvod.prvek-neni-hotovy": "Tento prvek hra zatím neumí.",
   "duvod.svar-nepovoleny": "Svary v této úrovni nejsou povolené.",
+  "duvod.pilir-mimo-zaklad": "Pilíř musí stát na základu vyznačeném ve výkresu, nebo na jiném pilíři.",
   "duvod.stycnik-v-terenu": "Pod povrchem terénu se staví jen z kotev.",
   "duvod.zavazi-nepovolene": "Tolik závaží do jednoho styčníku tato úroveň nedovoluje.",
   "duvod.ladeny-tlumic-nepovoleny": "Tak těžký laděný tlumič tato úroveň nedovoluje.",
   "duvod.ladeny-tlumic-mimo-rozsah": "Laděný tlumič je nastavený mimo rozsah, ve kterém ho lze vyrobit.",
   "duvod.tlumeni-mimo-rozsah": "Tlumič má nastavení mimo rozsah, který se dá vyrobit.",
+  "duvod.predpeti-mimo-rozsah": "Napínák lana je nastavený mimo rozsah.",
   "duvod.nad-rozpocet": "Most je dražší než rozpočet. Před zkouškou ho zlevni.",
 
   // Popisové pole
@@ -441,6 +500,7 @@ const CS = {
   "provoz.autobus": "autobus",
   "provoz.nakladni": "nákladní auto",
   "provoz.souprava": "tahač s návěsem",
+  "provoz.nadmerny": "nadměrný náklad",
   "provoz.jiny": "provoz",
 
   // Medaile
@@ -508,6 +568,8 @@ const CS = {
   "kapitola.2.tema": "Most, který se houpe. Ocel, běžci, pochodující útvar a rezonance.",
   "kapitola.3.nazev": "Okresní silnice",
   "kapitola.3.tema": "Tíha a vzpěr. Ocelobetonová mostovka, těžký ocelový profil, dodávky, autobusy, nákladní auta a brzdění.",
+  "kapitola.4.nazev": "Údolí",
+  "kapitola.4.tema": "Velké rozpětí. Pilíře, svary, lana a napínáky; tahač s návěsem a nadměrný náklad.",
   "kapitola.5.nazev": "Lávka ve městě",
   "kapitola.5.tema": "Město v pohybu. Dav, běžecký závod, průvod s kapelou, skákající dav a laděný tlumič.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
@@ -544,6 +606,14 @@ const CS = {
     "Třicet metrů přes hlubokou rokli, autobusy v obou směrech a dvě auta. Pod mostem je tentokrát místa dost. Zkus příhradu postavit pod mostovku: tlak pak nese betonová mostovka, která ho umí, a ocel dole jen táhne. Vozovka je nová a hladká, takže cestující v autobusu ucítí jen to, jak se most pod nimi prohýbá. Mistrovská medaile chce jízdu skoro bez houpání; na to musí být most tuhý.",
   "zadani.3-04":
     "Osmačtyřicet metrů ve dvou polích. Oba konce mostu leží na posuvných ložiskách; pevný bod je jen na skále uprostřed údolí. Přijede kolona čtyř nákladních aut, na mostě zabrzdí, tři sekundy stojí a rozjede se; proti ní jede autobus. Brzdící kola tlačí vozovku dopředu polovinou své tíhy, dohromady přes padesát tun, a tu sílu musí most odvést do skály. Nohy pilíře jsou dlouhé a tlačené: pozor na vzpěr.",
+  "zadani.4-01":
+    "Čtyřiapadesát metrů přes řeku. Pojedou dva tahače s návěsem, proti nim nákladní auto a dvě osobní. Na jedno pole je to moc: síly v příhradě rostou s druhou mocninou rozpětí a tak velká by se do rozpočtu nevešla. V řece jsou ale dva základy. Postav na ně betonové pilíře; rozdělí most na tři pole po osmnácti metrech a každé unese lehká příhrada. Pilíř smí stát jen na základu nebo na jiném pilíři. Výborně snáší tlak, špatně ohyb.",
+  "zadani.4-02":
+    "Osmačtyřicet metrů, tři základy a nad vozovkou se stavět nesmí. Mostovka položená na pilíře se mezi nimi prolomí, protože její pole spojují klouby. Nově máš svar: klikni v paletě na Svar a potom na styčník. Svařený styčník se neohne, pruty v něm přenášejí ohyb a z mostovky se stane spojitý nosník, který příhradu nepotřebuje. Přetížená ocel ve svaru nepraskne hned, ale trvale se ohne; při zkoušce takové místo označí prstenec, plastický kloub. Pojede kolona tří nákladních aut, autobus a tahač s návěsem.",
+  "zadani.4-03":
+    "Šedesát metrů a jediný základ uprostřed údolí. Postav na něj vysoký pilíř, pylon, a z jeho hlavy natáhni lana do styčníků mostovky: tak vypadá zavěšený most. Lano umí jen táhnout a smí měřit až šedesát metrů. Nezapomeň na lana do opěr na obou koncích; drží hlavu pylonu, když kolona zatíží jen půlku mostu. Tlačítko Dopnout lana (N) nastaví napínáky tak, aby mostovka pod vlastní tíhou zůstala rovná; jednotlivá lana doladíš položkou Napínák lana. Na ose frekvencí uvidíš, že povolená lana visí a most je měkký, kdežto dotažená ho ztuží. Pojede kolona čtyř nákladních aut, autobus a tahač s návěsem.",
+  "zadani.4-04":
+    "Sedmdesát dva metrů přes rokli, kde není kam postavit pilíř. Po mostě pojede krokem podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: na základech na březích dva pylony, přes jejich hlavy nosné lano prověšené do oblouku a z něj svislé závěsy ke styčníkům mostovky. Za pylony nosné lano ukotvi do kotev v zemi. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Nikdo nepochoduje, takže most nerozhoupou tolik jako útvar, ale je jich skoro deset tun a těžší most kmitá pomaleji. Na ose frekvencí proto sleduj i druhý trojúhelník, most s lidmi. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s². Tlačítkem Analýza dole otevřeš rezonanční křivku, která ukazuje, jak silně most na který rytmus odpoví.",
   "zadani.5-02":

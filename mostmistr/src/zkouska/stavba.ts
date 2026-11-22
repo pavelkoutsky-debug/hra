@@ -21,7 +21,7 @@ export type PopisPrutu = Omit<PopisPrvku, "a" | "b">;
  * na metr šířky, `hmotaNavic` je nenosná hmota v kg na metr (zábradlí, vozovka).
  */
 export function popisPrutu(id: IdPrvku, sirkaMostovky: number, hmotaNavic = 0): PopisPrutu {
-  return popisZVlastnosti(vlastnostiNeboChyba(id, sirkaMostovky), id === "lano", hmotaNavic);
+  return popisZVlastnosti(vlastnostiNeboChyba(id, sirkaMostovky), KATALOG[id].druh === "lano", hmotaNavic);
 }
 
 export function vlastnostiNeboChyba(id: IdPrvku, sirkaMostovky: number): VlastnostiPrutu {
@@ -113,7 +113,7 @@ export interface StavbaMostu {
  * - Styčník návrhu ležící v kotvě úrovně je podepřen podle jejího typu. Styčník v místě
  *   základu je vetknut (pata pilíře).
  * - Konec prutu je kloubový, pokud styčník není svařený nebo vetknutý. Lana, pružiny
- *   a tlumiče jsou kloubové vždy.
+ *   a tlumiče jsou kloubové vždy; betonový pilíř je naopak do styčníku vetknutý vždy.
  * - Dlouhé pruty a lana se skrytě dělí; díly jsou spojené tuze a sdílejí číslo prutu.
  * - Mostovka nese navíc hmotnost vybavení z úrovně.
  */
@@ -169,7 +169,8 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
 
     const dilu =
       druh === "lano" ? pocetDiluLana(delka) : pocetDiluNosniku(delka, zaklad.EI, zaklad.hmotnostNaMetr);
-    // Předpětí lana: klidová délka se zkrátí tak, aby v napnutém laně byla zadaná síla.
+    // Předpětí lana: klidová délka se zkrátí tak, aby v napnutém laně byla zadaná síla;
+    // záporné předpětí lano naopak prodlouží (viz `PREDPETI_LANA`).
     const predpeti = druh === "lano" ? (prut.predpeti ?? 0) * vlastnosti.unosnost.tah : 0;
     const klidovaDelka = delka / dilu / (1 + predpeti / zaklad.EA);
 
@@ -184,8 +185,11 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
       const prvek: PopisPrvku = { ...zaklad, a: predchozi, b: dalsi, prut: cislo, klidovaDelka };
       if (druh !== "lano") {
         prvek.vzpernaDelka = delka;
-        if (i === 0) prvek.kloubA = !tuhy[a];
-        if (i === dilu - 1) prvek.kloubB = !tuhy[b];
+        // Betonový pilíř je monolit: do styčníku je vetknutý vždy, takže dva pilíře nad
+        // sebou tvoří jeden průběžný sloup. Ostatní pruty jsou tuhé jen ve svaru.
+        const monolit = druh === "pilir";
+        if (i === 0) prvek.kloubA = !(tuhy[a] || monolit);
+        if (i === dilu - 1) prvek.kloubB = !(tuhy[b] || monolit);
       }
       popis.prvky.push(prvek);
       utlumy.push(vlastnosti.utlum);

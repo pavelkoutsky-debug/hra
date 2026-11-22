@@ -87,6 +87,9 @@
           <button type="button" class="paleta__tlacitko" data-akce="zrcadlit">
             <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
           </button>
+          <button type="button" class="paleta__tlacitko" data-akce="dopnout" data-popis="paleta.dopnout.popis" hidden>
+            <kbd>N</kbd><span data-text="paleta.dopnout"></span>
+          </button>
           <div class="paleta__dvojice">
             <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
               <kbd>Del</kbd><span data-text="paleta.smazat"></span>
@@ -136,6 +139,21 @@
               <output data-udaj="ladeny-frekvence"></output>
               <button type="button" class="paleta__tlacitko" data-akce="ladeny-frekvence-plus" data-popis="paleta.ladeny.vys">+</button>
             </div>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="predpeti" hidden>
+            <h2 data-text="paleta.napinak"></h2>
+            <div class="paleta__krokovac">
+              <button type="button" class="paleta__tlacitko" data-akce="predpeti-min" data-popis="paleta.napinak.min">&minus;</button>
+              <output data-udaj="predpeti"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="predpeti-plus" data-popis="paleta.napinak.plus">+</button>
+            </div>
+            <p class="paleta__poznamka" data-udaj="predpeti-tah"></p>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="svar" hidden>
+            <h2 data-text="paleta.svar"></h2>
+            <button type="button" class="paleta__tlacitko" data-akce="svar-prepnout" data-popis="paleta.svar.popis" aria-pressed="false">
+              <kbd>S</kbd><span data-udaj="svar-prepnout"></span>
+            </button>
           </div>
           <div class="paleta__nastaveni" data-nastaveni="tlumeni" hidden>
             <h2 data-text="paleta.tlumeni"></h2>

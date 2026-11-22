@@ -344,8 +344,41 @@ function souprava(): ModelUcastnika {
   ]);
 }
 
+/**
+ * Nadměrný náklad: 120 t, 10 km/h, délka 24 m. Těžký tahač (8 t vpředu, dvě hnací nápravy
+ * po 11 t) táhne modulový podvalník s osmi řadami kol po 11,25 t, řady 1,5 m od sebe a v každé
+ * osm pneumatik. Hydraulické pérování podvalníku je měkké a silně tlumené (1,5 Hz, útlum 30 %).
+ * Jede krokem, takže most zatěžuje skoro staticky, zato dlouho a celou svou tíhou najednou.
+ */
+function nadmerny(): ModelUcastnika {
+  const rady = Array.from(
+    { length: 8 },
+    (_, i): NapravaVozu => ({
+      odstup: 11.5 + 1.5 * i,
+      zatizeni: 11250,
+      neodpruzena: 1400,
+      frekvence: 1.5,
+      utlum: 0.3,
+      pneumatik: 8,
+    }),
+  );
+  return vozidlo(10 / 3.6, 24, 40, PNEU_NAKLADNI, 0.6, 2, [
+    { odstup: 1.4, zatizeni: 8000, neodpruzena: 700, frekvence: 2.6, utlum: 0.12, pneumatik: 2 },
+    { odstup: 4.6, zatizeni: 11000, neodpruzena: 1150, frekvence: 2.2, utlum: 0.15, pneumatik: 4 },
+    { odstup: 5.95, zatizeni: 11000, neodpruzena: 1150, frekvence: 2.2, utlum: 0.15, pneumatik: 4 },
+    ...rady,
+  ]);
+}
+
 /** Druhy provozu, které jsou silniční vozidla s karoserií na pérování. */
-const VOZIDLA: ReadonlySet<IdProvozu> = new Set<IdProvozu>(["auto", "dodavka", "autobus", "nakladni", "souprava"]);
+const VOZIDLA: ReadonlySet<IdProvozu> = new Set<IdProvozu>([
+  "auto",
+  "dodavka",
+  "autobus",
+  "nakladni",
+  "souprava",
+  "nadmerny",
+]);
 
 /** Je daný druh provozu silniční vozidlo s karoserií (ne chodec ani cyklista)? */
 export function jeVozidlo(druh: IdProvozu): boolean {
@@ -370,6 +403,7 @@ export function modelUcastnika(druh: IdProvozu, kadence?: number): ModelUcastnik
   if (druh === "autobus") return autobus();
   if (druh === "nakladni") return nakladni();
   if (druh === "souprava") return souprava();
+  if (druh === "nadmerny") return nadmerny();
   return null;
 }
 
