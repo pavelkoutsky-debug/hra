@@ -71,6 +71,16 @@ function cas(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" });
 }
 
+/** Počet se slovem ve správném tvaru: 1 hráč, 3 hráči, 5 hráčů. */
+function pocet(kolik: number, jeden: string, dva: string, pet: string): string {
+  return `${kolik.toLocaleString("cs-CZ")} ${kolik === 1 ? jeden : kolik >= 2 && kolik <= 4 ? dva : pet}`;
+}
+
+/** Hodiny a minuty času v milisekundách (místní čas prohlížeče). */
+function hodina(ms: number): string {
+  return new Date(ms).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+}
+
 function bunka(text: string, trida?: string): HTMLTableCellElement {
   const td = document.createElement("td");
   td.textContent = text;
@@ -278,7 +288,8 @@ function vykresliDetailVazby(v: EvidovanaVazba): void {
   const odkaz = prvek<HTMLAnchorElement>("#vazba-uroven");
   const idUrovne = v.uroven ?? navrh?.uroven;
   odkaz.hidden = idUrovne === undefined;
-  if (idUrovne !== undefined) odkaz.href = `/?uroven=${encodeURIComponent(idUrovne)}`;
+  // Hra se otevře s vypnutým záznamem: zkoušení zadavatele nemá kazit čísla o hráčích.
+  if (idUrovne !== undefined) odkaz.href = `/?uroven=${encodeURIComponent(idUrovne)}&zaznam=vypnout`;
   prvek<HTMLTextAreaElement>("#vazba-poznamka").value = v.poznamka;
   vykresliStavy();
   const udalosti = v.udalosti ?? [];
@@ -297,6 +308,8 @@ async function otevriVazbu(id: string): Promise<void> {
   try {
     const { vazba } = await sprava<{ vazba: EvidovanaVazba }>(`co=vazba&id=${encodeURIComponent(id)}`);
     vykresliDetailVazby(vazba);
+    // Na úzkém okně je detail až pod seznamem: posune se k němu.
+    prvek("#detail-vazby").scrollIntoView({ block: "nearest" });
     ohlas("");
   } catch (chyba) {
     ohlas(`Zpětnou vazbu se nepodařilo načíst: ${(chyba as Error).message}`);
@@ -345,7 +358,7 @@ prvek("#vazba-ulozit").addEventListener("click", () => {
       const { vazba } = await sprava<{ vazba: EvidovanaVazba }>("co=vazba", { id: v.id, stav: zvolenyStav, poznamka });
       vazby = vazby.map((p) => (p.id === vazba.id ? { ...p, stav: vazba.stav } : p));
       vykresliDetailVazby(vazba);
-      ohlas(`Uloženo: ${vazba.id} je ${NAZVY_STAVU[vazba.stav]}.`);
+      ohlas(`Uloženo: ${vazba.id} – stav „${NAZVY_STAVU[vazba.stav]}“.`);
     } catch (chyba) {
       ohlas(`Uložit se nepodařilo: ${(chyba as Error).message}`);
     }
@@ -381,6 +394,46 @@ prvek("#vazba-kopirovat").addEventListener("click", () => {
 
 const vyberDne = prvek<HTMLSelectElement>("#den");
 
+function prepniZalozku(ktera: string): void {
+  for (const z of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
+    z.setAttribute("aria-selected", String(z.dataset.zalozka === ktera));
+  }
+  for (const panel of document.querySelectorAll<HTMLElement>("[data-panel]")) {
+    panel.hidden = panel.dataset.panel !== ktera;
+  }
+}
+
+// Od zprávy k tomu, co hráč ten den ve hře dělal: otevře deník dne, kdy zpráva přišla, a
+// v něm sezení, ze kterého ji hráč poslal.
+prvek("#vazba-sezeni").addEventListener("click", () => {
+  const v = vybrana;
+  if (!v) return;
+  const den = v.prijato.slice(0, 10);
+  void (async () => {
+    try {
+      if (![...vyberDne.options].some((m) => m.value === den)) await nactiDny();
+      if (![...vyberDne.options].some((m) => m.value === den)) {
+        ohlas(`Ze dne ${den} v deníku nic není: hráč měl záznam vypnutý, nebo byl deník toho dne smazán.`);
+        return;
+      }
+      vyberDne.value = den;
+      await nactiDen(den);
+      const radek = [...prvek("#sezeni tbody").querySelectorAll<HTMLTableRowElement>("tr")].find(
+        (r) => r.dataset.vyber === `${v.hlavicka.hrac}/${v.hlavicka.sezeni}`,
+      );
+      if (!radek) {
+        ohlas(`Sezení této zprávy v deníku dne ${den} není: hráč měl nejspíš záznam vypnutý.`);
+        return;
+      }
+      prepniZalozku("denik");
+      radek.click();
+      radek.scrollIntoView({ block: "center" });
+    } catch (chyba) {
+      ohlas(`Deník se nepodařilo načíst: ${(chyba as Error).message}`);
+    }
+  })();
+});
+
 function cislo(hodnota: number | null, mist = 0): string {
   return hodnota === null ? "—" : hodnota.toLocaleString("cs-CZ", { maximumFractionDigits: mist });
 }
@@ -392,9 +445,11 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
   const obdobi = odpoved.od === odpoved.do ? odpoved.do : `${odpoved.dny[0] ?? odpoved.od} až ${odpoved.do} (${odpoved.dny.length} dní s deníkem)`;
   prvek("#souhrn-nadpis").textContent = `Souhrn po úrovních · ${obdobi}`;
   prvek("#den-pocty").textContent =
-    `${souhrn.hracu} hráčů (${souhrn.novych} nových, ${souhrn.dotykovych} na dotyku) · ${souhrn.sezeni} sezení · ` +
-    `${souhrn.udalosti} událostí v ${davek} dávkách · záznam si vypnulo ${souhrn.vypnuli}` +
-    (neuplne ? ` · NEÚPLNÉ: ${odpoved.nedokonceno.join(", ")} má víc dávek, než se stihlo přečíst` : "");
+    `${pocet(souhrn.hracu, "hráč", "hráči", "hráčů")} (z toho nových ${souhrn.novych}, na dotyku ${souhrn.dotykovych}) · ` +
+    `${souhrn.sezeni} sezení · ${pocet(souhrn.udalosti, "událost", "události", "událostí")} ` +
+    `v ${davek === 1 ? "1 dávce" : `${davek.toLocaleString("cs-CZ")} dávkách`} · ` +
+    `záznam si ${souhrn.vypnuli === 1 ? "vypnul 1 hráč" : souhrn.vypnuli >= 2 && souhrn.vypnuli <= 4 ? `vypnuli ${souhrn.vypnuli} hráči` : `vypnulo ${souhrn.vypnuli} hráčů`}` +
+    (neuplne ? ` · NEÚPLNÉ: ${odpoved.nedokonceno.join(", ")} – dávek je víc, než se stihlo přečíst; zkus souhrn načíst znovu` : "");
   const telo = prvek<HTMLTableSectionElement>("#souhrn tbody");
   telo.replaceChildren(
     ...souhrn.urovne.map((u) => {
@@ -427,8 +482,8 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
   );
   prvek("#souhrn-chyby").textContent =
     souhrn.chyb === 0
-      ? `Prohlížeče neohlásily žádnou chybu. Zpětných vazeb odesláno: ${souhrn.vazeb}.`
-      : `Chyby ohlášené prohlížeči (${souhrn.chyb}): ${souhrn.chyby.map((c) => `${c.zprava} (${c.pocet}×)`).join(" · ")}. Zpětných vazeb odesláno: ${souhrn.vazeb}.`;
+      ? "Prohlížeče neohlásily žádnou chybu."
+      : `Chyby ohlášené prohlížeči (${souhrn.chyb}): ${souhrn.chyby.map((c) => `${c.zprava} (${c.pocet}×)`).join(" · ")}.`;
 }
 
 async function otevriSezeni(den: string, s: SezeniDne, radek: HTMLTableRowElement): Promise<void> {
@@ -466,16 +521,15 @@ function zacatekObdobi(den: string): string {
 }
 
 /**
- * Souhrn za období. Server na jednu žádost přečte jen omezený počet dávek a uzavřeným dnům
- * si ukládá, kam došel; žádost se proto opakuje, dokud má co dopočítat.
+ * Souhrn za období. Server na jednu žádost přečte jen omezený počet dávek a ukládá si, kam
+ * u kterého dne došel; žádost se proto opakuje, dokud má co dopočítat.
  */
 async function nactiSouhrn(den: string): Promise<void> {
   const dotaz = `co=souhrn&od=${zacatekObdobi(den)}&do=${den}`;
   let odpoved = await sprava<OdpovedSouhrnu>(dotaz);
-  // Opakuje se, dokud je co dopočítat a každé kolo něco přidá (uzavřené dny si server
-  // pamatuje; dnešek se počítá vždy znovu, takže u něj další kolo pomůže jen jednou).
+  // Opakuje se, dokud je co dopočítat a každé kolo něco přidá.
   for (let kolo = 0; kolo < 200 && odpoved.neuplne; kolo++) {
-    ohlas(`Počítám souhrn: zbývá ${odpoved.nedokonceno.length} dní…`);
+    ohlas(`Počítám souhrn: přečteno ${odpoved.davek.toLocaleString("cs-CZ")} dávek, zbývá dopočítat ${pocet(odpoved.nedokonceno.length, "den", "dny", "dní")}…`);
     const dalsi = await sprava<OdpovedSouhrnu>(dotaz);
     const pokrok = dalsi.davek > odpoved.davek || dalsi.nedokonceno.length < odpoved.nedokonceno.length;
     odpoved = dalsi;
@@ -492,7 +546,12 @@ async function nactiDen(den: string): Promise<void> {
     ...seznam.sezeni.map((s) => {
       const radek = document.createElement("tr");
       radek.dataset.vyber = `${s.hrac}/${s.sezeni}`;
-      radek.append(bunka(s.hrac), bunka(`${cas(new Date(s.zacatek).toISOString())} · ${s.sezeni}`), bunka(String(s.davek), "cislo"));
+      radek.append(
+        bunka(s.hrac),
+        bunka(`${cas(new Date(s.zacatek).toISOString())} · ${s.sezeni}`),
+        bunka(hodina(s.prvni) === hodina(s.posledni) ? hodina(s.prvni) : `${hodina(s.prvni)}–${hodina(s.posledni)}`),
+        bunka(String(s.davek), "cislo"),
+      );
       radek.addEventListener("click", () => void otevriSezeni(den, s, radek));
       return radek;
     }),
@@ -578,14 +637,7 @@ prvek("#export").addEventListener("click", () => {
 // ---- Přihlášení a záložky ----
 
 for (const zalozka of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
-  zalozka.addEventListener("click", () => {
-    for (const z of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
-      z.setAttribute("aria-selected", String(z === zalozka));
-    }
-    for (const panel of document.querySelectorAll<HTMLElement>("[data-panel]")) {
-      panel.hidden = panel.dataset.panel !== zalozka.dataset.zalozka;
-    }
-  });
+  zalozka.addEventListener("click", () => prepniZalozku(zalozka.dataset.zalozka ?? ""));
 }
 
 async function prihlas(): Promise<void> {

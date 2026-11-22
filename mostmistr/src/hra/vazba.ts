@@ -52,7 +52,12 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
     prepinacZaznamu.textContent = t(denik.zapnuto ? "vazba.zaznam.vypnout" : "vazba.zaznam.zapnout");
     prepinacZaznamu.hidden = !denik.lzeZapnout;
     // Bez mostu a v přehledu není co přikládat kromě posledních kroků.
-    udaj("vazba-prilohy").textContent = t(zdroj.navrh() === undefined ? "vazba.prilohy.kroky" : "vazba.prilohy.most");
+    udaj("vazba-prilohy").textContent = t(
+      zdroj.navrh() !== undefined ? "vazba.prilohy.most" : zdroj.uroven() !== undefined ? "vazba.prilohy.kroky.uroven" : "vazba.prilohy.kroky",
+    );
+    const pocet = udaj("vazba-pocet");
+    pocet.textContent = t("vazba.pocet", { pocet: text.value.length, nejvic: NEJDELSI_VAZBA });
+    pocet.dataset.plny = String(text.value.length >= 0.9 * NEJDELSI_VAZBA);
   };
 
   const otevri = (predvoleny?: DruhVazby): void => {
@@ -63,6 +68,8 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
     }
     hlaseni.textContent = "";
     delete okno.dataset.odeslano;
+    // Kdo si záznam hraní vypnul, tomu se kroky ze hry samy nepřikládají; zaškrtnout je může.
+    prilohy.checked = denik.zapnuto;
     obnov();
     okno.showModal();
     text.focus();
@@ -82,6 +89,7 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
   text.addEventListener("input", obnov);
   prepinacZaznamu.addEventListener("click", () => {
     nastavZaznam(!denik.zapnuto);
+    if (!denik.zapnuto) prilohy.checked = false;
     obnov();
   });
 
@@ -121,7 +129,7 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
         hlaseni.textContent = t("vazba.nepodarilo");
       } else {
         okno.dataset.odeslano = "ano";
-        hlaseni.textContent = t("vazba.diky", { id: id || "—" });
+        hlaseni.textContent = t(kam.length > 0 ? "vazba.diky.kontakt" : "vazba.diky");
         text.value = "";
         hodnoceni = null;
       }

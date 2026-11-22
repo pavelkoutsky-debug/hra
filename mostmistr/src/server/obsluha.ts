@@ -12,16 +12,21 @@
 //   POST /api/sprava?co=vazba                 { id, stav?, poznamka? } změní stav řešení
 //   GET  /api/sprava?co=dny                   dny, ze kterých je deník
 //   GET  /api/sprava?co=den&den=RRRR-MM-DD    sezení toho dne
-//   GET  /api/sprava?co=sezeni&den=…&hrac=…&slozka=…   události jednoho sezení
+//   GET  /api/sprava?co=sezeni&den=…&hrac=…&slozka=…   události jednoho sezení (slozka = začátek-číslo)
 //   GET  /api/sprava?co=souhrn&den=…          souhrn dne po úrovních
 //   GET  /api/sprava?co=souhrn&od=…&do=…      souhrn za období (dny včetně krajních)
 //   GET  /api/sprava?co=export&den=…&preskocit=N   dávky dne tak, jak přišly, po částech
 //   POST /api/sprava?co=smazat                { vazba: id } smaže zpětnou vazbu,
 //                                             { den } smaže deník toho dne
 //
-// Souhrn se počítá z „výtahů“ dnů (viz `denik/souhrn.ts`). Den, do kterého už nic nepřibude,
-// má výtah uložený pod klíčem `vytah/<den>.json`; když má den víc dávek, než se stihne
-// přečíst na jednu žádost, uloží se rozpracovaný výtah a příští žádost v něm pokračuje.
+// Dávky deníku leží pod klíči `denik/<den>/<čas příjmu>-<hráč>-<začátek sezení>-<sezení>-
+// <pořadí>-<náhoda>.json`. Čas příjmu je vpředu schválně: nové dávky tak přibývají vždy na
+// konec abecedního pořadí klíčů a co už je spočítané, se nemusí číst znovu.
+//
+// Souhrn se počítá z „výtahů“ dnů (viz `denik/souhrn.ts`). Výtah dne je uložený pod klíčem
+// `vytah/<den>.json` i s klíčem poslední započtené dávky; další žádost přečte jen dávky za
+// ním. Platí to i pro dnešek; po půlnoci se den jednou spočítá znovu od začátku (dávka, která
+// se při ukládání opozdila, mohla zapadnout před už započtené) a pak se už jen čte.
 
 import { ChybaDat } from "../data/kontrola";
 import {
@@ -59,6 +64,8 @@ export const NEJVIC_DAVEK_VE_VYVOZU = 200;
 export const NEJVIC_VAZEB_DENNE = 300;
 /** Jak dlouho po půlnoci (UTC) se den ještě nepokládá za uzavřený, ms: dávka z 23:59 se může opozdit. */
 const ODKLAD_UZAVERKY = 10 * 60 * 1000;
+/** Jak stará musí dnešní dávka být, aby se započetla do uloženého výtahu dne, ms. */
+const USAZENI = 15 * 1000;
 /** Nejvíc zpětných vazeb na jedné stránce seznamu. */
 export const NEJVIC_VAZEB_V_SEZNAMU = 200;
 /** Kolik záznamů se z úložiště čte souběžně. */
@@ -93,11 +100,14 @@ export interface PolozkaSeznamuVazeb {
 export interface SezeniDne {
   hrac: string;
   sezeni: string;
-  /** Jméno složky sezení v úložišti (začátek sezení a jeho číslo); posílá se zpět v dotazu na sezení. */
+  /** Označení sezení v dotazu na jeho události: začátek sezení a jeho číslo. */
   slozka: string;
   /** Kdy sezení začalo podle hodin hráče, ms. */
   zacatek: number;
   davek: number;
+  /** Kdy ten den přišla první a poslední dávka sezení podle hodin serveru, ms. */
+  prvni: number;
+  posledni: number;
 }
 
 /** Odpověď na souhrn dne nebo období. */
@@ -109,25 +119,37 @@ export interface OdpovedSouhrnu {
   souhrn: SouhrnDeniku;
   /** Kolik dávek deníku je v souhrnu započteno. */
   davek: number;
-  /** Souhrn není celý: dny v `nedokonceno` mají víc dávek, než se stihlo přečíst. */
+  /**
+   * Souhrn není celý: dny v `nedokonceno` mají víc dávek, než se stihlo přečíst na jednu
+   * žádost. Server si pamatuje, kam došel, takže opakováním žádosti se dopočítají.
+   */
   neuplne: boolean;
   nedokonceno: string[];
-  /** Dny, které lze dopočítat opakováním žádosti (uzavřené dny si pamatují, kam došly). */
-  dopocitatelne: string[];
 }
 
 /** Výtah dne uložený na serveru. */
 interface UlozenyVytah {
   vytah: VytahDeniku;
-  /** Kolik dávek dne (v pořadí klíčů) je ve výtahu započteno a zda jsou to všechny. */
+  /** Kolik dávek dne je ve výtahu započteno a klíč poslední z nich (null = žádná). */
   zpracovano: number;
+  posledni: string | null;
+  /** Jsou započtené všechny dávky, které den měl, když se výtah naposledy počítal? */
   hotovo: boolean;
+  /** Výtah vznikal, dokud do dne ještě přibývaly dávky; po uzávěrce dne se spočítá znovu. */
+  otevreny: boolean;
 }
 
 function jeUlozenyVytah(h: unknown): h is UlozenyVytah {
   if (typeof h !== "object" || h === null) return false;
   const u = h as Partial<UlozenyVytah>;
-  return typeof u.zpracovano === "number" && u.zpracovano >= 0 && typeof u.hotovo === "boolean" && jeVytah(u.vytah);
+  return (
+    typeof u.zpracovano === "number" &&
+    u.zpracovano >= 0 &&
+    (u.posledni === null || typeof u.posledni === "string") &&
+    typeof u.hotovo === "boolean" &&
+    typeof u.otevreny === "boolean" &&
+    jeVytah(u.vytah)
+  );
 }
 
 function odpoved(stav: number, telo?: unknown): Response {
@@ -186,6 +208,22 @@ const DEN = /^\d{4}-\d{2}-\d{2}$/;
 const ID_HRACE = /^[0-9a-f]{8,32}$/;
 const ID_VAZBY = /^\d{8}T\d{6}-[0-9a-f]{4,12}$/;
 const SLOZKA_SEZENI = /^\d{13,15}-[0-9a-f]{8,32}$/;
+/** Jméno dávky deníku v úložišti: čas příjmu, hráč, začátek sezení, sezení, pořadí, náhoda. */
+const JMENO_DAVKY = /^(\d{13})-([0-9a-f]{8,32})-(\d{13,15})-([0-9a-f]{8,32})-(\d{5,})-[0-9a-f]+\.json$/;
+
+/** Co o dávce říká její klíč; null u klíče, který dávce deníku nepatří. */
+function zKliceDavky(klic: string): { prijato: number; hrac: string; slozka: string; zacatek: number; sezeni: string; poradi: number } | null {
+  const shoda = JMENO_DAVKY.exec(klic.slice(klic.lastIndexOf("/") + 1));
+  if (!shoda) return null;
+  return {
+    prijato: Number(shoda[1]),
+    hrac: shoda[2]!,
+    slozka: `${shoda[3]}-${shoda[4]}`,
+    zacatek: Number(shoda[3]),
+    sezeni: shoda[4]!,
+    poradi: Number(shoda[5]),
+  };
+}
 
 /** Zpětná vazba tak, jak je v seznamu (malý záznam vedle celé zprávy, ať se seznam čte rychle). */
 function polozkaSeznamu(v: EvidovanaVazba): PolozkaSeznamuVazeb {
@@ -223,12 +261,18 @@ export async function prijmiDenik(zadost: Request, p: ProstrediServeru): Promise
   }
   const cas = p.ted();
   const { hrac, sezeni, zacatek } = davka.hlavicka;
-  // Složka sezení začíná časem jeho začátku, takže sezení jednoho hráče jdou v úložišti za
-  // sebou podle času. Náhodný dovětek brání přepsání: dvě stránky téhož sezení (zdvojený
-  // panel prohlížeče) můžou poslat dávku se stejným číslem.
-  const slozka = `${String(zacatek).padStart(13, "0")}-${sezeni}`;
-  const klic = `denik/${denZ(cas)}/${hrac}/${slozka}/${String(davka.poradi).padStart(5, "0")}-${p.nahoda()}.json`;
-  await p.sklad.zapis(klic, { prijato: cas.toISOString(), prostredi: p.prostredi, ...davka });
+  // Klíč začíná časem příjmu, takže dávky dne jdou v úložišti za sebou tak, jak přišly, a nové
+  // přibývají na konec. Náhodný dovětek brání přepsání: dvě stránky téhož sezení (zdvojený
+  // panel prohlížeče) můžou poslat dávku se stejným číslem ve stejné milisekundě.
+  const jmeno = [
+    String(cas.getTime()).padStart(13, "0"),
+    hrac,
+    String(zacatek).padStart(13, "0"),
+    sezeni,
+    String(davka.poradi).padStart(5, "0"),
+    p.nahoda(),
+  ].join("-");
+  await p.sklad.zapis(`denik/${denZ(cas)}/${jmeno}.json`, { prijato: cas.toISOString(), prostredi: p.prostredi, ...davka });
   return odpoved(204);
 }
 
@@ -334,54 +378,64 @@ function jeDavka(h: unknown): h is DavkaDeniku & { prijato: string; prostredi: s
   return typeof h === "object" && h !== null && Array.isArray((h as DavkaDeniku).udalosti) && typeof (h as DavkaDeniku).hlavicka === "object";
 }
 
-/** Dávky deníku jednoho dne (nejvýš `nejvic`, od `preskocit`-té) a údaj, zda jich je víc. */
-async function davkyDne(
-  sklad: SkladZaznamu,
-  den: string,
-  predpona = "",
-  preskocit = 0,
-  nejvic = NEJVIC_DAVEK_NAJEDNOU,
-): Promise<{ davky: DavkaDeniku[]; neuplne: boolean; celkem: number }> {
-  const klice = await sklad.klice(`denik/${den}/${predpona}`);
-  const vybrane = klice.slice(preskocit, preskocit + nejvic);
-  const davky = (await prectiVse(sklad, vybrane)).filter(jeDavka);
-  return { davky, neuplne: klice.length > preskocit + vybrane.length, celkem: klice.length };
+/** Klíče dávek deníku jednoho dne v pořadí, v jakém dávky přišly. */
+async function kliceDne(sklad: SkladZaznamu, den: string): Promise<string[]> {
+  return (await sklad.klice(`denik/${den}/`)).sort();
 }
 
 const klicVytahu = (den: string): string => `vytah/${den}.json`;
 
 /**
- * Výtah jednoho dne. Uzavřený den ho má uložený; jinak se spočítá z dávek, nejvýš z tolika,
- * kolik zbývá v `rozpocet`. Rozpracovaný výtah uzavřeného dne se uloží, takže příští žádost
- * pokračuje tam, kde tahle skončila. `ulozeny` je to, co o dni server už ví (null = nic).
+ * Výtah jednoho dne. Server si ho ukládá i s klíčem poslední započtené dávky a příště přečte
+ * jen dávky za ním, nejvýš tolik, kolik zbývá v `rozpocet`. Do dneška dávky ještě přibývají:
+ * ukládá se jen to, co přišlo před chvílí (`USAZENI`), a nejnovější dávky se k odpovědi
+ * dopočítají pokaždé znovu. Po uzávěrce dne se výtah jednou spočítá od začátku, protože
+ * opožděná dávka mohla zapadnout před už započtené. `ulozeny` je to, co o dni server ví.
  */
 async function vytahDne(
   p: ProstrediServeru,
   den: string,
   ulozeny: UlozenyVytah | null,
   rozpocet: { zbyva: number },
-): Promise<UlozenyVytah & { uzavreny: boolean }> {
-  const uzavreny = den < denZ(new Date(p.ted().getTime() - ODKLAD_UZAVERKY));
-  if (uzavreny && ulozeny?.hotovo) return { ...ulozeny, uzavreny };
+): Promise<{ vytah: VytahDeniku; zpracovano: number; hotovo: boolean }> {
+  const ted = p.ted().getTime();
+  const uzavreny = den < denZ(new Date(ted - ODKLAD_UZAVERKY));
+  // Na rozpracovaný výtah jde navázat jen ve stejném stavu dne, v jakém vznikl.
+  const zaklad = ulozeny !== null && ulozeny.otevreny === !uzavreny ? ulozeny : null;
+  if (uzavreny && zaklad?.hotovo) return zaklad;
   // Rozpočet žádosti je vyčerpaný: den se ani nevypisuje (i výpis klíčů stojí čas) a vrátí
   // se to, co o něm server už ví.
-  if (rozpocet.zbyva <= 0) {
-    return { vytah: uzavreny && ulozeny ? ulozeny.vytah : prazdnyVytah(), zpracovano: uzavreny && ulozeny ? ulozeny.zpracovano : 0, hotovo: false, uzavreny };
+  if (rozpocet.zbyva <= 0) return { vytah: zaklad?.vytah ?? prazdnyVytah(), zpracovano: zaklad?.zpracovano ?? 0, hotovo: false };
+
+  const klice = await kliceDne(p.sklad, den);
+  const za = zaklad?.posledni ?? null;
+  const od = za === null ? 0 : klice.findIndex((k) => k > za);
+  const nove = od < 0 ? [] : klice.slice(od, od + rozpocet.zbyva);
+  rozpocet.zbyva -= nove.length;
+  const hotovo = od < 0 || od + nove.length >= klice.length;
+  // Dnešní dávky mladší než `USAZENI` se do uloženého výtahu nepočítají: jiná, která přišla
+  // ve stejnou chvíli, se mohla uložit o okamžik později a zařadit se před ně.
+  const mez = uzavreny ? null : `denik/${den}/${String(ted - USAZENI).padStart(13, "0")}`;
+  let usazenych = nove.length;
+  if (mez !== null) for (usazenych = 0; usazenych < nove.length && nove[usazenych]! < mez; ) usazenych += 1;
+  const davky = await prectiVse(p.sklad, nove);
+  const usazene = slucVytahy([zaklad?.vytah ?? prazdnyVytah(), vytahDeniku(davky.slice(0, usazenych).filter(jeDavka))]);
+  const pocet = (zaklad?.zpracovano ?? 0) + usazenych;
+  if (usazenych > 0 || (uzavreny && klice.length > 0)) {
+    const kUlozeni: UlozenyVytah = {
+      vytah: usazene,
+      zpracovano: pocet,
+      posledni: usazenych > 0 ? nove[usazenych - 1]! : za,
+      hotovo: uzavreny && hotovo,
+      otevreny: !uzavreny,
+    };
+    await p.sklad.zapis(klicVytahu(den), kUlozeni);
   }
-  const klice = await p.sklad.klice(`denik/${den}/`);
-  // Dnešek se počítá vždy od začátku: nové dávky přibývají i doprostřed pořadí klíčů.
-  const zaklad = uzavreny && ulozeny && ulozeny.zpracovano <= klice.length ? ulozeny : null;
-  const od = zaklad?.zpracovano ?? 0;
-  const kolik = Math.max(0, Math.min(klice.length - od, rozpocet.zbyva));
-  rozpocet.zbyva -= kolik;
-  const davky = (await prectiVse(p.sklad, klice.slice(od, od + kolik))).filter(jeDavka);
-  const vysledek: UlozenyVytah = {
-    vytah: slucVytahy([zaklad?.vytah ?? prazdnyVytah(), vytahDeniku(davky)]),
-    zpracovano: od + kolik,
-    hotovo: od + kolik >= klice.length,
+  return {
+    vytah: usazenych === nove.length ? usazene : slucVytahy([usazene, vytahDeniku(davky.slice(usazenych).filter(jeDavka))]),
+    zpracovano: (zaklad?.zpracovano ?? 0) + nove.length,
+    hotovo,
   };
-  if (uzavreny && (kolik > 0 || vysledek.hotovo)) await p.sklad.zapis(klicVytahu(den), vysledek);
-  return { ...vysledek, uzavreny };
 }
 
 /** Souhrn za dny od–do (včetně). Počítá se z výtahů dnů; co se nestihne, hlásí jako nedokončené. */
@@ -391,16 +445,12 @@ async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promis
   const rozpocet = { zbyva: NEJVIC_DAVEK_NAJEDNOU };
   const vytahy: VytahDeniku[] = [];
   const nedokonceno: string[] = [];
-  const dopocitatelne: string[] = [];
   let davek = 0;
   for (const [i, den] of dny.entries()) {
     const v = await vytahDne(p, den, ulozene[i] ?? null, rozpocet);
     vytahy.push(v.vytah);
     davek += v.zpracovano;
-    if (!v.hotovo) {
-      nedokonceno.push(den);
-      if (v.uzavreny) dopocitatelne.push(den);
-    }
+    if (!v.hotovo) nedokonceno.push(den);
   }
   return {
     od,
@@ -410,7 +460,6 @@ async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promis
     davek,
     neuplne: nedokonceno.length > 0,
     nedokonceno,
-    dopocitatelne,
   };
 }
 
@@ -483,7 +532,7 @@ export async function spravuj(zadost: Request, p: ProstrediServeru): Promise<Res
       return odpoved(200, { smazano: 1, zbyva: 0 });
     }
     if (typeof co.den === "string" && DEN.test(co.den)) {
-      const klice = await sklad.klice(`denik/${co.den}/`);
+      const klice = await kliceDne(sklad, co.den);
       const ted = klice.slice(0, NEJVIC_DAVEK_NAJEDNOU);
       await provedVse(ted, (klic) => sklad.smaz(klic));
       // Výtah dne už neplatí; smaže se hned, ať se z něj nepočítá souhrn smazaného dne.
@@ -511,38 +560,43 @@ export async function spravuj(zadost: Request, p: ProstrediServeru): Promise<Res
   if (!DEN.test(den)) return chyba(cesta === "" ? 404 : 400, cesta === "" ? "neznámá adresa správy" : "chybí den ve tvaru RRRR-MM-DD");
 
   if (cesta === "den") {
-    const pocty = new Map<string, SezeniDne>();
-    for (const klic of await sklad.klice(`denik/${den}/`)) {
-      const [, , hrac, slozka] = klic.split("/");
-      if (!hrac || !slozka || !SLOZKA_SEZENI.test(slozka)) continue;
-      const pomlcka = slozka.indexOf("-");
-      const zaznam = pocty.get(`${hrac}/${slozka}`) ?? {
-        hrac,
-        sezeni: slozka.slice(pomlcka + 1),
-        slozka,
-        zacatek: Number(slozka.slice(0, pomlcka)),
-        davek: 0,
-      };
-      zaznam.davek += 1;
-      pocty.set(`${hrac}/${slozka}`, zaznam);
+    const sezeni = new Map<string, SezeniDne>();
+    for (const klic of await kliceDne(sklad, den)) {
+      const d = zKliceDavky(klic);
+      if (!d) continue;
+      const zaznam = sezeni.get(`${d.hrac}/${d.slozka}`);
+      if (zaznam) {
+        zaznam.davek += 1;
+        zaznam.posledni = d.prijato;
+      } else {
+        sezeni.set(`${d.hrac}/${d.slozka}`, { hrac: d.hrac, sezeni: d.sezeni, slozka: d.slozka, zacatek: d.zacatek, davek: 1, prvni: d.prijato, posledni: d.prijato });
+      }
     }
-    return odpoved(200, { den, sezeni: [...pocty.values()] });
+    return odpoved(200, { den, sezeni: [...sezeni.values()] });
   }
 
   if (cesta === "sezeni") {
     const hrac = dotaz.get("hrac") ?? "";
     const slozka = dotaz.get("slozka") ?? "";
     if (!ID_HRACE.test(hrac) || !SLOZKA_SEZENI.test(slozka)) return chyba(400, "chybí číslo hráče nebo sezení");
-    const { davky, neuplne } = await davkyDne(sklad, den, `${hrac}/${slozka}/`);
+    const klice = (await kliceDne(sklad, den)).filter((klic) => {
+      const d = zKliceDavky(klic);
+      return d !== null && d.hrac === hrac && d.slozka === slozka;
+    });
+    const davky = (await prectiVse(sklad, klice.slice(0, NEJVIC_DAVEK_NAJEDNOU))).filter(jeDavka);
     if (davky.length === 0) return chyba(404, "takové sezení ten den není");
+    // Stabilní řazení: dávky se stejným číslem (zdvojený panel) zůstanou v pořadí, v jakém přišly.
     const udalosti: UdalostDeniku[] = davky.sort((a, b) => a.poradi - b.poradi).flatMap((d) => d.udalosti);
-    return odpoved(200, { den, hlavicka: davky[0]!.hlavicka, udalosti, neuplne });
+    return odpoved(200, { den, hlavicka: davky[0]!.hlavicka, udalosti, neuplne: klice.length > NEJVIC_DAVEK_NAJEDNOU });
   }
 
   if (cesta === "export") {
     const preskocit = Math.max(0, Math.floor(Number(dotaz.get("preskocit") ?? "0")) || 0);
-    const { davky, neuplne, celkem } = await davkyDne(sklad, den, "", preskocit, NEJVIC_DAVEK_VE_VYVOZU);
-    return odpoved(200, { den, davky, neuplne, celkem, dalsi: neuplne ? preskocit + NEJVIC_DAVEK_VE_VYVOZU : null });
+    const klice = await kliceDne(sklad, den);
+    const vybrane = klice.slice(preskocit, preskocit + NEJVIC_DAVEK_VE_VYVOZU);
+    const davky = (await prectiVse(sklad, vybrane)).filter(jeDavka);
+    const neuplne = klice.length > preskocit + vybrane.length;
+    return odpoved(200, { den, davky, neuplne, celkem: klice.length, dalsi: neuplne ? preskocit + NEJVIC_DAVEK_VE_VYVOZU : null });
   }
 
   return chyba(404, "neznámá adresa správy");

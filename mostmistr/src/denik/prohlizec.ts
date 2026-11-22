@@ -21,27 +21,32 @@ function nahodneCislo(): string {
   return Array.from(bajty, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Odešle JSON na adresu téhož webu; vrací odpověď serveru, nebo null, když se to nepovedlo. */
-async function odesli(adresa: string, telo: string): Promise<Response | null> {
+/** Jak dlouho se nejdéle čeká na odpověď serveru, ms; pak se žádost vzdá. */
+const NEJDELSI_ODPOVED = 20_000;
+
+/** Pošle JSON na adresu téhož webu. Když server do `NEJDELSI_ODPOVED` neodpoví, žádost zruší a vyhodí chybu. */
+async function posliJson(adresa: string, telo: string): Promise<Response> {
+  const zruseni = new AbortController();
+  const budik = window.setTimeout(() => zruseni.abort(), NEJDELSI_ODPOVED);
   try {
-    const odpoved = await fetch(adresa, {
+    return await fetch(adresa, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: telo,
       // Malou žádost prohlížeč dokončí, i když hráč mezitím přejde jinam.
       keepalive: telo.length < 60_000,
+      signal: zruseni.signal,
     });
-    return odpoved.ok ? odpoved : null;
-  } catch {
-    return null;
+  } finally {
+    window.clearTimeout(budik);
   }
 }
 
 /** Odešle zpětnou vazbu a vrátí její číslo; null, když ji server nepřijal. */
 export async function odesliVazbu(adresa: string, telo: string): Promise<{ id: string } | null> {
-  const odpoved = await odesli(adresa, telo);
-  if (!odpoved) return null;
   try {
+    const odpoved = await posliJson(adresa, telo);
+    if (!odpoved.ok) return null;
     const data = (await odpoved.json()) as { id?: unknown };
     return typeof data.id === "string" ? { id: data.id } : null;
   } catch {
@@ -92,9 +97,20 @@ export function predOdchodem(obsluha: () => void): void {
 /** Deník této stránky; při prvním volání ho založí a napojí na události prohlížeče. */
 export function denikHry(): Denik {
   if (denik) return denik;
+  const trvala = pamet("localStorage");
+  const sezeni = pamet("sessionStorage");
+  // Adresa s `?zaznam=vypnout` (odkazy ze stránky správce) záznam v tomto prohlížeči potichu
+  // vypne dřív, než se cokoli zapíše: zkoušení autorů nemá kazit čísla o hráčích.
+  if (new URLSearchParams(window.location.search).get("zaznam") === "vypnout") {
+    try {
+      (trvala ?? sezeni)?.setItem(KLIC_ZAZNAMU, "0");
+    } catch {
+      // Paměť je plná nebo zakázaná: deník se pak bez ní stejně nevede.
+    }
+  }
   const novy = new Denik({
-    trvala: pamet("localStorage"),
-    sezeni: pamet("sessionStorage"),
+    trvala,
+    sezeni,
     ted: () => Date.now(),
     nahoda: nahodneCislo,
     posli: async (adresa, telo, naOdchodu): Promise<VysledekOdeslani> => {
@@ -102,12 +118,7 @@ export function denikHry(): Denik {
         return navigator.sendBeacon(adresa, new Blob([telo], { type: "application/json" })) ? "prijato" : "nedostupne";
       }
       try {
-        const odpoved = await fetch(adresa, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: telo,
-          keepalive: telo.length < 60_000,
-        });
+        const odpoved = await posliJson(adresa, telo);
         if (odpoved.ok) return "prijato";
         // Chybu v žádosti (špatný tvar, moc velká) nemá smysl opakovat; přetížení a chyby serveru ano.
         return odpoved.status >= 400 && odpoved.status < 500 && odpoved.status !== 429 ? "odmitnuto" : "nedostupne";

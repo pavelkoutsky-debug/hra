@@ -140,7 +140,9 @@ describe("upozornění na deník hraní", () => {
     expect(await telo("denik")).toBe("zapnuto");
     const upozorneni = stranka.locator('#obrazovka-prehled [data-udaj="zaznam-upozorneni"]');
     expect(await upozorneni.isVisible()).toBe(true);
-    expect(await upozorneni.innerText()).toContain("anonymně zapisuje, jak se hraje");
+    // Upozornění říká, že záznam odchází autorům hry, co v něm je a že jde vypnout.
+    expect(await upozorneni.innerText()).toContain("anonymně odesílá autorům záznam hraní");
+    expect(await upozorneni.innerText()).toContain("Záznam jde kdykoli vypnout");
     expect(await stranka.locator("#zaznam-hrani").isChecked()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/a0-upozorneni-na-denik.png` });
     await upozorneni.locator('[data-akce="zaznam-rozumim"]').click();
@@ -159,6 +161,11 @@ describe("deník z průchodu úrovní", () => {
     // Hráč přišel přes přehled a upozornění už potvrdil: v okně se zadáním se neopakuje.
     expect(await stranka.locator('#okno-zadani [data-udaj="zaznam-upozorneni"]').isVisible()).toBe(false);
     await stranka.locator('#okno-zadani[open] button[value="zavrit"]').click();
+
+    // Klik do prázdného výkresu není úprava mostu: do deníku se jako změna stavby nezapíše.
+    const prazdno = await bodSveta(4, 4);
+    await stranka.mouse.click(prazdno.x, prazdno.y);
+    expect(await telo("pruty")).toBe("0");
 
     // Mostovka ze dvou dílů a věšadlo nad ní, jako referenční most první úrovně.
     await tahni([0, 0], [4, 0]);
@@ -218,9 +225,12 @@ describe("zpětná vazba", () => {
     const okno = stranka.locator("#okno-vazba");
     await okno.waitFor({ state: "visible" });
     expect(await akce("vazba-odeslat").isDisabled()).toBe(true);
-    expect(await udaj("vazba-prilohy")).toContain("Přiložit můj most");
+    expect(await udaj("vazba-prilohy")).toContain("Přiložit můj most a poslední kroky z této úrovně");
+    expect(await stranka.locator("#vazba-prilohy").isChecked()).toBe(true);
+    expect(await udaj("vazba-pocet")).toBe("0 / 4000 znaků");
     await okno.locator('input[name="vazba-druh"][value="obtiznost"]').check();
     await stranka.locator("#vazba-text").fill("První úroveň je akorát, ale nevěděl jsem, že se dá táhnout z kotvy.");
+    expect(await udaj("vazba-pocet")).toBe("67 / 4000 znaků");
     await okno.locator('[data-hodnoceni="4"]').click();
     await stranka.screenshot({ path: `${SLOZKA}/a1-zpetna-vazba.png` });
     // Klávesy v okně patří textu, ne hře: mezerník nepustí zkoušku.
@@ -228,7 +238,7 @@ describe("zpětná vazba", () => {
     expect(await telo("rezim")).toBe("zkouska");
     await akce("vazba-odeslat").click();
     await expect.poll(() => okno.getAttribute("data-odeslano")).toBe("ano");
-    expect(await udaj("vazba-hlaseni")).toMatch(/^Díky! Zpráva dorazila pod číslem \d{8}T\d{6}-[0-9a-f]{6}\.$/);
+    expect(await udaj("vazba-hlaseni")).toBe("Díky, zpráva dorazila.");
     expect(zadosti.vazba).toBe(1);
 
     const klice = await sklad.klice("vazba/");
@@ -244,12 +254,20 @@ describe("zpětná vazba", () => {
 
   it("s vypnutým záznamem hra neodešle nic, zpětnou vazbu ale poslat jde", async () => {
     await akce("upravit").click();
-    await stranka.locator('#obrazovka-uroven .lista [data-akce="vazba"]').click();
+    // „Napiš nám“ je v liště i dole v paletě; v úzkém okně zůstane jen to v paletě.
+    await stranka.setViewportSize({ width: 1100, height: 720 });
+    expect(await stranka.locator('#obrazovka-uroven .lista [data-akce="vazba"]').isVisible()).toBe(false);
+    await stranka.screenshot({ path: `${SLOZKA}/a5-uzke-okno.png` });
+    await stranka.setViewportSize({ width: 1280, height: 720 });
+    expect(await stranka.locator('#obrazovka-uroven .lista [data-akce="vazba"]').isVisible()).toBe(true);
+    await stranka.locator('#obrazovka-uroven .paleta [data-akce="vazba"]').click();
     const okno = stranka.locator("#okno-vazba");
     await okno.waitFor({ state: "visible" });
-    expect(await udaj("vazba-zaznam")).toContain("anonymně zapisuje");
+    expect(await udaj("vazba-zaznam")).toContain("anonymně odesílá autorům");
     await akce("vazba-zaznam").click();
     expect(await udaj("vazba-zaznam")).toBe("Anonymní záznam hraní je vypnutý.");
+    // Kdo záznam vypnul, tomu se kroky ze hry ke zprávě samy nepřikládají.
+    expect(await stranka.locator("#vazba-prilohy").isChecked()).toBe(false);
     expect(await telo("denik")).toBe("vypnuto");
     await okno.locator('button[value="zavrit"]').click();
     // Vypnutí samo se ještě odešle; počkáme na něj a od té chvíle počítáme.
@@ -274,14 +292,20 @@ describe("zpětná vazba", () => {
 
     // Zpětná vazba je výslovná zpráva od hráče: odejde i teď, v přehledu bez mostu.
     await stranka.locator('#obrazovka-prehled [data-akce="vazba"]').click();
-    expect(await udaj("vazba-prilohy")).toContain("Přiložit posledních pár kroků");
+    expect(await udaj("vazba-prilohy")).toContain("Přiložit poslední kroky z této stránky");
+    expect(await stranka.locator("#vazba-prilohy").isChecked()).toBe(false);
     await stranka.locator("#vazba-text").fill("Chtělo by to víc úrovní.");
     await stranka.locator("#vazba-kontakt").fill("hrac@example.org");
     expect(await stranka.locator(".vazba__poznamka").innerText()).toContain("E-mail uvidíme jen u této zprávy");
     // Enter v poli s e-mailem zprávu odešle (dřív okno zavřel a zpráva se ztratila).
     await stranka.locator("#vazba-kontakt").press("Enter");
     await expect.poll(() => stranka.locator("#okno-vazba").getAttribute("data-odeslano")).toBe("ano");
-    expect(await sklad.klice("vazba/")).toHaveLength(2);
+    expect(await udaj("vazba-hlaseni")).toBe("Díky, zpráva dorazila. Odpovědět ti můžeme na uvedený e-mail.");
+    const klice = await sklad.klice("vazba/");
+    expect(klice).toHaveLength(2);
+    // Bez zaškrtnutí šla jen zpráva: žádný most ani kroky ze hry.
+    const bezPriloh = (await Promise.all(klice.map((k) => sklad.cti(k)))) as EvidovanaVazba[];
+    expect(bezPriloh.find((v) => v.kontakt === "hrac@example.org")).not.toHaveProperty("udalosti");
     expect(zadosti.denik).toBe(predtim);
     await stranka.locator('#okno-vazba button[value="zavrit"]').click();
 
@@ -298,7 +322,7 @@ describe("zpětná vazba", () => {
 });
 
 describe("hráč, který přijde rovnou do úrovně", () => {
-  it("vidí upozornění na záznam i po zavření zadání, v paletě; vypnutím zmizí a nic dalšího neodejde", async () => {
+  it("vidí upozornění na záznam i po zavření zadání, v paletě; po vypnutí mu hra potvrdí, že nic dalšího neodejde", async () => {
     const novyHrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const okno = await novyHrac.newPage();
     try {
@@ -312,8 +336,12 @@ describe("hráč, který přijde rovnou do úrovně", () => {
       await okno.screenshot({ path: `${SLOZKA}/a4-upozorneni-v-palete.png` });
       const predtim = zadosti.denik;
       await vPalete.locator('[data-akce="zaznam-vypnout"]').click();
-      expect(await vPalete.isVisible()).toBe(false);
       expect(await okno.locator("body").getAttribute("data-denik")).toBe("vypnuto");
+      // Na místě upozornění zůstane potvrzení, dokud ho hráč neodklikne.
+      expect(await vPalete.innerText()).toContain("Záznam hraní je vypnutý a nic dalšího se neodesílá");
+      expect(await vPalete.locator('[data-akce="zaznam-vypnout"]').isVisible()).toBe(false);
+      await vPalete.locator('[data-akce="zaznam-rozumim"]').click();
+      expect(await vPalete.isVisible()).toBe(false);
       // Odejde jediná dávka s jedinou událostí: že hráč záznam vypnul.
       await expect.poll(() => zadosti.denik).toBe(predtim + 1);
       const davky = (await prijateDavky()).filter((d) => d.udalosti.some((u) => u.druh === "denik.vypnut"));
@@ -324,6 +352,28 @@ describe("hráč, který přijde rovnou do úrovně", () => {
       expect(zadosti.denik).toBe(predtim + 1);
     } finally {
       await novyHrac.close();
+    }
+  });
+});
+
+describe("odkaz bez záznamu", () => {
+  it("adresa s ?zaznam=vypnout záznam v prohlížeči potichu vypne: neodejde nic, ani zpráva o vypnutí", async () => {
+    const zadavatel = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const okno = await zadavatel.newPage();
+    try {
+      const predtim = zadosti.denik;
+      await okno.goto(`${adresa}?uroven=1-02&zaznam=vypnout`);
+      await okno.locator(PLATNO).waitFor();
+      expect(await okno.locator("body").getAttribute("data-denik")).toBe("vypnuto");
+      expect(await okno.locator('#okno-zadani [data-udaj="zaznam-upozorneni"]').isVisible()).toBe(false);
+      // Vypnutí platí dál i bez parametru v adrese.
+      await okno.goto(adresa);
+      await okno.locator(".karta").first().waitFor();
+      expect(await okno.locator("#zaznam-hrani").isChecked()).toBe(false);
+      await okno.waitForTimeout(300);
+      expect(zadosti.denik).toBe(predtim);
+    } finally {
+      await zadavatel.close();
     }
   });
 });
@@ -352,14 +402,16 @@ describe("stránka správce", () => {
     expect(await stranka.locator("#vazba-text").innerText()).toContain("táhnout z kotvy");
     expect(await stranka.locator("#vazba-udaje").innerText()).toContain("4 z 5");
     expect(await stranka.locator("#vazba-most").isVisible()).toBe(true);
-    expect(await stranka.locator("#vazba-uroven").getAttribute("href")).toBe("/?uroven=1-01");
+    // Hra se ze správy otevírá v novém panelu a s vypnutým záznamem.
+    expect(await stranka.locator("#vazba-uroven").getAttribute("href")).toBe("/?uroven=1-01&zaznam=vypnout");
+    expect(await stranka.locator("#vazba-uroven").getAttribute("target")).toBe("_blank");
     expect(await stranka.locator("#vazba-udalosti").innerText()).toContain("zkouska.konec");
     await stranka.screenshot({ path: `${SLOZKA}/a2-sprava-zpetna-vazba.png` });
 
     await stranka.locator('#vazba-stavy [data-stav="vyreseno"]').click();
     await stranka.locator("#vazba-poznamka").fill("Nápověda k tažení z kotvy doplněna do zadání.");
     await stranka.locator("#vazba-ulozit").click();
-    await expect.poll(() => stranka.locator("#hlaseni").innerText()).toMatch(/^Uloženo: .* je vyřešeno\.$/);
+    await expect.poll(() => stranka.locator("#hlaseni").innerText()).toMatch(/^Uloženo: .* – stav „vyřešeno“\.$/);
     expect(await stranka.locator("#filtr-stavu").innerText()).toContain("vyřešeno (1)");
     const ulozene = (await Promise.all((await sklad.klice("vazba/")).map((k) => sklad.cti(k)))) as EvidovanaVazba[];
     expect(ulozene.find((v) => v.druh === "obtiznost")).toMatchObject({ stav: "vyreseno", poznamka: "Nápověda k tažení z kotvy doplněna do zadání." });
@@ -385,8 +437,9 @@ describe("stránka správce", () => {
     await stranka.locator('[data-zalozka="denik"]').click();
     const dnes = new Date().toISOString().slice(0, 10);
     expect(await stranka.locator("#den").inputValue()).toBe(dnes);
-    expect(await stranka.locator("#den-pocty").innerText()).toMatch(/^2 hráčů \(1 nových, 0 na dotyku\) · 2 sezení/);
-    expect(await stranka.locator("#den-pocty").innerText()).toContain("záznam si vypnulo 2");
+    expect(await stranka.locator("#den-pocty").innerText()).toMatch(/^2 hráči \(z toho nových 1, na dotyku 0\) · 2 sezení/);
+    // První hráč záznam vypnul a zase zapnul; vypnutý ho má jen ten, kdo přišel rovnou do úrovně.
+    expect(await stranka.locator("#den-pocty").innerText()).toContain("záznam si vypnul 1 hráč");
     const souhrn = stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td');
     const bunky = await souhrn.allInnerTexts();
     expect(bunky.slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
@@ -412,6 +465,18 @@ describe("stránka správce", () => {
     await start.click();
     expect(await stranka.locator("#sezeni-most").isVisible()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/a3-sprava-denik.png` });
+
+    // Od zprávy rovnou k sezení, ze kterého ji hráč poslal.
+    await stranka.locator('[data-zalozka="vazby"]').click();
+    await stranka.locator("#vazby tbody tr").first().click();
+    await stranka.locator("#detail-vazby").waitFor({ state: "visible" });
+    const hrac = /Hráč\s+([0-9a-f]{16})/.exec(await stranka.locator("#vazba-udaje").innerText())![1]!;
+    await stranka.locator("#detail-sezeni").evaluate((detail) => ((detail as HTMLElement).hidden = true));
+    await stranka.locator("#vazba-sezeni").click();
+    await stranka.locator("#detail-sezeni").waitFor({ state: "visible" });
+    expect(await stranka.locator('[data-zalozka="denik"]').getAttribute("aria-selected")).toBe("true");
+    expect(await stranka.locator("#sezeni-udaje").innerText()).toContain(hrac);
+    expect(await stranka.locator('#sezeni tbody tr[aria-selected="true"]').innerText()).toContain(hrac);
     // Deník dne jde po potvrzení smazat celý.
     stranka.once("dialog", (dialog) => void dialog.accept());
     await stranka.locator("#smazat-den").click();
@@ -423,5 +488,40 @@ describe("stránka správce", () => {
   it("během celého průchodu prohlížeč nehlásil žádnou chybu", () => {
     // Odmítnuté přihlášení správce prohlížeč ohlásí jako chybu sítě; ta je záměrná.
     expect(chyby.filter((c) => !c.includes("401"))).toEqual([]);
+  });
+});
+
+describe("zkouška, kterou hra nepustí", () => {
+  it("most dražší než rozpočet se nezkouší a deník si zapíše proč", async () => {
+    const hrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const puvodni = stranka;
+    stranka = await hrac.newPage();
+    try {
+      await stranka.goto(`${adresa}?uroven=1-01`);
+      await stranka.locator(PLATNO).waitFor();
+      await stranka.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      // Mostovka a nad ní zbytečně vysoká a hustá konstrukce z trámů: přes 45 000 Kč.
+      await tahni([0, 0], [4, 0]);
+      await tahni([4, 0], [8, 0]);
+      await stranka.locator('.paleta__prvky button[data-prvek="drevo-lehke"]').click();
+      for (const [od, k] of [[[0, 0], [4, 2]], [[4, 2], [8, 0]], [[0, 0], [4, 4]], [[4, 4], [8, 0]], [[4, 0], [4, 2]], [[4, 2], [4, 4]]] as [[number, number], [number, number]][]) {
+        await tahni(od, k);
+      }
+      expect(await telo("pruty")).toBe("8");
+      await stranka.locator(PLATNO).focus();
+      await stranka.keyboard.press("Space");
+      expect(await telo("rezim")).toBe("stavba");
+      expect(await stranka.locator(".vykres__hlaseni").innerText()).toContain("rozpoč");
+      // Odchod z úrovně deník odešle.
+      await stranka.goto(adresa);
+      await stranka.locator(".karta").first().waitFor();
+      const odmitnuta = await pockejNaUdalost("zkouska.odmitnuta");
+      expect(odmitnuta).toMatchObject({ uroven: "1-01", data: { duvod: "nad-rozpocet", pokus: null } });
+      expect(odmitnuta.data!.cena).toBeGreaterThan(45_000);
+      expect((await prijateUdalosti()).some((u) => u.druh === "zkouska.start")).toBe(false);
+    } finally {
+      stranka = puvodni;
+      await hrac.close();
+    }
   });
 });

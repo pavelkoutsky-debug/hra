@@ -1827,3 +1827,39 @@ body[data-rezim="stavba"] .uroven .legenda {
     flex-shrink: 0.2;
   }
 }
+
+/* Počet znaků pod textem zpětné vazby; u konce místa se zvýrazní. */
+.vazba__pocet {
+  margin: 2px 0 0 !important;
+  color: var(--popisek);
+  font-size: 11px;
+  text-align: right;
+}
+
+.vazba__pocet[data-plny="true"] {
+  color: var(--varovani);
+}
+
+/* Poděkování po odeslání není varování. */
+#okno-vazba[data-odeslano="ano"] .okno__hlaseni {
+  color: var(--cara-silna);
+}
+
+/* „Napiš nám“ je i dole v paletě; v úzkém okně v liště úrovně chybí místo, zůstane jen tam. */
+.paleta__tlacitko--vazba {
+  flex-shrink: 0;
+  margin-top: 10px;
+}
+
+@media (max-width: 1180px) {
+  .lista .lista__vazba {
+    display: none;
+  }
+}
+
+/* Telefon: v liště přehledu zůstane název hry a tlačítka. */
+@media (max-width: 560px) {
+  .hra--prehled .lista__oddil {
+    display: none;
+  }
+}

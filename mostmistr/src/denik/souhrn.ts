@@ -48,7 +48,7 @@ export interface SouhrnDeniku {
   /** Chyby hlášené prohlížečem a odeslané zpětné vazby. */
   chyb: number;
   vazeb: number;
-  /** Hráči, kteří si záznam hraní vypnuli. */
+  /** Hráči, kteří si záznam hraní vypnuli a do konce období ho znovu nezapnuli. */
   vypnuli: number;
   /** Nejčastější chyby: text a počet, nejvýš deset. */
   chyby: { zprava: string; pocet: number }[];
@@ -74,10 +74,11 @@ export interface HracVeVytahu {
   sezeni: string[];
   novy: boolean;
   dotyk: boolean;
-  vypnul: boolean;
+  /** Poslední, co hráč se záznamem udělal: true vypnul, false znovu zapnul, null nic z toho. */
+  vypnul: boolean | null;
 }
 
-export const VERZE_VYTAHU = 1;
+export const VERZE_VYTAHU = 2;
 /**
  * Nejvíc různých textů chyb, které si výtah pamatuje; další se sčítají pod „ostatní“. Strop
  * chrání výtah před zahlcením vymyšlenými daty; běžný den k němu nedojde. Nad ním už sloučení
@@ -195,19 +196,24 @@ function novyHracVUrovni(): HracVUrovni {
   };
 }
 
-const novyHrac = (): HracVeVytahu => ({ sezeni: [], novy: false, dotyk: false, vypnul: false });
+const novyHrac = (): HracVeVytahu => ({ sezeni: [], novy: false, dotyk: false, vypnul: null });
+
+/** Porovnání dvou textů po znacích (stejné, jakým se řadí klíče v úložišti). */
+const poradiTextu = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
- * Výtah z dávek deníku. Dávky nemusejí být seřazené; řadí se podle hráče, začátku sezení
- * (podle hodin hráče) a pořadí, tedy tak, jak se hrálo, a stejně, jak jdou za sebou klíče
- * v úložišti. Na pořadí záleží u „zkoušek do prvního průchodu“.
+ * Výtah z dávek deníku. Dávky nemusejí být seřazené; řadí se podle času, kdy je server
+ * přijal (dávky ze serveru ho nesou v `prijato`), pak podle hráče, začátku sezení (podle
+ * hodin hráče) a pořadí. Je to pořadí, ve kterém se hrálo, a zároveň pořadí klíčů dávek
+ * v úložišti. Záleží na něm u „zkoušek do prvního průchodu“ a u vypnutí záznamu.
  */
-export function vytahDeniku(davky: readonly DavkaDeniku[]): VytahDeniku {
+export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })[]): VytahDeniku {
   const serazene = [...davky].sort(
     (a, b) =>
-      a.hlavicka.hrac.localeCompare(b.hlavicka.hrac) ||
+      poradiTextu(typeof a.prijato === "string" ? a.prijato : "", typeof b.prijato === "string" ? b.prijato : "") ||
+      poradiTextu(a.hlavicka.hrac, b.hlavicka.hrac) ||
       (a.hlavicka.zacatek ?? 0) - (b.hlavicka.zacatek ?? 0) ||
-      a.hlavicka.sezeni.localeCompare(b.hlavicka.sezeni) ||
+      poradiTextu(a.hlavicka.sezeni, b.hlavicka.sezeni) ||
       a.poradi - b.poradi,
   );
   const v = prazdnyVytah();
@@ -217,6 +223,7 @@ export function vytahDeniku(davky: readonly DavkaDeniku[]): VytahDeniku {
     const data = u.data ?? {};
     if (u.druh === "sezeni.start" && !anoZ(data.navrat)) oHraci.novy = true;
     else if (u.druh === "denik.vypnut") oHraci.vypnul = true;
+    else if (u.druh === "denik.zapnut") oHraci.vypnul = false;
     else if (u.druh === "chyba") {
       v.chyb += 1;
       prictiChybu(v.chyby, (textZ(data.zprava) ?? "neznámá chyba").slice(0, NEJDELSI_CHYBA), 1);
@@ -269,8 +276,9 @@ export function vytahDeniku(davky: readonly DavkaDeniku[]): VytahDeniku {
 }
 
 /**
- * Sloučí výtahy do jednoho. Na pořadí záleží jen u „do prvního průchodu“: výtahy mají jít
- * za sebou tak, jak se hrálo (dny vzestupně, části jednoho dne v pořadí klíčů dávek).
+ * Sloučí výtahy do jednoho. Na pořadí záleží u „do prvního průchodu“ a u vypnutí záznamu:
+ * výtahy mají jít za sebou tak, jak se hrálo (dny vzestupně, části jednoho dne v pořadí
+ * klíčů dávek).
  */
 export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
   const s = prazdnyVytah();
@@ -284,7 +292,7 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
       for (const sezeni of o.sezeni) if (!cil.sezeni.includes(sezeni)) cil.sezeni.push(sezeni);
       cil.novy ||= o.novy;
       cil.dotyk ||= o.dotyk;
-      cil.vypnul ||= o.vypnul;
+      if (o.vypnul !== null && o.vypnul !== undefined) cil.vypnul = o.vypnul;
     }
     for (const [uroven, hraci] of Object.entries(v.urovne)) {
       const cilUrovne = (s.urovne[uroven] ??= slovnik());
@@ -360,7 +368,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
     udalosti: v.udalosti,
     chyb: v.chyb,
     vazeb: v.vazeb,
-    vypnuli: hraci.filter((h) => h.vypnul).length,
+    vypnuli: hraci.filter((h) => h.vypnul === true).length,
     chyby: Object.entries(v.chyby)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
