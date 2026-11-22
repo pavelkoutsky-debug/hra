@@ -309,11 +309,12 @@ describe("automatické dopnutí lan", () => {
     const zavesy = dopnuty.pruty.filter((p) => p.prvek === "lano").map((p) => p.predpeti!);
     expect(Math.min(...zavesy)).toBeLessThan(-1);
     expect(Math.max(...zavesy)).toBeGreaterThan(1);
-    // Hlavy pylonů: vodorovně na místě do pár milimetrů.
+    // Hlavy pylonů: vodorovně na místě do centimetru (šestnáctimetrový pylon se o tolik nakloní
+    // bez povšimnutí; přesnější srovnání by stálo zbytečný tah v kotevních lanech).
     const s = sestavSoustavu(sestavMost(visuta, dopnuty).popis);
     expect(najdiKlid(s, volneStupne(s), TIHOVE_ZRYCHLENI)).toBe(true);
     dopnuty.stycniky.forEach((st, i) => {
-      if (st.y === 16 && (st.x === -4 || st.x === 76)) expect(Math.abs(s.x[i]! - st.x)).toBeLessThan(0.005);
+      if (st.y === 16 && (st.x === -4 || st.x === 76)) expect(Math.abs(s.x[i]! - st.x)).toBeLessThan(0.01);
     });
     // Skutečný tah v nosném laně odpovídá vzorci pro parabolu H = q·L²/(8·f) aspoň řádově:
     // mostovka s vybavením váží 4 240 kg/m, rozpětí lana 80 m, průvěs kolem 12 m.
@@ -428,5 +429,219 @@ describe("nadměrný náklad", () => {
     const konec = zpravy.at(-1)!;
     expect(konec.typ).toBe("konec");
     if (konec.typ === "konec") expect(konec.vysledek).toMatchObject({ pruchod: true, ucastniku: 3, prejelo: 3 });
+  }, 60_000);
+});
+
+describe("nálezy nezávislých recenzí M4b", () => {
+  const nakresli = (e: Editor, prvek: Parameters<Editor["zvolPrvek"]>[0], od: [number, number], k: [number, number]): boolean => {
+    e.zvolPrvek(prvek);
+    e.stiskni(B(od[0], od[1]));
+    e.tahni(B(k[0], k[1]));
+    return e.pust();
+  };
+  const klikni = (e: Editor, x: number, y: number): void => {
+    e.stiskni(B(x, y));
+    e.pust();
+  };
+  /** Visutý most s nosným lanem nataženým rovně mezi hlavami pylonů ve výšce `vyska`. */
+  const rovneLano = (vyska: number): NavrhMostu => {
+    const k = new Kreslic("4-04");
+    for (let x = 0; x < 72; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+    for (const x of [-4, 76]) k.prut("pilir", [x, 0], [x, vyska]);
+    const body: [number, number][] = [[-4, vyska], ...Array.from({ length: 11 }, (_, i): [number, number] => [6 * (i + 1), vyska]), [76, vyska]];
+    for (let i = 0; i + 1 < body.length; i++) k.prut("lano-nosne", body[i]!, body[i + 1]!);
+    for (const bod of body.slice(1, -1)) k.prut("lano", bod, [bod[0], 0]);
+    k.prut("lano-nosne", [-4, vyska], [-18, 0]);
+    k.prut("lano-nosne", [76, vyska], [90, 0]);
+    return k.navrh();
+  };
+  const dobehni = (uroven: Uroven, navrh: NavrhMostu): Zkouska => {
+    const z = new Zkouska(uroven, navrh, nasadaUrovne(uroven));
+    for (let i = 0; i < 400 && !z.hotovo; i++) z.pokracuj(1);
+    return z;
+  };
+
+  it("na základ patří jen pilíř a pilíř nejde položit", () => {
+    const uroven = udoli();
+    const e = new Editor(uroven, prazdnyNavrh(uroven.id));
+    // Ocelový sloup ze základu by pilíř nahradil; základ je jen patka pilíře.
+    expect(nakresli(e, "ocel-tezka", [30, -10], [30, 0])).toBe(false);
+    expect(e.posledniDuvod).toBe("zaklad-jen-pilir");
+    expect(nakresli(e, "pilir", [30, -10], [30, 0])).toBe(true);
+    // Nakloněný pilíř ano (4 m do strany na 8 m výšky), ležící ne.
+    expect(nakresli(e, "pilir", [30, 0], [34, 8])).toBe(true);
+    expect(nakresli(e, "pilir", [30, 0], [36, 6])).toBe(false);
+    expect(e.posledniDuvod).toBe("pilir-sikmy");
+    // Vzpěra z hlavy pilíře je v pořádku.
+    expect(nakresli(e, "ocel-tezka", [30, 0], [24, 6])).toBe(true);
+    expect(zkontrolujNavrh(e.navrh, uroven)).toEqual([]);
+  });
+
+  it("dlouhý tah mostovky nebo pilíře se rozdělí na díly; vzpěra a tah mimo rastr ne", () => {
+    const uroven = udoli();
+    const e = new Editor(uroven, prazdnyNavrh(uroven.id));
+    // Celá mostovka jedním tahem: deset šestimetrových dílů a jeden krok zpět.
+    e.zvolPrvek("mostovka-ocelobeton");
+    e.stiskni(B(0, 0));
+    e.tahni(B(60, 0));
+    expect(e.tah).toMatchObject({ duvod: null, dilu: 10 });
+    expect(e.pust()).toBe(true);
+    expect(e.navrh.pruty).toHaveLength(10);
+    expect(e.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60]);
+    expect(zkontrolujNavrh(e.navrh, uroven)).toEqual([]);
+    e.zpet();
+    expect(e.navrh.pruty).toHaveLength(0);
+    // Pilíř ze základu až nad mostovku: dva díly po třinácti metrech nejdou, tři po 8,67 m
+    // neleží na rastru… dvacet čtyři metrů jsou dva dvanáctimetrové.
+    expect(nakresli(e, "pilir", [30, -10], [30, 14])).toBe(true);
+    expect(e.navrh.pruty.map((p) => p.prvek)).toEqual(["pilir", "pilir"]);
+    // Ocelová vzpěra se nedělí: kloub uprostřed by ji zlomil.
+    expect(nakresli(e, "ocel-tezka", [30, 14], [10, 14])).toBe(false);
+    expect(e.posledniDuvod).toBe("prut-dlouhy");
+    // Šikmá mostovka, jejíž dělicí body neleží na rastru, se odmítne jako dřív.
+    e.zvolPrvek("mostovka-ocelobeton");
+    e.stiskni(B(0, 0));
+    e.tahni(B(7, 1));
+    expect(e.tah).toMatchObject({ duvod: "prut-dlouhy" });
+    expect(e.pust()).toBe(false);
+  });
+
+  it("právě nakreslené lano se volbou jiného prvku nepřepíše a zrcadlení neomezí", () => {
+    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    expect(nakresli(e, "pilir", [-4, 0], [-4, 12])).toBe(true);
+    expect(nakresli(e, "lano-nosne", [-4, 12], [6, 8])).toBe(true);
+    expect(e.vybranePruty.size).toBe(1);
+    // Hráč jde kreslit závěsy: nosné lano zůstává nosným a výběr zmizí.
+    expect(e.zvolPrvek("lano")).toBe(false);
+    expect(e.navrh.pruty.map((p) => p.prvek)).toEqual(["pilir", "lano-nosne"]);
+    expect(e.vybranePruty.size).toBe(0);
+    expect(e.posledniDuvod).toBeNull();
+    // Závěs je po nakreslení zase vybraný; zrcadlí se přesto celý most, ne jen on.
+    expect(nakresli(e, "lano", [6, 8], [6, 0])).toBe(true);
+    expect(e.zrcadliJenVyber).toBe(false);
+    expect(e.zrcadli()).toBe(true);
+    expect(e.navrh.pruty.map((p) => p.prvek).sort()).toEqual(["lano", "lano", "lano-nosne", "lano-nosne", "pilir", "pilir"]);
+  });
+
+  it("lano vybrané kliknutím přepsat jde a napínák si přitom nechá stejnou délku", () => {
+    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    nakresli(e, "pilir", [-4, 0], [-4, 12]);
+    nakresli(e, "lano", [-4, 12], [6, 12]);
+    e.zmenPredpeti(25);
+    const pred = e.navrh.pruty.find((p) => p.prvek === "lano")!;
+    const zkraceni = zkraceniLana("lano", 10, pred.predpeti!);
+    expect(zkraceni).toBeGreaterThan(0.02);
+    // Kliknutí na lano je výslovný výběr: volba prvku ho změní.
+    klikni(e, 1, 12);
+    expect(e.zrcadliJenVyber).toBe(true);
+    expect(e.zvolPrvek("lano-nosne")).toBe(true);
+    const po = e.navrh.pruty.find((p) => p.prvek === "lano-nosne")!;
+    expect(po.id).toBe(pred.id);
+    expect(zkraceniLana("lano-nosne", 10, po.predpeti!)).toBeCloseTo(zkraceni, 4);
+    // Lano změněné na ocel napínák ztrácí.
+    expect(e.zvolPrvek("ocel-lehka")).toBe(true);
+    expect(e.navrh.pruty.find((p) => p.id === pred.id)!.predpeti).toBeUndefined();
+  });
+
+  it("u různě nastavených lan ukáže napínák oba krajní stavy", () => {
+    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    nakresli(e, "pilir", [-4, 0], [-4, 12]);
+    nakresli(e, "lano", [-4, 12], [6, 12]);
+    e.zmenPredpeti(-90);
+    nakresli(e, "lano", [-4, 12], [6, 6]);
+    e.zmenPredpeti(-20);
+    e.vyberVse();
+    const vyber = e.predpetiVyberu!;
+    expect(vyber.ruzne).toBe(true);
+    expect(Math.round(1000 * vyber.nejmensiZkraceni)).toBeLessThan(-50);
+    expect(Math.round(1000 * vyber.zkraceni)).toBeGreaterThan(-20);
+  });
+
+  it("nosné lano natažené rovně dopnutí nepřetíží: přizná, že tvar nedrží, a zkouška skončí obyčejným pádem", () => {
+    const navrh = rovneLano(12);
+    const dopnuti = dopniLana(visuta, navrh)!;
+    // Bez průvěsu by lano muselo nést mnohonásobek pevnosti; dopnutí zůstane u bezpečné meze.
+    expect(dopnuti.tah).toBeLessThan(0.8);
+    expect(dopnuti.po).toBeGreaterThan(0.1);
+    expect(dopnuti.po).toBeLessThan(dopnuti.pred);
+    const vysledek = dobehni(visuta, sPredpetim(navrh, dopnuti.predpeti)).vysledek();
+    expect(vysledek.rozpad).toBe(false);
+    expect(vysledek.pruchod).toBe(false);
+  }, 60_000);
+
+  it("lano dotažené do krajnosti se přetrhne už při napínání a výpočet se nerozpadne", () => {
+    const ref = RESENI["4-03"]!.pruchod;
+    let poradi = -1;
+    const pretazeny = { ...ref, pruty: ref.pruty.map((p) => (p.prvek === "lano" && ++poradi === 1 ? { ...p, predpeti: 45 } : p)) };
+    const z = new Zkouska(zavesena, pretazeny, nasadaUrovne(zavesena));
+    const prvni = z.pokracuj(0.05).udalosti.filter((u) => u.druh === "poruseni");
+    // Přetržení je první událostí v čase nula a patří přetaženému lanu.
+    expect(prvni[0]).toMatchObject({ cas: 0, prut: pretazeny.pruty.findIndex((p) => p.predpeti === 45) });
+    for (let i = 0; i < 400 && !z.hotovo; i++) z.pokracuj(1);
+    expect(z.hotovo).toBe(true);
+    expect(z.vysledek()).toMatchObject({ rozpad: false, pruchod: false });
+    // Stejné lano v rovném nosném laně visutého mostu (stav, který dřív nabízelo samo dopnutí).
+    const rovny = rovneLano(12);
+    const napnuty = { ...rovny, pruty: rovny.pruty.map((p) => (p.prvek === "lano-nosne" ? { ...p, predpeti: 50 } : p)) };
+    expect(dobehni(visuta, napnuty).vysledek()).toMatchObject({ rozpad: false, pruchod: false });
+  }, 120_000);
+
+  it("silná lana s malým tahem dopnutí nekazí a nikdy most nenechá horší, než byl", () => {
+    const uroven = udoli();
+    // Vějíř z nosných lan: sílu v laně určuje tíha mostovky a je to jen pár procent pevnosti.
+    const k = new Kreslic();
+    for (let x = 0; x < 60; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+    k.prut("pilir", [30, -10], [30, 0]);
+    k.prut("pilir", [30, 0], [30, 12]);
+    k.prut("pilir", [30, 12], [30, 16]);
+    for (const x of [0, 6, 12, 18, 24, 36, 42, 48, 54, 60]) k.prut("lano-nosne", [30, 16], [x, 0], { predpeti: 0.05 });
+    const navrh = k.navrh();
+    const dopnuti = dopniLana(uroven, navrh)!;
+    expect(dopnuti.pred).toBeLessThan(0.01);
+    expect(dopnuti.po).toBeLessThan(0.002);
+    expect(dopnuti.po).toBeLessThanOrEqual(dopnuti.pred);
+    // Dopnutý most znovu dopnout: výsledek se nezhorší.
+    const znovu = dopniLana(uroven, sPredpetim(navrh, dopnuti.predpeti))!;
+    expect(znovu.po).toBeLessThanOrEqual(dopnuti.po + 1e-9);
+  }, 60_000);
+
+  it("volně visící lano mostu klidovou polohu nebere; samotné povolené lano zkoušku nezasekne", () => {
+    const ref = RESENI["4-03"]!.pruchod;
+    const hlava = ref.stycniky.find((st) => st.x === 30 && st.y === 16)!.id;
+    const volny = Math.max(...ref.stycniky.map((st) => st.id)) + 1;
+    const sLanem: NavrhMostu = {
+      ...ref,
+      stycniky: [...ref.stycniky, { id: volny, x: 36, y: 16 }],
+      pruty: [...ref.pruty, { id: Math.max(...ref.pruty.map((p) => p.id)) + 1, a: hlava, b: volny, prvek: "lano", predpeti: 0.05 }],
+    };
+    const s = sestavSoustavu(sestavMost(zavesena, sLanem).popis);
+    expect(najdiKlid(s, volneStupne(s), TIHOVE_ZRYCHLENI)).toBe(true);
+    expect(dopniLana(zavesena, sLanem)).not.toBeNull();
+    expect(dobehni(zavesena, sLanem).vysledek()).toMatchObject({ pruchod: true, bezRovnovahy: false });
+    // Jediné povolené lano mezi kotvami, bez provozu: krok výpočtu je platné číslo a zkouška doběhne.
+    const lano: NavrhMostu = {
+      verze: 3,
+      uroven: "4-04",
+      stycniky: [{ id: 0, x: -18, y: 0 }, { id: 1, x: 0, y: 0 }],
+      pruty: [{ id: 0, a: 0, b: 1, prvek: "lano", predpeti: -0.05 }],
+    };
+    const z = dobehni({ ...visuta, jizdniRad: [] }, lano);
+    expect(z.hotovo).toBe(true);
+    expect(z.simulace.dt).toBeGreaterThan(0);
+    expect(z.vysledek().rozpad).toBe(false);
+  }, 120_000);
+
+  it("most s vratkou klidovou polohou dopnout nejde", () => {
+    const uroven = udoli();
+    // Vzpínadlo z lan pod kloubovou mostovkou: stojí jen na ostří nože.
+    const k = new Kreslic();
+    for (let x = 0; x < 60; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+    k.prut("pilir", [30, -10], [30, 0]);
+    for (const od of [0, 30]) {
+      const body: [number, number][] = [[od, 0], [od + 6, -2], [od + 12, -3], [od + 18, -3], [od + 24, -2], [od + 30, 0]];
+      for (let i = 0; i + 1 < body.length; i++) k.prut("lano", body[i]!, body[i + 1]!, { predpeti: 0.05 });
+      for (const bod of body.slice(1, -1)) k.prut("ocel-lehka", bod, [bod[0], 0]);
+    }
+    expect(dopniLana(uroven, k.navrh())).toBeNull();
   }, 60_000);
 });

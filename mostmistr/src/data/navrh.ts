@@ -169,6 +169,8 @@ export type DruhProblemu =
   | "prvek-neni-hotovy"
   | "svar-nepovoleny"
   | "pilir-mimo-zaklad"
+  | "pilir-sikmy"
+  | "zaklad-jen-pilir"
   | "stycnik-v-terenu"
   | "prut-v-zakazane-zone"
   | "zavazi-nepovolene"
@@ -245,6 +247,16 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     }
     if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {
       problemy.push({ druh: "prut-v-zakazane-zone", prut: p.id });
+    }
+    if (polozka.druh === "pilir") {
+      // Pilíř je sloup: smí se naklonit, ale ne ležet. Položený by sloužil jako betonový trám
+      // několikrát únosnější než mostovka, a to pilíř ve hře být nemá.
+      if (2 * Math.abs(b.x - a.x) > Math.abs(b.y - a.y)) problemy.push({ druh: "pilir-sikmy", prut: p.id });
+    } else {
+      // Základ je patka pilíře; jiný prut do něj nevede (opěry a kotvy lan jsou kotvy úrovně).
+      const naZaklade = (s: StycnikNavrhu): boolean =>
+        uroven.zaklady.some((z) => z.x === s.x && z.y === s.y) && !uroven.kotvy.some((k) => k.x === s.x && k.y === s.y);
+      if (naZaklade(a) || naZaklade(b)) problemy.push({ druh: "zaklad-jen-pilir", prut: p.id });
     }
   }
   for (const id of pilireMimoZaklad(navrh, uroven)) problemy.push({ druh: "pilir-mimo-zaklad", prut: id });

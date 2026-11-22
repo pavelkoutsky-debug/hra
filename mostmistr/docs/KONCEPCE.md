@@ -123,7 +123,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Prvek | K čemu je |
 |---|---|
 | Napínák lana | Lanu se nastaví předpětí. Ladí se tím tvar a tuhost zavěšených a visutých mostů. *(M4b: hráč nastavuje délku lana po milimetrech, „dotaženo o 47 mm“ nebo „povoleno o 7 mm“, a hra k tomu ukazuje tah v laně pod vlastní tíhou mostu. Závěsy visutého mostu se musí umět o desítky centimetrů zkrátit i prodloužit, což jako podíl pevnosti nejde vyjádřit.)* |
-| Automatické dopnutí | Tlačítko, které lana napne tak, aby mostovka pod vlastní tíhou držela nakreslený tvar. Napínák pak slouží k ručnímu doladění. *(M4b: hlídá i to, aby se pylony nenakláněly a žádné lano neviselo. Tvar nosného lana visutého mostu určuje zatížení, ne výkres; dopnutí mu přizpůsobí délky závěsů.)* |
+| Automatické dopnutí | Tlačítko, které lana napne tak, aby mostovka pod vlastní tíhou držela nakreslený tvar. Napínák pak slouží k ručnímu doladění. *(M4b: hlídá i to, aby se pylony nenakláněly, žádné lano neviselo a žádné neneslo pod vlastní tíhou mostu přes 70 % pevnosti; tvar, který by lana udržela jen za cenu přetížení, nedotáhne a řekne proč. Tvar nosného lana visutého mostu určuje zatížení, ne výkres; dopnutí mu přizpůsobí délky závěsů.)* |
 | Viskózní tlumič | Prut, který klade odpor rychlosti. Tlumí kmitání. Rozsah nastavení je omezený. *(M3a: 5 až 200 kN·s/m v devíti stupních.)* |
 | Pružina | Prut s volitelnou tuhostí. |
 | Závaží | Hmota ve styčníku. Protizávaží zvedacích mostů a hmota laděných tlumičů. |
@@ -500,6 +500,7 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M3b Dav a analýza** | Dav, běžecký závod, průvod, skákající dav, laděný tlumič, analytický panel, rezonanční křivka, budič, grafy, záznam porušení, porovnání pokusů, kapitola 5 | Laděný tlumič v testu rozdělí rezonanční špičku; úrovně projdou testem vyhratelnosti |
 | **M4a Těžká doprava** | Nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka, kapitola 3 | Dynamické zvýšení od nerovností odpovídá očekávanému rozsahu; úrovně projdou |
 | **M4b Velká rozpětí** | Lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby, kapitola 4 | Visutý a zavěšený referenční most unese kolonu kamionů; úrovně projdou |
+| **M4c Zpětná vazba a deník hraní** | Okno pro zpětnou vazbu hráče přímo ve hře (s přiloženým mostem a posledním děním), anonymní deník hraní (úrovně, úpravy mostu, zkoušky a jejich výsledky, chyby), ukládání na Netlify, stránka správce s evidencí a stavem řešení. *(Přidáno na přání zadavatele 22. 11. 2026.)* | Zpětná vazba odeslaná ve hře se objeví na stránce správce se stavem „nová“ a jde označit za vyřešenou; deník z průchodu úrovní obsahuje stavbu, zkoušky i výsledek; s vypnutým záznamem hra neodešle nic |
 | **M5 Železnice** | Kolejiště, lokomotiva, vagóny, dvoupatrové mosty, kapitola 6 | Nákladní vlak přejede referenční most; úrovně projdou |
 | **M6 Pohyblivé mosty** | Písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 | Most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou |
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |

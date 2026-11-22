@@ -156,7 +156,7 @@ const CS = {
   "paleta.napinak.nazev": "Napínák lana",
   "paleta.napinak.cena": "v ceně lana",
   "paleta.napinak.prvek.popis": "Zkracuje nebo prodlužuje lano. Dotažené lano víc táhne a most je tužší",
-  "paleta.napinak.navod": "Klikni na lano, kterému chceš nastavit napínák. Dotáhneš ho a povolíš tlačítky − a + vlevo dole.",
+  "paleta.napinak.navod": "Klikni na lano, kterému chceš nastavit napínák. Tlačítkem + ho dotáhneš, tlačítkem − povolíš (se Shiftem po centimetrech).",
   "paleta.napinak.bezLan": "Napínák patří na lano. Nejdřív nějaké natáhni.",
   "paleta.napinak": "Napínák lana",
   "paleta.napinak.min": "Povolit lano o milimetr (se Shiftem o centimetr)",
@@ -164,8 +164,9 @@ const CS = {
   "paleta.napinak.dotazeno": "dotaženo o {mm} mm",
   "paleta.napinak.povoleno": "povoleno o {mm} mm",
   "paleta.napinak.nula": "délka jako na výkresu",
-  "paleta.napinak.ruzne": "nejvíc {zapis}",
+  "paleta.napinak.ruzne": "různě: {od} až {do}",
   "paleta.napinak.tah": "Tah pod vlastní tíhou mostu: {kN} kN, {podil} pevnosti lana.",
+  "paleta.napinak.tah.pretizeno": "Tah pod vlastní tíhou mostu: {kN} kN, {podil} pevnosti lana. Tolik lano neunese a přetrhne se; povol napínák.",
   "paleta.napinak.tah.visi": "Pod vlastní tíhou mostu lano visí povolené a nic nenese.",
   "paleta.napinak.tah.pocitaSe": "Tah v laně se počítá…",
   "paleta.napinak.tah.bezKlidu": "Most zatím nemá klidovou polohu, takže tah v laně nejde určit.",
@@ -178,7 +179,11 @@ const CS = {
   "dopnuti.hotovo.bezPred": "Lana jsou dopnutá. Mostovka se pod vlastní tíhou od výkresu liší nejvýš o {po} mm.",
   "dopnuti.zbylo":
     "Lana jsou dopnutá, jak to šlo, ale mostovka se od výkresu pořád liší až o {po} mm. Nosné lano se pod tíhou vyrovná do oblouku; nakresli ho tak rovnou a dopni lana znovu.",
-  "dopnuti.nejde": "Lana se dopnout nepodařilo: most nemá klidovou polohu, nebo lana nemají na co působit.",
+  "dopnuti.pretizeno":
+    "Lana mostovku do výkresu nedotáhnou: musela by nést víc, než bezpečně unesou (už teď {podil} své pevnosti). Mostovka zůstává až {po} mm pod výkresem. Dej nosnému lanu větší průvěs (prověs ho mezi pylony do oblouku), nebo postav vyšší pylony, a dopni lana znovu.",
+  "dopnuti.nejde":
+    "Lana dopnout nejde: část mostu nic nedrží, takže nemá klidovou polohu. Zavěs na lano každý styčník mostovky (nebo mostovku svař) a zkontroluj, že lana vedou až ke kotvám nebo pylonům.",
+  "zrcadleni.jenVyber": "Zrcadlí se jen vybrané pruty. Pro celý most zruš výběr (Esc) a zrcadli znovu.",
   "paleta.svar.nazev": "Svar",
   "paleta.svar.cena": "{zaPrut} za každý prut",
   "paleta.svar.prvek.popis": "Tuhý spoj: pruty se ve styčníku nemůžou natáčet a přenášejí ohyb (S)",
@@ -275,7 +280,15 @@ const CS = {
   "namahani.ohyb": "moment {velicina} kNm při únosnosti {unosnost} kNm",
   "namahani.smyk": "posouvající síla {velicina} kN při únosnosti {unosnost} kN",
   "namahani.soubeh": "{co}; s ostatním namáháním dohromady {mira}",
-  "vysledek.prvni": "Jako první selhal prut {prut} ({prvek}): {zpusob}, {co}.",
+  "namahani.vycerpano": "{co}; prut se v tom místě trvale ohýbal, až povolil",
+  "vysledek.prvni": "Jako první selhal prut {prut} ({prvek}): {co}.",
+  "vysledek.prvni.obstal": "Most obstál, i když prut {prut} ({prvek}) nevydržel: {co}.",
+  "vysledek.prvni.bezRovnovahy": "Most se začal skládat hned, pod vlastní tíhou; první povolil prut {prut} ({prvek}): {co}.",
+  "vysledek.prvni.napinani":
+    "Prut {prut} ({prvek}) se přetrhl už při napínání: napínák ho dotáhl na {nasobek}násobek pevnosti. Povol ho, nebo nech lana dopnout znovu (N).",
+  "vysledek.nasledek.lano": "lano se přetrhlo",
+  "vysledek.autobus.bezHodnoceni": "{zrychleni} m/s² · {trida} · v čase {cas} · tady se nehodnotí",
+  "vysledek.autobus.nemereno": "neměřeno: autobus po celém mostě nepřejel",
   "vysledek.prvni.sjeti": "Jako první sjel konec mostu z posuvné podpory.",
   "vysledek.prehratPoruseni": "Přehrát první porušení zpomaleně",
   "frekvence.nadpis": "Frekvence",
@@ -471,6 +484,8 @@ const CS = {
   "duvod.prvek-neni-hotovy": "Tento prvek hra zatím neumí.",
   "duvod.svar-nepovoleny": "Svary v této úrovni nejsou povolené.",
   "duvod.pilir-mimo-zaklad": "Pilíř musí stát na základu vyznačeném ve výkresu, nebo na jiném pilíři.",
+  "duvod.pilir-sikmy": "Pilíř je sloup: smí se naklonit nejvýš o polovinu své výšky, položit nejde.",
+  "duvod.zaklad-jen-pilir": "Na základ patří jen pilíř. Vzpěry, lana i mostovku veď z pilíře nebo z opěr.",
   "duvod.stycnik-v-terenu": "Pod povrchem terénu se staví jen z kotev.",
   "duvod.zavazi-nepovolene": "Tolik závaží do jednoho styčníku tato úroveň nedovoluje.",
   "duvod.ladeny-tlumic-nepovoleny": "Tak těžký laděný tlumič tato úroveň nedovoluje.",
@@ -526,7 +541,10 @@ const CS = {
   "vysledek.shrnuti.cast": "Přejelo {prejelo} z {pocet}, spadlo {spadlo}.",
   "vysledek.shrnuti.bezProvozu": "Most stál jen pod vlastní tíhou.",
   "vysledek.shrnuti.rozpad": "Simulace se numericky rozpadla a výsledek neplatí. Pošli mi prosím diagnostiku.",
-  "vysledek.bezRovnovahy": "Most nemá pod vlastní tíhou klidovou polohu: chybí mu ztužení nebo podpora.",
+  "vysledek.nedopnuto":
+    "Lana nejsou dopnutá: mostovka už před zkouškou visela {mm} mm pod výkresem. Zkus Dopnout lana (N).",
+  "vysledek.bezRovnovahy":
+    "Most nemá pod vlastní tíhou klidovou polohu: některé styčníky nic nepodpírá, nebo chybí ztužení. Sleduj při přehrání, kde se začne prolamovat.",
   "vysledek.cena": "Cena",
   "vysledek.vyuziti": "Největší využití",
   "vysledek.vyuzitiPrutu": "{vyuziti} · prut {prut}, {zpusob}, v čase {cas}",
@@ -614,7 +632,7 @@ const CS = {
   "zadani.4-03":
     "Šedesát metrů a jediný základ uprostřed údolí. Postav na něj vysoký pilíř, pylon, a z jeho hlavy natáhni lana do styčníků mostovky: tak vypadá zavěšený most. Lano umí jen táhnout a smí měřit až šedesát metrů. Nezapomeň na lana do opěr na obou koncích; drží hlavu pylonu, když kolona zatíží jen půlku mostu. Tlačítko Dopnout lana (N) nastaví napínáky tak, aby mostovka pod vlastní tíhou zůstala rovná; jednotlivá lana doladíš položkou Napínák lana. Na ose frekvencí uvidíš, že povolená lana visí a most je měkký, kdežto dotažená ho ztuží. Pojede kolona čtyř nákladních aut, autobus a tahač s návěsem.",
   "zadani.4-04":
-    "Sedmdesát dva metrů přes rokli, kde není kam postavit pilíř. Po mostě pojede krokem podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: na základech na březích dva pylony, přes jejich hlavy nosné lano prověšené do oblouku a z něj svislé závěsy ke styčníkům mostovky. Za pylony nosné lano ukotvi do kotev v zemi. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
+    "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř. Po mostě pojede krokem podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: na základech na březích dva pylony, přes jejich hlavy nosné lano prověšené do oblouku a z něj svislé závěsy ke styčníkům mostovky. Za pylony nosné lano ukotvi do kotev v zemi. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Nikdo nepochoduje, takže most nerozhoupou tolik jako útvar, ale je jich skoro deset tun a těžší most kmitá pomaleji. Na ose frekvencí proto sleduj i druhý trojúhelník, most s lidmi. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s². Tlačítkem Analýza dole otevřeš rezonanční křivku, která ukazuje, jak silně most na který rytmus odpoví.",
   "zadani.5-02":

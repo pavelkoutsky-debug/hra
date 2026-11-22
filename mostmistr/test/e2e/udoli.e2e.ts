@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { chromium, type Browser, type Page } from "playwright";
 import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Kreslic } from "../../src/data/kreslic";
 import { navrhNaText, navrhZTextu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 
@@ -254,6 +255,9 @@ describe("na lanech: zavěšený most, napínák a dopnutí", () => {
     expect(await telo("pruty")).toBe("4");
     const nastaveni = stranka.locator('[data-nastaveni="predpeti"]');
     expect(await nastaveni.isVisible()).toBe(true);
+    // Nastavení napínáku je na dohled i v okně vysokém 720 px, kde je paleta delší než obrazovka.
+    const tlacitkoPlus = (await akce("predpeti-plus").boundingBox())!;
+    expect(tlacitkoPlus.y + tlacitkoPlus.height).toBeLessThanOrEqual(720);
     // Lano dlouhé 26,8 m s výchozím předpětím 5 % je o 12,5 mm kratší než nakreslené.
     expect(await udaj("predpeti")).toBe("dotaženo o 13 mm");
     expect(await telo("predpeti")).toBe("0.050");
@@ -325,6 +329,10 @@ describe("náklad století: visutý most", () => {
     expect(await udaj("zadani-provoz")).toContain("nadměrný náklad zleva");
     expect(await udaj("zadani-stavba")).toContain("Nosné lano: 6 000 Kč/m · do 60 m");
     expect(await udaj("zadani-skutecnost")).toContain("Çanakkale");
+    // Dlouhé zadání se v okně vysokém 720 px posouvá, tlačítko ale zůstává na dohled.
+    const ramTlacitka = (await stranka.locator('#okno-zadani button[value="zavrit"]').boundingBox())!;
+    expect(ramTlacitka.y + ramTlacitka.height).toBeLessThanOrEqual(720);
+    await stranka.screenshot({ path: `${SLOZKA}/97b-zadani-nizke-okno.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await stranka.locator('.paleta__prvky button[data-prvek="lano-nosne"]').innerText()).toContain("Nosné lano");
 
@@ -350,6 +358,46 @@ describe("náklad století: visutý most", () => {
     await stranka.keyboard.press("c");
     expect(await naKonec()).toBe("MOST OBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (3).");
+  }, 360_000);
+
+  it("nové nosné lano se volbou závěsů nepřepíše a rovné lano dopnutí přizná", async () => {
+    await otevri("4-04");
+
+    // Pylony, mostovka a nosné lano natažené rovně mezi hlavami pylonů; závěsy zatím chybí.
+    const k = new Kreslic("4-04");
+    for (let x = 0; x < 72; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+    for (const x of [-4, 76]) k.prut("pilir", [x, 0], [x, 12]);
+    const body: [number, number][] = [[-4, 12], ...Array.from({ length: 11 }, (_, i): [number, number] => [6 * (i + 1), 12]), [76, 12]];
+    for (let i = 1; i + 1 < body.length; i++) k.prut("lano-nosne", body[i]!, body[i + 1]!);
+    k.prut("lano-nosne", [-4, 12], [-18, 0]);
+    k.prut("lano-nosne", [76, 12], [90, 0]);
+    await nactiMost(navrhNaText(k.navrh()));
+    const prutuPred = Number(await telo("pruty"));
+
+    // Poslední díl nosného lana hráč dokreslí a sáhne v paletě po závěsech: díl zůstává nosným lanem.
+    await stranka.locator('.paleta__prvky button[data-prvek="lano-nosne"]').click();
+    await tahni([-4, 12], [6, 12]);
+    expect(Number(await telo("pruty"))).toBe(prutuPred + 1);
+    const cenaPred = await udaj("cena");
+    await stranka.locator('.paleta__prvky button[data-prvek="lano"]').click();
+    expect(await udaj("cena")).toBe(cenaPred);
+    expect((await mostNaVykresu()).pruty.at(-1)!.prvek).toBe("lano-nosne");
+    expect(await stranka.locator('[data-nastaveni="predpeti"]').isVisible()).toBe(false);
+    for (const [x] of body.slice(1, -1)) await tahni([x, 12], [x, 0]);
+    expect((await mostNaVykresu()).pruty.filter((p) => p.prvek === "lano")).toHaveLength(11);
+
+    // Rovné lano by muselo nést mnohonásobek pevnosti: dopnutí to řekne a poradí průvěs.
+    await stranka.keyboard.press("Escape");
+    await akce("dopnout").click();
+    await stranka.locator('body[data-dopnuti="hotovo"]').waitFor({ timeout: 90_000 });
+    expect(await hlaseni()).toMatch(/^Lana mostovku do výkresu nedotáhnou: musela by nést víc, než bezpečně unesou \(už teď \d\d % své pevnosti\)\. Mostovka zůstává až \d+ mm pod výkresem\./);
+    await stranka.screenshot({ path: `${SLOZKA}/99d-rovne-lano-dopnuti.png` });
+    // Zkouška skončí obyčejným pádem, ne rozpadem výpočtu, a poradí dopnutí.
+    await spust();
+    expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    expect(await udaj("vysledek-shrnuti")).toContain("Lana nejsou dopnutá: mostovka už před zkouškou visela");
+    await stranka.screenshot({ path: `${SLOZKA}/99e-rovne-lano-vysledek.png` });
+    await akce("upravit").click();
   }, 360_000);
 
   it("během celé kapitoly prohlížeč nehlásil žádnou chybu", () => {
