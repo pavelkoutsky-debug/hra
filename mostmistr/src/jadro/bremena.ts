@@ -100,6 +100,11 @@ export interface Bremena {
   /** Břemeno je vypnuté (1): s trasou se nestýká a nic nepřenáší, například po pádu z mostu. */
   vypnuto: Uint8Array;
   /**
+   * Podélná síla na mostovku jako násobek tlaku kola, kladná ve směru +x. Brzdící kolo
+   * tlačí vozovku dopředu silou (zpomalení / g) × tlak, rozjíždějící se ji tlačí dozadu.
+   */
+  podelna: Float64Array;
+  /**
    * Jak moc se mostovka pod břemenem houpe: vyhlazená velikost její svislé rychlosti, m/s.
    * Vede se jen u břemen s budicí silou (lidí); podle ní člověk ztrácí krok.
    */
@@ -134,6 +139,7 @@ export function vytvorBremena(trasa: Trasa, popisy: readonly PopisBremene[], pro
     sila: new Float64Array(n),
     prvek: new Int32Array(n).fill(BEZ_OPORY),
     vypnuto: new Uint8Array(n),
+    podelna: new Float64Array(n),
     houpani: new Float64Array(n),
     dt: 0,
   };
@@ -338,7 +344,7 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
       if (tlak < 0 && uzel >= 0) tlak = 0;
     }
     sila[i] = tlak;
-    if (e >= 0 && tlak !== 0) pridejSiluNaPrvek(s, e, xi, 0, -tlak);
+    if (e >= 0 && tlak !== 0) pridejSiluNaPrvek(s, e, xi, b.podelna[i]! * tlak, -tlak);
   }
 }
 

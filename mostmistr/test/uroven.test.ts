@@ -245,7 +245,7 @@ describe("verze formátu úrovně", () => {
       budic: false,
       nejhorsiKomfort: 3,
     };
-    const trasa = (zaklad.trasy as { id: string }[])[0]!.id;
+    const trasa = (platna().trasy as { id: string }[])[0]!.id;
     const jizda = { cas: 0, trasa, smer: 1, druh: "nakladni" };
     const u = nactiUroven({
       ...zaklad,

@@ -33,6 +33,8 @@ export interface ModelUcastnika {
   rozestup: number;
   /** Kroková síla chodce: frekvence v Hz a amplitudy harmonických (sin, cos) v newtonech. */
   buzeni?: { frekvence: number; amplitudy: number[] };
+  /** Výška těžiště vozidla nad vozovkou, m; podle ní se při brzdění přitíží přední náprava. */
+  teziste?: number;
 }
 
 const g = 9.80665;
@@ -231,6 +233,7 @@ function auto(): ModelUcastnika {
     rychlost: 50 / 3.6,
     delka: 4.4,
     rozestup: 14,
+    teziste: 0.55,
     napravy: [naprava(0.9, 0.55), naprava(3.6, 0.45)],
   };
 }
@@ -267,12 +270,14 @@ function vozidlo(
   rozestup: number,
   pneu: Pneumatika,
   vyskaKaroserie: number,
+  teziste: number,
   napravy: readonly NapravaVozu[],
 ): ModelUcastnika {
   return {
     rychlost,
     delka,
     rozestup,
+    teziste,
     napravy: napravy.map((n): Naprava => {
       const odpruzena = n.zatizeni - n.neodpruzena;
       return {
@@ -291,7 +296,7 @@ function vozidlo(
  * nápravě; karoserie se houpe kolem 1,5 Hz s útlumem 30 %.
  */
 function dodavka(): ModelUcastnika {
-  return vozidlo(50 / 3.6, 6, 18, PNEU_DODAVKY, 0.45, [
+  return vozidlo(50 / 3.6, 6, 18, PNEU_DODAVKY, 0.45, 0.9, [
     { odstup: 1, zatizeni: 1600, neodpruzena: 110, frekvence: 1.5, utlum: 0.3, pneumatik: 2 },
     { odstup: 4.7, zatizeni: 1900, neodpruzena: 160, frekvence: 1.5, utlum: 0.3, pneumatik: 2 },
   ]);
@@ -303,7 +308,7 @@ function dodavka(): ModelUcastnika {
  * se houpe kolem 1,2 Hz s útlumem 25 %.
  */
 function autobus(): ModelUcastnika {
-  return vozidlo(40 / 3.6, 12, 30, PNEU_NAKLADNI, 0.55, [
+  return vozidlo(40 / 3.6, 12, 30, PNEU_NAKLADNI, 0.55, 1.2, [
     { odstup: 2.7, zatizeni: 6500, neodpruzena: 650, frekvence: 1.2, utlum: 0.25, pneumatik: 2 },
     { odstup: 8.7, zatizeni: 11500, neodpruzena: 1150, frekvence: 1.2, utlum: 0.25, pneumatik: 4 },
   ]);
@@ -315,7 +320,7 @@ function autobus(): ModelUcastnika {
  * 2,8 Hz s útlumem 12 %. To je pásmo, ve kterém kmitají silniční mosty středních rozpětí.
  */
 function nakladni(): ModelUcastnika {
-  return vozidlo(40 / 3.6, 9.2, 24, PNEU_NAKLADNI, 0.6, [
+  return vozidlo(40 / 3.6, 9.2, 24, PNEU_NAKLADNI, 0.6, 1.5, [
     { odstup: 1.4, zatizeni: 7000, neodpruzena: 650, frekvence: 2.8, utlum: 0.12, pneumatik: 2 },
     { odstup: 5.9, zatizeni: 9500, neodpruzena: 1100, frekvence: 2.8, utlum: 0.12, pneumatik: 4 },
     { odstup: 7.25, zatizeni: 9500, neodpruzena: 1100, frekvence: 2.8, utlum: 0.12, pneumatik: 4 },
@@ -330,7 +335,7 @@ function nakladni(): ModelUcastnika {
  */
 function souprava(): ModelUcastnika {
   const naves = 22000 / 3;
-  return vozidlo(40 / 3.6, 16.5, 34, PNEU_NAKLADNI, 0.6, [
+  return vozidlo(40 / 3.6, 16.5, 34, PNEU_NAKLADNI, 0.6, 1.6, [
     { odstup: 1.4, zatizeni: 6500, neodpruzena: 650, frekvence: 2.6, utlum: 0.12, pneumatik: 2 },
     { odstup: 5, zatizeni: 11500, neodpruzena: 1150, frekvence: 1.6, utlum: 0.2, pneumatik: 4 },
     { odstup: 10.6, zatizeni: naves, neodpruzena: 700, frekvence: 1.6, utlum: 0.2, pneumatik: 2 },

@@ -186,3 +186,91 @@ describe("jízda po silničním mostě", () => {
     expect(zkouska.vysledek()).toMatchObject({ pruchod: true, ucastniku: 3, prejelo: 3, spadlo: 0, poruseni: 0 });
   }, 120_000);
 });
+
+describe("brzdění na mostě", () => {
+  const brzda = { misto: 16, stani: 2 };
+  const jizda: PolozkaJizdnihoRadu = { cas: 0, trasa: "silnice", smer: 1, druh: "nakladni", brzdeni: brzda };
+
+  it("vůz zastaví čelem v určeném místě, postojí a rozjede se", () => {
+    const zkouska = new Zkouska(silnice([jizda]), prihradovyMost(), 1);
+    const u = zkouska.ucastnici[0]!;
+    const b = u.brzdeni!;
+    const v = 40 / 3.6;
+    // Brzdí 5 m/s², takže brzdná dráha je v²/2a a brzdění trvá v/a; rozjíždí se 1,5 m/s².
+    expect(b.zpomaleni).toBe(5);
+    expect(b.stoji - b.od).toBeCloseTo(v / 5, 9);
+    expect(b.rozjezd - b.stoji).toBeCloseTo(2, 9);
+    expect(b.jede - b.rozjezd).toBeCloseTo(v / 1.5, 9);
+    const s = zkouska.simulace.soustava;
+    const predni = u.kola[0]!;
+    // Čelo vozu je 1,4 m před přední nápravou.
+    const celo = (): number => s.x[predni]! + 1.4;
+    while (zkouska.simulace.cas < b.stoji + 1) zkouska.simulace.krok();
+    expect(celo()).toBeCloseTo(16, 1);
+    expect(s.vx[predni]).toBe(0);
+    // Dvě sekundy po rozjezdu jede 3 m/s (plné rychlosti dosáhne až za mostem).
+    while (zkouska.simulace.cas < b.rozjezd + 2) zkouska.simulace.krok();
+    expect(s.vx[predni]).toBeCloseTo(3, 1);
+    const vysledek = dojed(zkouska);
+    expect(vysledek).toMatchObject({ pruchod: true, prejelo: 1, spadlo: 0, poruseni: 0 });
+    // Zkouška trvá o stání a ztrátu při brzdění a rozjezdu déle než plynulý průjezd.
+    const plynule = dojed(new Zkouska(silnice([{ cas: 0, trasa: "silnice", smer: 1, druh: "nakladni" }]), prihradovyMost(), 1));
+    expect(vysledek.trvani - plynule.trvani).toBeCloseTo(2 + v / 10 + v / 3, 0);
+  }, 60_000);
+
+  it("brzdná síla jde přes mostovku do pevné podpory: hmotnost krát zpomalení", () => {
+    const zkouska = new Zkouska(silnice([jizda]), prihradovyMost(), 1);
+    const b = zkouska.ucastnici[0]!.brzdeni!;
+    const bremena = zkouska.provoz.bremena[0]!;
+    // Uprostřed brzdění tlačí kola vozovku dopředu polovinou své tíhy (5 m/s² je 0,51 g).
+    while (zkouska.simulace.cas < (b.od + b.stoji) / 2) zkouska.simulace.krok();
+    let tlak = 0;
+    for (let i = 0; i < bremena.pocet; i++) {
+      expect(bremena.podelna[i]).toBeCloseTo(5 / g, 12);
+      tlak += bremena.sila[i]!;
+    }
+    expect(tlak / (26000 * g)).toBeGreaterThan(0.85);
+    expect(tlak / (26000 * g)).toBeLessThan(1.15);
+    // Přední náprava je přitížená, zadní odlehčené.
+    expect(bremena.sila[0]! / (7000 * g)).toBeGreaterThan(1.2);
+    expect((bremena.sila[1]! + bremena.sila[2]!) / (19000 * g)).toBeLessThan(0.95);
+    const vysledek = dojed(zkouska);
+    const pevna = vysledek.reakce.find((r) => r.stycnik === 0)!;
+    // Největší vodorovná reakce pevné podpory odpovídá brzdné síle 26 t × 5 m/s² = 130 kN.
+    expect(pevna.vodorovna / 1000).toBeGreaterThan(100);
+    expect(pevna.vodorovna / 1000).toBeLessThan(190);
+    const bezBrzdeni = dojed(new Zkouska(silnice([{ cas: 0, trasa: "silnice", smer: 1, druh: "nakladni" }]), prihradovyMost(), 1));
+    expect(bezBrzdeni.reakce.find((r) => r.stycnik === 0)!.vodorovna / 1000).toBeLessThan(20);
+  }, 60_000);
+
+  it("kolona brzdí naráz a drží rozestupy; protisměr zastaví čelem na druhou stranu", () => {
+    const zkouska = new Zkouska(
+      silnice([
+        { cas: 0, trasa: "silnice", smer: 1, druh: "nakladni", pocet: 2, rozestup: 12, brzdeni: { misto: 20, stani: 1 } },
+        { cas: 0, trasa: "silnice", smer: -1, druh: "dodavka", brzdeni: { misto: 6, stani: 1, zpomaleni: 4 } },
+      ]),
+      prihradovyMost(),
+      1,
+    );
+    const [prvni, druhy, dodavka] = zkouska.ucastnici;
+    expect(druhy!.brzdeni).toEqual(prvni!.brzdeni);
+    expect(dodavka!.brzdeni!.zpomaleni).toBe(4);
+    const s = zkouska.simulace.soustava;
+    while (zkouska.simulace.cas < prvni!.brzdeni!.stoji + 0.5) zkouska.simulace.krok();
+    expect(s.x[prvni!.kola[0]!]! + 1.4).toBeCloseTo(20, 1);
+    expect(s.x[prvni!.kola[0]!]! - s.x[druhy!.kola[0]!]!).toBeCloseTo(12, 6);
+    while (zkouska.simulace.cas < dodavka!.brzdeni!.stoji + 0.5) zkouska.simulace.krok();
+    // Dodávka jede doleva: její čelo je metr vlevo od přední nápravy.
+    expect(s.x[dodavka!.kola[0]!]! - 1).toBeCloseTo(6, 1);
+    expect(dojed(zkouska)).toMatchObject({ pruchod: true, ucastniku: 3, prejelo: 3, spadlo: 0 });
+  }, 60_000);
+
+  it("chodců se brzdění netýká: údaj se u lidí přehlíží", () => {
+    const zkouska = new Zkouska(
+      silnice([{ cas: 0, trasa: "silnice", smer: 1, druh: "chodec", brzdeni: { misto: 10, stani: 5 } }]),
+      prihradovyMost(),
+      1,
+    );
+    expect(zkouska.ucastnici[0]!.brzdeni).toBeUndefined();
+  });
+});
