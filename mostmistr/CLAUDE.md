@@ -35,7 +35,9 @@ Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po zm�
 - **Kmitání a komfort.** Zrychlení mostovky měří `src/jadro/komfort.ts`; nad 2,5 m/s² most neobstojí a úroveň může chtít i lepší třídu (`nejhorsiKomfort`). Lidé na mostě ho sami tlumí a při silném kmitání ztrácejí krok, takže úrovně s rezonancí se ladí simulací se skutečnou násadou úrovně, ne odhadem.
 - **Nerovnost vozovky.** Úroveň má třídu `nerovnost` (`zadna`, A, B, C); profil silnice vyrábí `src/jadro/nerovnost.ts` z násady úrovně jen aritmetikou a jedou po něm kola, ne chodci. Úrovně kapitol 1, 2 a 5 jsou vyladěné na rovné vozovce (`zadna`) a tak mají zůstat. Nerovnost zvětšuje jen účinek vozidla; u těžkého mostu je to pár procent celkového namáhání, takže úroveň s ní neraď „od oka“.
 - **Těžké mosty nesou hlavně sebe.** Ocelobetonová mostovka váží přes čtyři tuny na metr. Příhrada pod ní je zhruba dvakrát účinnější než nad ní (tlak nese beton); když má úroveň učit něco jiného, zakaž prostor pod mostem zónou a ověř referenční mosty v obou polohách.
-- **Lana a dopnutí.** Napínák mění délku lana; v návrhu je to `predpeti` (podíl pevnosti při nehybných koncích, smí být záporné i větší než 1), hráč vidí milimetry a tah z rozboru. Referenční mosty s lany mají napínáky zapsané v `urovne/reseni.ts` (`PREDPETI`) tak, jak je spočítalo `dopniLana`; po změně tvaru takového mostu, úrovně nebo katalogu je spočítej znovu, test `test/lana.test.ts` hlídá, že mostovka pod vlastní tíhou drží tvar. Zavěšený most potřebuje kotevní lana, pylon visutého mostu nesmí stát ve styčníku mostovky a svařená mostovka visutému mostu škodí.
+- **Lana a dopnutí.** Napínák mění délku lana; v návrhu je to `predpeti` (podíl pevnosti při nehybných koncích, smí být záporné i větší než 1), hráč vidí milimetry a tah z rozboru. Referenční mosty s lany mají napínáky zapsané v `urovne/reseni.ts` (`PREDPETI`) tak, jak je spočítalo `dopniLana`; po změně tvaru takového mostu, úrovně nebo katalogu je spočítej znovu, test `test/lana.test.ts` hlídá, že mostovka pod vlastní tíhou drží tvar. Zavěšený most potřebuje kotevní lana, pylon visutého mostu nesmí stát ve styčníku mostovky a svařená mostovka visutému mostu škodí. Dopnutí drží tah lan pod vlastní tíhou mezi 1 % a 70 % pevnosti (`NEJVETSI_KLIDOVY_TAH`) a most nikdy nezhorší; lano, které by ve výchozím stavu neslo přes trojnásobek pevnosti, zkouška přetrhne už v čase nula.
+- **Pilíře a základy.** Pilíř stojí na základu nebo na jiném pilíři a smí se naklonit nejvýš o polovinu výšky; do základu nevede nic jiného než pilíř. Dlouhý tah mostovky nebo pilíře editor sám rozdělí na díly.
+- **Výběr kvůli nastavení.** Lano vybrané samo (po nakreslení, nástrojem Napínák) není výběr k úpravám: volba prvku ho nepřepíše a zrcadlení se jím neomezí (`Editor.zrcadliJenVyber`). Nové samočinné výběry dělej stejně.
 - **Lidé v řadách.** Útvar, dav, závod, průvod a skákající dav vede simulace po řadách (jeden účastník = jedna řada, `PopisUcastnika.lidi`). Všechno, co vidí hráč, počítá lidi, ne řady.
 - **Pokusy.** Brnknutí a budič jsou zkoušky bez provozu (`Beh.pokus`): nepočítají se do medailí, rekordů ani do porovnání pokusů a smějí běžet i na mostě nad rozpočtem.
 - **Každý nový prvek má ukázku.** Zadavatel chce, aby hráč pochopil, proč prvek potřebuje: úroveň, která učí něco nového, má v `urovne/ukazky.ts` dvojici mostů (bez prvku a s ním) a ve slovníku popisek `ukazka.<id>.*` a odstavec `skutecnost.<id>` o skutečných mostech. Fakta ověř vyhledáním; `test/ukazky.test.ts` hlídá, že ukázka předvádí, co tvrdí, a `test/e2e/mesto.e2e.ts` každou ukázku kampaně pustí v prohlížeči (novou úroveň s ukázkou tam přidej do seznamu). Ukázka se počítá s úrovní bez rozpočtu, takže její most smí být dražší; ostatní pravidla úrovně splnit musí, jinak ji zkouška odmítne.
@@ -50,7 +52,16 @@ Před každým pushem musí projít `npm run build` i `npm run test:e2e`. Po zm�
 
 ## Postup po milnících
 
-Milníky a jejich kritéria jsou v koncepci, kap. 12. Každý milník končí pull requestem do větve `main`. Netlify k němu vyrobí náhled, zadavatel ho vyzkouší a po jeho schválení se sloučí. Hru si sám nezahraješ, proto ke každé úrovni patří referenční řešení a test vyhratelnosti.
+Milníky a jejich kritéria jsou v koncepci, kap. 12. Každý milník končí pull requestem do větve `main` a Netlify k němu vyrobí náhled. Hru si sám nezahraješ, proto ke každé úrovni patří referenční řešení a test vyhratelnosti.
+
+Od 22. 11. 2026 zadavatel nechce u každého milníku čekat na své schválení. Postup je:
+
+1. Milník dodělej a **detailně interně otestuj** (`npm run build`, `npm run test:e2e`, snímky si prohlédni).
+2. Pusť **nezávislé recenze** čerstvými agenty, kteří neznají tvé závěry: aspoň recenzi kódu, hraní nové části očima nováčka v prohlížeči a u změn fyziky nezávislou kontrolu výpočtů. Dej jim kód a cíl, ne svůj názor.
+3. Nálezy ověř a **zapracuj**; co nezapracuješ, zapiš do `docs/STAV.md` s důvodem.
+4. Po zeleném sestavení pull request **slouč sám** a pokračuj dalším milníkem. Zadavateli pošli stručné shrnutí s odkazy.
+
+Výjimka je M9 (zvuky načisto): ty musí zadavatel poslechnout a schválit.
 
 ## Prostředí
 

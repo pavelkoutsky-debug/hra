@@ -49,13 +49,15 @@ function nakresliNahled(canvas: HTMLCanvasElement, uroven: Uroven, uloziste: Ulo
 
 function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Uloziste): HTMLElement {
   const rekord = uloziste.rekord(uroven.id);
-  // Úroveň, kterou hráč už jednou prošel, zůstává odemčená, i když před ni později přibyla
-  // nová kapitola (kapitola 3 se zařadila před dřív vydanou kapitolu 5).
+  // Úroveň, kterou hráč už jednou prošel nebo ve které má rozestavěný most, zůstává odemčená,
+  // i když před ni později přibyla nová kapitola (kapitoly 3 a 4 se zařadily před dřív
+  // vydanou kapitolu 5).
   const odemceno =
     uloziste.odemcenoVse ||
     predchozi === undefined ||
     uloziste.rekord(predchozi.id)?.medaile.pruchod === true ||
-    rekord?.medaile.pruchod === true;
+    rekord?.medaile.pruchod === true ||
+    (uloziste.navrh(uroven.id)?.pruty.length ?? 0) > 0;
 
   const polozka = document.createElement("li");
   polozka.className = "karta";

@@ -279,6 +279,26 @@ export function vlastniTvarySoustavy(s: Soustava, stupne: Int32Array, pocet: num
 }
 
 /**
+ * Nejvyšší úhlová frekvence pro volbu kroku výpočtu. Většinou je to `nejvyssiFrekvence`;
+ * soustava, která v aktuální poloze žádnou tuhost nemá (samá povolená lana), ale mocninnou
+ * metodou žádnou frekvenci nedá. Pak se bere odhad z prvků, jako by byly napnuté: krok musí
+ * vydržet i chvíli, kdy se lana napnou.
+ */
+export function frekvenceProKrokovani(s: Soustava, stupne: Int32Array): number {
+  const omega = nejvyssiFrekvence(s, stupne);
+  if (omega > 0 && omega < Infinity) return omega;
+  let nejvic = 0;
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    const delka = s.klidovaDelka[e]!;
+    const hmota = s.hmotnostNaMetr[e]!;
+    if (!(delka > 0) || !(hmota > 0)) continue;
+    const omega2 = (4 * s.EA[e]!) / (hmota * delka * delka);
+    if (omega2 > nejvic) nejvic = omega2;
+  }
+  return Math.sqrt(nejvic);
+}
+
+/**
  * Nejvyšší vlastní úhlová frekvence soustavy v aktuální poloze mocninnou metodou.
  * Matici nesestavuje: součin K·v získá derivací vnitřních sil ve směru v.
  * Výsledek určuje nejdelší stabilní krok explicitní integrace, 2/ω_max.

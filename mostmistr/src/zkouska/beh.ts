@@ -57,7 +57,7 @@ export class BehZkousky {
         try {
           const prekazky = zkontrolujNavrh(zprava.navrh, zprava.uroven).filter((p) => p.druh !== "nad-rozpocet");
           const vysledek = prekazky.length === 0 ? dopniLana(zprava.uroven, zprava.navrh) : null;
-          if (vysledek) dopnuti = { predpeti: [...vysledek.predpeti], pred: vysledek.pred, po: vysledek.po };
+          if (vysledek) dopnuti = { predpeti: [...vysledek.predpeti], pred: vysledek.pred, po: vysledek.po, tah: vysledek.tah };
         } catch {
           dopnuti = null;
         }

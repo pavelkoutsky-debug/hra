@@ -103,7 +103,7 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     expect(await udaj("hmotnost")).toMatch(/^10\d,\d\st$/);
     await spust();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
-    expect(await udaj("vysledek-prvni")).toMatch(/^Jako první selhal prut \d+ \(lehký ocelový profil\)/);
+    expect(await udaj("vysledek-prvni")).toMatch(/^(Jako první selhal|Most se začal skládat hned, pod vlastní tíhou; první povolil) prut \d+ \(lehký ocelový profil\)/);
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["3-01"]!.mistrovska));
     await spust();

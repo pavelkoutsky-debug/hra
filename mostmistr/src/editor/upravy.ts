@@ -2,7 +2,7 @@
 // nemění, takže historie úprav (zpět a znovu) je jen řada návrhů.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, PREDPETI_LANA, type IdPrvku } from "../data/katalog";
+import { KATALOG, PREDPETI_LANA, predpetiZeZkraceni, zkraceniLana, type IdPrvku } from "../data/katalog";
 import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu, type TlumicStycniku } from "../data/navrh";
 
 export function prazdnyNavrh(idUrovne: string): NavrhMostu {
@@ -68,14 +68,28 @@ export function smaz(navrh: NavrhMostu, pruty: ReadonlySet<number>, stycniky: Re
   return bezOsamelychStycniku({ ...navrh, pruty: zbyle });
 }
 
-/** Změní prvek daných prutů; parametry, které k novému prvku nepatří, zahodí. */
+/**
+ * Změní prvek daných prutů; parametry, které k novému prvku nepatří, zahodí. Lano změněné
+ * na jiné lano si nechá napínák dotažený o stejnou délku.
+ */
 export function zmenPrvek(navrh: NavrhMostu, pruty: Iterable<number>, prvek: IdPrvku): NavrhMostu {
   const menene = new Set(pruty);
   let zmena = false;
   const nove = navrh.pruty.map((p) => {
     if (!menene.has(p.id) || p.prvek === prvek) return p;
     zmena = true;
-    return novyPrut(p.id, p.a, p.b, prvek);
+    const novy = novyPrut(p.id, p.a, p.b, prvek);
+    if (p.predpeti !== undefined && KATALOG[p.prvek].druh === "lano" && KATALOG[prvek].druh === "lano") {
+      const a = navrh.stycniky.find((s) => s.id === p.a);
+      const b = navrh.stycniky.find((s) => s.id === p.b);
+      if (a && b) {
+        const delka = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+        const stejne = predpetiZeZkraceni(prvek, delka, zkraceniLana(p.prvek, delka, p.predpeti));
+        const zaokrouhlene = Math.round(stejne / PREDPETI_LANA.presnost) * PREDPETI_LANA.presnost;
+        novy.predpeti = Math.max(PREDPETI_LANA.nejmensi, Math.min(PREDPETI_LANA.nejvetsi, zaokrouhlene));
+      }
+    }
+    return novy;
   });
   return zmena ? { ...navrh, pruty: nove } : navrh;
 }

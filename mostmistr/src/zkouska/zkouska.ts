@@ -12,8 +12,9 @@ import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
 import { rozhodujiciVelicina, vnitrniSily, ZPUSOB_TAH, ZPUSOB_ZADNY } from "../jadro/namahani";
+import { NASLEDEK_ROZLOMENI } from "../jadro/poruseni";
 import { Simulace, type Zatizeni } from "../jadro/simulace";
-import { sestavSoustavu, type Soustava } from "../jadro/soustava";
+import { LANO, sestavSoustavu, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
 import { pridejKontaktSTerenem, vytvorTeren, type Teren } from "../jadro/teren";
 import { vytvorTrasu } from "../jadro/trasa";
@@ -49,6 +50,9 @@ export interface DavkaZkousky {
   udalosti: Udalost[];
 }
 
+/** Lano napnuté ve výchozím stavu víc než tolikanásobkem své pevnosti se přetrhne už při napínání. */
+const PRETRZENI_PRI_NAPINANI = 3;
+
 export class Zkouska {
   readonly simulace: Simulace;
   readonly provoz: Provoz;
@@ -56,6 +60,8 @@ export class Zkouska {
   readonly trvani: number;
   /** Most neměl pod vlastní tíhou klidovou polohu. */
   readonly bezRovnovahy: boolean;
+  /** Největší svislá odchylka mostovky od výkresu v klidové poloze, m; null bez klidové polohy. */
+  readonly pruvesVKlidu: number | null;
 
   readonly #uroven: Uroven;
   readonly #navrh: NavrhMostu;
@@ -115,6 +121,19 @@ export class Zkouska {
     let stupne = stupneMostu(s);
     // Most s povolenými lany přímý výpočet nenajde; ten se ustálí časovou simulací.
     this.bezRovnovahy = !najdiKlid(s, stupne, tiha);
+    this.pruvesVKlidu = null;
+    if (!this.bezRovnovahy) {
+      const mostovka = new Set(stavba.trasy.flatMap((t) => t.pruty));
+      let nejvic = 0;
+      for (let e = 0; e < s.pocetPrvku; e++) {
+        if (!mostovka.has(s.prut[e]!)) continue;
+        for (const i of [s.prvekA[e]!, s.prvekB[e]!]) {
+          const nakresleny = stavba.popis.stycniky[i];
+          if (nakresleny) nejvic = Math.max(nejvic, Math.abs(s.y[i]! - nakresleny.y));
+        }
+      }
+      this.pruvesVKlidu = nejvic;
+    }
     if (this.bezRovnovahy) {
       s = sestavSoustavu(stavba.popis);
       stupne = stupneMostu(s);
@@ -126,9 +145,10 @@ export class Zkouska {
         vnejsi[svisly] = -brnknuti.sila;
         if (najdiRovnovahu(s, stupne, vnejsi, tiha) < 0) {
           // Síla, kterou most neunese ani staticky: zkusí se bez ní.
+          // (Stejnou cestou jako poprvé: most s povolenými lany přímý výpočet nenajde.)
           s = sestavSoustavu(stavba.popis);
           stupne = stupneMostu(s);
-          najdiRovnovahu(s, stupne, new Float64Array(stupne.length), tiha);
+          najdiKlid(s, stupne, tiha);
         }
       }
     }
@@ -206,6 +226,53 @@ export class Zkouska {
         : TRVANI_BEZ_PROVOZU;
     this.trvani = plan.ucastnici.length > 0 ? plan.konec + DOBEH : bezProvozu;
     if (plan.ucastnici.length === 0) this.#konec = bezProvozu;
+    // Až nakonec: přetržení mění stavbu a ohlašuje to všemu, co se výše připravilo.
+    this.#pretrhniPretazenaLana(s);
+  }
+
+  /**
+   * Lano, které by ve výchozím stavu neslo několikanásobek své pevnosti (napínák dotažený
+   * do krajnosti), se přetrhlo už při napínání: zkouška začíná bez něj a přetržení je
+   * první událostí v čase nula. Díly lana se přitom povolí; jinak by přetržení vymrštilo
+   * zbytek mostu energií, jakou skutečné lano nikdy nepojme, a výpočet by se rozpadl.
+   */
+  #pretrhniPretazenaLana(s: Soustava): void {
+    const dily = new Map<number, number[]>();
+    for (let e = 0; e < s.pocetPrvku; e++) {
+      const prut = s.prut[e]!;
+      if (s.druh[e] !== LANO || prut < 0) continue;
+      const prvky = dily.get(prut);
+      if (prvky) prvky.push(e);
+      else dily.set(prut, [e]);
+    }
+    const delkaPrvku = (e: number): number => {
+      const dx = s.x[s.prvekB[e]!]! - s.x[s.prvekA[e]!]!;
+      const dy = s.y[s.prvekB[e]!]! - s.y[s.prvekA[e]!]!;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+    let pretrzeno = false;
+    for (const [prut, prvky] of dily) {
+      let tah = 0;
+      for (const e of prvky) {
+        tah += Math.max(0, s.tuhostOsova[e]! * (delkaPrvku(e) - s.klidovaDelka[e]! - s.plastDelka[e]!)) / prvky.length;
+      }
+      const unosnost = s.unosnostTah[prvky[0]!]!;
+      if (!(tah > PRETRZENI_PRI_NAPINANI * unosnost)) continue;
+      for (const e of prvky) {
+        const delka = delkaPrvku(e);
+        if (!(delka > 0)) continue;
+        s.klidovaDelka[e] = delka;
+        s.plastDelka[e] = 0;
+        s.tuhostOsova[e] = s.EA[e]! / delka;
+      }
+      this.simulace.pretrhni(
+        { prvek: prvky[prvky.length >> 1]!, prut, zpusob: ZPUSOB_TAH, misto: 2, nasledek: NASLEDEK_ROZLOMENI, mira: tah / unosnost },
+        tah,
+        unosnost,
+      );
+      pretrzeno = true;
+    }
+    if (pretrzeno) this.simulace.poZmeneStavby();
   }
 
   /** Pořadí prutů návrhu, které tvoří mostovku tras. */
@@ -509,6 +576,7 @@ export class Zkouska {
       obalka: this.#obalka.map((o) => ({ ...o })),
       reakce: this.#reakce.map((r) => ({ ...r })),
       bezRovnovahy: this.bezRovnovahy,
+      pruvesVKlidu: this.pruvesVKlidu,
       rozpad,
       trvani: this.simulace.cas,
       kroku: this.simulace.kroku,

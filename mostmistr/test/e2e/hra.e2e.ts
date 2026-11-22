@@ -183,7 +183,8 @@ describe("stavba myší", () => {
   });
 
   it("příliš dlouhý prut nepoloží a řekne proč", async () => {
-    await tahni([0, 0], [6, 2]);
+    // Tah, který nejde rozdělit na stejné díly s konci na rastru (jinak by se mostovka rozdělila sama).
+    await tahni([0, 0], [7, 2]);
     expect(await pocetPrutu()).toBe(2);
     expect(await udaj("hlaseni")).toBe("Příliš dlouhý prut: Dřevěná mostovka měří nejvýš 4 m.");
   });

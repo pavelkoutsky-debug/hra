@@ -206,7 +206,8 @@ export function vytahDeniku(davky: readonly DavkaDeniku[]): VytahDeniku {
     else if (u.druh === "uroven.opustena") zaznam.sekundDriv += cisloZ(data.sekund);
     else if (u.druh === "stavba.zmena" && data.co === "prut") {
       const prvek = textZ(data.prvek);
-      if (prvek !== null) pricti((v.prvky[u.uroven] ??= slovnik()), prvek, 1);
+      // Dlouhý tah rozdělený na díly dal víc prutů najednou.
+      if (prvek !== null) pricti((v.prvky[u.uroven] ??= slovnik()), prvek, Math.max(1, Math.round(cisloZ(data.dilu))));
     } else if (u.druh === "zkouska.konec" && (data.pokus === null || data.pokus === undefined)) {
       zaznam.zkousek += 1;
       if (anoZ(data.pruchod)) {

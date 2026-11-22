@@ -148,11 +148,23 @@ describe("editor", () => {
     expect(e.tah).toMatchObject({ druh: "prut", od: { x: 0, y: 0 } });
     e.tahni(B(3, 0));
     expect(e.tah).toMatchObject({ k: { x: 3, y: 0 }, duvod: null });
-    e.tahni(B(6, 0));
+    // Trám delší, než prvek dovoluje, se odmítne (mostovka by se rozdělila na díly).
+    e.zvolPrvek("drevo-lehke");
+    e.tahni(B(7, 0));
     expect(e.tah).toMatchObject({ duvod: "prut-dlouhy" });
     expect(e.pust()).toBe(false);
     expect(e.navrh.pruty).toHaveLength(0);
     expect(e.posledniDuvod).toBe("prut-dlouhy");
+  });
+
+  it("mostovku delší než jeden díl rozdělí na stejné díly", () => {
+    const { e } = novy();
+    e.stiskni(B(0, 0));
+    e.tahni(B(8, 0));
+    expect(e.tah).toMatchObject({ duvod: null, dilu: 2 });
+    expect(e.pust()).toBe(true);
+    expect(e.navrh.pruty).toHaveLength(2);
+    expect(e.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 4, 8]);
   });
 
   it("z místa, kde nic není, se kreslit nezačne", () => {

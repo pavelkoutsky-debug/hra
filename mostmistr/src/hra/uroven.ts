@@ -4,7 +4,7 @@
 import { cenaNavrhu, hmotnostNavrhu } from "../data/cena";
 import type { Bod } from "../data/geometrie";
 import { jeUvnitr } from "../data/geometrie";
-import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku } from "../data/katalog";
+import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku, NEJVETSI_KLIDOVY_TAH } from "../data/katalog";
 import { ChybaDat } from "../data/kontrola";
 import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
@@ -282,6 +282,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   pomocny.poslouchej((zprava) => {
     if (zprava.typ === "dopnuti") {
       prijmiDopnuti(zprava.id, zprava.dopnuti);
+      return;
+    }
+    // Pád pomocného vlákna: rozpočítané dopnutí už nedorazí, tak ať tlačítko nezůstane zamčené.
+    if (zprava.typ === "chyba" && dopinani) {
+      prijmiDopnuti(dopinani.id, null);
       return;
     }
     if (zprava.typ !== "rozbor" || zprava.id !== idRozboru) return;
@@ -701,6 +706,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   /** Kliknutí při přidávání přídavku: vybere styčník nebo lano a přidá mu, co ještě nemá. */
   function povesPridavek(ktery: Pridavek, bod: Bod): void {
+    editor.posledniDuvod = null;
     if (ktery === "napinak") {
       const prut = editor.prutU(bod);
       const lano = prut === null ? undefined : editor.navrh.pruty.find((p) => p.id === prut);
@@ -741,7 +747,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
    * pravidla, poradí, co chybí.
    */
   function dopniLana(): void {
-    if (rezim !== "stavba" || !smiLana) return;
+    // Dokud se jedno dopnutí počítá, další žádost by jen čekala za ním ve stejném vlákně.
+    if (rezim !== "stavba" || !smiLana || dopinani) return;
     if (editor.pocetLan === 0) {
       ukazHlaseni(t("dopnuti.bezLan"), "info", true);
       return;
@@ -768,7 +775,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (rezim !== "stavba" || editor.navrh !== puvodni) {
       zapis("dopnuti", { vysledek: "zahozeno" });
       document.body.dataset.dopnuti = "zahozeno";
-      skryjHlaseni();
+      // Hlášení „Dopínám lana…“ zmizí; během zkoušky už na liště může být něco jiného.
+      if (rezim === "stavba") skryjHlaseni();
       obnovStavbu();
       return;
     }
@@ -789,8 +797,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     document.body.dataset.dopnuti = "hotovo";
     document.body.dataset.dopnutiOdchylka = (1000 * vysledek.po).toFixed(1);
     const mm = (metry: number): string => cislo(1000 * metry, metry < 0.01 ? 1 : 0);
-    // Odchylka přes dva centimetry znamená, že lana nakreslený tvar splnit neumějí.
-    if (vysledek.po > 0.02) ukazHlaseni(t("dopnuti.zbylo", { po: mm(vysledek.po) }), "varovani", false);
+    // Odchylka přes dva centimetry znamená, že lana nakreslený tvar splnit neumějí: buď by
+    // musela nést víc, než bezpečně unesou (nosné lano je moc rovné), nebo jim tvar nesedí.
+    if (vysledek.po > 0.02 && vysledek.tah >= NEJVETSI_KLIDOVY_TAH - 0.02) {
+      ukazHlaseni(t("dopnuti.pretizeno", { po: mm(vysledek.po), podil: procenta(vysledek.tah) }), "varovani", false);
+    } else if (vysledek.po > 0.02) ukazHlaseni(t("dopnuti.zbylo", { po: mm(vysledek.po) }), "varovani", false);
     else {
       ukazHlaseni(
         Number.isFinite(vysledek.pred)
@@ -814,14 +825,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       delete document.body.dataset.predpeti;
       return;
     }
-    const mm = Math.round(1000 * predpeti.zkraceni);
-    const zapis =
-      mm > 0
-        ? t("paleta.napinak.dotazeno", { mm: cislo(mm, 0) })
-        : mm < 0
-          ? t("paleta.napinak.povoleno", { mm: cislo(-mm, 0) })
-          : t("paleta.napinak.nula");
-    udaj("predpeti").textContent = predpeti.ruzne ? t("paleta.napinak.ruzne", { zapis }) : zapis;
+    const zapisZkraceni = (metry: number): string => {
+      const mm = Math.round(1000 * metry);
+      if (mm > 0) return t("paleta.napinak.dotazeno", { mm: cislo(mm, 0) });
+      return mm < 0 ? t("paleta.napinak.povoleno", { mm: cislo(-mm, 0) }) : t("paleta.napinak.nula");
+    };
+    const zapis = zapisZkraceni(predpeti.zkraceni);
+    const zapisOd = zapisZkraceni(predpeti.nejmensiZkraceni);
+    udaj("predpeti").textContent =
+      predpeti.ruzne && zapisOd !== zapis ? t("paleta.napinak.ruzne", { od: zapisOd, do: zapis }) : zapis;
     document.body.dataset.predpeti = predpeti.predpeti.toFixed(3);
 
     // Tah v klidu: největší z vybraných lan a kolik je to z pevnosti.
@@ -839,7 +851,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       if (nejvetsi >= 0) {
         text =
           nejvetsi > 0
-            ? t("paleta.napinak.tah", { kN: cislo(nejvetsi / 1000, 0), podil: procenta(podil) })
+            ? t(podil > 1 ? "paleta.napinak.tah.pretizeno" : "paleta.napinak.tah", { kN: cislo(nejvetsi / 1000, 0), podil: procenta(podil) })
             : t("paleta.napinak.tah.visi");
         document.body.dataset.tahLana = (nejvetsi / 1000).toFixed(1);
       }
@@ -849,6 +861,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function zvolPrvek(id: IdPrvku): void {
     if (rezim !== "stavba" || !KATALOG[id].hotovo) return;
+    // Z nástroje přídavku (napínák, svar…) se jde kreslit; jeho výběr se na nový prvek nemění.
+    if (jePridavek(nastroj)) editor.zrusVyber();
     nastroj = "kresleni";
     editor.zvolPrvek(id);
     if (editor.posledniDuvod) ukazHlaseni(textDuvodu(editor.posledniDuvod, id), "varovani", true);
@@ -881,6 +895,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       data.prvek = prut.prvek;
       data.od = [prut.od.x, prut.od.y];
       data.k = [prut.k.x, prut.k.y];
+      // Dlouhý tah rozdělený na díly: kolik prutů z něj vzniklo.
+      if (prut.dilu) data.dilu = prut.dilu;
     }
     zapis("stavba.zmena", data);
   }
@@ -1265,8 +1281,16 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const klic: KlicTextu =
       zpusob === ZPUSOB_OHYB ? "namahani.ohyb" : zpusob === ZPUSOB_SMYK ? "namahani.smyk" : zpusob === ZPUSOB_TAH ? "namahani.tah" : "namahani.tlak";
     const co = t(klic, { velicina: cislo(velicina / 1000, 1), unosnost: cislo(unosnost / 1000, 1) });
-    return velicina < 0.97 * unosnost * Math.min(1, mira) ? t("namahani.soubeh", { co, mira: procenta(mira) }) : co;
+    if (velicina < 0.97 * unosnost * Math.min(1, mira)) return t("namahani.soubeh", { co, mira: procenta(mira) });
+    // Moment těsně pod únosností: prut na mezi držel a trvale se ohýbal (plastický kloub), až povolil.
+    return zpusob === ZPUSOB_OHYB && velicina < unosnost ? t("namahani.vycerpano", { co }) : co;
   }
+
+  /** Je prut návrhu s tímto pořadím lano? */
+  const jeLano = (b: Beh, prut: number): boolean => {
+    const prvekPrutu = b.navrh.pruty[prut]?.prvek;
+    return prvekPrutu !== undefined && KATALOG[prvekPrutu].druh === "lano";
+  };
 
   /** Údaje o prutu, na který hráč při zkoušce klikl, a reakce v podporách. */
   function obnovUdajePrutu(): void {
@@ -1503,8 +1527,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function zrcadli(): void {
     if (rezim !== "stavba") return;
+    const jenVyber = editor.zrcadliJenVyber;
     editor.zrcadli();
     if (editor.posledniDuvod) ukazHlaseni(textDuvodu(editor.posledniDuvod, null), "varovani", true);
+    else if (jenVyber) ukazHlaseni(t("zrcadleni.jenVyber"), "info", true);
   }
 
   function prepniVyber(): void {
@@ -1900,12 +1926,21 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   function vetaOPoruseni(b: Beh, u: Extract<Udalost, { druh: "poruseni" | "sjeti" }>): string {
     if (u.druh === "sjeti") return t("vysledek.prvni.sjeti");
     const prvekPrutu = b.navrh.pruty[u.prut]?.prvek;
-    return t("vysledek.prvni", {
-      prut: u.prut + 1,
-      prvek: prvekPrutu ? nazevPrvku(prvekPrutu).toLocaleLowerCase("cs") : "",
-      zpusob: t(nazevZpusobu(u.zpusob)),
-      co: zapisNamahani(u.zpusob, u.velicina, u.unosnost, u.mira),
-    });
+    const prvekText = prvekPrutu ? nazevPrvku(prvekPrutu).toLocaleLowerCase("cs") : "";
+    // Lano, které napínák přetáhl daleko za pevnost, se přetrhlo už před zkouškou.
+    if (jeLano(b, u.prut) && u.cas === 0 && u.velicina > 2 * u.unosnost) {
+      return t("vysledek.prvni.napinani", { prut: u.prut + 1, prvek: prvekText, nasobek: cislo(u.velicina / u.unosnost, 0) });
+    }
+    const zpusob = t(nazevZpusobu(u.zpusob));
+    const namahani = zapisNamahani(u.zpusob, u.velicina, u.unosnost, u.mira);
+    // „tah, tah 6 215 kN“ by říkalo totéž dvakrát; způsob se uvádí jen tam, kde říká víc (vzpěr).
+    const co = namahani.startsWith(zpusob) ? namahani : `${zpusob}, ${namahani}`;
+    const klic: KlicTextu = b.vysledek?.pruchod
+      ? "vysledek.prvni.obstal"
+      : b.vysledek?.bezRovnovahy
+        ? "vysledek.prvni.bezRovnovahy"
+        : "vysledek.prvni";
+    return t(klic, { prut: u.prut + 1, prvek: prvekText, co });
   }
 
   /** Skočí kousek před první porušení, označí prut, který selhal, a přehraje zlom zpomaleně. */
@@ -1976,6 +2011,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       );
     }
     if (vysledek.bezRovnovahy) vety.push(t("vysledek.bezRovnovahy"));
+    // Most s lany, který už před zkouškou visel hluboko pod výkresem, má nedopnuté napínáky.
+    const maLana = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "lano");
+    if (!vysledek.pruchod && !jePokus && maLana && (vysledek.pruvesVKlidu ?? 0) > 0.1) {
+      vety.push(t("vysledek.nedopnuto", { mm: cislo(1000 * (vysledek.pruvesVKlidu ?? 0), 0) }));
+    }
     const komfort = vysledek.komfort;
     if (komfort && komfort.trida > uroven.nejhorsiKomfort && vysledek.spadlo === 0 && !vysledek.rozpad) {
       vety.push(
@@ -2017,16 +2057,23 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       const skok = document.createElement("button");
       skok.type = "button";
       skok.className = "vysledek__skok";
-      skok.textContent = t("vysledek.kmitaniHodnota", {
+      // Kde o pohodlí v úrovni nejde, je to údaj pro zajímavost a řádek to říká: „nepřijatelné“
+      // vedle medailí by jinak vypadalo jako důvod neúspěchu.
+      const hodnotiSe = uroven.mistrovska?.druh === "komfort-cestujicich";
+      skok.textContent = t(hodnotiSe ? "vysledek.kmitaniHodnota" : "vysledek.autobus.bezHodnoceni", {
         zrychleni: cislo(cestujici.zrychleni, 2),
         trida: t(`komfort.${cestujici.trida}`),
         cas: zapisCasu(cestujici.cas),
       });
       skok.addEventListener("click", () => skocNa(cestujici.cas));
       const zapisZrychleni = (hodnota: number): string => `${cislo(hodnota, 2)} m/s²`;
-      poleAutobusu.replaceChildren(
-        ...bezNull([skok, rozdil(cestujici.zrychleni, minule?.komfortCestujicich?.zrychleni, zapisZrychleni)]),
-      );
+      // Autobus, který na most nedojel nebo jel po mostě už porušeném, se neměří.
+      if (cestujici.zrychleni === 0 && cestujici.cas === 0) poleAutobusu.replaceChildren(t("vysledek.autobus.nemereno"));
+      else {
+        poleAutobusu.replaceChildren(
+          ...bezNull([skok, rozdil(cestujici.zrychleni, minule?.komfortCestujicich?.zrychleni, zapisZrychleni)]),
+        );
+      }
       poleAutobusu.dataset.zrychleni = cestujici.zrychleni.toFixed(3);
     }
 
@@ -2064,7 +2111,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     }
 
     // Porušení prutů a sjetí z podpor: každé jde rozkliknout na časové ose.
-    const poruseni = b.udalosti.filter((u) => u.druh === "poruseni" || u.druh === "sjeti");
+    // Lano se dělí na díly a prut se může utrhnout na obou koncích: tentýž prut ve stejném
+    // okamžiku se vypíše jen jednou.
+    const vypsane = new Set<string>();
+    const poruseni = b.udalosti.filter((u) => {
+      if (u.druh === "sjeti") return true;
+      if (u.druh !== "poruseni") return false;
+      const klic = `${zapisCasu(u.cas)}|${u.prut}`;
+      if (vypsane.has(klic)) return false;
+      vypsane.add(klic);
+      return true;
+    }) as Extract<Udalost, { druh: "poruseni" | "sjeti" }>[];
     const radky: HTMLElement[] = poruseni.slice(0, NEJVIC_VYPSANYCH_PORUSENI).map((u) => {
       const polozka = document.createElement("li");
       const skok = document.createElement("button");
@@ -2076,7 +2133,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
               cas: zapisCasu(u.cas),
               prut: u.prut + 1,
               zpusob: t(nazevZpusobu(u.zpusob)),
-              nasledek: t(nazevNasledku(u.nasledek)),
+              nasledek: t(jeLano(b, u.prut) ? "vysledek.nasledek.lano" : nazevNasledku(u.nasledek)),
             })
           : t("vysledek.sjeti.radek", { cas: zapisCasu(u.cas) });
       skok.addEventListener("click", () => {
@@ -2322,9 +2379,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           return;
         }
         if (rezim !== "stavba") return;
+        // Bez rozdělaného tahu (kliknutí nástrojem přídavku) není co hlásit; důvod, proč
+        // editor odmítl dřívější tah, by se jinak ukázal znovu.
+        const tahl = editor.tah !== null;
         const kreslil = editor.tah?.druh === "prut";
         editor.pust();
-        if (editor.posledniDuvod) {
+        if (tahl && editor.posledniDuvod) {
           ukazHlaseni(textDuvodu(editor.posledniDuvod, kreslil ? editor.prvek : null), "varovani", true);
         }
         obnovStavbu();
@@ -2514,10 +2574,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         prepniLadenyTlumic();
         break;
       case "s":
-        prepniSvar();
+        if (udalost.repeat) break;
+        // Se zapnutým nástrojem Svar klávesa nástroj jen odloží; svar právě přidaný kliknutím nechá být.
+        if (nastroj === "svar") prepniPridavek("svar");
+        else prepniSvar();
         break;
       case "n":
-        dopniLana();
+        if (!udalost.repeat) dopniLana();
         break;
       case "a":
         prepniAnalyzu();
@@ -2648,5 +2711,5 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     .catch(() => {
       udaj("fyzika").textContent = t("pole.fyzikaNedostupna");
     });
-  if (uroven.osaFrekvenci) naplanujRozbor();
+  if (uroven.osaFrekvenci || smiLana) naplanujRozbor();
 }

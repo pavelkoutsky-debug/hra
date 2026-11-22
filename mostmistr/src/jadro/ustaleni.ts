@@ -10,7 +10,7 @@
 // zůstávají na místě.
 
 import { kinetickaEnergie, krok, spoctiSily, type NastaveniKroku } from "./integrator";
-import { najdiRovnovahu, nejvyssiFrekvence } from "./matice";
+import { frekvenceProKrokovani, najdiRovnovahu } from "./matice";
 import { LANO, type Soustava } from "./soustava";
 import { betaProUtlum, zvolKrok } from "./stabilita";
 
@@ -18,6 +18,18 @@ import { betaProUtlum, zvolKrok } from "./stabilita";
 const NEJDELSI_USTALENI = 30;
 /** Styčník, který se posune dál, už neusedá, ale padá: soustava klidovou polohu nemá. */
 const NEJVETSI_POSUN = 6;
+/**
+ * Totéž pro body, ve kterých se stýkají jen lana: volný konec lana nebo hodně povolené lano
+ * se smí zhoupnout daleko a most přitom klidovou polohu má. Nejdelší lano měří 60 m, takže
+ * dál se dostane jen kus, který opravdu padá.
+ */
+const NEJVETSI_POSUN_LANA = 100;
+/**
+ * Po kolika krocích se posun kontroluje i mimo vrcholy pohybové energie. Kus ve volném pádu
+ * žádný vrchol nemá, takže by se jinak počítalo až do vypršení času. Mez je tu dvojnásobná:
+ * uprostřed zhoupnutí smí být styčník dál než v klidu.
+ */
+const KROKU_MEZI_KONTROLAMI = 256;
 /** Nevyvážená síla, pod kterou je soustava v klidu, jako podíl tíhy jejího nejtěžšího styčníku. */
 const PRESNOST_USTALENI = 1e-4;
 /** Poměrný útlum nejvyšší frekvence při ustálení: rychlé kmity mají zmizet hned. */
@@ -57,26 +69,56 @@ export function ustalSoustavu(s: Soustava, stupne: Int32Array, tiha: number): bo
     s.vy.fill(0);
     s.omega.fill(0);
   };
+  /** Vrátí soustavě hmoty a tlumení; plasticita zůstává zmrazená až do konce ustálení. */
   const obnov = (): void => {
     s.invHmotaX.set(invX);
     s.invHmotaY.set(invY);
     s.invSetrvacnost.set(invJ);
     s.beta.set(beta);
-    s.plasticitaZmrazena = zmrazeno;
     zastav();
   };
-  /** Největší nevyvážená síla ve volných posunech; volá se se zastavenou soustavou. */
+  /**
+   * Největší nevyvážená síla ve volných posunech; volá se se zastavenou soustavou.
+   * Když výpočet někde dal neplatné číslo, vrací NaN (a soustava se za ustálenou nepočítá).
+   */
   const nevyvazeno = (): number => {
     let nejvic = 0;
     for (let i = 0; i < s.pocetStycniku; i++) {
-      if (s.invHmotaX[i] !== 0 && Math.abs(s.fx[i]!) > nejvic) nejvic = Math.abs(s.fx[i]!);
-      if (s.invHmotaY[i] !== 0 && Math.abs(s.fy[i]!) > nejvic) nejvic = Math.abs(s.fy[i]!);
+      if (s.invHmotaX[i] !== 0) {
+        const f = Math.abs(s.fx[i]!);
+        if (f !== f) return f;
+        if (f > nejvic) nejvic = f;
+      }
+      if (s.invHmotaY[i] !== 0) {
+        const f = Math.abs(s.fy[i]!);
+        if (f !== f) return f;
+        if (f > nejvic) nejvic = f;
+      }
     }
     return nejvic;
   };
+  // Styčníky, do kterých vede i něco jiného než lano, a podpory (posuvné ložisko, které
+  // lano odtáhne o metry, není klidová poloha mostu); ostatní jsou jen body lan.
+  const nosny = new Uint8Array(s.pocetStycniku);
+  for (let i = 0; i < s.pocetStycniku; i++) if ((s.podpora[i]! & 3) !== 0) nosny[i] = 1;
+  for (let e = 0; e < s.pocetPrvku; e++) {
+    if (s.druh[e] === LANO) continue;
+    nosny[s.prvekA[e]!] = 1;
+    nosny[s.prvekB[e]!] = 1;
+  }
+  /** Posunul se některý styčník od nakreslené polohy dál než o `mez` metrů (nebo do neplatna)? */
+  const dalNez = (mez: number): boolean => {
+    for (let j = 0; j < s.pocetStycniku; j++) {
+      const dx = s.x[j]! - x0[j]!;
+      const dy = s.y[j]! - y0[j]!;
+      const dovoleno = nosny[j] === 1 ? mez : NEJVETSI_POSUN_LANA;
+      if (!(dx * dx + dy * dy <= dovoleno * dovoleno)) return true;
+    }
+    return false;
+  };
 
   zastav();
-  const omegaMax = nejvyssiFrekvence(s, stupne);
+  const omegaMax = frekvenceProKrokovani(s, stupne);
   s.beta.fill(betaProUtlum(omegaMax, UTLUM_USTALENI));
   const dt = zvolKrok(omegaMax, UTLUM_USTALENI);
   const nastaveni: NastaveniKroku = { dt, tiha, alfa: 0 };
@@ -89,31 +131,31 @@ export function ustalSoustavu(s: Soustava, stupne: Int32Array, tiha: number): bo
     const energie = kinetickaEnergie(s);
     if (energie >= minula) {
       minula = energie;
+      // Kus ve volném pádu jen zrychluje a k vrcholu energie nikdy nedojde.
+      if ((i + 1) % KROKU_MEZI_KONTROLAMI === 0 && dalNez(2 * NEJVETSI_POSUN)) break;
       continue;
     }
     // Vrchol pohybové energie je za námi: soustava právě prolétla kolem klidové polohy.
     zastav();
     spoctiSily(s, tiha, 0);
     minula = 0;
+    // Soustava, která se někam zřítila, klidovou polohu poblíž nakreslené nemá,
+    // i kdyby tam dole nakonec zůstala viset v klidu.
+    if (dalNez(NEJVETSI_POSUN)) break;
+    // Neplatné číslo (NaN) podmínku nesplní: rozpadlý výpočet se za ustálený nepočítá.
     if (nevyvazeno() <= PRESNOST_USTALENI * nejvetsiTiha) {
       ustaleno = true;
       break;
     }
-    // Soustava, která se někam zřítila, klidovou polohu poblíž nakreslené nemá.
-    let spadla = false;
-    for (let j = 0; j < s.pocetStycniku; j++) {
-      const dx = s.x[j]! - x0[j]!;
-      const dy = s.y[j]! - y0[j]!;
-      if (!(dx * dx + dy * dy <= NEJVETSI_POSUN * NEJVETSI_POSUN)) {
-        spadla = true;
-        break;
-      }
-    }
-    if (spadla) break;
   }
   obnov();
+  // Síly v klidové poloze se počítají ještě se zmrazenou plasticitou: ustálení je jen
+  // hledání výchozího stavu a nesmí v prutech zanechat trvalé přetvoření.
   spoctiSily(s, tiha, 0);
-  if (!ustaleno) return false;
+  if (!ustaleno) {
+    s.plasticitaZmrazena = zmrazeno;
+    return false;
+  }
   // Doladění přímým výpočtem: lana už mají tah a s ním příčnou tuhost. Když ho přímý
   // výpočet odmítne (soustava je v klidu, ale drží jen tíhou, ne tuhostí), zůstává poloha
   // z ustálení: je to rovnováha, jen vratká, a zkouška to ukáže.
@@ -126,8 +168,10 @@ export function ustalSoustavu(s: Soustava, stupne: Int32Array, tiha: number): bo
     s.y.set(y);
     s.cosN.set(cosN);
     s.sinN.set(sinN);
+    s.plasticitaZmrazena = true;
     spoctiSily(s, tiha, 0);
   }
+  s.plasticitaZmrazena = zmrazeno;
   return true;
 }
 

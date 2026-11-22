@@ -368,6 +368,13 @@ export const PREDPETI_LANA = {
   presnost: 0.001,
 } as const;
 
+/**
+ * Největší tah, který smí lano nést pod vlastní tíhou mostu, jako podíl pevnosti. Zbytek je
+ * rezerva na provoz; referenční mosty kampaně mají v klidu nejvýš polovinu pevnosti.
+ * Automatické dopnutí lana nad tuto mez nedotahuje.
+ */
+export const NEJVETSI_KLIDOVY_TAH = 0.7;
+
 /** Poměrné protažení lana při plném využití pevnosti (pevnost / modul pružnosti materiálu). */
 export function protazeniNaMezi(id: IdPrvku): number {
   const polozka = KATALOG[id];

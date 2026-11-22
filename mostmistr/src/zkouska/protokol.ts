@@ -74,6 +74,8 @@ export interface DopnutiLan {
   /** Největší svislá odchylka mostovky od nakresleného tvaru před dopnutím a po něm, v metrech. */
   pred: number;
   po: number;
+  /** Největší tah v laně po dopnutí pod vlastní tíhou mostu, jako podíl jeho pevnosti. */
+  tah: number;
 }
 
 /** Co se při zkoušce stalo a kdy. Čísla způsobu a následku porušení jsou konstanty jádra. */
@@ -157,6 +159,11 @@ export interface VysledekZkousky {
   komfortCestujicich: KomfortZkousky | null;
   /** Cena mostu v korunách. */
   cena: number;
+  /**
+   * O kolik metrů se mostovka pod vlastní tíhou, ještě před provozem, nejvíc lišila od výkresu.
+   * U mostu s lany prozradí nedopnuté napínáky. Null, když most klidovou polohu nemá.
+   */
+  pruvesVKlidu: number | null;
   /** Největší využití ze všech prutů. */
   nejvetsiVyuziti: number;
   /** Kmitání mostovky, dokud po ní šli lidé; null v úrovni bez lidí. */

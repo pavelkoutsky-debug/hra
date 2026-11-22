@@ -13,14 +13,16 @@
 // 2. vodorovná poloha ostatních styčníků, do kterých vedou lana a zároveň pruty nebo pilíře
 //    (hlava pylonu se nemá naklánět: kotevní lana vyrovnají tah lan z pole);
 // 3. s malou vahou poloha styčníků, ve kterých se stýkají jen lana (body nosného lana);
-// 4. každé lano má pod vlastní tíhou mostu zůstat napnuté, jinak by nic neneslo.
+// 4. každé lano má pod vlastní tíhou mostu zůstat napnuté, jinak by nic neneslo, a nesmí
+//    nést víc než bezpečnou část své pevnosti: tvar, který by lana udržela jen za cenu
+//    přetržení (nosné lano nakreslené rovně), se proto nedotáhne a hráč se dozví proč.
 //
 // Nosné lano visutého mostu se pod tíhou vyrovná do tvaru, který odpovídá zatížení, a
 // předpětím se s tím nic nenadělá. Závěsy se mu proto přizpůsobí délkou (napínák je smí
 // zkrátit i prodloužit o desítky centimetrů): mostovka pak zůstane rovná, i když nosné lano
 // není nakreslené přesně jako parabola.
 
-import { KATALOG, PREDPETI_LANA } from "../data/katalog";
+import { KATALOG, NEJVETSI_KLIDOVY_TAH, PREDPETI_LANA } from "../data/katalog";
 import type { NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
@@ -41,9 +43,22 @@ const NEJMENSI_TLUMENI = 1e-6;
 const NEJVETSI_TLUMENI = 1e4;
 /** Váha polohy styčníků, ve kterých se stýkají jen lana, proti svislé poloze mostovky. */
 const VAHA_BODU_LANA = 0.05;
-/** Nejmenší tah, který má v každém laně pod vlastní tíhou mostu zůstat, jako podíl jeho pevnosti. */
-const NEJMENSI_TAH = 0.05;
-/** Váha chybějícího tahu: chybí-li lanu procento pevnosti, je to jako deset centimetrů odchylky mostovky. */
+/**
+ * Nejmenší tah, který má v každém laně pod vlastní tíhou mostu zůstat, jako podíl jeho pevnosti.
+ * Jen tolik, aby lano neviselo: sílu v závěsu nebo v šikmém laně určuje tíha, kterou nese, a
+ * u silného lana bývá pár procent pevnosti. Vyšší mez by takový most kazila (mostovka by se
+ * zvedala, aby lano dostalo předepsaný tah).
+ */
+const NEJMENSI_TAH = 0.01;
+/**
+ * Váha vodorovné polohy styčníků pylonu, do kterých vedou lana. Hlavu pylonu srovnají kotevní
+ * lana skoro zadarmo, takže stačí malá váha; s plnou by dopnutí rovnalo i ohyb pylonu mezi
+ * lany, a to jen za cenu obrovského tahu v kotevních lanech.
+ */
+const VAHA_PYLONU = 0.2;
+/** Největší tah, který smí lano nést pod vlastní tíhou mostu, jako podíl pevnosti. */
+const NEJVETSI_TAH = NEJVETSI_KLIDOVY_TAH;
+/** Váha chybějícího nebo přebývajícího tahu: procento pevnosti je jako deset centimetrů odchylky mostovky. */
 const VAHA_TAHU = 10;
 
 export interface VysledekDopnuti {
@@ -52,6 +67,8 @@ export interface VysledekDopnuti {
   /** Největší svislá odchylka mostovky od nakresleného tvaru před dopnutím a po něm, v metrech. */
   pred: number;
   po: number;
+  /** Největší tah v laně po dopnutí pod vlastní tíhou mostu, jako podíl jeho pevnosti. */
+  tah: number;
 }
 
 interface Sledovany {
@@ -161,6 +178,8 @@ export function dopniLana(uroven: Uroven, navrh: NavrhMostu): VysledekDopnuti | 
       if (dilu[j]! > 0) stav.tahy[j] = stav.tahy[j]! / dilu[j]!;
       const chybi = NEJMENSI_TAH - stav.tahy[j]!;
       if (chybi > 0) stav.cena += VAHA_TAHU * VAHA_TAHU * chybi * chybi;
+      const prebyva = stav.tahy[j]! - NEJVETSI_TAH;
+      if (prebyva > 0) stav.cena += VAHA_TAHU * VAHA_TAHU * prebyva * prebyva;
     }
   };
   /**
@@ -211,13 +230,14 @@ export function dopniLana(uroven: Uroven, navrh: NavrhMostu): VysledekDopnuti | 
     if (mostovka.has(i)) continue;
     if (nosne.has(i)) {
       // Hlava pylonu: svisle ji drží pylon sám, lana rozhodují o tom, jestli se nakloní.
-      if (volne.has(3 * i)) sledovane.push({ kod: 3 * i, vaha: 1, mostovka: false });
+      if (volne.has(3 * i)) sledovane.push({ kod: 3 * i, vaha: VAHA_PYLONU, mostovka: false });
       continue;
     }
     if (volne.has(3 * i)) sledovane.push({ kod: 3 * i, vaha: VAHA_BODU_LANA, mostovka: false });
     if (volne.has(3 * i + 1)) sledovane.push({ kod: 3 * i + 1, vaha: VAHA_BODU_LANA, mostovka: false });
   }
-  if (sledovane.length === 0) return null;
+  // Bez mostovky a bez pylonu není co držet ve tvaru: lana nemají na co působit.
+  if (!sledovane.some((sl) => sl.mostovka || sl.vaha > VAHA_BODU_LANA)) return null;
   zmer(stav, sledovane);
 
   // Odchylka před dopnutím se měří s předpětím, jaké návrh opravdu má.
@@ -225,12 +245,14 @@ export function dopniLana(uroven: Uroven, navrh: NavrhMostu): VysledekDopnuti | 
   const pred = puvodni ? puvodni.nejvetsi : Infinity;
 
   predpeti = vychozi;
-  let nejlepsi = { predpeti, cena: stav.cena, nejvetsi: stav.nejvetsi };
+  const nejvetsiTah = (tahy: Float64Array): number => tahy.reduce((nejvic, tah) => Math.max(nejvic, tah), 0);
+  let nejlepsi = { predpeti, cena: stav.cena, nejvetsi: stav.nejvetsi, tah: nejvetsiTah(stav.tahy) };
   if (puvodni && puvodni.cena < nejlepsi.cena) {
     nejlepsi = {
       predpeti: Float64Array.from(cisla, (cislo) => navrh.pruty[cislo]!.predpeti ?? 0),
       cena: puvodni.cena,
       nejvetsi: puvodni.nejvetsi,
+      tah: nejvetsiTah(puvodni.tahy),
     };
   }
 
@@ -241,6 +263,8 @@ export function dopniLana(uroven: Uroven, navrh: NavrhMostu): VysledekDopnuti | 
   let tlumeni = NEJMENSI_TLUMENI;
   while (pokusu < NEJVIC_POKUSU && stav.cena > PRESNOST_TVARU * PRESNOST_TVARU) {
     const odhad = linearizuj(stav, sledovane, lana);
+    // Most, jehož klidová poloha je vratká (matice tuhosti nejde rozložit), dopnout nejde.
+    if (!odhad && pokusu === 2) return null;
     if (!odhad) break;
     let dalsi: Ustaleny | null = null;
     let dalsiPredpeti = predpeti;
@@ -265,7 +289,7 @@ export function dopniLana(uroven: Uroven, navrh: NavrhMostu): VysledekDopnuti | 
     const zlepseni = stav.cena - dalsi.cena;
     stav = dalsi;
     predpeti = dalsiPredpeti;
-    if (stav.cena < nejlepsi.cena) nejlepsi = { predpeti, cena: stav.cena, nejvetsi: stav.nejvetsi };
+    if (stav.cena < nejlepsi.cena) nejlepsi = { predpeti, cena: stav.cena, nejvetsi: stav.nejvetsi, tah: nejvetsiTah(stav.tahy) };
     // Dál už se tvar nezlepšuje: nakreslený tvar lana přesně splnit neumějí.
     if (zlepseni < Math.max(1e-3 * stav.cena, NEPATRNE_ZLEPSENI * NEPATRNE_ZLEPSENI)) break;
   }
@@ -275,13 +299,22 @@ export function dopniLana(uroven: Uroven, navrh: NavrhMostu): VysledekDopnuti | 
   const konecny = ustal(zaokrouhlene, sledovane);
   const vysledek = new Map<number, number>();
   cisla.forEach((cislo, j) => vysledek.set(navrh.pruty[cislo]!.id, Math.round(zaokrouhlene[j]! * 1000) / 1000));
-  return { predpeti: vysledek, pred, po: konecny ? konecny.nejvetsi : nejlepsi.nejvetsi };
+  const po = konecny ? konecny.nejvetsi : nejlepsi.nejvetsi;
+  const tah = konecny ? nejvetsiTah(konecny.tahy) : nejlepsi.tah;
+  // Dopnutí nesmí most zhoršit: když mostovka neleží blíž výkresu než s napínáky, jaké návrh
+  // měl, a lana přitom nebyla přetížená víc než teď, zůstává všechno, jak bylo.
+  if (puvodni && po >= puvodni.nejvetsi && nejvetsiTah(puvodni.tahy) <= Math.max(NEJVETSI_TAH, tah)) {
+    const beze = new Map<number, number>();
+    cisla.forEach((cislo) => beze.set(navrh.pruty[cislo]!.id, navrh.pruty[cislo]!.predpeti ?? 0));
+    return { predpeti: beze, pred, po: puvodni.nejvetsi, tah: nejvetsiTah(puvodni.tahy) };
+  }
+  return { predpeti: vysledek, pred, po, tah };
 }
 
 /**
  * Lineární odhad mostu kolem stavu `stav`: vrací funkci, která pro dané tlumení spočítá opravu
- * předpětí lan, jež podle odhadu nejvíc zmenší odchylky sledovaných stupňů a chybějící tah
- * povolených lan. Silnější tlumení dává kratší, opatrnější krok. Null, když matice tuhosti
+ * předpětí lan, jež podle odhadu nejvíc zmenší odchylky sledovaných stupňů a tah lan, kterým
+ * chybí nebo přebývá, vrátí do mezí. Silnější tlumení dává kratší, opatrnější krok. Null, když matice tuhosti
  * nejde rozložit nebo lana na sledované stupně nepůsobí.
  */
 function linearizuj(
@@ -364,7 +397,8 @@ function linearizuj(
 
   // Nejmenší čtverce s tlumením (lana, která dělají totéž, si opravu rozdělí):
   // (AᵀA + λ·D)·Δp = −Aᵀ·zbytek, kde D je diagonála AᵀA. Lana, která by oprava povolila pod
-  // nejmenší tah, se přidají jako podmínka „tah zůstane na nejmenší hodnotě“ a úloha se vyřeší znovu.
+  // nejmenší tah nebo přetížila nad největší, se přidají jako podmínka „tah zůstane na mezi“
+  // a úloha se vyřeší znovu.
   const zaklad = new Float64Array(m * m);
   const pravaZaklad = new Float64Array(m);
   let stopa = 0;
@@ -387,8 +421,12 @@ function linearizuj(
   for (let j = 0; j < m; j++) meritko[j] = Math.max(zaklad[j * m + j]! + vaha2 * T[j * m + j]! * T[j * m + j]!, (1e-6 * stopa) / m);
 
   return (tlumeni) => {
-    const drzene = new Uint8Array(m);
-    for (let i = 0; i < m; i++) if (stav.tahy[i]! < NEJMENSI_TAH) drzene[i] = 1;
+    // Mez, na které se tah lana drží: 0 žádná, jinak nejmenší nebo největší dovolený tah.
+    const drzene = new Float64Array(m);
+    for (let i = 0; i < m; i++) {
+      if (stav.tahy[i]! < NEJMENSI_TAH) drzene[i] = NEJMENSI_TAH;
+      else if (stav.tahy[i]! > NEJVETSI_TAH) drzene[i] = NEJVETSI_TAH;
+    }
     let oprava: Float64Array | null = null;
     for (let kolo = 0; kolo <= m; kolo++) {
       const N = zaklad.slice();
@@ -396,7 +434,7 @@ function linearizuj(
       for (let j = 0; j < m; j++) N[j * m + j] = N[j * m + j]! + tlumeni * meritko[j]!;
       for (let i = 0; i < m; i++) {
         if (drzene[i] === 0) continue;
-        const chybi = stav.tahy[i]! - NEJMENSI_TAH;
+        const chybi = stav.tahy[i]! - drzene[i]!;
         for (let j = 0; j < m; j++) {
           prava[j] = prava[j]! - vaha2 * T[i * m + j]! * chybi;
           for (let k = 0; k < m; k++) N[j * m + k] = N[j * m + k]! + vaha2 * T[i * m + j]! * T[i * m + k]!;
@@ -405,14 +443,17 @@ function linearizuj(
       if (!choleskehoRozklad(N, m)) return oprava;
       vyresRozkladem(N, m, prava);
       oprava = prava;
-      // Která další lana by tahle oprava povolila pod nejmenší tah?
+      // Která další lana by tahle oprava povolila pod nejmenší tah nebo přetížila?
       let pribylo = false;
       for (let i = 0; i < m; i++) {
-        if (drzene[i] === 1) continue;
+        if (drzene[i] !== 0) continue;
         let zmena = 0;
         for (let j = 0; j < m; j++) zmena += T[i * m + j]! * prava[j]!;
         if (stav.tahy[i]! + zmena < NEJMENSI_TAH - 1e-4) {
-          drzene[i] = 1;
+          drzene[i] = NEJMENSI_TAH;
+          pribylo = true;
+        } else if (stav.tahy[i]! + zmena > NEJVETSI_TAH + 1e-4) {
+          drzene[i] = NEJVETSI_TAH;
           pribylo = true;
         }
       }
