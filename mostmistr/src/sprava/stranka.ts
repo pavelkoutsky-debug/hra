@@ -1,0 +1,515 @@
+// Stránka správce: zpětná vazba hráčů se stavem řešení a deník hraní po dnech a sezeních.
+// Je to nástroj pro zadavatele, ne součást hry; proto má texty přímo u sebe. Se serverem
+// mluví přes /api/sprava a každou žádost podepisuje heslem správce.
+
+import { navrhZTextu, type NavrhMostu } from "../data/navrh";
+import type { Uroven } from "../data/uroven";
+import type { SouhrnDeniku } from "../denik/souhrn";
+import { STAVY_VAZBY, type EvidovanaVazba, type HlavickaDeniku, type StavVazby, type UdalostDeniku } from "../denik/udalosti";
+import type { PolozkaSeznamuVazeb, SezeniDne } from "../server/obsluha";
+import { celyVyrez } from "../vykres/kamera";
+import { nakresliNavrh } from "../vykres/navrh";
+import { nakresliVykres } from "../vykres/vykres";
+import { nactiUrovne } from "../../urovne/index";
+
+const KLIC_HESLA = "mostmistr.sprava.heslo";
+const NAZVY_STAVU: Record<StavVazby, string> = { nova: "nová", "resi-se": "řeší se", vyreseno: "vyřešeno", zamitnuto: "zamítnuto" };
+const NAZVY_DRUHU: Record<string, string> = { chyba: "chyba", napad: "nápad", obtiznost: "obtížnost", pochvala: "pochvala", jine: "jiné" };
+
+const prvek = <T extends HTMLElement>(volic: string): T => {
+  const nalezeny = document.querySelector<T>(volic);
+  if (!nalezeny) throw new Error(`Na stránce chybí prvek ${volic}.`);
+  return nalezeny;
+};
+
+const hlaseni = prvek<HTMLElement>("#hlaseni");
+const obsah = prvek<HTMLElement>("#obsah");
+const poleHesla = prvek<HTMLInputElement>("#heslo");
+const urovne = new Map<string, Uroven>(nactiUrovne().map((u) => [u.id, u]));
+
+let heslo = "";
+try {
+  heslo = window.sessionStorage.getItem(KLIC_HESLA) ?? "";
+} catch {
+  heslo = "";
+}
+
+class ChybaSpravy extends Error {
+  constructor(
+    readonly stav: number,
+    zprava: string,
+  ) {
+    super(zprava);
+  }
+}
+
+/** Zavolá správu; `telo` znamená zápis (POST). Chybu serveru vyhodí i s jeho vysvětlením. */
+async function sprava<T>(dotaz: string, telo?: unknown): Promise<T> {
+  const odpoved = await fetch(`/api/sprava?${dotaz}`, {
+    method: telo === undefined ? "GET" : "POST",
+    headers: { authorization: `Bearer ${heslo}`, ...(telo === undefined ? {} : { "content-type": "application/json" }) },
+    ...(telo === undefined ? {} : { body: JSON.stringify(telo) }),
+  });
+  let data: unknown = null;
+  try {
+    data = await odpoved.json();
+  } catch {
+    data = null;
+  }
+  if (!odpoved.ok) {
+    const zprava = (data as { chyba?: unknown } | null)?.chyba;
+    throw new ChybaSpravy(odpoved.status, typeof zprava === "string" ? zprava : `server odpověděl ${odpoved.status}`);
+  }
+  return data as T;
+}
+
+function ohlas(text: string): void {
+  hlaseni.textContent = text;
+}
+
+function cas(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" });
+}
+
+function bunka(text: string, trida?: string): HTMLTableCellElement {
+  const td = document.createElement("td");
+  td.textContent = text;
+  if (trida) td.className = trida;
+  return td;
+}
+
+function znackaStavu(stav: StavVazby): HTMLElement {
+  const znacka = document.createElement("span");
+  znacka.className = "stav";
+  znacka.dataset.stav = stav;
+  znacka.textContent = NAZVY_STAVU[stav] ?? stav;
+  return znacka;
+}
+
+function udaje(seznam: HTMLElement, polozky: [string, string][]): void {
+  seznam.replaceChildren(
+    ...polozky.flatMap(([nazev, hodnota]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = nazev;
+      const dd = document.createElement("dd");
+      dd.textContent = hodnota;
+      return [dt, dd];
+    }),
+  );
+}
+
+function zarizeni(h: HlavickaDeniku): string {
+  return `hra ${h.hra} (${h.sestaveni}) · okno ${h.okno[0]}×${h.okno[1]} · ${h.dotyk ? "dotyk" : "myš"} · ${h.jazyk}`;
+}
+
+/** Nakreslí most do plátna; vrací false, když zápis mostu nejde přečíst nebo úroveň není známá. */
+function nakresliMost(platno: HTMLCanvasElement, zapis: string | undefined, idUrovne: string | undefined): NavrhMostu | null {
+  platno.hidden = true;
+  if (!zapis) return null;
+  let navrh: NavrhMostu;
+  try {
+    navrh = navrhZTextu(zapis);
+  } catch {
+    return null;
+  }
+  const uroven = urovne.get(idUrovne ?? navrh.uroven) ?? urovne.get(navrh.uroven);
+  if (!uroven) return null;
+  platno.hidden = false;
+  const hustota = window.devicePixelRatio || 1;
+  const obrys = platno.getBoundingClientRect();
+  const rozmer = { sirka: Math.max(1, obrys.width), vyska: Math.max(1, obrys.height) };
+  platno.width = Math.round(rozmer.sirka * hustota);
+  platno.height = Math.round(rozmer.vyska * hustota);
+  const ctx = platno.getContext("2d", { alpha: false });
+  if (!ctx) return navrh;
+  ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
+  const kamera = celyVyrez(uroven.vyrez, rozmer, 6);
+  nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, nahled: true });
+  nakresliNavrh(ctx, kamera, rozmer, {
+    navrh,
+    vybranePruty: new Set(),
+    vybraneStycniky: new Set(),
+    tah: null,
+    zacatek: null,
+    problemy: [],
+    obalka: null,
+  });
+  return navrh;
+}
+
+function casUdalosti(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** Podrobnosti události na jeden řádek; zápis mostu se nahradí jeho velikostí. */
+function popisDat(u: UdalostDeniku): string {
+  if (!u.data) return "";
+  const data: Record<string, unknown> = { ...u.data };
+  if (typeof data.navrh === "string") {
+    try {
+      const navrh = navrhZTextu(data.navrh);
+      data.navrh = `most: ${navrh.pruty.length} prutů`;
+    } catch {
+      data.navrh = "most (nečitelný)";
+    }
+  }
+  return JSON.stringify(data);
+}
+
+/** Tabulka událostí; klik na řádek se zápisem mostu most nakreslí do `platno`. */
+function vypisUdalosti(kam: HTMLElement, udalosti: readonly UdalostDeniku[], platno: HTMLCanvasElement | null): void {
+  const tabulka = document.createElement("table");
+  const telo = document.createElement("tbody");
+  for (const u of udalosti) {
+    const radek = document.createElement("tr");
+    radek.append(bunka(casUdalosti(u.t), "cislo"), bunka(u.uroven ?? ""), bunka(u.druh), bunka(popisDat(u)));
+    const zapis = u.data?.navrh;
+    if (platno && typeof zapis === "string") {
+      radek.dataset.vyber = "most";
+      radek.title = "Klikni: nakreslit tento most";
+      radek.addEventListener("click", () => {
+        for (const r of telo.querySelectorAll("tr[aria-selected]")) r.removeAttribute("aria-selected");
+        radek.setAttribute("aria-selected", "true");
+        nakresliMost(platno, zapis, u.uroven);
+      });
+    }
+    telo.append(radek);
+  }
+  tabulka.append(telo);
+  kam.replaceChildren(tabulka);
+}
+
+// ---- Zpětná vazba ----
+
+let vazby: PolozkaSeznamuVazeb[] = [];
+let filtr: StavVazby | "vse" = "vse";
+let vybrana: EvidovanaVazba | null = null;
+let zvolenyStav: StavVazby = "nova";
+
+function vykresliFiltr(): void {
+  const pocty = new Map<string, number>();
+  for (const v of vazby) pocty.set(v.stav, (pocty.get(v.stav) ?? 0) + 1);
+  const moznosti: (StavVazby | "vse")[] = ["vse", ...STAVY_VAZBY];
+  prvek("#filtr-stavu").replaceChildren(
+    ...moznosti.map((stav) => {
+      const tlacitko = document.createElement("button");
+      tlacitko.type = "button";
+      tlacitko.dataset.filtr = stav;
+      tlacitko.setAttribute("aria-pressed", String(filtr === stav));
+      const pocet = stav === "vse" ? vazby.length : (pocty.get(stav) ?? 0);
+      tlacitko.textContent = `${stav === "vse" ? "vše" : NAZVY_STAVU[stav]} (${pocet})`;
+      tlacitko.addEventListener("click", () => {
+        filtr = stav;
+        vykresliVazby();
+      });
+      return tlacitko;
+    }),
+  );
+}
+
+function vykresliVazby(): void {
+  vykresliFiltr();
+  const telo = prvek<HTMLTableSectionElement>("#vazby tbody");
+  const viditelne = vazby.filter((v) => filtr === "vse" || v.stav === filtr);
+  telo.replaceChildren(
+    ...viditelne.map((v) => {
+      const radek = document.createElement("tr");
+      radek.dataset.vyber = v.id;
+      radek.setAttribute("aria-selected", String(vybrana?.id === v.id));
+      const stav = document.createElement("td");
+      stav.append(znackaStavu(v.stav));
+      radek.append(
+        bunka(cas(v.prijato)),
+        stav,
+        bunka(NAZVY_DRUHU[v.druh] ?? v.druh),
+        bunka(v.uroven ?? "—"),
+        bunka(v.hodnoceni === null ? "—" : `${v.hodnoceni}/5`, "cislo"),
+        bunka(`${v.ukazka}${v.maNavrh ? " [most]" : ""}${v.maKontakt ? " [kontakt]" : ""}`),
+      );
+      radek.addEventListener("click", () => void otevriVazbu(v.id));
+      return radek;
+    }),
+  );
+  if (viditelne.length === 0) {
+    const radek = document.createElement("tr");
+    const prazdno = bunka(vazby.length === 0 ? "Zatím žádná zpětná vazba nepřišla." : "V tomto stavu žádná zpětná vazba není.");
+    prazdno.colSpan = 6;
+    radek.append(prazdno);
+    telo.append(radek);
+  }
+}
+
+function vykresliStavy(): void {
+  prvek("#vazba-stavy").replaceChildren(
+    ...STAVY_VAZBY.map((stav) => {
+      const tlacitko = document.createElement("button");
+      tlacitko.type = "button";
+      tlacitko.dataset.stav = stav;
+      tlacitko.setAttribute("aria-pressed", String(zvolenyStav === stav));
+      tlacitko.textContent = NAZVY_STAVU[stav];
+      tlacitko.addEventListener("click", () => {
+        zvolenyStav = stav;
+        vykresliStavy();
+      });
+      return tlacitko;
+    }),
+  );
+}
+
+function vykresliDetailVazby(v: EvidovanaVazba): void {
+  vybrana = v;
+  zvolenyStav = v.stav;
+  prvek("#detail-vazby").hidden = false;
+  udaje(prvek("#vazba-udaje"), [
+    ["Číslo", v.id],
+    ["Přijato", `${cas(v.prijato)} · ${v.prostredi}`],
+    ["Druh", NAZVY_DRUHU[v.druh] ?? v.druh],
+    ["Úroveň", v.uroven ?? "—"],
+    ["Jak hra baví", v.hodnoceni === undefined ? "neuvedeno" : `${v.hodnoceni} z 5`],
+    ["Kontakt", v.kontakt ?? "neuveden"],
+    ["Zařízení", zarizeni(v.hlavicka)],
+    ["Hráč", `${v.hlavicka.hrac} · sezení ${v.hlavicka.sezeni}`],
+    ["Upraveno", v.upraveno ? cas(v.upraveno) : "—"],
+  ]);
+  prvek("#vazba-text").textContent = v.text;
+  const navrh = nakresliMost(prvek<HTMLCanvasElement>("#vazba-most"), v.navrh, v.uroven);
+  prvek("#vazba-kopirovat").hidden = v.navrh === undefined;
+  const odkaz = prvek<HTMLAnchorElement>("#vazba-uroven");
+  const idUrovne = v.uroven ?? navrh?.uroven;
+  odkaz.hidden = idUrovne === undefined;
+  if (idUrovne !== undefined) odkaz.href = `/?uroven=${encodeURIComponent(idUrovne)}`;
+  prvek<HTMLTextAreaElement>("#vazba-poznamka").value = v.poznamka;
+  vykresliStavy();
+  const udalosti = v.udalosti ?? [];
+  prvek("#vazba-udalosti-nadpis").hidden = udalosti.length === 0;
+  const seznam = prvek("#vazba-udalosti");
+  seznam.hidden = udalosti.length === 0;
+  if (udalosti.length > 0) vypisUdalosti(seznam, udalosti, prvek<HTMLCanvasElement>("#vazba-most"));
+  vykresliVazby();
+}
+
+async function otevriVazbu(id: string): Promise<void> {
+  try {
+    const { vazba } = await sprava<{ vazba: EvidovanaVazba }>(`co=vazba&id=${encodeURIComponent(id)}`);
+    vykresliDetailVazby(vazba);
+    ohlas("");
+  } catch (chyba) {
+    ohlas(`Zpětnou vazbu se nepodařilo načíst: ${(chyba as Error).message}`);
+  }
+}
+
+async function nactiVazby(): Promise<void> {
+  vazby = (await sprava<{ vazby: PolozkaSeznamuVazeb[] }>("co=vazby")).vazby;
+  vykresliVazby();
+}
+
+prvek("#vazba-ulozit").addEventListener("click", () => {
+  const v = vybrana;
+  if (!v) return;
+  void (async () => {
+    try {
+      const poznamka = prvek<HTMLTextAreaElement>("#vazba-poznamka").value;
+      const { vazba } = await sprava<{ vazba: EvidovanaVazba }>("co=vazba", { id: v.id, stav: zvolenyStav, poznamka });
+      vazby = vazby.map((p) => (p.id === vazba.id ? { ...p, stav: vazba.stav } : p));
+      vykresliDetailVazby(vazba);
+      ohlas(`Uloženo: ${vazba.id} je ${NAZVY_STAVU[vazba.stav]}.`);
+    } catch (chyba) {
+      ohlas(`Uložit se nepodařilo: ${(chyba as Error).message}`);
+    }
+  })();
+});
+
+prvek("#vazba-kopirovat").addEventListener("click", () => {
+  const zapis = vybrana?.navrh;
+  if (!zapis) return;
+  void navigator.clipboard.writeText(zapis).then(
+    () => ohlas("Most je ve schránce. Ve hře ho načteš tlačítkem Import."),
+    () => ohlas("Zkopírovat se nepodařilo; prohlížeč nepustil do schránky."),
+  );
+});
+
+// ---- Deník hraní ----
+
+const vyberDne = prvek<HTMLSelectElement>("#den");
+
+function cislo(hodnota: number | null, mist = 0): string {
+  return hodnota === null ? "—" : hodnota.toLocaleString("cs-CZ", { maximumFractionDigits: mist });
+}
+
+function vykresliSouhrn(souhrn: SouhrnDeniku, davek: number, neuplne: boolean): void {
+  prvek("#den-pocty").textContent =
+    `${souhrn.hracu} hráčů (${souhrn.novych} nových, ${souhrn.dotykovych} na dotyku) · ${souhrn.sezeni} sezení · ` +
+    `${souhrn.udalosti} událostí v ${davek} dávkách${neuplne ? " · NEÚPLNÉ: den má víc dávek, než se načte najednou" : ""}`;
+  const telo = prvek<HTMLTableSectionElement>("#souhrn tbody");
+  telo.replaceChildren(
+    ...souhrn.urovne.map((u) => {
+      const radek = document.createElement("tr");
+      radek.dataset.uroven = u.uroven;
+      const selhani = Object.entries(u.selhani)
+        .slice(0, 4)
+        .map(([duvod, pocet]) => `${duvod} ${pocet}×`)
+        .join(", ");
+      radek.append(
+        bunka(`${u.uroven} ${urovne.get(u.uroven)?.nazev ?? ""}`),
+        bunka(cislo(u.hracu), "cislo"),
+        bunka(cislo(u.zkousek), "cislo"),
+        bunka(cislo(u.pruchodu), "cislo"),
+        bunka(cislo(u.hracuSPruchodem), "cislo"),
+        bunka(cislo(u.hracuBezZkousky), "cislo"),
+        bunka(cislo(u.zkousekDoPruchodu, 1), "cislo"),
+        bunka(cislo(u.minutDoPruchodu, 1), "cislo"),
+        bunka(`${u.medaile.pruchod} / ${u.medaile.rozpocet} / ${u.medaile.mistrovska}`, "cislo"),
+        bunka(selhani),
+      );
+      return radek;
+    }),
+  );
+  prvek("#souhrn-chyby").textContent =
+    souhrn.chyb === 0
+      ? `Prohlížeče ten den neohlásily žádnou chybu. Zpětných vazeb odesláno: ${souhrn.vazeb}.`
+      : `Chyby ohlášené prohlížeči (${souhrn.chyb}): ${souhrn.chyby.map((c) => `${c.zprava} (${c.pocet}×)`).join(" · ")}. Zpětných vazeb odesláno: ${souhrn.vazeb}.`;
+}
+
+async function otevriSezeni(den: string, s: SezeniDne, radek: HTMLTableRowElement): Promise<void> {
+  try {
+    const data = await sprava<{ hlavicka: HlavickaDeniku; udalosti: UdalostDeniku[]; neuplne: boolean }>(
+      `co=sezeni&den=${den}&hrac=${s.hrac}&sezeni=${s.sezeni}`,
+    );
+    for (const r of prvek("#sezeni tbody").querySelectorAll("tr[aria-selected]")) r.setAttribute("aria-selected", "false");
+    radek.setAttribute("aria-selected", "true");
+    prvek("#detail-sezeni").hidden = false;
+    udaje(prvek("#sezeni-udaje"), [
+      ["Hráč", s.hrac],
+      ["Sezení", s.sezeni],
+      ["Zařízení", zarizeni(data.hlavicka)],
+      ["Událostí", `${data.udalosti.length}${data.neuplne ? " (neúplné)" : ""}`],
+    ]);
+    const platno = prvek<HTMLCanvasElement>("#sezeni-most");
+    platno.hidden = true;
+    vypisUdalosti(prvek("#sezeni-udalosti"), data.udalosti, platno);
+    ohlas("");
+  } catch (chyba) {
+    ohlas(`Sezení se nepodařilo načíst: ${(chyba as Error).message}`);
+  }
+}
+
+async function nactiDen(den: string): Promise<void> {
+  prvek("#detail-sezeni").hidden = true;
+  const [souhrn, seznam] = await Promise.all([
+    sprava<{ souhrn: SouhrnDeniku; davek: number; neuplne: boolean }>(`co=souhrn&den=${den}`),
+    sprava<{ sezeni: SezeniDne[] }>(`co=den&den=${den}`),
+  ]);
+  vykresliSouhrn(souhrn.souhrn, souhrn.davek, souhrn.neuplne);
+  prvek<HTMLTableSectionElement>("#sezeni tbody").replaceChildren(
+    ...seznam.sezeni.map((s) => {
+      const radek = document.createElement("tr");
+      radek.dataset.vyber = `${s.hrac}/${s.sezeni}`;
+      radek.append(bunka(s.hrac), bunka(s.sezeni), bunka(String(s.davek), "cislo"));
+      radek.addEventListener("click", () => void otevriSezeni(den, s, radek));
+      return radek;
+    }),
+  );
+}
+
+async function nactiDny(): Promise<void> {
+  const { dny } = await sprava<{ dny: string[] }>("co=dny");
+  vyberDne.replaceChildren(
+    ...dny.map((den) => {
+      const moznost = document.createElement("option");
+      moznost.value = den;
+      moznost.textContent = den;
+      return moznost;
+    }),
+  );
+  if (dny.length === 0) {
+    prvek("#den-pocty").textContent = "Deník je zatím prázdný.";
+    return;
+  }
+  await nactiDen(dny[0]!);
+}
+
+vyberDne.addEventListener("change", () => {
+  void nactiDen(vyberDne.value).catch((chyba: unknown) => ohlas(`Den se nepodařilo načíst: ${(chyba as Error).message}`));
+});
+
+prvek("#export").addEventListener("click", () => {
+  const den = vyberDne.value;
+  if (!den) return;
+  void (async () => {
+    try {
+      const data = await sprava<unknown>(`co=export&den=${den}`);
+      const odkaz = document.createElement("a");
+      odkaz.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
+      odkaz.download = `mostmistr-denik-${den}.json`;
+      odkaz.click();
+      URL.revokeObjectURL(odkaz.href);
+    } catch (chyba) {
+      ohlas(`Stáhnout se nepodařilo: ${(chyba as Error).message}`);
+    }
+  })();
+});
+
+// ---- Přihlášení a záložky ----
+
+for (const zalozka of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
+  zalozka.addEventListener("click", () => {
+    for (const z of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
+      z.setAttribute("aria-selected", String(z === zalozka));
+    }
+    for (const panel of document.querySelectorAll<HTMLElement>("[data-panel]")) {
+      panel.hidden = panel.dataset.panel !== zalozka.dataset.zalozka;
+    }
+  });
+}
+
+async function prihlas(): Promise<void> {
+  ohlas("Načítám…");
+  try {
+    await nactiVazby();
+    await nactiDny();
+    obsah.hidden = false;
+    prvek("#odhlasit").hidden = false;
+    document.body.dataset.sprava = "prihlaseno";
+    try {
+      window.sessionStorage.setItem(KLIC_HESLA, heslo);
+    } catch {
+      // Bez paměti panelu se heslo po obnovení stránky zadá znovu.
+    }
+    ohlas("");
+  } catch (chyba) {
+    obsah.hidden = true;
+    document.body.dataset.sprava = "odmitnuto";
+    const stav = chyba instanceof ChybaSpravy ? chyba.stav : 0;
+    if (stav === 401) ohlas("Nesprávné heslo správce.");
+    else if (stav === 503) ohlas(`Server heslo správce nezná: ${(chyba as Error).message}.`);
+    else if (stav === 404 || stav === 0) ohlas("Správa na této adrese neběží (funkce Netlify nejsou nasazené, nebo je stránka otevřená mimo Netlify).");
+    else ohlas(`Přihlášení se nepovedlo: ${(chyba as Error).message}`);
+  }
+}
+
+prvek<HTMLFormElement>("#prihlaseni").addEventListener("submit", (udalost) => {
+  udalost.preventDefault();
+  heslo = poleHesla.value;
+  void prihlas();
+});
+
+prvek("#odhlasit").addEventListener("click", () => {
+  heslo = "";
+  poleHesla.value = "";
+  try {
+    window.sessionStorage.removeItem(KLIC_HESLA);
+  } catch {
+    // Nic k odstranění.
+  }
+  obsah.hidden = true;
+  prvek("#odhlasit").hidden = true;
+  document.body.dataset.sprava = "odhlaseno";
+  ohlas("Odhlášeno.");
+});
+
+if (heslo) {
+  poleHesla.value = heslo;
+  void prihlas();
+}

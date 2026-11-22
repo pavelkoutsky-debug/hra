@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.jadro.json && tsc --noEmit -p tsconfig.node.json",
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.jadro.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.funkce.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vite build && vitest run --config vitest.e2e.config.ts",
