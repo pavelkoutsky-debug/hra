@@ -8,6 +8,10 @@ import ocelovaLavka from "./2-01.json";
 import ranniRozcvicka from "./2-02.json";
 import cestnaJednotka from "./2-03.json";
 import prehlidka from "./2-04.json";
+import okresniSilnice from "./3-01.json";
+import podVedenim from "./3-02.json";
+import linka from "./3-03.json";
+import kolona from "./3-04.json";
 import nabrezi from "./5-01.json";
 import mestskyBeh from "./5-02.json";
 import slavnost from "./5-03.json";
@@ -23,6 +27,10 @@ const SOUBORY_KAMPANE: readonly unknown[] = [
   ranniRozcvicka,
   cestnaJednotka,
   prehlidka,
+  okresniSilnice,
+  podVedenim,
+  linka,
+  kolona,
   nabrezi,
   mestskyBeh,
   slavnost,

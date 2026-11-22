@@ -13,7 +13,7 @@ Poslední aktualizace: 22. 11. 2026
 | M3a Rezonance | Hotovo, zadavatel vyzkoušel a schválil; sloučeno do `main` (21. 11. 2026) |
 | M3z Zvuk (předsunuto z M8) | Hotovo jako **pracovní verze**, sloučeno do `main` (22. 11. 2026). Zadavatel chce zvuky později předělat pomocí ElevenLabs |
 | M3b Dav a analýza | Hotovo, sloučeno do `main` (22. 11. 2026) včetně opravy ukázky 5-04 |
-| M4a Těžká doprava | Rozpracováno (zatím jen průzkum kódu a návrh postupu, žádný kód) |
+| M4a Těžká doprava | Hotovo, čeká na vyzkoušení zadavatelem (pull request M4a) |
 | M4b až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
@@ -90,6 +90,79 @@ V přehledu kampaně je pátá kapitola hned za druhou; třetí a čtvrtá (siln
 - Jak se s panelem a budičem pracuje člověku, který je vidí poprvé. Testy ověřují, že fungují, ne že jsou srozumitelné.
 - Obtížnost páté kapitoly: je nastavená z referenčních mostů stejně jako dřív, ale úrovně s tlumičem jsou první, kde hráč ladí dvě čísla najednou.
 - Jiné prohlížeče než Chromium.
+
+## M4a — výsledek
+
+Třetí kapitola: okresní silnice. Těžká doprava, ocelobetonová mostovka a těžký ocelový profil; mosty, které nesou hlavně samy sebe.
+
+**Vozidla** (`src/zkouska/vozidla.ts`, kresba ve `src/vykres/provoz.ts`)
+
+| Vozidlo | Hmotnost | Nápravy | Rychlost | Pérování |
+|---|---|---|---|---|
+| Dodávka | 3,5 t | 2 (1,6 + 1,9 t) | 50 km/h | 1,5 Hz, útlum 30 % |
+| Autobus | 18 t | 2 (6,5 + 11,5 t) | 40 km/h | vzduchové, 1,2 Hz, útlum 25 % |
+| Nákladní auto | 26 t | 3 (7 + 9,5 + 9,5 t) | 40 km/h | listová pera, 2,8 Hz, útlum 12 % |
+| Tahač s návěsem | 40 t | 5 (6,5 + 11,5 + 3 × 7,33 t) | 40 km/h | tahač pera, návěs vzduch 1,6 Hz |
+
+Každá náprava je karoserie na pérování nad kolem na pneumatice, stejně jako u osobního auta. Tahač s návěsem je hotový a otestovaný, v úrovních přijde až ve čtvrté kapitole. Provoz v obou směrech hra uměla už dřív; nově může úroveň vozidlům předepsat rozestup a rychlost (kolona).
+
+**Ocelobetonová mostovka** (`src/data/katalog.ts`): železobetonová deska 200 mm na ocelových nosnících IPE 240 po 1,5 m, přepočtená na ocel. Váží 520 kg na metr čtvereční (dřevěná 34), v ohybu unese 317 kNm na metr šířky (dřevěná 34) a je stokrát tužší. V tahu nese jen ocel, v tlaku hlavně beton. Poruší se tvárně. Pole do 6 m, 12 000 Kč/m.
+
+**Nerovnost vozovky** (`src/jadro/nerovnost.ts`): profil silnice s normovým spektrem (ISO 8608, třídy A, B, C; směrodatná odchylka výšky 4, 8 a 16 mm), počítaný jen aritmetikou z násady úrovně, takže stejná úroveň má vždy stejnou silnici. Kola po něm jedou před mostem i na něm; chodci ne. Vyšší třída je táž silnice, jen dvakrát hrbolatější.
+
+**Brzdění** (`src/zkouska/provoz.ts`): položka jízdního řádu může vozidlům nařídit zabrzdit na mostě (výchozí zpomalení 5 m/s²), postát a rozjet se. Celá skupina brzdí naráz. Kola tlačí vozovku podélnou silou (zpomalení / g) × tlak kola a vůz se předkloní: přední náprava se přitíží, zadní odlehčí.
+
+**Pohodlí cestujících**: měří se svislé zrychlení karoserie autobusu, dokud jede po mostě (stejný filtr a třídy jako u chodců). Bonus `komfort-cestujicich` rozhoduje o mistrovské medaili; výsledek má řádek „Pohodlí v autobusu“.
+
+**Jak je splněno kritérium milníku** (`test/nerovnost.test.ts`)
+
+- *Dynamické zvýšení od nerovností odpovídá očekávanému rozsahu.* Největší průhyb 24m příhradového mostu pod nákladním autem (staticky 4,2 mm) proti pomalému přejezdu po rovné vozovce, šest různých silnic každé třídy:
+
+  | Vozovka | Zvýšení v průměru | Rozpětí jednotlivých přejezdů |
+  |---|---|---|
+  | rovná, 40 km/h | 5 % | — |
+  | nová (A) | 8 % | 1 až 15 % |
+  | běžná (B) | 14 % | 7 až 25 % |
+  | rozbitá (C) | 26 % | 13 až 46 % |
+
+  Koncepce čekala 15 až 30 %; tomu odpovídá běžná až rozbitá vozovka. Test hlídá pásma kolem těchto hodnot a to, že zvýšení s třídou roste.
+- *Úrovně projdou testem vyhratelnosti*: všech šestnáct úrovní, každá medaile i mosty, které neprojít mají.
+- Testy: 728 jednotkových, 121 kontrol v prohlížeči (z toho 8 nových v `test/e2e/silnice.e2e.ts` a 4 nové ukázky).
+
+**Kapitola 3 – Okresní silnice** (využití nejvíc namáhaného prutu):
+
+| Úroveň | Rozpětí | Provoz | Čemu učí | Průchod / rozpočet / mistrovská | Co neprojde |
+|---|---|---|---|---|---|
+| 3-01 Okresní silnice | 24 m | dodávka, 2 auta, autobus | vlastní tíha: mostovka má sto tun | 44 / 66 / 38 % | metr vysoká příhrada se zlomí dřív, než kdo přijede |
+| 3-02 Pod vedením | 36 m, výška do 3 m | 2 nákladní auta, autobus, dodávka | vzpěr a těžký profil na tlačený pás | 53 / 62 / 51 % | horní pás z lehkého profilu; dvanáctimetrový lehký pás vybočí vlastní tíhou |
+| 3-03 Linka přes rokli | 30 m | 2 autobusy, 2 auta | příhrada pod mostovkou; pohodlí v autobusu | 65 / 48 / 25 %; autobus 0,16 / 0,26 / 0,13 m/s² | metr vysoká příhrada nad mostovkou |
+| 3-04 Kolona | 2 × 24 m, skála uprostřed | kolona 4 nákladních aut brzdí, autobus | brzdná síla a pilíř; oba konce na posuvných ložiskách | 49 / 73 / 36 % | příhrada bez pilíře; pilíř z lehkého profilu se pod brzdící kolonou podlomí |
+
+Každá úroveň má ukázku a odstavec „Ve skutečnosti“ (most v Québecu 1907, Eulerův vzorec 1744, spřažené mosty, pevné a posuvné ložisko a brzdná síla podle normy). Zdroje jsou v popisu pull requestu.
+
+**Co se při kalibraci ukázalo**
+
+- **Most nese hlavně sám sebe.** Na 30 m dělá vlastní tíha tři čtvrtiny namáhání; nákladní auto přidá zbytek. Proto nerovnost vozovky, která zvětší účinek auta o desítky procent, změní celkové namáhání jen o jednotky procent. Rozhoduje u lehkých mostů, ne u těchto.
+- **Příhrada pod mostovkou je zhruba dvakrát účinnější než stejná nad ní**: tlak nese betonová mostovka a ocel jen táhne, takže se nic nevzpírá. Je to fyzikálně správně a je z toho lekce úrovně 3-03. V úrovních 3-01 a 3-02 je prostor pod mostem zakázaný (průjezdný profil), aby zůstala lekce o tíze a vzpěru.
+- **Ocel se láme tvárně**, takže most s několika „porušeními“ často ještě drží a provoz přejede; počítá se to jako průchod, stejně jako dosud. Úroveň 3-02 má proto dvě nákladní auta za sebou: jedno by most s lehkým pásem jen ohnulo.
+- **Pohodlí v autobusu určuje hlavně vozovka.** Na běžné silnici vychází 0,4 až 0,6 m/s² na jakémkoli mostě; most rozhoduje jen na hladké vozovce (tuhý 0,12, měkký 0,28 m/s²). Úroveň 3-03 má proto vozovku rovnou.
+- **Brzdění rozhoduje tam, kde vodorovnou sílu nese štíhlý tlačený prut.** U mostu s pevnou podporou na břehu zmizí v mostovce. Úroveň 3-04 má proto oba konce na posuvných ložiskách a pevný bod jen na skále: lehké nohy pilíře projíždějící kolonu unesou na hraně, brzdící ne.
+
+**Formát úrovně má verzi 4**: nerovnost vozovky začala platit (`zadna`, A, B, C) a položky jízdního řádu umějí `rozestup`, `rychlost` a `brzdeni`. Starší úrovně třídu nerovnosti uváděly, ale hra ji nepočítala; převod jim dává `zadna`, takže jejich výsledky se nezměnily.
+
+**Verze fyziky zůstává 5.** Výsledky všech dosavadních úrovní i otisky regresní sady jsou stejné; přibyly jen nové věci.
+
+**Drobnosti**
+
+- Úroveň, kterou hráč už prošel, zůstává odemčená, i když se před ni zařadila nová kapitola (kapitola 3 před kapitolu 5).
+- Popisek zakázané zóny se drží ve viditelné části výkresu (v malém okně ukázky býval uříznutý).
+- Zadání popisuje vozovku a brzdění; paleta ukazuje ocelobetonovou mostovku silnější čarou.
+
+**Co ověřeno není**
+
+- Jak působí obtížnost: úrovně jsou nastavené z referenčních mostů jako dřív, ale hráč má víc cest (nad mostovkou, pod ní, různé pilíře).
+- Jiné prohlížeče než Chromium.
+- Zvuky těžkých vozidel jsou pracovní (hlasitější verze zvuku auta); načisto v M9.
 
 ## Úprava po M3b: paleta prvků
 
@@ -341,14 +414,14 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. Schválit sloučení úpravy palety (laděný tlumič mezi prvky, skupina Pokusy).
+1. Vyzkoušet náhled M4a (kapitola 3) a rozhodnout o sloučení do `main`.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.
 
 ## Další krok
 
-M4a Těžká doprava: nákladní vozidla, autobus, souprava, obousměrný provoz, nerovnost vozovky, brzdění, těžká ocel, ocelobetonová mostovka a kapitola 3. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M4b Velká rozpětí (po schválení M4a): lana, napínák, automatické dopnutí, pilíře, svary v editoru, viditelné plastické klouby a kapitola 4 s tahačem s návěsem. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
 
 ## Zpětná vazba zadavatele
 
@@ -370,7 +443,7 @@ M4a Těžká doprava: nákladní vozidla, autobus, souprava, obousměrný provoz
 
 - 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“; zadavatel opravu nechal sloučit hned.
 
-- 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“.
+- 22. 11. 2026, vzápětí: „ve stavebních prvcích nikde nevidím laděný tlumič a budič“. Upraveno, viz „Úprava po M3b: paleta prvků“; zadavatel úpravu nechal sloučit hned (verze 0.7.2).
 
 - 21. 11. 2026, po vyzkoušení M3a s ukázkami: „Přijde mi to fajn, pokračuj dále.“ M3a sloučeno do `main`, následuje M3z.
 

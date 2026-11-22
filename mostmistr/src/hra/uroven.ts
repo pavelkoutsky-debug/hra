@@ -33,7 +33,7 @@ import { frekvenceBudice, jeStaly } from "../zkouska/budic";
 import { KlientZkousky } from "../zkouska/klient";
 import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
 import type { BudicZkousky, RozborMostu, Udalost, VysledekZkousky, ZpravaZeZkousky } from "../zkouska/protokol";
-import { lidiVRade, rytmusLidi } from "../zkouska/vozidla";
+import { jeVozidlo, lidiVRade, rytmusLidi } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
@@ -539,12 +539,20 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         polozka.druh === "skakajici-dav" ? "provoz.skoky" : rytmus.rozptyl > 0 ? "provoz.krokKolem" : "provoz.krok";
       kdo = t(klicRytmu, { kdo, f: cislo(rytmus.f, 1) });
     }
+    // U vozidel patří k zadání i to, co není obvyklé: jiná rychlost a brzdění na mostě.
+    if (polozka.rychlost !== undefined && !jeClovek(polozka.druh)) {
+      kdo = t("provoz.rychlost", { kdo, rychlost: cislo(3.6 * polozka.rychlost, 0) });
+    }
+    const brzdi = polozka.brzdeni !== undefined && jeVozidlo(polozka.druh);
+    const stani = polozka.brzdeni ? cislo(polozka.brzdeni.stani, Number.isInteger(polozka.brzdeni.stani) ? 0 : 1) : "";
     const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
     if (vetou) {
       const odkud = t(polozka.smer === 1 ? "zadani.provoz.zleva" : "zadani.provoz.zprava");
-      return t("zadani.provoz.polozka", { kdo, odkud, cas });
+      const veta = t("zadani.provoz.polozka", { kdo, odkud, cas });
+      return brzdi ? t("zadani.provoz.brzdi", { veta, stani }) : veta;
     }
-    return t("rad.polozka", { cas, smer: polozka.smer === 1 ? "→" : "←", kdo });
+    const kratce = t("rad.polozka", { cas, smer: polozka.smer === 1 ? "→" : "←", kdo });
+    return brzdi ? t("rad.brzdi", { polozka: kratce }) : kratce;
   }
 
   // ---- Stavba ----
@@ -1698,6 +1706,27 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       poleKmitani.dataset.trida = String(komfort.trida);
     }
 
+    // Pohodlí cestujících; řádek je jen tam, kde jel autobus.
+    const cestujici = vysledek.komfortCestujicich;
+    for (const uzel of panelVysledku.querySelectorAll<HTMLElement>('[data-radek="autobus"]')) uzel.hidden = cestujici === null;
+    if (cestujici) {
+      const poleAutobusu = udaj("vysledek-autobus");
+      const skok = document.createElement("button");
+      skok.type = "button";
+      skok.className = "vysledek__skok";
+      skok.textContent = t("vysledek.kmitaniHodnota", {
+        zrychleni: cislo(cestujici.zrychleni, 2),
+        trida: t(`komfort.${cestujici.trida}`),
+        cas: zapisCasu(cestujici.cas),
+      });
+      skok.addEventListener("click", () => skocNa(cestujici.cas));
+      const zapisZrychleni = (hodnota: number): string => `${cislo(hodnota, 2)} m/s²`;
+      poleAutobusu.replaceChildren(
+        ...bezNull([skok, rozdil(cestujici.zrychleni, minule?.komfortCestujicich?.zrychleni, zapisZrychleni)]),
+      );
+      poleAutobusu.dataset.zrychleni = cestujici.zrychleni.toFixed(3);
+    }
+
     vypisMedaile(udaj("vysledek-medaile"), uroven, vysledek.medaile);
     udaj("vysledek-cena").replaceChildren(
       ...bezNull([document.createTextNode(koruny(vysledek.cena)), rozdil(vysledek.cena, minule?.cena, koruny)]),
@@ -1800,6 +1829,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       return uzel;
     };
     const provoz = uroven.jizdniRad.map((p) => polozka(zapisJizdy(p, true)));
+    // Nerovná vozovka patří k provozu: říká, o kolik víc vozidla most zatíží.
+    if (uroven.nerovnost !== "zadna" && uroven.jizdniRad.some((p) => !jeClovek(p.druh))) {
+      provoz.push(polozka(t(`zadani.vozovka.${uroven.nerovnost}`)));
+    }
     udaj("zadani-provoz").replaceChildren(...(provoz.length > 0 ? provoz : [polozka(t("zadani.provoz.zadny"))]));
 
     const stavba = uroven.povolenePrvky

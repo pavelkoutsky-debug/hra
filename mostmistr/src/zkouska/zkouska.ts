@@ -63,6 +63,9 @@ export class Zkouska {
   readonly #reakce: ReakcePodpory[];
   /** Měření kmitání mostovky; null v úrovni, kde přes most nejdou lidé. */
   readonly #komfort: MereniKomfortu | null;
+  /** Měření zrychlení karoserií autobusů a čísla účastníků, kteří autobusy jsou. */
+  readonly #komfortCestujicich: MereniKomfortu | null;
+  readonly #autobusy: number[];
   #dalsiSnimek = 0;
   #topologii = 0;
   #poruseni = 0;
@@ -170,6 +173,15 @@ export class Zkouska {
     } else {
       this.#komfort = null;
     }
+    // Pohodlí cestujících se měří na karoseriích autobusů.
+    this.#autobusy = [];
+    const karoserieAutobusu: number[] = [];
+    this.ucastnici.forEach((u, k) => {
+      if (u.druh !== "autobus") return;
+      this.#autobusy.push(k);
+      karoserieAutobusu.push(...u.karoserie);
+    });
+    this.#komfortCestujicich = karoserieAutobusu.length > 0 ? vytvorMereniKomfortu(s, karoserieAutobusu) : null;
     const skryte: number[] = [];
     for (let i = stycnikuMostu; i < s.pocetStycniku; i++) skryte.push(i);
     const zavazi: number[] = [];
@@ -331,6 +343,11 @@ export class Zkouska {
         }
       }
 
+      // Cestující hodnotí jízdu po mostě, ne po silnici před ním; po zřícení už nehodnotí nic.
+      if (this.#komfortCestujicich && !sim.porusena) {
+        zmerKomfort(s, this.#komfortCestujicich, sim.dt, sim.cas, this.provoz.nekdoNaMoste(s, this.#autobusy));
+      }
+
       // Průjezdy a pády.
       const provozni = this.provoz.udalosti;
       for (; this.#udalostiProvozu < provozni.length; this.#udalostiProvozu++) {
@@ -438,6 +455,9 @@ export class Zkouska {
     const mereni = this.#budic ? null : this.#komfort;
     const komfort: KomfortZkousky | null =
       mereni === null ? null : { zrychleni: mereni.nejvetsi, cas: mereni.cas, trida: tridaKomfortu(mereni.nejvetsi) };
+    const cestujici = this.#komfortCestujicich;
+    const komfortCestujicich: KomfortZkousky | null =
+      cestujici === null ? null : { zrychleni: cestujici.nejvetsi, cas: cestujici.cas, trida: tridaKomfortu(cestujici.nejvetsi) };
     let vysledekBudice: VysledekZkousky["budic"] = null;
     if (this.#budic) {
       const { frekvence, zrychleni } = vyhodnotBudic(this.#budic, this.#krivkaBudice);
@@ -461,13 +481,15 @@ export class Zkouska {
     const medaile: Medaile = {
       pruchod: pruchod && zkouska,
       rozpocet: zkouska && pruchod && uroven.inzenyrskyRozpocet !== null && cena <= uroven.inzenyrskyRozpocet,
-      // Komfort cestujících ve vozidlech se zatím neměří; takový bonus proto získat nejde.
       mistrovska:
         zkouska &&
         pruchod &&
         bonus !== null &&
         ((bonus.druh === "rezerva" && nejvetsiVyuziti <= bonus.limit) ||
-          (bonus.druh === "komfort-chodcu" && komfort !== null && komfort.zrychleni <= bonus.limit)),
+          (bonus.druh === "komfort-chodcu" && komfort !== null && komfort.zrychleni <= bonus.limit) ||
+          (bonus.druh === "komfort-cestujicich" &&
+            komfortCestujicich !== null &&
+            komfortCestujicich.zrychleni <= bonus.limit)),
     };
     return {
       pruchod,
@@ -478,6 +500,7 @@ export class Zkouska {
       cena,
       nejvetsiVyuziti,
       komfort,
+      komfortCestujicich,
       brnknuti: this.#brnknuty < 0 ? null : { frekvence: frekvenceKmitani },
       budic: vysledekBudice,
       medaile,

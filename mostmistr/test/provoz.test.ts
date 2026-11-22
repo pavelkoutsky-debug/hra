@@ -35,7 +35,7 @@ describe("modely účastníků", () => {
 
   it("druhy, které hra zatím neumí, model nemají", () => {
     expect(modelUcastnika("lokomotiva")).toBeNull();
-    expect(modelUcastnika("autobus")).toBeNull();
+    expect(modelUcastnika("traktor")).toBeNull();
   });
 });
 

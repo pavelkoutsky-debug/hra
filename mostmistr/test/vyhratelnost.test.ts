@@ -1,6 +1,7 @@
 // Každá úroveň kampaně jde vyhrát, každou medaili lze získat a triviální most neprojde.
 import { describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../src/data/cena";
+import { KATALOG } from "../src/data/katalog";
 import { zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import type { VysledekZkousky } from "../src/zkouska/protokol";
@@ -34,6 +35,10 @@ describe("kampaň", () => {
       "2-02",
       "2-03",
       "2-04",
+      "3-01",
+      "3-02",
+      "3-03",
+      "3-04",
       "5-01",
       "5-02",
       "5-03",
@@ -93,7 +98,7 @@ for (const uroven of kampan) {
     }
 
     it("nejlevnější možná stavba (jen mostovka) je mezi mosty, které neprojdou", () => {
-      const jenMostovka = reseni.pady.find((p) => p.navrh.pruty.every((prut) => prut.prvek === "mostovka-drevo"));
+      const jenMostovka = reseni.pady.find((p) => p.navrh.pruty.every((prut) => KATALOG[prut.prvek].druh === "mostovka"));
       expect(jenMostovka).toBeDefined();
       expect(cenaNavrhu(jenMostovka!.navrh)).toBeLessThan(cenaNavrhu(reseni.rozpocet));
     });

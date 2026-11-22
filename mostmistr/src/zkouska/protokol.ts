@@ -136,6 +136,11 @@ export interface VysledekZkousky {
   spadlo: number;
   /** Počet porušení prutů. */
   poruseni: number;
+  /**
+   * Pohodlí cestujících: největší svislé zrychlení karoserie autobusu, dokud jel po mostě
+   * (stejné měření a třídy jako u chodců). Null, když přes most žádný autobus nejel.
+   */
+  komfortCestujicich: KomfortZkousky | null;
   /** Cena mostu v korunách. */
   cena: number;
   /** Největší využití ze všech prutů. */

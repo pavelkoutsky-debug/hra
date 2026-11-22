@@ -1,0 +1,116 @@
+{
+  "verze": 4,
+  "id": "3-03",
+  "nazev": "Linka přes rokli",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -16,
+    "xMax": 40,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 2,
+      "y": -7
+    },
+    {
+      "x": 7,
+      "y": -13
+    },
+    {
+      "x": 23,
+      "y": -13
+    },
+    {
+      "x": 28,
+      "y": -7
+    },
+    {
+      "x": 30,
+      "y": 0
+    },
+    {
+      "x": 40,
+      "y": 0
+    }
+  ],
+  "hladina": -11.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 30,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 30,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "zadna",
+  "rozpocet": 800000,
+  "inzenyrskyRozpocet": 630000,
+  "mistrovska": {
+    "druh": "komfort-cestujicich",
+    "limit": 0.15
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 3,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 5,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "auto",
+      "pocet": 2
+    }
+  ]
+}

@@ -33,6 +33,8 @@ export interface ModelUcastnika {
   rozestup: number;
   /** Kroková síla chodce: frekvence v Hz a amplitudy harmonických (sin, cos) v newtonech. */
   buzeni?: { frekvence: number; amplitudy: number[] };
+  /** Výška těžiště vozidla nad vozovkou, m; podle ní se při brzdění přitíží přední náprava. */
+  teziste?: number;
 }
 
 const g = 9.80665;
@@ -231,8 +233,123 @@ function auto(): ModelUcastnika {
     rychlost: 50 / 3.6,
     delka: 4.4,
     rozestup: 14,
+    teziste: 0.55,
     napravy: [naprava(0.9, 0.55), naprava(3.6, 0.45)],
   };
+}
+
+/** Náprava užitkového vozidla: co nese, jak je odpružená a na kolika pneumatikách stojí. */
+interface NapravaVozu {
+  /** Vzdálenost za čelem vozidla, m. */
+  odstup: number;
+  /** Hmota, kterou náprava přenáší do vozovky (včetně sebe), kg. */
+  zatizeni: number;
+  /** Hmota kol a nápravy pod pérováním, kg. */
+  neodpruzena: number;
+  /** Vlastní frekvence karoserie na pérování nápravy (Hz) a poměrný útlum. */
+  frekvence: number;
+  utlum: number;
+  pneumatik: number;
+}
+
+/** Pneumatika: radiální tuhost N/m, tlumení N·s/m a poloměr zatíženého kola, m. */
+interface Pneumatika {
+  tuhost: number;
+  tlumeni: number;
+  polomer: number;
+}
+
+/** Pneumatika dodávky a pneumatika nákladního vozu a autobusu (kolem 1 MN/m při huštění 8 bar). */
+const PNEU_DODAVKY: Pneumatika = { tuhost: 300_000, tlumeni: 400, polomer: 0.34 };
+const PNEU_NAKLADNI: Pneumatika = { tuhost: 1_000_000, tlumeni: 2_000, polomer: 0.5 };
+
+/** Složí vozidlo z náprav; `vyskaKaroserie` je výška styčníku karoserie nad osou kola, m. */
+function vozidlo(
+  rychlost: number,
+  delka: number,
+  rozestup: number,
+  pneu: Pneumatika,
+  vyskaKaroserie: number,
+  teziste: number,
+  napravy: readonly NapravaVozu[],
+): ModelUcastnika {
+  return {
+    rychlost,
+    delka,
+    rozestup,
+    teziste,
+    napravy: napravy.map((n): Naprava => {
+      const odpruzena = n.zatizeni - n.neodpruzena;
+      return {
+        odstup: n.odstup,
+        odpruzena,
+        neodpruzena: n.neodpruzena,
+        perovani: { ...pruzina(odpruzena, n.frekvence, n.utlum), vyska: vyskaKaroserie },
+        kontakt: { tuhost: n.pneumatik * pneu.tuhost, tlumeni: n.pneumatik * pneu.tlumeni, vyska: pneu.polomer },
+      };
+    }),
+  };
+}
+
+/**
+ * Dodávka: 3 500 kg, 50 km/h, rozvor 3,7 m. Naložená nese 46 % na přední a 54 % na zadní
+ * nápravě; karoserie se houpe kolem 1,5 Hz s útlumem 30 %.
+ */
+function dodavka(): ModelUcastnika {
+  return vozidlo(50 / 3.6, 6, 18, PNEU_DODAVKY, 0.45, 0.9, [
+    { odstup: 1, zatizeni: 1600, neodpruzena: 110, frekvence: 1.5, utlum: 0.3, pneumatik: 2 },
+    { odstup: 4.7, zatizeni: 1900, neodpruzena: 160, frekvence: 1.5, utlum: 0.3, pneumatik: 2 },
+  ]);
+}
+
+/**
+ * Městský autobus s cestujícími: 18 t, 40 km/h, délka 12 m, rozvor 6 m. Přední náprava nese
+ * 6,5 t na dvou pneumatikách, zadní 11,5 t na čtyřech. Vzduchové pérování je měkké: karoserie
+ * se houpe kolem 1,2 Hz s útlumem 25 %.
+ */
+function autobus(): ModelUcastnika {
+  return vozidlo(40 / 3.6, 12, 30, PNEU_NAKLADNI, 0.55, 1.2, [
+    { odstup: 2.7, zatizeni: 6500, neodpruzena: 650, frekvence: 1.2, utlum: 0.25, pneumatik: 2 },
+    { odstup: 8.7, zatizeni: 11500, neodpruzena: 1150, frekvence: 1.2, utlum: 0.25, pneumatik: 4 },
+  ]);
+}
+
+/**
+ * Třínápravové nákladní auto: 26 t, 40 km/h. Přední náprava 7 t, zadní dvojnáprava 2× 9,5 t
+ * s osami 1,35 m od sebe. Listová pera jsou tvrdá a málo tlumí: naložený vůz se houpe kolem
+ * 2,8 Hz s útlumem 12 %. To je pásmo, ve kterém kmitají silniční mosty středních rozpětí.
+ */
+function nakladni(): ModelUcastnika {
+  return vozidlo(40 / 3.6, 9.2, 24, PNEU_NAKLADNI, 0.6, 1.5, [
+    { odstup: 1.4, zatizeni: 7000, neodpruzena: 650, frekvence: 2.8, utlum: 0.12, pneumatik: 2 },
+    { odstup: 5.9, zatizeni: 9500, neodpruzena: 1100, frekvence: 2.8, utlum: 0.12, pneumatik: 4 },
+    { odstup: 7.25, zatizeni: 9500, neodpruzena: 1100, frekvence: 2.8, utlum: 0.12, pneumatik: 4 },
+  ]);
+}
+
+/**
+ * Tahač s návěsem: 40 t na pěti nápravách, 40 km/h, délka 16,5 m. Tahač nese 6,5 t vpředu
+ * (listová pera) a 11,5 t na hnací nápravě; návěs má tři nápravy po 7,33 t na vzduchovém
+ * pérování (1,6 Hz, útlum 20 %). Návěs leží na točnici nad hnací nápravou; v tomto modelu
+ * nese každá náprava svůj díl nákladu samostatně.
+ */
+function souprava(): ModelUcastnika {
+  const naves = 22000 / 3;
+  return vozidlo(40 / 3.6, 16.5, 34, PNEU_NAKLADNI, 0.6, 1.6, [
+    { odstup: 1.4, zatizeni: 6500, neodpruzena: 650, frekvence: 2.6, utlum: 0.12, pneumatik: 2 },
+    { odstup: 5, zatizeni: 11500, neodpruzena: 1150, frekvence: 1.6, utlum: 0.2, pneumatik: 4 },
+    { odstup: 10.6, zatizeni: naves, neodpruzena: 700, frekvence: 1.6, utlum: 0.2, pneumatik: 2 },
+    { odstup: 11.9, zatizeni: naves, neodpruzena: 700, frekvence: 1.6, utlum: 0.2, pneumatik: 2 },
+    { odstup: 13.2, zatizeni: naves, neodpruzena: 700, frekvence: 1.6, utlum: 0.2, pneumatik: 2 },
+  ]);
+}
+
+/** Druhy provozu, které jsou silniční vozidla s karoserií na pérování. */
+const VOZIDLA: ReadonlySet<IdProvozu> = new Set<IdProvozu>(["auto", "dodavka", "autobus", "nakladni", "souprava"]);
+
+/** Je daný druh provozu silniční vozidlo s karoserií (ne chodec ani cyklista)? */
+export function jeVozidlo(druh: IdProvozu): boolean {
+  return VOZIDLA.has(druh);
 }
 
 /**
@@ -249,6 +366,10 @@ export function modelUcastnika(druh: IdProvozu, kadence?: number): ModelUcastnik
   if (druh === "skakajici-dav") return chodecVeSkupine(KADENCE_DAVU, RYCHLOST_DAVU, 1);
   if (druh === "cyklista") return cyklista();
   if (druh === "auto") return auto();
+  if (druh === "dodavka") return dodavka();
+  if (druh === "autobus") return autobus();
+  if (druh === "nakladni") return nakladni();
+  if (druh === "souprava") return souprava();
   return null;
 }
 

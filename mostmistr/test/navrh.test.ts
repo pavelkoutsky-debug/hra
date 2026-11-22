@@ -111,7 +111,7 @@ describe("kontrola návrhu proti úrovni", () => {
     const hotove = Object.entries(KATALOG)
       .filter(([, polozka]) => polozka.hotovo)
       .map(([id]) => id);
-    expect(hotove).toEqual(["mostovka-drevo", "drevo-lehke", "drevo-tezke", "ocel-lehka", "ocel-tezka", "tlumic", "pruzina"]);
+    expect(hotove).toEqual(["mostovka-drevo", "mostovka-ocelobeton", "drevo-lehke", "drevo-tezke", "ocel-lehka", "ocel-tezka", "tlumic", "pruzina"]);
     for (const polozka of Object.values(KATALOG)) {
       if (polozka.predbezne) expect(polozka.hotovo).toBe(false);
     }

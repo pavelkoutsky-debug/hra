@@ -1,0 +1,130 @@
+{
+  "verze": 4,
+  "id": "3-02",
+  "nazev": "Pod vedením",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -14,
+    "xMax": 46,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 4,
+      "y": -7
+    },
+    {
+      "x": 10,
+      "y": -11
+    },
+    {
+      "x": 26,
+      "y": -11
+    },
+    {
+      "x": 32,
+      "y": -7
+    },
+    {
+      "x": 36,
+      "y": 0
+    },
+    {
+      "x": 46,
+      "y": 0
+    }
+  ],
+  "hladina": -9.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 36,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": -10,
+      "yMin": 3.5,
+      "xMax": 46,
+      "yMax": 12
+    },
+    {
+      "xMin": 0.5,
+      "yMin": -11,
+      "xMax": 35.5,
+      "yMax": -0.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 36,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "B",
+  "rozpocet": 1250000,
+  "inzenyrskyRozpocet": 960000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.52
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nakladni",
+      "pocet": 2,
+      "rozestup": 14
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 7,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "dodavka"
+    }
+  ]
+}

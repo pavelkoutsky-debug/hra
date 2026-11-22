@@ -238,12 +238,18 @@ function nakresliZakazanouZonu(
   ctx.strokeRect(ostre(a.x), ostre(a.y), Math.round(sirka), Math.round(vyska));
   ctx.setLineDash([]);
 
-  if (sirka > 110 && vyska > 22) {
+  // Popisek stojí v levém horním rohu té části zóny, která je vidět; jinak by ho okraj
+  // výkresu (nebo malé okno ukázky) uřízl.
+  const vlevo = Math.max(a.x, 0);
+  const nahore = Math.max(a.y, 0);
+  const viditelnaSirka = Math.min(b.x, s.rozmer.sirka) - vlevo;
+  const viditelnaVyska = Math.min(b.y, s.rozmer.vyska) - nahore;
+  if (viditelnaSirka > 110 && viditelnaVyska > 22) {
     ctx.font = `11px ${PISMO}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillStyle = BARVY.zakaz;
-    ctx.fillText(t("vykres.zakazanaZona"), a.x + 6, a.y + 5);
+    ctx.fillText(t("vykres.zakazanaZona"), vlevo + 6, nahore + 5);
   }
 }
 

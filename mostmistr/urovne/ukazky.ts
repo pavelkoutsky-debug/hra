@@ -36,6 +36,40 @@ function sTlumiciV(navrh: NavrhMostu, mista: readonly number[], hmota: number, f
   };
 }
 
+/**
+ * Stejný most s horním pásem z těžkého profilu: pruty mezi styčníky v největší výšce
+ * a krajní šikminy od podpor k nim.
+ */
+function sTezkymPasem(navrh: NavrhMostu): NavrhMostu {
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  let vyska = 0;
+  let levy = Infinity;
+  let pravy = -Infinity;
+  for (const s of navrh.stycniky) {
+    vyska = Math.max(vyska, s.y);
+    if (s.y === 0) {
+      levy = Math.min(levy, s.x);
+      pravy = Math.max(pravy, s.x);
+    }
+  }
+  const nahore = (s: { y: number }): boolean => s.y === vyska;
+  const podpora = (s: { x: number; y: number }): boolean => s.y === 0 && (s.x === levy || s.x === pravy);
+  return {
+    ...navrh,
+    pruty: navrh.pruty.map((p) => {
+      const a = podleId.get(p.a)!;
+      const b = podleId.get(p.b)!;
+      const pas = (nahore(a) && nahore(b)) || (nahore(a) && podpora(b)) || (podpora(a) && nahore(b));
+      return pas && p.prvek === "ocel-lehka" ? { ...p, prvek: "ocel-tezka" as const } : p;
+    }),
+  };
+}
+
+/** Stejný most převrácený pod mostovku: co bylo nad ní, je stejně hluboko pod ní. */
+function prevraceny(navrh: NavrhMostu): NavrhMostu {
+  return { ...navrh, stycniky: navrh.stycniky.map((s) => (s.y === 0 ? s : { ...s, y: -s.y })) };
+}
+
 function sProvozem(uroven: Uroven, jizdniRad: PolozkaJizdnihoRadu[]): Uroven {
   return { ...uroven, jizdniRad };
 }
@@ -84,6 +118,26 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
         b: { uroven: pochod, navrh: sTlumenim(reseni.mistrovska, 100_000) },
       };
     }
+
+    // Stejná mostovka, příhrada metr a tři metry vysoká: nízká neunese ani sebe.
+    case "3-01":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+
+    // Stejný tvar s dvanáctimetrovým horním pásem: z lehkého profilu vybočí, z těžkého ne.
+    case "3-02": {
+      const lehky = reseni.pady[2]!.navrh;
+      return { a: { uroven, navrh: lehky }, b: { uroven, navrh: sTezkymPasem(lehky) } };
+    }
+
+    // Stejná nízká příhrada nad mostovkou a pod ní: nahoře se ocelový pás vzpírá, dole tlak nese beton.
+    case "3-03": {
+      const nad = reseni.pady[1]!.navrh;
+      return { a: { uroven, navrh: nad }, b: { uroven, navrh: prevraceny(nad) } };
+    }
+
+    // Stejný most pod brzdící kolonou: pilíř z lehkého a z těžkého profilu.
+    case "3-04":
+      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
     // Stejný dav, dva mosty: nižší s lidmi sjede do pásma jejich kroků, vyšší zůstane nad ním.
     case "5-01":

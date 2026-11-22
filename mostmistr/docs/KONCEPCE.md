@@ -111,7 +111,7 @@ Pevnosti jsou střední hodnoty skutečných materiálů, ne normové hodnoty s 
 | Prvek | Chování | Jak se poruší | Výchozí parametry | Největší délka |
 |---|---|---|---|---|
 | Dřevěná mostovka | Pojízdná, lehká, levná | Křehce: praskne | GL24h · E 11,5 GPa · ohyb ~32 MPa · 420 kg/m³ | 4 m |
-| Ocelobetonová mostovka | Pojízdná, těžká, únosná | Tvárně: ohne se | Spřažená deska, velká vlastní tíha | 6 m |
+| Ocelobetonová mostovka | Pojízdná, těžká, únosná | Tvárně: ohne se | Spřažená deska, velká vlastní tíha *(M4a: deska 200 mm na nosnících IPE 240, 520 kg/m²; v tlaku nese beton, v tahu jen ocel, proto je příhrada pod mostovkou účinnější než nad ní)* | 6 m |
 | Kolejiště | Pojízdné jen pro kolejová vozidla | Tvárně | Kolej na mostnicích | 6 m |
 | Dřevěný trám | Tah, tlak, ohyb; brzy se vzpírá | Křehce | GL24h, lehký a těžký průřez | 6 m |
 | Ocelový nosník | Tah, tlak, ohyb | Tvárně: trvale se ohne, pak se zlomí | S355 · E 210 GPa · kluz ~400 MPa · pevnost ~510 MPa · 7 850 kg/m³ | 12 m |
@@ -270,13 +270,13 @@ Na začátku zkoušky se vlastní tíha nezapne skokem. Most startuje z předem 
 ### 7.6 Vozidla a kontakt s mostovkou
 
 - Vozidlo je karoserie (svislý pohyb a houpání) na nápravách s pružinami a tlumiči. Je to stejný typ modelu, jaký se používá při inženýrském výpočtu interakce vozidla s mostem.
-- Vozidlo jede po mostovce předepsanou rychlostí. Brzdění je událost jízdního řádu, která do mostovky přenese podélnou sílu.
+- Vozidlo jede po mostovce předepsanou rychlostí. Brzdění je událost jízdního řádu, která do mostovky přenese podélnou sílu. *(M4a: vůz zabrzdí, postojí a rozjede se; síla je úměrná tlaku kol a vůz se při tom předkloní. Rozhoduje tam, kde vodorovnou sílu nese štíhlý tlačený prut, například nohy pilíře.)*
 - Pneumatika je pružina se skutečnou radiální tuhostí. Kontakt je jednostranný, kolo může odskočit.
 - Když se mostovka pod vozidlem poruší, vozidlo se stane volným tělesem a padá.
 - Tahač a návěs spojuje točnice, vagóny spřáhla s pružením.
 - Vlak má skříň, podvozky a dvojkolí.
 
-Bez nerovností vozovky by vozidla most dynamicky téměř nezatížila: recenzent spočítal rozdíl 0,2 % proti pouhé pohyblivé síle. S nerovnostmi vychází dynamické zvýšení o 15 až 30 %, což odpovídá skutečnosti.
+Bez nerovností vozovky by vozidla most dynamicky téměř nezatížila: recenzent spočítal rozdíl 0,2 % proti pouhé pohyblivé síle. S nerovnostmi vychází dynamické zvýšení o 15 až 30 %, což odpovídá skutečnosti. *(M4a: profil silnice má normové spektrum tříd A, B, C a je pro každou úroveň vždy stejný. Naměřené zvýšení průhybu pod nákladním autem: rovná vozovka při 40 km/h 5 %, nová 8 %, běžná 14 %, rozbitá 26 % v průměru; jednotlivé přejezdy se liší (na rozbité 13 až 46 %). Zvýšení se týká jen účinku vozidla: u těžkého mostu, který nese hlavně sám sebe, změní celkové namáhání o jednotky procent.)*
 
 ### 7.7 Lidé
 

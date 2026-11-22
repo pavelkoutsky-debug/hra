@@ -37,6 +37,8 @@ function mezi(v: number, min: number, max: number): number {
 /** Tloušťka čáry prutu podle prvku, v pixelech při měřítku `m` pixelů na metr. */
 export function tloustkaPrutu(prvek: IdPrvku, m: number): number {
   const druh = KATALOG[prvek].druh;
+  // Ocelobetonová mostovka je na výkresu silnější než dřevěná, jako ve skutečnosti.
+  if (prvek === "mostovka-ocelobeton") return mezi(0.32 * m, 6.5, 12);
   if (druh === "mostovka") return mezi(0.22 * m, 4.5, 9);
   if (druh === "lano") return 1.6;
   if (druh === "pilir") return mezi(0.5 * m, 8, 18);

@@ -18,6 +18,7 @@ import {
   type PopisBremene,
 } from "../jadro/bremena";
 import { nahoda, nahodnaFaze } from "../jadro/nahoda";
+import { vyskaNerovnosti, vytvorNerovnost, type Nerovnost } from "../jadro/nerovnost";
 import type { Zatizeni } from "../jadro/simulace";
 import { popisPruziny, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { pridejKontaktSTerenem, vyskaTerenuV, type Teren } from "../jadro/teren";
@@ -29,6 +30,7 @@ import {
   KADENCE_KAPELY,
   KADENCE_SKAKANI,
   KADENCE_ZAVODU,
+  jeVozidlo,
   lidiVRade,
   modelUcastnika,
   ROZPTYL_DAVU,
@@ -106,6 +108,11 @@ export interface PopisUcastnika {
    * rozejde (časy děje v sekundách) a v jakém rytmu skáče (Hz). Skáčou všichni naráz.
    */
   skok?: { prichod: number; od: number; do: number; odchod: number; kadence: number };
+  /**
+   * Brzdění vozidla: odkdy brzdí, odkdy stojí, kdy se rozjíždí a odkdy zase jede plnou
+   * rychlostí (časy děje v sekundách), s jakým zpomalením brzdí a zrychlením se rozjíždí (m/s²).
+   */
+  brzdeni?: { od: number; stoji: number; rozjezd: number; jede: number; zpomaleni: number; zrychleni: number };
 }
 
 interface KontaktUcastnika {
@@ -122,6 +129,11 @@ interface PlanUcastnika extends PopisUcastnika {
   /** Skákající dav: amplitudy krokové síly při chůzi a síly doskoků. */
   chuze?: number[];
   skakani?: number[];
+  /**
+   * Přitížení přední nápravy při zpomalení 1 m/s², N: hmotnost × výška těžiště / rozvor.
+   * O stejnou sílu se odlehčí zadní nápravy. Nula u vozidla s jednou nápravou.
+   */
+  prenos: number;
 }
 
 /** Řada lidí nebo jedno vozidlo ze skupiny v jízdním řádu. */
@@ -134,6 +146,10 @@ interface Rada {
   lidi: number;
   vTaktu: boolean;
 }
+
+/** Zpomalení při brzdění, když ho úroveň neurčí, a zrychlení při rozjezdu, m/s². */
+const VYCHOZI_ZPOMALENI = 5;
+const ZRYCHLENI_ROZJEZDU = 1.5;
 
 /** Pauza mezi příchodem skákajícího davu na místo a prvním skokem a po posledním skoku, s. */
 const PAUZA_SKAKANI = 1;
@@ -151,9 +167,25 @@ function odchylka(nahodne: () => number): number {
   return z < -2 ? -2 : z > 2 ? 2 : z;
 }
 
+/**
+ * Model jednoho účastníka položky jízdního řádu. U vozidel smí úroveň předepsat jinou
+ * rychlost a jiný rozestup ve skupině (pomalá kolona nárazník na nárazník).
+ */
+function modelPolozky(polozka: Uroven["jizdniRad"][number]): ModelUcastnika | null {
+  const model = modelUcastnika(polozka.druh, polozka.kadence);
+  if (!model || jeClovek(polozka.druh)) return model;
+  if (polozka.rychlost === undefined && polozka.rozestup === undefined) return model;
+  return {
+    ...model,
+    rychlost: polozka.rychlost ?? model.rychlost,
+    // Vozy se nesmějí překrývat, ať úroveň chce cokoli.
+    rozestup: Math.max(polozka.rozestup ?? model.rozestup, model.delka + 1),
+  };
+}
+
 /** Rozloží položku jízdního řádu na řady: kdo jde vedle koho, jak daleko za sebou a v jakém rytmu. */
 function radySkupiny(polozka: Uroven["jizdniRad"][number], uroven: Uroven, nahodne: () => number): Rada[] | null {
-  const jeden = modelUcastnika(polozka.druh, polozka.kadence);
+  const jeden = modelPolozky(polozka);
   if (!jeden) return null;
   const lidi = polozka.pocet ?? 1;
   const vRade = lidiVRade(polozka.druh, uroven.sirkaMostovky);
@@ -228,6 +260,10 @@ export interface PlanProvozu {
   ucastnici: PlanUcastnika[];
   /** Kontakty břemen pro každou trasu úrovně. */
   kontakty: PopisBremene[][];
+  /** Výškový profil vozovky každé trasy; null, když je vozovka dokonale rovná. */
+  nerovnosti: (Nerovnost | null)[];
+  /** Tíhové zrychlení, se kterým zkouška počítá, m/s². */
+  tiha: number;
   /** Index prvního styčníku provozu; styčníky mostu jsou před ním. */
   prvniStycnik: number;
   /** Čas, kdy by měl poslední účastník dojet, kdyby nikdo nespadl. */
@@ -246,20 +282,50 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
   const plan: PlanProvozu = {
     ucastnici: [],
     kontakty: uroven.trasy.map(() => []),
+    nerovnosti: uroven.trasy.map(() => null),
+    tiha,
     prvniStycnik: popis.stycniky.length,
     konec: 0,
   };
 
-  uroven.jizdniRad.forEach((polozka, cisloPolozky) => {
+  // Nejdřív se každá položka rozloží na řady (to spotřebovává náhodu ve stálém pořadí)
+  // a zjistí se, jak daleko před mostem bude kdo stát; podle toho se pak vyrobí vozovka.
+  const skupiny = uroven.jizdniRad.map((polozka) => {
     const cisloTrasy = uroven.trasy.findIndex((t) => t.id === polozka.trasa);
     const trasa = uroven.trasy[cisloTrasy];
     if (!trasa) throw new Error(`Jízdní řád odkazuje na trasu „${polozka.trasa}“, která v úrovni není.`);
     const rady = radySkupiny(polozka, uroven, nahodne);
     if (!rady || rady.length === 0) throw new Error(`Provoz druhu „${polozka.druh}“ hra zatím neumí.`);
-    const rychlost = rady[0]!.model.rychlost;
     // Před mostem je rozjezd dlouhý sekundu jízdy, aby bylo vidět, kdo přijíždí.
-    const nabeh = Math.max(2, rychlost);
+    const nabeh = Math.max(2, rady[0]!.model.rychlost);
+    return { cisloTrasy, trasa, rady, nabeh };
+  });
+  if (uroven.nerovnost !== "zadna") {
+    uroven.trasy.forEach((trasa, cisloTrasy) => {
+      // Vozovka sahá tak daleko před most a za něj, kam dosáhne nejvzdálenější čekající vůz.
+      let presah = 30;
+      for (const skupina of skupiny) {
+        if (skupina.cisloTrasy !== cisloTrasy) continue;
+        const posledni = skupina.rady[skupina.rady.length - 1]!;
+        presah = Math.max(presah, skupina.nabeh + posledni.zaCelem + posledni.model.delka + 10);
+      }
+      // Vlastní řada náhodných čísel, aby nerovnosti neposunuly fáze kroků lidí.
+      const nasadaVozovky = (Math.imul(nasada ^ 0x9e3779b9, 0x85ebca6b) + cisloTrasy) >>> 0;
+      plan.nerovnosti[cisloTrasy] = vytvorNerovnost(
+        trasa.zacatek.x - presah,
+        trasa.konec.x + presah,
+        uroven.nerovnost as Exclude<Uroven["nerovnost"], "zadna">,
+        nasadaVozovky,
+      );
+    });
+  }
+
+  uroven.jizdniRad.forEach((polozka, cisloPolozky) => {
+    const { cisloTrasy, trasa, rady, nabeh } = skupiny[cisloPolozky]!;
+    const rychlost = rady[0]!.model.rychlost;
     const delkaMostu = trasa.konec.x - trasa.zacatek.x;
+    // Po nerovnostech jedou kola; chodec je překročí.
+    const profil = jeClovek(polozka.druh) ? null : plan.nerovnosti[cisloTrasy]!;
 
     // Skákající dav dojde doprostřed mostu, zastaví, skáče a zase odejde. Řady jdou stejně
     // rychle a zastaví ve stejných rozestupech, takže na místo dojdou všechny naráz.
@@ -272,6 +338,23 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
       const konecSkakani = od + (polozka.trvani ?? VYCHOZI_TRVANI_SKAKANI);
       skok = { prichod, od, do: konecSkakani, odchod: konecSkakani + PAUZA_SKAKANI, kadence: polozka.kadence ?? KADENCE_SKAKANI };
       skakani = skokan(skok.kadence);
+    }
+
+    // Brzdění: celá skupina brzdí naráz, takže si vozy drží rozestupy. První zastaví čelem
+    // v místě, které úroveň určila; brzdit začne tak, aby mu na to brzdná dráha stačila.
+    let brzdeni: PopisUcastnika["brzdeni"];
+    let ztrataCasu = 0;
+    if (polozka.brzdeni && jeVozidlo(polozka.druh)) {
+      const zpomaleni = polozka.brzdeni.zpomaleni ?? VYCHOZI_ZPOMALENI;
+      const celo = polozka.smer === 1 ? trasa.zacatek.x - nabeh : trasa.konec.x + nabeh;
+      const draha = polozka.smer * (polozka.brzdeni.misto - celo);
+      const brzdnaDraha = (rychlost * rychlost) / (2 * zpomaleni);
+      const od = polozka.cas + Math.max(0, draha - brzdnaDraha) / rychlost;
+      const stoji = od + rychlost / zpomaleni;
+      const rozjezd = stoji + polozka.brzdeni.stani;
+      brzdeni = { od, stoji, rozjezd, jede: rozjezd + rychlost / ZRYCHLENI_ROZJEZDU, zpomaleni, zrychleni: ZRYCHLENI_ROZJEZDU };
+      // Při brzdění a rozjezdu ujede vůz polovinu toho, co by ujel plnou rychlostí.
+      ztrataCasu = polozka.brzdeni.stani + rychlost / (2 * zpomaleni) + rychlost / (2 * ZRYCHLENI_ROZJEZDU);
     }
 
     rady.forEach((rada, clen) => {
@@ -293,7 +376,17 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
         trasa: cisloTrasy,
         kontakty: [],
         stycniky: [],
+        prenos: 0,
       };
+      if (brzdeni) {
+        ucastnik.brzdeni = brzdeni;
+        const rozvor = model.napravy[model.napravy.length - 1]!.odstup - model.napravy[0]!.odstup;
+        if (rozvor > 0) {
+          let hmota = 0;
+          for (const naprava of model.napravy) hmota += naprava.odpruzena + naprava.neodpruzena;
+          ucastnik.prenos = (hmota * (model.teziste ?? 1)) / rozvor;
+        }
+      }
       if (model.buzeni && rada.faze) {
         ucastnik.kadence = model.buzeni.frekvence;
         ucastnik.faze = rada.faze;
@@ -308,9 +401,10 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
 
       for (const naprava of model.napravy) {
         const x = celo - polozka.smer * naprava.odstup;
-        // Výchozí poloha je klidová: kontakt stlačený tíhou všeho, co nese.
+        // Výchozí poloha je klidová: kontakt stlačený tíhou všeho, co nese, na hrbolu, kde kolo stojí.
         const nesena = naprava.odpruzena + naprava.neodpruzena;
-        const yKola = zem + naprava.kontakt.vyska - (nesena * tiha) / naprava.kontakt.tuhost;
+        const hrbol = profil ? vyskaNerovnosti(profil, x) : 0;
+        const yKola = zem + hrbol + naprava.kontakt.vyska - (nesena * tiha) / naprava.kontakt.tuhost;
         const kolo = popis.stycniky.length;
         const bremeno: PopisBremene = {
           stycnik: kolo,
@@ -318,6 +412,7 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
           tlumeni: naprava.kontakt.tlumeni,
           vyskaNad: naprava.kontakt.vyska,
         };
+        if (profil) bremeno.poNerovnostech = true;
         if (model.buzeni && ucastnik.faze) bremeno.buzeni = { ...model.buzeni, faze: ucastnik.faze };
 
         if (naprava.perovani && naprava.neodpruzena > 0) {
@@ -348,7 +443,7 @@ export function naplanujProvoz(popis: PopisSoustavy, uroven: Uroven, nasada: num
       }
       plan.ucastnici.push(ucastnik);
       const draha = odCela + delkaMostu + model.delka + DOJEZD;
-      const stani = skok ? skok.odchod - skok.prichod : 0;
+      const stani = skok ? skok.odchod - skok.prichod : ztrataCasu;
       plan.konec = Math.max(plan.konec, polozka.cas + draha / model.rychlost + stani);
     });
   });
@@ -374,6 +469,8 @@ export class Provoz implements Zatizeni {
   readonly #naTerenu: Uint8Array;
   /** Skákající dav: kolikátou část svého vystoupení má která řada za sebou (viz `#veSkoku`). */
   readonly #castSkoku: Uint8Array;
+  /** Okamžité zrychlení každého účastníka ve směru jízdy, m/s² (záporné při brzdění). */
+  readonly #zrychleni: Float64Array;
   #nedokonceno: number;
 
   constructor(s: Soustava, plan: PlanProvozu, trasy: Trasa[], uroven: Uroven, teren: Teren) {
@@ -384,8 +481,9 @@ export class Provoz implements Zatizeni {
     this.ucastnici = plan.ucastnici;
     this.stavy = new Uint8Array(plan.ucastnici.length);
     this.#castSkoku = new Uint8Array(plan.ucastnici.length);
+    this.#zrychleni = new Float64Array(plan.ucastnici.length);
     this.#nedokonceno = plan.ucastnici.length;
-    this.bremena = trasy.map((trasa, i) => vytvorBremena(trasa, plan.kontakty[i] ?? []));
+    this.bremena = trasy.map((trasa, i) => vytvorBremena(trasa, plan.kontakty[i] ?? [], plan.nerovnosti[i] ?? null));
     this.#naTerenu = new Uint8Array(s.pocetStycniku);
     this.#vysky = new Float64Array(s.pocetStycniku);
     for (const u of plan.ucastnici) {
@@ -407,6 +505,21 @@ export class Provoz implements Zatizeni {
       const trasa = this.#uroven.trasy[u.trasa]!;
       const x = s.x[u.kola[0]!]!;
       if (x >= trasa.zacatek.x && x <= trasa.konec.x) return true;
+    }
+    return false;
+  }
+
+  /** Je právě na mostě (aspoň jedním kolem mezi konci své trasy) některý z daných účastníků? */
+  nekdoNaMoste(s: Soustava, kteri: readonly number[]): boolean {
+    const { ucastnici } = this.#plan;
+    for (const k of kteri) {
+      if (this.stavy[k] !== JEDE) continue;
+      const u = ucastnici[k]!;
+      const trasa = this.#uroven.trasy[u.trasa]!;
+      for (const i of u.kola) {
+        const x = s.x[i]!;
+        if (x >= trasa.zacatek.x && x <= trasa.konec.x) return true;
+      }
     }
     return false;
   }
@@ -457,6 +570,19 @@ export class Provoz implements Zatizeni {
 
   pridejSily(s: Soustava): void {
     for (const b of this.bremena) pridejSilyBremen(s, b);
+    // Brzdící vůz se předkloní: přední náprava se přitíží, zadní odlehčí (při rozjezdu naopak).
+    const { ucastnici } = this.#plan;
+    for (let k = 0; k < ucastnici.length; k++) {
+      const a = this.#zrychleni[k]!;
+      if (a === 0) continue;
+      const u = ucastnici[k]!;
+      const zadnich = u.karoserie.length - 1;
+      if (zadnich < 1 || u.prenos === 0) continue;
+      const sila = -a * u.prenos;
+      const predni = u.karoserie[0]!;
+      s.fy[predni] = s.fy[predni]! - sila;
+      for (let j = 1; j <= zadnich; j++) s.fy[u.karoserie[j]!] = s.fy[u.karoserie[j]!]! + sila / zadnich;
+    }
     const od = this.#plan.prvniStycnik;
     // Spadlí účastníci dopadají na terén a do vody; ostatní nese trasa.
     if (this.#nekdoSpadl) {
@@ -479,6 +605,7 @@ export class Provoz implements Zatizeni {
         }
       } else if (stav === JEDE) {
         if (u.skok) this.#veSkoku(s, k, u, cas);
+        if (u.brzdeni) this.#brzdi(s, k, u, cas);
         const trasa = this.#uroven.trasy[u.trasa]!;
         // Úroveň trasy pod účastníkem; trasa může být ve sklonu.
         const sklon = (trasa.konec.y - trasa.zacatek.y) / (trasa.konec.x - trasa.zacatek.x);
@@ -493,6 +620,7 @@ export class Provoz implements Zatizeni {
           if (u.smer === 1 ? x < trasa.konec.x + DOJEZD : x > trasa.zacatek.x - DOJEZD) dojel = false;
         }
         if (spadl) {
+          this.#zrychleni[k] = 0;
           this.#ukonci(k, SPADL, cas, "pad");
           // Od této chvíle se o trasu neopírá; zachytí ho až terén.
           for (const kontakt of u.kontakty) this.bremena[kontakt.trasa]!.vypnuto[kontakt.bremeno] = 1;
@@ -538,6 +666,33 @@ export class Provoz implements Zatizeni {
         }
       }
     }
+  }
+
+  /**
+   * Brzdění a rozjezd: předepsaná rychlost vozu klesá k nule, vůz stojí a zase zrychluje.
+   * Kola při tom tlačí vozovku podélnou silou úměrnou svému tlaku: při brzdění dopředu,
+   * při rozjezdu dozadu.
+   */
+  #brzdi(s: Soustava, k: number, u: PlanUcastnika, cas: number): void {
+    const b = u.brzdeni!;
+    let rychlost = u.rychlost;
+    let zrychleni = 0;
+    if (cas >= b.od && cas < b.stoji) {
+      zrychleni = -b.zpomaleni;
+      rychlost = u.rychlost - b.zpomaleni * (cas - b.od);
+    } else if (cas >= b.stoji && cas < b.rozjezd) {
+      rychlost = 0;
+    } else if (cas >= b.rozjezd && cas < b.jede) {
+      zrychleni = b.zrychleni;
+      rychlost = b.zrychleni * (cas - b.rozjezd);
+    }
+    if (rychlost < 0) rychlost = 0;
+    else if (rychlost > u.rychlost) rychlost = u.rychlost;
+    this.#zrychleni[k] = zrychleni;
+    for (const i of u.stycniky) s.vx[i] = u.smer * rychlost;
+    // Síla kol na vozovku je opačná než síla vozovky na kola: −hmota × zrychlení.
+    const podelna = (-u.smer * zrychleni) / this.#plan.tiha;
+    for (const kontakt of u.kontakty) this.bremena[kontakt.trasa]!.podelna[kontakt.bremeno] = podelna;
   }
 
   #ukonci(k: number, stav: number, cas: number, druh: "prujezd" | "pad"): void {

@@ -69,7 +69,7 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     trasy: [{ id: "silnice", druh: "silnice", zacatek: { x: 0, y: 0 }, konec: { x: z.rozpeti, y: 0 } }],
     sirkaMostovky: z.sirka ?? 4,
     hmotnostVybaveni: z.vybaveni ?? 300,
-    nerovnost: "A",
+    nerovnost: "zadna",
     rozpocet: null,
     inzenyrskyRozpocet: null,
     mistrovska: null,
