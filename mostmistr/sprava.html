@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Mostmistr – správa</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 20px 24px 40px;
+        background: #103f78;
+        color: #cfe3ff;
+        font: 13px/1.5 "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+      }
+      h1 { margin: 0 0 4px; color: #fff; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; }
+      h2 { margin: 20px 0 6px; color: #8fb4e6; font-size: 12px; font-weight: normal; letter-spacing: 2px; text-transform: uppercase; }
+      p { max-width: 84ch; margin: 0 0 12px; }
+      a { color: #fff; }
+      button, select, input, textarea {
+        padding: 5px 10px;
+        border: 1px solid #cfe3ff;
+        border-radius: 2px;
+        background: transparent;
+        color: #cfe3ff;
+        font: inherit;
+      }
+      button, select { cursor: pointer; }
+      select option { background: #103f78; }
+      button:hover:not(:disabled) { background: #1d5aa3; color: #fff; }
+      button:disabled { opacity: 0.45; cursor: default; }
+      button[aria-pressed="true"], button[aria-selected="true"] { background: #cfe3ff; color: #103f78; }
+      textarea { width: 100%; min-height: 70px; resize: vertical; }
+      .rada { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+      .hlaseni { min-height: 1.5em; color: #ffd166; }
+      .sloupce { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+      @media (max-width: 1000px) { .sloupce { grid-template-columns: minmax(0, 1fr); } }
+      .tabulka { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 4px 8px; border: 1px solid rgb(207 227 255 / 0.4); text-align: left; vertical-align: top; }
+      th { color: #8fb4e6; font-weight: normal; white-space: nowrap; }
+      td.cislo, th.cislo { text-align: right; white-space: nowrap; }
+      tbody tr[data-vyber] { cursor: pointer; }
+      tbody tr[data-vyber]:hover { background: rgb(29 90 163 / 0.6); }
+      tbody tr[aria-selected="true"] { background: #1d5aa3; color: #fff; }
+      .stav { padding: 0 6px; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
+      .stav[data-stav="nova"] { color: #ffd166; }
+      .stav[data-stav="resi-se"] { color: #8fd0ff; }
+      .stav[data-stav="vyreseno"] { color: #9be29b; }
+      .stav[data-stav="zamitnuto"] { color: #8fb4e6; }
+      .detail { padding: 12px 14px; border: 1px solid rgb(207 227 255 / 0.6); background: rgb(11 47 92 / 0.6); }
+      .detail dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 0 0 10px; }
+      .detail dt { color: #8fb4e6; }
+      .detail dd { margin: 0; overflow-wrap: anywhere; }
+      .text { margin: 0 0 12px; padding: 8px 10px; border-left: 2px solid #cfe3ff; background: rgb(11 47 92 / 0.7); color: #fff; white-space: pre-wrap; overflow-wrap: anywhere; }
+      canvas.most { display: block; width: 100%; height: 260px; margin-bottom: 8px; border: 1px solid rgb(207 227 255 / 0.6); }
+      .udalosti { max-height: 420px; overflow-y: auto; border: 1px solid rgb(207 227 255 / 0.4); }
+      .udalosti table { font-size: 12px; }
+      .udalosti td:last-child { overflow-wrap: anywhere; color: #a9c6ee; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <h1>Mostmistr – správa</h1>
+    <p>
+      Zpětná vazba hráčů a deník hraní. Stránka je jen pro tebe: bez hesla správce server nic
+      nevydá. Heslo je proměnná prostředí <code>MM_SPRAVCE_HESLO</code> v nastavení webu na Netlify
+      (aspoň osm znaků); po jejím nastavení web znovu nasaď.
+    </p>
+
+    <form class="rada" id="prihlaseni">
+      <label for="heslo">Heslo správce</label>
+      <input id="heslo" type="password" autocomplete="current-password" required minlength="8" />
+      <button type="submit">Přihlásit</button>
+      <button type="button" id="odhlasit" hidden>Odhlásit</button>
+    </form>
+    <p class="hlaseni" id="hlaseni" role="status"></p>
+
+    <div id="obsah" hidden>
+      <div class="rada" role="tablist">
+        <button type="button" role="tab" data-zalozka="vazby" aria-selected="true">Zpětná vazba</button>
+        <button type="button" role="tab" data-zalozka="denik" aria-selected="false">Deník hraní</button>
+      </div>
+
+      <section data-panel="vazby">
+        <div class="rada" id="filtr-stavu"></div>
+        <div class="sloupce">
+          <div class="tabulka">
+            <table id="vazby">
+              <thead>
+                <tr><th>Přijato</th><th>Stav</th><th>Druh</th><th>Úroveň</th><th class="cislo">Baví</th><th>Text</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="detail" id="detail-vazby" hidden>
+            <dl id="vazba-udaje"></dl>
+            <p class="text" id="vazba-text"></p>
+            <canvas class="most" id="vazba-most" hidden></canvas>
+            <div class="rada">
+              <button type="button" id="vazba-kopirovat" hidden>Zkopírovat most</button>
+              <a id="vazba-uroven" hidden>Otevřít úroveň ve hře</a>
+            </div>
+            <h2>Řešení</h2>
+            <div class="rada" id="vazba-stavy"></div>
+            <textarea id="vazba-poznamka" placeholder="Poznámka k řešení" maxlength="4000"></textarea>
+            <div class="rada" style="margin-top: 8px">
+              <button type="button" id="vazba-ulozit">Uložit stav a poznámku</button>
+              <button type="button" id="vazba-smazat">Smazat zpětnou vazbu</button>
+            </div>
+            <h2 id="vazba-udalosti-nadpis" hidden>Co hráč dělal před odesláním</h2>
+            <div class="udalosti" id="vazba-udalosti" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="denik" hidden>
+        <div class="rada">
+          <label for="den">Den</label>
+          <select id="den"></select>
+          <label for="obdobi">Souhrn za</label>
+          <select id="obdobi">
+            <option value="1">jen tento den</option>
+            <option value="7">7 dní do tohoto dne</option>
+            <option value="30">30 dní do tohoto dne</option>
+            <option value="0">všechno do tohoto dne</option>
+          </select>
+          <button type="button" id="export">Stáhnout deník dne</button>
+          <button type="button" id="smazat-den">Smazat deník dne</button>
+        </div>
+        <p id="den-pocty"></p>
+        <h2 id="souhrn-nadpis">Souhrn po úrovních</h2>
+        <div class="tabulka">
+          <table id="souhrn">
+            <thead>
+              <tr>
+                <th>Úroveň</th><th class="cislo">Hráčů</th><th class="cislo">Zkoušek</th><th class="cislo">Prošlo</th>
+                <th class="cislo">Hráčů s průchodem</th><th class="cislo">Bez zkoušky</th><th class="cislo">Zkoušek do průchodu</th>
+                <th class="cislo">Minut do průchodu</th><th class="cislo">Medaile P / R / M</th>
+                <th>Cena průchodu (nejnižší · medián · rozpočet úrovně)</th><th>Čím stavěli</th><th>Na čem mosty padaly</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="souhrn-chyby"></p>
+        <h2>Sezení vybraného dne</h2>
+        <div class="sloupce">
+          <div class="tabulka">
+            <table id="sezeni">
+              <thead><tr><th>Hráč</th><th>Sezení</th><th class="cislo">Dávek</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="detail" id="detail-sezeni" hidden>
+            <dl id="sezeni-udaje"></dl>
+            <canvas class="most" id="sezeni-most" hidden></canvas>
+            <div class="udalosti" id="sezeni-udalosti"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="/src/sprava/stranka.ts"></script>
+  </body>
+</html>

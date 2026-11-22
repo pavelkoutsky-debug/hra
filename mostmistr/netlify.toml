@@ -7,7 +7,19 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# Funkce: příjem zpětné vazby a deníku hraní a správa (viz src/server/). Ukládají do Netlify Blobs.
+# Heslo správce je proměnná prostředí MM_SPRAVCE_HESLO nastavená v Netlify, v repozitáři není.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sprava.html"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Cache-Control = "no-store"

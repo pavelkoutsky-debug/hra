@@ -1,6 +1,6 @@
 {
   "name": "mostmistr",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "description": "Mostmistr — 2D stavění mostů ve stylu technického výkresu s vlastní fyzikou",
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.jadro.json && tsc --noEmit -p tsconfig.node.json",
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.jadro.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.funkce.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vite build && vitest run --config vitest.e2e.config.ts",
@@ -24,5 +24,8 @@
     "typescript": "7.0.2",
     "vite": "8.3.8",
     "vitest": "5.1.1"
+  },
+  "dependencies": {
+    "@netlify/blobs": "11.1.9"
   }
 }
