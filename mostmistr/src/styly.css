@@ -465,6 +465,22 @@ body[data-sandbox] .pole__bunka:nth-child(3) {
   background: #ff4d3d;
 }
 
+/* Popis značky, ke které je ukazatel nejblíž: stojí nad osou u té značky. */
+.osa__bublina {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 3;
+  transform: translateX(-50%);
+  max-width: min(320px, 80vw);
+  padding: 3px 8px;
+  background: var(--lista);
+  border: 1px solid var(--cara);
+  color: var(--cara-silna);
+  font-size: 11px;
+  white-space: pre;
+  pointer-events: none;
+}
+
 .poruseni {
   margin: 0;
   padding: 0;
@@ -1927,6 +1943,11 @@ body[data-rezim="stavba"] .uroven .legenda {
   margin-top: 0;
 }
 
+/* Medaile stojí v zadání nahoře; nadpis pod nimi potřebuje odstup jako mezi ostatními oddíly. */
+.okno__vedlejsi .medaile + h3 {
+  margin-top: 14px;
+}
+
 @media (max-width: 860px) {
   .okno__telo {
     grid-template-columns: minmax(0, 1fr);
@@ -2091,5 +2112,132 @@ body[data-rezim="stavba"] .uroven .legenda {
 @media (max-width: 560px) {
   .hra--prehled .lista__oddil {
     display: none;
+  }
+}
+
+/*
+ * Telefon a úzké okno. Do 1100 px šířky lišta úrovně nemá název hry (zpět vede tlačítko
+ * Kampaň), ovládání přehrávání se zalamuje, aby táhlo času neuteklo za okraj, a legenda
+ * využití se láme vedle popisového pole. Do 900 px zmizí i pruh rozpočtu a tlačítka + a −
+ * (výkres se zvětšuje dvěma prsty nebo kolečkem). Do 700 px se obrazovka úrovně skládá pod
+ * sebe: výkres, časová osa a paleta dole ve dvou sloupcích.
+ */
+@media (max-width: 1100px) {
+  #obrazovka-uroven .lista__nazev {
+    display: none;
+  }
+
+  .uroven .osa {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .uroven .osa__drah {
+    flex: 1 1 240px;
+  }
+
+  .uroven .legenda {
+    max-width: calc(100% - 396px);
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 900px) {
+  #obrazovka-uroven .rozpocet__pruh,
+  #obrazovka-uroven [data-akce="oddalit"],
+  #obrazovka-uroven [data-akce="priblizit"] {
+    display: none;
+  }
+
+  /* Popisové pole tu už není, legenda smí přes celý výkres. */
+  .uroven .legenda {
+    max-width: calc(100% - 20px);
+  }
+}
+
+@media (max-width: 700px) {
+  .lista {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    overflow: visible;
+    padding: 6px 8px;
+  }
+
+  /* Mezera v liště je na telefonu zlom řádku. */
+  .lista__mezera {
+    flex: 0 0 100%;
+    height: 0;
+    margin-top: -6px;
+  }
+
+  #obrazovka-uroven .rozpocet {
+    flex: 1 1 auto;
+  }
+
+  .uroven {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+
+  .uroven .vykres {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .uroven .osa {
+    grid-row: 2;
+    grid-column: 1;
+    gap: 6px 8px;
+    padding: 6px 8px;
+  }
+
+  .uroven .osa__drah {
+    flex: 1 1 60%;
+    min-width: 180px;
+  }
+
+  .uroven .paleta {
+    grid-row: 3;
+    grid-column: 1;
+    max-height: 34vh;
+    max-height: 34dvh;
+    border-right: 0;
+    border-top: 1px solid rgb(207 227 255 / 0.6);
+  }
+
+  /* Při zkoušce se nestaví: paleta ustoupí výkresu a výsledku. */
+  body[data-rezim="zkouska"] .uroven .paleta {
+    display: none;
+  }
+
+  .paleta__prvky,
+  .paleta__pokusy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .vysledek {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analyza {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    max-height: calc(100% - 12px);
+  }
+}
+
+/* Prst potřebuje větší cíl než myš. */
+@media (pointer: coarse) {
+  .tlacitko,
+  .paleta__tlacitko {
+    min-height: 38px;
+  }
+
+  .tlacitko--znak {
+    min-width: 38px;
   }
 }

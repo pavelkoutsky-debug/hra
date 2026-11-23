@@ -120,7 +120,7 @@ beforeAll(async () => {
   napoj("/api/vazba", "vazba", prijmiVazbu);
   napoj("/api/sprava", "sprava", spravuj);
   prohlizec = await chromium.launch();
-  kontext = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  kontext = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka = await kontext.newPage();
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {
@@ -323,7 +323,7 @@ describe("zpětná vazba", () => {
 
 describe("hráč, který přijde rovnou do úrovně", () => {
   it("vidí upozornění na záznam i po zavření zadání, v paletě; po vypnutí mu hra potvrdí, že nic dalšího neodejde", async () => {
-    const novyHrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const novyHrac = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const okno = await novyHrac.newPage();
     try {
       await okno.goto(`${adresa}?uroven=1-02`);
@@ -367,7 +367,7 @@ describe("hráč, který přijde rovnou do úrovně", () => {
 
 describe("odkaz bez záznamu", () => {
   it("adresa s ?zaznam=vypnout záznam v prohlížeči potichu vypne: neodejde nic, ani zpráva o vypnutí", async () => {
-    const zadavatel = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const zadavatel = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const okno = await zadavatel.newPage();
     try {
       const predtim = zadosti.denik;
@@ -507,7 +507,7 @@ describe("stránka správce", () => {
 
 describe("zkouška, kterou hra nepustí", () => {
   it("most dražší než rozpočet se nezkouší a deník si zapíše proč", async () => {
-    const hrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const hrac = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const puvodni = stranka;
     stranka = await hrac.newPage();
     try {

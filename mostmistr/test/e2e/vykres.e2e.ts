@@ -52,7 +52,7 @@ beforeAll(async () => {
   if (!adresa) throw new Error("Náhledový server neoznámil adresu.");
 
   prohlizec = await chromium.launch();
-  stranka = await prohlizec.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka.on("pageerror", (chyba) => chybyStranky.push(chyba.message));
   stranka.on("console", (zprava) => {
     if (zprava.type() === "error") chybyStranky.push(zprava.text());

@@ -77,7 +77,10 @@ export function spoctiVnitrniSily(s: Soustava): void {
         if (mezOhybu !== Infinity && plasticky) {
           // Plastický kloub: skutečný moment na konci (včetně zatížení uvnitř prvku
           // z minulého kroku) nepřekročí plastickou únosnost sníženou osovou silou.
-          const podilOsove = Math.abs(osova) / s.unosnostTah[e]!;
+          // Tah ubírá z únosnosti průřezu v tahu, tlak z únosnosti v tlaku: u ocelobetonu
+          // je tlak několikrát větší (tlak nese beton) a tlačená mostovka v ohybu neslábne
+          // tolik jako tažená. Stejně to bere posudek v `namahani.ts`.
+          const podilOsove = osova < 0 ? -osova / s.unosnostTlak[e]! : osova / s.unosnostTah[e]!;
           const mez = mezOhybu * (podilOsove < 0.95 ? 1 - podilOsove : 0.05);
           const skutecnyA = mA - zatMomentA[e]!;
           const skutecnyB = mB - zatMomentB[e]!;

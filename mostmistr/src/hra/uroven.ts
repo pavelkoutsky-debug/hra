@@ -42,7 +42,7 @@ import { VERZE_FYZIKY } from "../jadro/verze";
 import { prvek, udaj } from "../ui/dom";
 import { celeCislo, cislo, datum, hmotnost, koruny, meritkoVykresu, procenta } from "../ui/formaty";
 import { posunPrehravani, zapisCasu, type StavPrehravani } from "../ui/prehravani";
-import { jeKlicTextu, t, type KlicTextu } from "../ui/slovnik";
+import { aktualniJazyk, jeKlicTextu, nazevUrovne, t, type KlicTextu } from "../ui/slovnik";
 import { celyVyrez, obrazNaSvet, omezNaVyrez, posunO, svetNaObraz, zoomKolem, type Kamera } from "../vykres/kamera";
 import { nakresliKonstrukci } from "../vykres/konstrukce";
 import { nakresliNavrh, tloustkaPrutu } from "../vykres/navrh";
@@ -52,7 +52,8 @@ import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
 import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
 import { nakresliKrivku, nakresliPrubeh, stropGrafu, vrcholyKrivky, type BodKrivky } from "../vykres/grafy";
-import { nakresliVykres } from "../vykres/vykres";
+import { nakresliSpodekVykresu, nakresliVrsekVykresu, nakresliVykres } from "../vykres/vykres";
+import { UlozenaVrstva } from "../vykres/vrstva";
 import { frekvenceBudice, jeStaly } from "../zkouska/budic";
 import { KlientZkousky } from "../zkouska/klient";
 import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
@@ -90,6 +91,8 @@ const OKRAJ_VYKRESU = 28;
 const KROK_ZOOMU_TLACITKEM = 1.25;
 /** Jak daleko od prutu se při zkoušce ještě počítá kliknutí na něj, v pixelech. */
 const DOSAH_KLIKNUTI = 9;
+/** Jak blízko značce na časové ose musí ukazatel být, aby se ukázal její popis (pixely). */
+const DOSAH_ZNACKY_OSY = 7;
 /** Kolik porušení výsledek vypíše jmenovitě; zbytek shrne počtem. */
 const NEJVIC_VYPSANYCH_PORUSENI = 5;
 /** Po jaké době zmizí hlášení, které na nic nečeká, v milisekundách. */
@@ -242,6 +245,7 @@ export function spustUroven(
   const tahlo = prvek("#cas", HTMLInputElement);
   const pruhSpocitano = prvek("#obrazovka-uroven .osa__spocitano", HTMLElement);
   const znackyOsy = prvek("#obrazovka-uroven .osa__znacky", HTMLElement);
+  const bublinaOsy = prvek("#obrazovka-uroven .osa__bublina", HTMLElement);
   const panelVysledku = prvek(".vysledek", HTMLElement);
   const paletaPrvku = prvek(".paleta__prvky", HTMLElement);
   const rozpocet = prvek(".rozpocet", HTMLElement);
@@ -399,12 +403,18 @@ export function spustUroven(
     return beh !== null && !beh.pokus && beh.vysledek !== null && beh.navrh === editor.navrh ? beh.vysledek : null;
   }
 
+  /** Spodní vrstva výkresu uložená pro přehrávání zkoušky. */
+  const spodekVykresu = new UlozenaVrstva();
+
   function kresli(ctx: CanvasRenderingContext2D, rozmer: { sirka: number; vyska: number }): void {
     if (rezim === "zkouska" && beh) {
       const cas = prehravani.cas;
       // Loď, která do mostu narazila, se od té chvíle kreslí barvou varování.
       const { odemceno, narazene } = stavPohybu(beh.udalosti, cas);
-      nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, cas, narazeneLode: narazene });
+      // Rastr, voda a terén se při přehrávání nemění: kreslí se jednou a pak se přenášejí.
+      const stav = { uroven, kamera, rozmer, kurzor: null, cas, narazeneLode: narazene };
+      spodekVykresu.nakresli(ctx, rozmer, `${kamera.x};${kamera.y};${kamera.meritko}`, (kam) => nakresliSpodekVykresu(kam, stav));
+      nakresliVrsekVykresu(ctx, stav);
       const stavba = beh.zaznam.stavV(prehravani.cas, snimek);
       if (stavba) {
         if (beh.oznaceny !== null) zvyrazniPrut(ctx, stavba, beh.oznaceny);
@@ -2121,27 +2131,105 @@ export function spustUroven(
     platno.prekresli();
   }
 
+  /** Co značky na časové ose znamenají: čas a popis pro bublinu nad osou. */
+  let popisyZnacek: { cas: number; popis: string }[] = [];
+
+  /** Účastník provozu jedním slovem („chodec“, „nákladní vůz“). */
+  function nazevProvozu(druh: string): string {
+    const klic = `provoz.${druh}`;
+    return jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
+  }
+
   /** Značky na časové ose: výjezdy účastníků, porušení prutů a pády. */
   function obnovZnacky(): void {
+    popisyZnacek = [];
+    bublinaOsy.hidden = true;
     if (!beh) {
       znackyOsy.replaceChildren();
       return;
     }
-    const delka = delkaDeje(beh);
-    const znacka = (cas: number, druh: string): HTMLElement => {
+    const b = beh;
+    const delka = delkaDeje(b);
+    const znacka = (cas: number, druh: string, popis: string): HTMLElement => {
       const uzel = document.createElement("span");
       uzel.className = `osa__znacka osa__znacka--${druh}`;
       uzel.style.left = `${(100 * Math.min(1, Math.max(0, cas / delka))).toFixed(2)}%`;
+      popisyZnacek.push({ cas, popis });
       return uzel;
     };
     if (!(delka > 0)) return;
+    // Skupina, která vyjíždí naráz (řady útvaru), má jednu značku s počtem.
+    const vyjezdy = new Map<string, { cas: number; druh: string; pocet: number }>();
+    for (const u of b.ucastnici) {
+      const klic = `${u.start}|${u.druh}`;
+      const zaznam = vyjezdy.get(klic);
+      if (zaznam) zaznam.pocet += u.lidi ?? 1;
+      else vyjezdy.set(klic, { cas: u.start, druh: u.druh, pocet: u.lidi ?? 1 });
+    }
+    const popisUdalosti = (u: Udalost): string => {
+      switch (u.druh) {
+        case "poruseni":
+          return t("osa.znacka.poruseni", { prut: u.prut + 1 });
+        case "sjeti":
+          return t("osa.znacka.sjeti");
+        case "pad": {
+          const kdo = b.ucastnici.find((ucastnik) => ucastnik.polozka === u.polozka && ucastnik.clen === u.clen);
+          return t("osa.znacka.pad", { kdo: nazevProvozu(kdo?.druh ?? "") });
+        }
+        case "pohyb":
+          return t(`osa.znacka.pohyb.${u.faze}`);
+        case "lod":
+          return t(u.stav === "narazila" ? "osa.znacka.lodNarazila" : "osa.znacka.lodProplula");
+        default:
+          return "";
+      }
+    };
     znackyOsy.replaceChildren(
-      ...beh.ucastnici.map((u) => znacka(u.start, "vyjezd")),
-      ...beh.udalosti
+      ...[...vyjezdy.values()].map((v) =>
+        znacka(
+          v.cas,
+          "vyjezd",
+          t("osa.znacka.vyjezd", { kdo: v.pocet > 1 ? t("rad.vice", { pocet: v.pocet, kdo: nazevProvozu(v.druh) }) : nazevProvozu(v.druh) }),
+        ),
+      ),
+      ...b.udalosti
         .filter((u) => u.druh !== "prujezd")
         // Zvedání mostu a proplutí lodi jsou běžný děj; červená patří jen nárazu lodi.
-        .map((u) => znacka(u.cas, u.druh === "lod" ? (u.stav === "narazila" ? "naraz" : "lod") : u.druh)),
+        .map((u) => znacka(u.cas, u.druh === "lod" ? (u.stav === "narazila" ? "naraz" : "lod") : u.druh, popisUdalosti(u))),
     );
+  }
+
+  /**
+   * Bublina nad časovou osou: ukazatel poblíž značky řekne, co značka znamená. Značky samy
+   * kliknutí nechytají (ležely by na táhle), proto se hledá nejbližší podle místa ukazatele.
+   */
+  function ukazBublinuOsy(udalost: PointerEvent): void {
+    const draha = tahlo.getBoundingClientRect();
+    const delka = beh ? delkaDeje(beh) : 0;
+    if (!beh || !(delka > 0) || draha.width <= 0) {
+      bublinaOsy.hidden = true;
+      return;
+    }
+    let nejblizsi: { cas: number; popis: string } | null = null;
+    let nejmensi = DOSAH_ZNACKY_OSY;
+    for (const z of popisyZnacek) {
+      const vzdalenost = Math.abs(draha.left + (draha.width * Math.min(1, Math.max(0, z.cas / delka))) - udalost.clientX);
+      if (vzdalenost <= nejmensi) {
+        nejmensi = vzdalenost;
+        nejblizsi = z;
+      }
+    }
+    if (!nejblizsi) {
+      bublinaOsy.hidden = true;
+      return;
+    }
+    // Víc značek ve stejném okamžiku (řetěz porušení) se vypíše pod sebe, nejvýš čtyři.
+    const stejne = popisyZnacek.filter((z) => Math.abs(z.cas - nejblizsi!.cas) < 0.05);
+    const radky = stejne.slice(0, 4).map((z) => `${zapisCasu(z.cas)} · ${z.popis}`);
+    if (stejne.length > 4) radky.push(t("vysledek.poruseni.dalsi", { pocet: stejne.length - 4 }));
+    bublinaOsy.textContent = radky.join("\n");
+    bublinaOsy.style.left = `${(100 * Math.min(1, Math.max(0, nejblizsi.cas / delka))).toFixed(2)}%`;
+    bublinaOsy.hidden = false;
   }
 
   function prepniPrehravani(): void {
@@ -2612,7 +2700,7 @@ export function spustUroven(
     const mezRezervy = uroven.mistrovska?.druh === "rezerva" ? uroven.mistrovska.limit : null;
     const zapisVyuziti = (podil: number): string =>
       mezRezervy !== null && podil !== mezRezervy && Math.round(podil * 100) === Math.round(mezRezervy * 100)
-        ? `${cislo(podil * 100, 2)}\u00a0%`
+        ? `${cislo(podil * 100, 2)}${aktualniJazyk() === "cs" ? "\u00a0" : ""}%`
         : procenta(podil);
     if (nejvic >= 0) {
       const o = vysledek.obalka[nejvic]!;
@@ -2717,7 +2805,7 @@ export function spustUroven(
 
   function naplnZadani(): void {
     udaj("zadani-list").textContent = t("zadani.uroven", { id: uroven.id });
-    udaj("zadani-nazev").textContent = uroven.nazev;
+    udaj("zadani-nazev").textContent = nazevUrovne(uroven);
     const klic = `zadani.${uroven.id}`;
     udaj("zadani-text").textContent = jeKlicTextu(klic) ? t(klic) : "";
 
@@ -2854,7 +2942,13 @@ export function spustUroven(
     try {
       navrh = navrhZTextu(obsahOkna.value.trim());
     } catch (chyba) {
-      const duvod = chyba instanceof ChybaDat || chyba instanceof Error ? chyba.message : String(chyba);
+      // Věty kontroly dat jsou česky; v jiném jazyce stačí místo v zápisu, kde kontrola narazila.
+      const duvod =
+        chyba instanceof ChybaDat && aktualniJazyk() !== "cs"
+          ? chyba.cesta
+          : chyba instanceof Error
+            ? chyba.message
+            : String(chyba);
       udaj("okno-hlaseni").textContent = t("okno.import.chyba", { duvod });
       return;
     }
@@ -3115,6 +3209,15 @@ export function spustUroven(
     });
   }
   tahlo.addEventListener("input", () => skocNa(Number(tahlo.value)));
+  // Popis značek: u myši pod ukazatelem, u prstu při tažení táhla.
+  tahlo.addEventListener("pointermove", ukazBublinuOsy);
+  tahlo.addEventListener("pointerdown", ukazBublinuOsy);
+  for (const konec of ["pointerleave", "pointerup", "pointercancel"] as const) {
+    tahlo.addEventListener(konec, (udalost) => {
+      // Prst po zvednutí nad osou nezůstává; myš ano a bublina s ní.
+      if (konec !== "pointerup" || udalost.pointerType !== "mouse") bublinaOsy.hidden = true;
+    });
+  }
 
   // Po kliknutí myší na tlačítko se pozornost vrací na výkres, aby mezerník dál pouštěl
   // zkoušku a nemačkal znovu poslední tlačítko.
@@ -3272,10 +3375,13 @@ export function spustUroven(
           zrychleni: cislo(snimek.kmitani, 2),
         });
       } else if (b.zlom) {
-        // Zkouška do zlomu: kolik zátěže na mostě právě leží. Po prvním porušení už neroste.
-        const zlomeno =
-          b.vysledek?.zlom?.cas ?? b.udalosti.find((u) => u.druh === "poruseni" || u.druh === "sjeti")?.cas ?? Infinity;
-        const naMetr = zatizeniZlomu(ZKOUSKA_DO_ZLOMU, Math.min(prehravani.cas, zlomeno));
+        // Zkouška do zlomu: kolik zátěže na mostě právě leží. Čte se ze šipek záznamu (každá
+        // nese zatížení na metr): zátěž neroste přesně s časem, při otevírání plastického
+        // kloubu čeká a po prvním porušení zůstává ležet.
+        let naMetr = 0;
+        if (b.zaznam.stavV(prehravani.cas, snimek) !== null) {
+          for (let i = 3; i < snimek.sily.length; i += 4) naMetr = Math.max(naMetr, Math.abs(snimek.sily[i]!));
+        }
         let delka = 0;
         for (const trasa of uroven.trasy) delka += Math.abs(trasa.konec.x - trasa.zacatek.x);
         text = t("legenda.zlom", {
@@ -3298,14 +3404,14 @@ export function spustUroven(
   // ---- Úvodní naplnění stránky ----
 
   vytvorPaletu();
-  udaj("uroven").textContent = `${uroven.id}  ${uroven.nazev}`;
-  udaj("nazev").textContent = uroven.nazev;
+  udaj("uroven").textContent = `${uroven.id}  ${nazevUrovne(uroven)}`;
+  udaj("nazev").textContent = nazevUrovne(uroven);
   udaj("list").textContent = uroven.id;
   udaj("verze").textContent = `${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
   udaj("datum").textContent = datum(new Date());
   const klicZadani = `zadani.${uroven.id}`;
   udaj("zadani").textContent = jeKlicTextu(klicZadani) ? t(klicZadani) : "";
-  document.title = `${uroven.id} ${uroven.nazev} – ${t("hra.nazev")}`;
+  document.title = `${uroven.id} ${nazevUrovne(uroven)} – ${t("hra.nazev")}`;
 
   // Jízdní řád na liště: provoz, zvedání mostu a lodě v pořadí, v jakém přijdou.
   const dej: { cas: number; text: string }[] = uroven.jizdniRad.map((polozka) => ({ cas: polozka.cas, text: zapisJizdy(polozka) }));

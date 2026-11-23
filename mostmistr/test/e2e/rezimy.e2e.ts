@@ -75,7 +75,7 @@ beforeAll(async () => {
   if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
   adresa = mistni;
   prohlizec = await chromium.launch();
-  stranka = await prohlizec.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {
     if (zprava.type() === "error") chyby.push(zprava.text());
@@ -506,6 +506,30 @@ describe("nápověda", () => {
     await akce("upravit").click();
     expect(await udaj("hlaseni")).not.toContain("Nedaří se?");
   }, 240_000);
+
+  it("ukazatel u značky na časové ose řekne, co značka znamená", async () => {
+    await otevri("1-02");
+    await nactiMost(navrhNaText(RESENI["1-02"]!.pady[0]!.navrh));
+    await spust();
+    const bublina = stranka.locator('[data-udaj="osa-znacka"]');
+    expect(await bublina.isVisible()).toBe(false);
+    // Značky leží na dráze táhla podle času; první výjezd je v čase nula na jejím začátku.
+    const draha = (await stranka.locator("#cas").boundingBox())!;
+    await stranka.mouse.move(draha.x + 2, draha.y + draha.height / 2);
+    await expect.poll(() => bublina.isVisible()).toBe(true);
+    expect((await bublina.innerText()).replace(/[  ]/g, " ")).toMatch(/^0,0 s · vyráží /);
+    // Co se na mostě pokazilo: první značka, která není výjezd.
+    const znacka = (await stranka.locator("#obrazovka-uroven .osa__znacka:not(.osa__znacka--vyjezd)").first().boundingBox())!;
+    await stranka.mouse.move(znacka.x + znacka.width / 2, draha.y + draha.height / 2);
+    await expect
+      .poll(async () => (await bublina.innerText()).replace(/[  ]/g, " "))
+      .toMatch(/ s · (porušení prutu \d+|.+ padá z mostu|konec mostu sjel z ložiska)/);
+    await stranka.screenshot({ path: `${SLOZKA}/rezimy-znacka-osy.png` });
+    // Mimo značky bublina zmizí.
+    await stranka.mouse.move(draha.x + draha.width / 2, draha.y - 200);
+    await expect.poll(() => bublina.isVisible()).toBe(false);
+    await akce("upravit").click();
+  }, 120_000);
 
   it("sandbox nápovědu nemá: není tam most, podle kterého by radila", async () => {
     await stranka.goto(`${adresa}?sandbox=1`);

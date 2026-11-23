@@ -16,6 +16,7 @@
         <span class="lista__nazev" data-text="hra.nazev"></span>
         <span class="lista__oddil" data-text="prehled.nadpis"></span>
         <span class="lista__mezera"></span>
+        <button type="button" class="tlacitko" data-akce="jazyk"></button>
         <a class="tlacitko" href="?sandbox=1" data-akce="otevrit-sandbox" data-text="prehled.sandbox" data-popis="prehled.sandbox.popis"></a>
         <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/zkusebna.html" data-text="lista.zkusebna"></a>
@@ -404,6 +405,7 @@
           <div class="osa__drah" data-jen="zkouska">
             <span class="osa__spocitano"></span>
             <span class="osa__znacky"></span>
+            <output class="osa__bublina" data-udaj="osa-znacka" hidden></output>
             <input type="range" id="cas" min="0" max="1" step="0.01" value="0" data-popis="zkouska.cas" />
           </div>
           <output class="osa__cas" data-udaj="cas" data-jen="zkouska"></output>
@@ -531,12 +533,13 @@
             <p class="okno__skutecnost" data-udaj="zadani-skutecnost" hidden></p>
           </div>
           <div class="okno__vedlejsi">
+            <!-- Medaile jsou cíl úrovně: stojí nahoře, ať nejsou v dlouhém zadání pod okrajem okna. -->
+            <h3 data-text="zadani.medaile" data-jen-kampan></h3>
+            <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
             <h3 data-text="zadani.provoz"></h3>
             <ul class="okno__seznam" data-udaj="zadani-provoz"></ul>
             <h3 data-text="zadani.stavba"></h3>
             <ul class="okno__seznam" data-udaj="zadani-stavba"></ul>
-            <h3 data-text="zadani.medaile" data-jen-kampan></h3>
-            <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
             <h3 data-text="vyzvy.nadpis" data-cast="zadani-vyzvy"></h3>
             <p class="okno__poznamka" data-text="vyzvy.uvod" data-cast="zadani-vyzvy"></p>
             <ul class="okno__seznam" data-udaj="zadani-vyzvy" data-cast="zadani-vyzvy"></ul>

@@ -2,7 +2,7 @@
 // se dá u prostého nosníku spočítat z hlavy: zlomí se, když moment uprostřed q·L²/8 dosáhne
 // únosnosti průřezu.
 import { describe, expect, it } from "vitest";
-import { KATALOG, MATERIALY } from "../src/data/katalog";
+import { KATALOG, MATERIALY, vlastnostiPrutu } from "../src/data/katalog";
 import type { NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
@@ -102,6 +102,31 @@ describe("zkouška do zlomu", () => {
     const rychle = zlom(lavka(), prkno(), { narust: 80 }).vysledek.zlom!;
     expect(rychle.cas!).toBeLessThan(pomalu.cas!);
     expect(Math.abs(rychle.zatizeni / pomalu.zatizeni - 1)).toBeLessThan(0.03);
+  });
+
+  it("tvárné porušení: zátěž čeká, než se plastický kloub otevře, takže výsledek je statická mez", () => {
+    // Ocelobetonové pole 6 m z opěry na opěru. Kloub uprostřed vznikne při plastickém momentu
+    // a zlomí se až po natočení; kdyby zátěž mezitím rostla, připsala by mostu podle rychlosti
+    // o 3 až 8 % víc, než unese.
+    const k = new Kreslic();
+    k.prut("mostovka-ocelobeton", [0, 0], [6, 0]);
+    const sirka = 7;
+    const vybaveni = 600;
+    const silnice: Uroven = {
+      ...urovenRegrese({ rozpeti: 6, sirka, vybaveni }),
+      trasy: [{ id: "silnice", druh: "silnice", zacatek: { x: 0, y: 0 }, konec: { x: 6, y: 0 } }],
+      povolenePrvky: ["mostovka-ocelobeton"],
+      jizdniRad: [],
+    };
+    const vlastnosti = vlastnostiPrutu("mostovka-ocelobeton", sirka)!;
+    const staticky = (8 * vlastnosti.unosnost.moment) / 36 - (vlastnosti.hmotnostNaMetr + vybaveni) * TIHOVE_ZRYCHLENI;
+    const pomalu = zlom(silnice, k.navrh(), { narust: 5 }).vysledek.zlom!;
+    const rychle = zlom(silnice, k.navrh(), { narust: 80 }).vysledek.zlom!;
+    expect(pomalu.cas).not.toBeNull();
+    expect(Math.abs(pomalu.zatizeni / staticky - 1)).toBeLessThan(0.01);
+    expect(Math.abs(rychle.zatizeni / staticky - 1)).toBeLessThan(0.01);
+    // Zátěž při zlomu je menší, než kolik by dala čistá kubika času: hodiny zátěže stály.
+    expect(rychle.zatizeni).toBeLessThan(zatizeniZlomu({ narust: 80 }, rychle.cas!));
   });
 
   it("dvakrát širší mostovka unese dvakrát víc na metr délky", () => {

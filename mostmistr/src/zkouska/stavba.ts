@@ -122,6 +122,81 @@ export interface StavbaMostu {
   zamky: { stycnik: number; pruty: number[] }[];
 }
 
+/** Nese prut ohyb a tlak (trám, profil, mostovka, pilíř)? Lano, píst, pružina a tlumič ne. */
+function jeNosnik(prvek: IdPrvku): boolean {
+  const druh = KATALOG[prvek].druh;
+  return druh !== "lano" && druh !== "pist" && druh !== "pruzina" && druh !== "tlumic";
+}
+
+/**
+ * Vzpěrná délka každého prutu návrhu v metrech. Prut, který ve styčníku tuze pokračuje dalším
+ * prutem ve stejné přímce a do toho styčníku nevede nic jiného (ani podpora), je s ním jeden
+ * průběžný prut: vybočí celý, a proto se počítá celá délka řetězu. Bez toho by svar uprostřed
+ * tlačeného prutu jeho vzpěrnou délku rozpůlil a únosnost zčtyřnásobil, ačkoli na mostě nic
+ * nepřibylo. Souřadnice styčníků jsou celá čísla, takže test přímky je přesný.
+ */
+function vzperneDelky(
+  navrh: NavrhMostu,
+  stycniky: readonly PopisStycniku[],
+  index: ReadonlyMap<number, number>,
+  tuhy: readonly boolean[],
+): number[] {
+  const konce = navrh.pruty.map((p) => [index.get(p.a) ?? -1, index.get(p.b) ?? -1] as const);
+  const delky = konce.map(([a, b]) => {
+    const sa = stycniky[a];
+    const sb = stycniky[b];
+    if (!sa || !sb) return 0;
+    return Math.sqrt((sb.x - sa.x) * (sb.x - sa.x) + (sb.y - sa.y) * (sb.y - sa.y));
+  });
+  const veStycniku: number[][] = stycniky.map(() => []);
+  konce.forEach(([a, b], cislo) => {
+    veStycniku[a]?.push(cislo);
+    veStycniku[b]?.push(cislo);
+  });
+  /** Prut, kterým prut `cislo` za svým koncem `konec` tuze a v přímce pokračuje; −1, když žádný. */
+  const pokracovani = (cislo: number, konec: number): number => {
+    const st = stycniky[konec];
+    const spolu = veStycniku[konec];
+    if (!st || !spolu || spolu.length !== 2 || st.pevneX || st.pevneY) return -1;
+    const dalsi = spolu[0] === cislo ? spolu[1]! : spolu[0]!;
+    const prvni = navrh.pruty[cislo]!;
+    const druhy = navrh.pruty[dalsi]!;
+    if (!jeNosnik(druhy.prvek)) return -1;
+    // Tuhý spoj je svar; betonové pilíře nad sebou jsou monolit i bez něj.
+    const monolit = KATALOG[prvni.prvek].druh === "pilir" && KATALOG[druhy.prvek].druh === "pilir";
+    if (!tuhy[konec] && !monolit) return -1;
+    const [a1, b1] = konce[cislo]!;
+    const [a2, b2] = konce[dalsi]!;
+    const odkud = stycniky[a1 === konec ? b1 : a1];
+    const kam = stycniky[a2 === konec ? b2 : a2];
+    if (!odkud || !kam) return -1;
+    const ux = st.x - odkud.x;
+    const uy = st.y - odkud.y;
+    const vx = kam.x - st.x;
+    const vy = kam.y - st.y;
+    // Stejná přímka (nulový vektorový součin) a stejný směr (kladný skalární).
+    return ux * vy - uy * vx === 0 && ux * vx + uy * vy > 0 ? dalsi : -1;
+  };
+  return navrh.pruty.map((prut, cislo) => {
+    let delka = delky[cislo]!;
+    if (!jeNosnik(prut.prvek)) return delka;
+    for (const start of konce[cislo]!) {
+      let soucasny = cislo;
+      let konec = start;
+      // Řetěz v přímce nemá kam zatočit; pojistka jen proti poškozeným datům.
+      for (let krok = 0; krok < navrh.pruty.length; krok++) {
+        const dalsi = pokracovani(soucasny, konec);
+        if (dalsi < 0) break;
+        delka += delky[dalsi]!;
+        const [a, b] = konce[dalsi]!;
+        konec = a === konec ? b : a;
+        soucasny = dalsi;
+      }
+    }
+    return delka;
+  });
+}
+
 /**
  * Sestaví popis soustavy z návrhu mostu v dané úrovni. Předpokládá návrh, který prošel
  * kontrolou `zkontrolujNavrh`.
@@ -164,6 +239,7 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
   const utlumy: number[] = [];
   const mostovka: number[] = [];
   const pisty: StavbaMostu["pisty"] = [];
+  const vzperne = vzperneDelky(navrh, popis.stycniky, index, tuhy);
   navrh.pruty.forEach((prut, cislo) => {
     const a = index.get(prut.a);
     const b = index.get(prut.b);
@@ -227,7 +303,7 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
       }
       const prvek: PopisPrvku = { ...zaklad, a: predchozi, b: dalsi, prut: cislo, klidovaDelka };
       if (druh !== "lano") {
-        prvek.vzpernaDelka = delka;
+        prvek.vzpernaDelka = vzperne[cislo]!;
         // Betonový pilíř je monolit: do styčníku je vetknutý vždy, takže dva pilíře nad
         // sebou tvoří jeden průběžný sloup. Ostatní pruty jsou tuhé jen ve svaru.
         const monolit = druh === "pilir";

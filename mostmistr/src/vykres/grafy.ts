@@ -1,6 +1,7 @@
 // Malé grafy analytického panelu: rezonanční křivka a průběhy v čase.
 // Kreslí se ve stejném stylu jako výkres: tenké světlé čáry na modrém podkladu.
 
+import { cislo } from "../ui/formaty";
 import { BARVY, PISMO } from "./barvy";
 
 type Kontext = CanvasRenderingContext2D;
@@ -66,8 +67,7 @@ export function stropGrafu(nejvic: number): number {
 
 function zapis(hodnota: number): string {
   if (hodnota === 0) return "0";
-  const text = Math.abs(hodnota) >= 10 ? hodnota.toFixed(0) : Math.abs(hodnota) >= 1 ? hodnota.toFixed(1) : hodnota.toFixed(2);
-  return text.replace(".", ",").replace("-", "−");
+  return cislo(hodnota, Math.abs(hodnota) >= 10 ? 0 : Math.abs(hodnota) >= 1 ? 1 : 2);
 }
 
 function ram(
