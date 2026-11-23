@@ -6,6 +6,7 @@
 // a snímky si pamatují, ke které patří.
 
 import { LANO, PRUZINA, type Soustava } from "../jadro/soustava";
+import type { Bod } from "../data/geometrie";
 
 /** Stavba konstrukce mezi dvěma porušeními. */
 export interface Topologie {
@@ -246,4 +247,28 @@ export function prazdnySnimek(): Snimek {
     kmitani: 0,
     klouby: BEZ_KLOUBU,
   };
+}
+
+/** Kde leží prut návrhu ve snímku: střed a délka (od jednoho konce prutu k druhému). */
+export function mistoPrutu(topologie: Topologie, snimek: Snimek, prut: number): { misto: Bod; rozsah: number } | null {
+  let xMin = Infinity;
+  let xMax = -Infinity;
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (let e = 0; e < topologie.prut.length; e++) {
+    if (topologie.prut[e] !== prut) continue;
+    for (const stycnik of [topologie.prvekA[e]!, topologie.prvekB[e]!]) {
+      const x = snimek.polohy[2 * stycnik];
+      const y = snimek.polohy[2 * stycnik + 1];
+      if (x === undefined || y === undefined) continue;
+      if (x < xMin) xMin = x;
+      if (x > xMax) xMax = x;
+      if (y < yMin) yMin = y;
+      if (y > yMax) yMax = y;
+    }
+  }
+  if (!(xMax >= xMin)) return null;
+  const dx = xMax - xMin;
+  const dy = yMax - yMin;
+  return { misto: { x: (xMin + xMax) / 2, y: (yMin + yMax) / 2 }, rozsah: Math.sqrt(dx * dx + dy * dy) };
 }

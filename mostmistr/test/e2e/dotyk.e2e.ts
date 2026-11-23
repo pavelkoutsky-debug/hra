@@ -346,7 +346,7 @@ describe("dotykové ovládání výkresu", () => {
     expect(preteklo).toEqual([]);
   }, 300_000);
 
-  it("telefon: výsledek jde sbalit, odkaz na porušení ho sbalí sám a Zpět i Smazat jsou v liště", async () => {
+  it("telefon: výsledek je pruh s podrobnostmi na rozkliknutí a Zpět i Smazat jsou v liště", async () => {
     const telefon = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
     const s = await telefon.newPage();
     s.on("pageerror", (chyba) => chyby.push(chyba.message));
@@ -370,25 +370,29 @@ describe("dotykové ovládání výkresu", () => {
     await s.locator('[data-akce="na-konec"]').tap();
     const vysledek = s.locator(".vysledek");
     await vysledek.waitFor({ state: "visible" });
+    // Výsledek je pruh nahoře (verdikt, věta, medaile, hlavní tlačítka): most pod ním je vidět.
+    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ano");
+    const pruh = (await vysledek.boundingBox())!;
+    const platno = (await s.locator(PLATNO).boundingBox())!;
+    expect(pruh.height).toBeLessThan(platno.height / 2);
+    expect(await s.locator('[data-udaj="vysledek-nadpis"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-akce="upravit"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-akce="dalsi"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-udaj="vysledek-shrnuti"]').isVisible()).toBe(false);
+    await s.screenshot({ path: `${SLOZKA}/telefon-vysledek-sbaleny.png` });
+    // Podrobnosti se rozbalí tlačítkem v pruhu a zase zavřou.
+    await s.locator('[data-akce="vysledek-sbalit"]').tap();
     expect(await vysledek.getAttribute("data-sbaleno")).toBe("ne");
+    expect(await s.locator('[data-udaj="vysledek-shrnuti"]').isVisible()).toBe(true);
     const cely = (await vysledek.boundingBox())!;
-    // Krok zpět v čase výsledek sbalí do řádku: je vidět most.
+    expect(cely.height).toBeGreaterThan(pruh.height);
+    // Krok zpět v čase podrobnosti zavře: je vidět most.
     await s.locator('[data-akce="krok-zpet"]').tap();
     expect(await vysledek.getAttribute("data-sbaleno")).toBe("ano");
-    const sbaleny = (await vysledek.boundingBox())!;
-    // Řádek s verdiktem a tlačítkem pro prst (44 px) s okrajem.
-    expect(sbaleny.height).toBeLessThan(72);
-    expect(sbaleny.height).toBeLessThan(cely.height / 3);
-    expect(await s.locator('[data-udaj="vysledek-nadpis"]').isVisible()).toBe(true);
-    expect(await s.locator('[data-akce="upravit"]').isVisible()).toBe(false);
-    await s.screenshot({ path: `${SLOZKA}/telefon-vysledek-sbaleny.png` });
-    // Tlačítko v řádku ho zase rozbalí; skok na konec taky.
     await s.locator('[data-akce="vysledek-sbalit"]').tap();
     expect(await vysledek.getAttribute("data-sbaleno")).toBe("ne");
     await s.locator('[data-akce="vysledek-sbalit"]').tap();
     expect(await vysledek.getAttribute("data-sbaleno")).toBe("ano");
-    await s.locator('[data-akce="na-konec"]').tap();
-    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ne");
     expect(await s.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
     await telefon.close();
   }, 200_000);

@@ -98,6 +98,7 @@ export class BehZkousky {
         trvani: zkouska.trvani,
         dt: zkouska.simulace.dt,
         ucastnici: zkouska.ucastnici.map((u) => ({ ...u })),
+        bezRovnovahy: zkouska.bezRovnovahy,
       });
     } catch (chyba) {
       this.#posli({ typ: "chyba", kod: "vypocet-selhal", podrobnosti: chyba instanceof Error ? chyba.message : String(chyba) });

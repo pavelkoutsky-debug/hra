@@ -7,7 +7,9 @@ import {
   KLIC_CISEL,
   KLIC_ODEMCENI,
   KLIC_POSKOZENEHO,
+  KLIC_PROSLYCH,
   KLIC_SANDBOXU,
+  KLIC_ZABERU,
   KLIC_ULOZENI,
   KLIC_ZVUKU,
   Uloziste,
@@ -184,5 +186,56 @@ describe("úložiště postupu", () => {
     // Mosty úrovní kampaně s tím nemají nic společného.
     expect(druhe.navrh("1-01")).toEqual(most());
     expect(sklad.getItem(KLIC_SANDBOXU)).toBe(sandboxNaText(vychoziSandbox()));
+  });
+});
+
+describe("paměť prošlých mostů a volba zpomaleného záběru", () => {
+  it("most, který úrovní prošel, si pamatuje i nové úložiště nad stejným skladem", () => {
+    const sklad = new SkladVPameti();
+    const prvni = new Uloziste(sklad);
+    expect(prvni.prosel("1-01", "8:abc:120")).toBe(false);
+    prvni.zapisProsly("1-01", "8:abc:120");
+    expect(prvni.prosel("1-01", "8:abc:120")).toBe(true);
+    const druhe = new Uloziste(sklad);
+    expect(druhe.prosel("1-01", "8:abc:120")).toBe(true);
+    // Jiná úroveň ani jiný most tím neprošly.
+    expect(druhe.prosel("1-02", "8:abc:120")).toBe(false);
+    expect(druhe.prosel("1-01", "8:def:120")).toBe(false);
+  });
+
+  it("drží jen několik posledních mostů na úroveň a stejný most nezapíše dvakrát", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    for (let i = 0; i < 12; i++) uloziste.zapisProsly("1-01", `8:${i}:1`);
+    uloziste.zapisProsly("1-01", "8:11:1");
+    const data = JSON.parse(sklad.data.get(KLIC_PROSLYCH)!) as Record<string, string[]>;
+    expect(data["1-01"]).toHaveLength(8);
+    expect(data["1-01"]!.at(-1)).toBe("8:11:1");
+    expect(uloziste.prosel("1-01", "8:0:1")).toBe(false);
+    expect(uloziste.prosel("1-01", "8:5:1")).toBe(true);
+  });
+
+  it("poškozený zápis prošlých mostů nevadí", () => {
+    const sklad = new SkladVPameti();
+    for (const zapis of ["{", "[]", "null", '{"1-01":"x"}', '{"1-01":[1,2,"8:a:1"]}']) {
+      sklad.data.set(KLIC_PROSLYCH, zapis);
+      const uloziste = new Uloziste(sklad);
+      expect(uloziste.prosel("1-01", "nic")).toBe(false);
+      uloziste.zapisProsly("1-01", "8:b:1");
+      expect(uloziste.prosel("1-01", "8:b:1")).toBe(true);
+    }
+    sklad.data.set(KLIC_PROSLYCH, '{"1-01":[1,2,"8:a:1"]}');
+    expect(new Uloziste(sklad).prosel("1-01", "8:a:1")).toBe(true);
+  });
+
+  it("zpomalený záběr je zapnutý, dokud ho hráč nevypne, a volba se pamatuje", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    expect(uloziste.zpomaleniPadu).toBe(true);
+    uloziste.zpomaleniPadu = false;
+    expect(sklad.data.get(KLIC_ZABERU)).toBe("0");
+    expect(new Uloziste(sklad).zpomaleniPadu).toBe(false);
+    uloziste.zpomaleniPadu = true;
+    expect(new Uloziste(sklad).zpomaleniPadu).toBe(true);
   });
 });

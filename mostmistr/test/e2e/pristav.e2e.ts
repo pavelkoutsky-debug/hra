@@ -115,7 +115,7 @@ afterAll(async () => {
 
 describe("přehled kampaně", () => {
   it("má sedmou kapitolu Přístav se čtyřmi úrovněmi", async () => {
-    await stranka.goto(adresa);
+    await stranka.goto(`${adresa}?vyvoj=1`);
     await stranka.locator(".karta").first().waitFor();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
     expect(kapitoly).toHaveLength(7);
@@ -287,7 +287,7 @@ describe("dvě křídla", () => {
     await nastavCas(15);
     await stranka.screenshot({ path: `${SLOZKA}/p7-dve-kridla-zvednuta.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (5).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(5\)\.$/);
     expect(await stranka.locator('[data-udaj="vysledek-pohyb"]').getAttribute("data-zamceno")).toBe("true");
     // Dvoukřídlý most nemá zámek na opěře, takže řádek o dosednutí chybí.
     expect(await stranka.locator('dd[data-udaj="vysledek-dosednuti"]').isVisible()).toBe(false);

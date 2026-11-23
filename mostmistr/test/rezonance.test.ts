@@ -126,7 +126,8 @@ describe("závaží a rozbor mostu", () => {
   it("mechanismus ani prázdný návrh vlastní frekvence nemají", () => {
     const k = new Kreslic("2-04");
     for (let x = 0; x < 32; x += 4) k.prut("mostovka-drevo", [x, 0], [x + 4, 0]);
-    expect(rozeberMost(prehlidka, k.navrh())).toEqual({
+    const rozbor = rozeberMost(prehlidka, k.navrh());
+    expect(rozbor).toMatchObject({
       stabilni: false,
       frekvence: [],
       frekvenceObsazeneho: [],
@@ -134,6 +135,9 @@ describe("závaží a rozbor mostu", () => {
       krivka: null,
       tahyLan: [],
     });
+    // Mechanismus k tomu dostane místo a důvod, kde se složí: styčník mostovky, který nic nedrží.
+    expect(rozbor.slozeni).toMatchObject({ duvod: "mostovka" });
+    expect(rozbor.volny).toBeNull();
     expect(rozeberMost(prehlidka, new Kreslic("2-04").navrh()).stabilni).toBe(false);
   });
 

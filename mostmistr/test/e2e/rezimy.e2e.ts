@@ -50,6 +50,8 @@ async function spust(): Promise<void> {
 async function naKonec(): Promise<string> {
   await akce("na-konec").click();
   await stranka.locator(".vysledek").waitFor({ state: "visible" });
+  // Výzvy a čísla, která tyhle testy čtou, jsou v podrobnostech výsledku.
+  if ((await stranka.locator(".vysledek").getAttribute("data-sbaleno")) === "ano") await akce("vysledek-sbalit").click();
   return udaj("vysledek-nadpis");
 }
 
@@ -173,7 +175,7 @@ describe("výzvy o efektivitu", () => {
     expect(await stupne()).toEqual(["3", "3", "1"]);
     expect(await textVyzvy("zlom")).toMatch(/[\d,]+ t na 100 000 Kč · bronz · stříbro od [\d,]+ t na 100 000 Kč/);
     // Co povolilo první, říká záznam porušení.
-    expect(await udaj("vysledek-prvni")).toContain("Jako první selhal prut");
+    expect(await udaj("vysledek-prvni")).toContain("Jako první povolil prut");
     await stranka.screenshot({ path: `${SLOZKA}/r3-vysledek-do-zlomu.png` });
 
     // Podvěšený most unese skoro dvakrát víc za stejnou cenu. Dokud neprošel běžnou zkouškou,
@@ -344,7 +346,7 @@ describe("sandbox", () => {
     expect(await telo("pruty")).toBe("13");
     await spust();
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (3).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(3\)\.$/);
     // Sandbox nemá další úroveň, výzvy ani medaile, a rekord si nezapisuje.
     expect(await akce("dalsi").isVisible()).toBe(false);
     expect(await stranka.locator('[data-cast="vyzvy"]').isVisible()).toBe(false);

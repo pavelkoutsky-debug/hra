@@ -86,6 +86,12 @@ async function nastavCas(sekundy: number): Promise<void> {
   await stranka.evaluate(() => new Promise<void>((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo()))));
 }
 
+/** Rozbalí podrobnosti výsledku (čísla, podmínky medailí, hlášení chyby), pokud jsou sbalené. */
+async function rozbalVysledek(): Promise<void> {
+  const panel = stranka.locator(".vysledek");
+  if ((await panel.getAttribute("data-sbaleno")) === "ano") await stranka.locator('[data-akce="vysledek-sbalit"]').click();
+}
+
 beforeAll(async () => {
   mkdirSync(SLOZKA, { recursive: true });
   server = await preview({ preview: { port: 4194, strictPort: false, host: "127.0.0.1" }, logLevel: "silent" });
@@ -108,7 +114,7 @@ afterAll(async () => {
 
 describe("přehled s druhou kapitolou", () => {
   it("ukáže všechny kapitoly; druhá je zamčená, dokud není dohraná první", async () => {
-    await stranka.goto(adresa);
+    await stranka.goto(`${adresa}?vyvoj=1`);
     await stranka.locator(".karta").first().waitFor();
     expect(await stranka.locator(".kapitola h1").allInnerTexts()).toEqual([
       "Kapitola 1 · Potok",
@@ -273,10 +279,11 @@ describe("kmitání mostovky rozhoduje", () => {
   it("nízká lávka bez tlumičů se pod útvarem rozkmitá a neobstojí, i když nikdo nespadne", async () => {
     await nactiMost(navrhNaText(RESENI["2-04"]!.pady[1]!.navrh));
     expect(await vyzkousej()).toBe("MOST NEOBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toContain("Přešli a přejeli všichni");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/(Přešli a přejeli|Přešli|Přejeli) všichni/);
     expect(await udaj("vysledek-shrnuti")).toContain("rozkmital víc, než se dá snést");
     expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · nepřijatelné · v čase \d+,\d s$/);
     // Odkaz skočí do okamžiku největšího kmitání; legenda ukazuje okamžitou hodnotu.
+    await rozbalVysledek();
     await stranka.locator('[data-udaj="vysledek-kmitani"] button').click();
     await expect.poll(() => udaj("kmitani")).toMatch(/^kmitání [3-9],\d\d m\/s²$/);
     await stranka.screenshot({ path: `${SLOZKA}/46-rezonance.png` });

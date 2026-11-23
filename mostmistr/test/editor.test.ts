@@ -162,6 +162,23 @@ describe("editor", () => {
     expect(e.posledniDuvod).toBe("prut-dlouhy");
   });
 
+  it("tah, který na stejné díly rozdělit nejde, rozdělí na co nejmíň dílů: 5 m je 3 + 2, ne 5 × 1", () => {
+    const { e } = novy();
+    e.stiskni(B(0, 0));
+    e.tahni(B(5, 0));
+    expect(e.tah).toMatchObject({ duvod: null, dilu: 2, deleni: [0.6] });
+    expect(e.pust()).toBe(true);
+    expect(e.navrh.pruty).toHaveLength(2);
+    expect(e.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 3, 5]);
+    // Sedm metrů jsou čtyři a tři.
+    const dalsi = novy().e;
+    dalsi.stiskni(B(0, 0));
+    dalsi.tahni(B(7, 0));
+    expect(dalsi.tah).toMatchObject({ duvod: null, dilu: 2 });
+    expect(dalsi.pust()).toBe(true);
+    expect(dalsi.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 4, 7]);
+  });
+
   it("mostovku delší než jeden díl rozdělí na stejné díly", () => {
     const { e } = novy();
     e.stiskni(B(0, 0));

@@ -110,6 +110,12 @@ function napoj(cesta: string, ktera: keyof typeof zadosti, obsluha: (zadost: Req
   server.middlewares.stack.unshift({ route: cesta, handle: vyrid });
 }
 
+/** Rozbalí podrobnosti výsledku (čísla, podmínky medailí, hlášení chyby), pokud jsou sbalené. */
+async function rozbalVysledek(): Promise<void> {
+  const panel = stranka.locator(".vysledek");
+  if ((await panel.getAttribute("data-sbaleno")) === "ano") await stranka.locator('[data-akce="vysledek-sbalit"]').click();
+}
+
 beforeAll(async () => {
   mkdirSync(SLOZKA, { recursive: true });
   server = await preview({ preview: { port: 4200, strictPort: false, host: "127.0.0.1" }, logLevel: "silent" });
@@ -221,6 +227,7 @@ describe("deník z průchodu úrovní", () => {
 
 describe("zpětná vazba", () => {
   it("z výsledku zkoušky jde napsat zpráva; server ji zaeviduje i s mostem a posledními kroky", async () => {
+    await rozbalVysledek();
     await stranka.locator('.vysledek [data-akce="vazba"]').click();
     const okno = stranka.locator("#okno-vazba");
     await okno.waitFor({ state: "visible" });

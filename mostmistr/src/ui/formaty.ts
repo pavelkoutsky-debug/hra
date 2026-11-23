@@ -75,3 +75,16 @@ export function procenta(podil: number): string {
 export function hmotnost(kg: number): string {
   return kg < 1000 ? `${celeCislo(kg)}\u00a0kg` : `${cislo(kg / 1000, 1)}\u00a0t`;
 }
+
+/**
+ * Rozdíl dvou hodnot se znaménkem tak, jak ho hráč vidí: počítá se ze zaokrouhlených hodnot,
+ * ne z přesných. Využití 42,6 % a 44,4 % se píše „43 %“ a „44 %“, takže rozdíl je „+1 %“,
+ * ne „+2 %“. `nasobek` říká, kolika nejmenším zobrazeným dílkům odpovídá jednotka hodnoty
+ * (procenta ze podílu 100, koruny 1, kN z newtonů 0,001): zaokrouhluje se stejně jako v zápisu.
+ * Null, když obě hodnoty vypadají stejně.
+ */
+export function zobrazenyRozdil(nove: number, stare: number, zapis: (hodnota: number) => string, nasobek: number): string | null {
+  const dilku = Math.round(nove * nasobek) - Math.round(stare * nasobek);
+  if (dilku === 0 || zapis(nove) === zapis(stare)) return null;
+  return `${dilku > 0 ? "+" : "−"}${zapis(Math.abs(dilku) / nasobek)}`;
+}

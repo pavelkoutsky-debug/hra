@@ -182,6 +182,10 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
     );
   };
 
+  // Odemknutí všech úrovní je pomůcka pro zkoušení hry: nabízí se jen s ?vyvoj=1 v adrese.
+  // Kdo ji už má zapnutou, vidí ji taky, ať ji může zase vypnout.
+  const proVyvoj = new URLSearchParams(window.location.search).get("vyvoj") === "1" || uloziste.odemcenoVse;
+  for (const uzel of document.querySelectorAll<HTMLElement>("[data-jen-vyvoj]")) uzel.hidden = !proVyvoj;
   volba.checked = uloziste.odemcenoVse;
   volba.addEventListener("change", () => {
     uloziste.odemcenoVse = volba.checked;
@@ -196,7 +200,9 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   poleHlaseni.textContent = text;
   poleHlaseni.hidden = text === "";
 
-  udaj("prehled-verze").textContent = `${t("hra.nazev")} ${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
+  // Otisk sestavení je údaj pro hlášení chyb: v patičce je jen v bublině.
+  udaj("prehled-verze").textContent = `${t("hra.nazev")} ${__VERZE_HRY__}`;
+  udaj("prehled-verze").title = `${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
   vykresli();
 
   // Postup kampaní: kolik úrovní je projitých, kolik medailí a stupňů výzev hráč má.
