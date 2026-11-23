@@ -15,7 +15,7 @@ import {
   zkraceniLana,
   type IdPrvku,
 } from "../data/katalog";
-import { zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type TlumicStycniku } from "../data/navrh";
+import { otoceniKridla, zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type TlumicStycniku } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPrutu, lzeZacit } from "./pravidla";
 import {
@@ -706,12 +706,14 @@ export class Editor {
    * Zdvih vybraných pístů v metrech: zdvih prvního z nich, největší zdvih, jaký všechny
    * vybrané dokážou, a zda se jejich zdvihy liší. Null, když není vybraný žádný píst.
    */
-  get zdvihVyberu(): { zdvih: number; nejvetsi: number; ruzne: boolean } | null {
+  get zdvihVyberu(): { zdvih: number; nejvetsi: number; ruzne: boolean; otoceni: number | null } | null {
     const pisty = this.#vybranePisty();
     if (pisty.size === 0) return null;
     let prvni: number | null = null;
     let nejvetsi = Infinity;
     let ruzne = false;
+    // Kosinus největšího otočení křídla mezi vybranými písty; null, kde čep křídla nejde určit.
+    let otoceni: number | null = null;
     for (const p of this.#navrh.pruty) {
       const delka = pisty.get(p.id);
       if (delka === undefined) continue;
@@ -719,8 +721,10 @@ export class Editor {
       if (prvni === null) prvni = zdvih;
       else if (Math.abs(zdvih - prvni) > 1e-9) ruzne = true;
       nejvetsi = Math.min(nejvetsi, nejvetsiZdvih(delka));
+      const kridlo = this.uroven.pohyb ? otoceniKridla(this.#navrh, this.uroven, p) : null;
+      if (kridlo !== null && (otoceni === null || kridlo.cos < otoceni)) otoceni = kridlo.cos;
     }
-    return { zdvih: prvni ?? 0, nejvetsi, ruzne };
+    return { zdvih: prvni ?? 0, nejvetsi, ruzne, otoceni };
   }
 
   /** Změní zdvih vybraných pístů o daný počet kroků; všechny dostanou stejnou hodnotu. */
@@ -730,13 +734,6 @@ export class Editor {
     const krok = PIST.krokZdvihu;
     const novy = Math.round(dosavadni.zdvih / krok + kroku) * krok;
     return this.#zmen(nastavZdvih(this.#navrh, new Set(this.#vybranePisty().keys()), () => novy), "zdvih");
-  }
-
-  /** Počet pístů v návrhu. */
-  get pocetPistu(): number {
-    let pocet = 0;
-    for (const p of this.#navrh.pruty) if (KATALOG[p.prvek].druh === "pist") pocet += 1;
-    return pocet;
   }
 
   /** Doplní zrcadlový obraz mostu (nebo výběru) podle osy hlavní trasy. */
@@ -797,14 +794,18 @@ export class Editor {
       const obraz = stycnikV(postupny, { x: 2 * osa - vzor.x, y: vzor.y });
       if (!obraz) continue;
       if (vzor.svar && this.uroven.povoleneSvary) postupny = nastavSvar(postupny, new Set([obraz.id]), true);
-      if (vzor.zamek && this.uroven.pohyb) postupny = nastavZamek(postupny, new Set([obraz.id]), true);
+      // Zámek se zrcadlí jen tam, kde být smí: ne na čep, do vetknutí ani na základ.
+      const drzi =
+        this.uroven.kotvy.some((k) => k.x === obraz.x && k.y === obraz.y && k.typ !== "posuvna") ||
+        this.uroven.zaklady.some((z) => z.x === obraz.x && z.y === obraz.y);
+      if (vzor.zamek && this.uroven.pohyb && !drzi) postupny = nastavZamek(postupny, new Set([obraz.id]), true);
       if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
       // Laděný tlumič v ose mostu má obraz sám v sobě; jinde ho obraz dostane, pokud žádný nemá.
       if (tlumic) postupny = nastavLadenyTlumic(postupny, new Set([obraz.id]), (dosavadni) => dosavadni ?? tlumic);
     }
     // Pás dotažený k ose a jeho obraz se spojí v jeden prut, pokud to pravidla úrovně dovolí.
     const pridane = new Set(postupny.pruty.filter((p) => !stare.has(p.id)).map((p) => p.id));
-    const spojeny = spojNaOse(postupny, osa, pridane, [...this.uroven.kotvy, ...this.uroven.zaklady]);
+    const spojeny = spojNaOse(postupny, osa, pridane, [...this.uroven.kotvy, ...this.uroven.zaklady], this.uroven.pohyb !== null);
     if (spojeny !== postupny) {
       const drive = new Set(zkontrolujNavrh(postupny, this.uroven).map((p) => `${p.druh}:${p.stycnik ?? ""}:${p.prut ?? ""}`));
       const horsi = zkontrolujNavrh(spojeny, this.uroven).some(

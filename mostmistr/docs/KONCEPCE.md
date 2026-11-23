@@ -337,6 +337,7 @@ Pevný krok, pevné pořadí výpočtu a pevné násady pro náhodný dav a nero
 - Plasticita je soustředěná do kloubů. Únava materiálu, teplota a dotvarování se neřeší.
 - Spřáhla vagónů nemají vůli. Trosky kolidují jen s terénem, ne mezi sebou.
 - Loď je pohyblivý průjezdný profil, ne těleso.
+- Píst zvedá most za sekundy, ne za minutu a půl jako skutečný; dělicí zámek mezi křídly je čep, který přenáší i tah (skutečný středový zámek jen smyk). *(M6, viz `docs/STAV.md`.)*
 - Vozidla jedou předepsanou rychlostí; prokluz kol se nepočítá.
 - Pevnosti jsou střední hodnoty bez normových součinitelů bezpečnosti, aby most padal tam, kde by skutečně selhal.
 

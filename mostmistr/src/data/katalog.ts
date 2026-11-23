@@ -247,11 +247,16 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     naMetrSirky: true,
   },
   // Ortotropní ocelová mostovka pohyblivých mostů: plech 14 mm vyztužený podélnými žebry
-  // lichoběžníkového průřezu (výška 300 mm, tloušťka 8 mm, po 600 mm). Na metr šířky:
-  // - plocha: plech 140 cm² + stěny žeber 82,8 cm² + pásnice žeber 26,7 cm² = 250 cm², tedy 196 kg,
-  // - těžiště 92 mm pod horním povrchem, moment setrvačnosti 33 600 cm⁴,
-  // - průřezový modul ke spodním vláknům 33 600 / 22,6 = 1 487 cm³, plastický asi o čtvrtinu větší,
-  // - smyk nesou stěny žeber.
+  // lichoběžníkového průřezu (výška 300 mm, nahoře 360 mm, dole 200 mm, tloušťka 8 mm, po
+  // 600 mm). Na metr šířky:
+  // - plocha: plech 140 cm² + šikmé stěny žeber 82,8 cm² + pásnice žeber 26,7 cm² = 250 cm²,
+  //   tedy 196 kg,
+  // - těžiště 91,5 mm pod horním povrchem, moment setrvačnosti 33 300 cm⁴ (plech 10 020,
+  //   stěny 10 560, pásnice 12 730),
+  // - průřezový modul ke spodním vláknům 33 300 / 22,25 = 1 497 cm³,
+  // - plastický modul 2 127 cm³: neutrální osa leží v plechu 12,5 mm pod povrchem, takže
+  //   skoro celý plech je tlačený a žebra tažená (tvarový součinitel 1,42),
+  // - smyk nesou stěny žeber: jejich plocha krát čtverec sklonu, 77 cm².
   // Je skoro třikrát lehčí než ocelobetonová a tužší, ale o hodně dražší: proto se dává tam,
   // kde se každá tuna musí zvedat.
   "mostovka-ocel": {
@@ -260,7 +265,7 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     hotovo: true,
     cena: { zaMetr: 26000 },
     material: "ocel",
-    prurez: { A: 250e-4, I: 33600e-8, As: 82.8e-4, W: 1487e-6, Wpl: 1860e-6, hmotnostNaMetr: 196 },
+    prurez: { A: 250e-4, I: 33300e-8, As: 77e-4, W: 1497e-6, Wpl: 2127e-6, hmotnostNaMetr: 196 },
     naMetrSirky: true,
   },
   // Kolej na mostnicích: dvě kolejnice 60E1 na dřevěných mostnicích po 0,6 m a pod nimi dva
@@ -391,7 +396,8 @@ export const PIST = {
   tuhostKratDelka: 92e6,
   /**
    * Tlumení válce, N·s/m: škrcení průtoku oleje brzdí každý pohyb, který se liší od řízeného.
-   * Křídlu o hmotnosti desítek tun to dává poměrný útlum kolem třetiny.
+   * Sklopenému křídlu o hmotnosti desítek tun to dává poměrný útlum od čtvrtiny výš; zvednuté
+   * křídlo má na píst kratší rameno a útlum klesne asi na 0,15, takže se nahoře chvíli houpe.
    */
   tlumeni: 1.5e6,
   /** Hmotnost válce na metr délky, kg/m. */
@@ -419,8 +425,13 @@ export function zdvihPistu(zdvih: number | undefined, delka: number): number {
 /** Dělicí zámek pohyblivého mostu: cena za kus, tuhost dosedací plochy a čepu, poměrný útlum. */
 export const ZAMEK = {
   cena: 25000,
-  /** Tuhost dosedací plochy a čepu zámku, N/m. */
+  /** Tuhost dosedací plochy zámku na opěře, N/m. */
   tuhost: 200e6,
+  /**
+   * Tuhost čepu zámku mezi křídly, N/m: řádově jako mostovka křídla v tahu, aby byl most po
+   * zamknutí stejně tuhý jako před odemknutím (tehdy konce spojuje společný styčník).
+   */
+  tuhostCepu: 4e9,
   /** Poměrný útlum dosednutí (pryžové nárazníky, tření čepu). */
   utlum: 0.3,
 } as const;

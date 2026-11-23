@@ -487,7 +487,7 @@ function kridlo(
 }
 
 /** Jednokřídlý sklopný most přes kanál široký `rozpeti`: čep vlevo, zámek na pravé opěře. */
-function sklopny(
+export function sklopny(
   uroven: string,
   rozpeti: number,
   pole: number,
@@ -500,8 +500,13 @@ function sklopny(
   });
 }
 
+/** Jednokřídlý most, jehož křídlo je o metr kratší než kanál a nemá zámek. */
+function kratkeKridlo(uroven: string, rozpeti: number, pist: { hloubka: number; kam: number; zdvih: number }): NavrhMostu {
+  return navrh(uroven, (k) => kridlo(k, 0, rozpeti - 1, 6, pist));
+}
+
 /** Dvoukřídlý sklopný most: čepy v obou opěrách, křídla se potkávají uprostřed v zámku. */
-function dvoukridly(
+export function dvoukridly(
   uroven: string,
   rozpeti: number,
   pole: number,
@@ -961,6 +966,7 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "bez zámku: konec křídla drží ložisko", navrh: sklopny("7-01", 12, 3, { hloubka: 3, kam: 3, zdvih: 1.5 }, { zamek: false }) },
       { nazev: "nesvařená mostovka: křídlo se při zvedání složí", navrh: sklopny("7-01", 12, 6, { hloubka: 3, kam: 6, zdvih: 2 }, { svar: false }) },
       { nazev: "malý zdvih: křídlo se nezvedne dost", navrh: sklopny("7-01", 12, 6, { hloubka: 3, kam: 6, zdvih: 1.5 }) },
+      { nazev: "křídlo o metr kratší, bez zámku: na opěru nedosáhne", navrh: kratkeKridlo("7-01", 12, { hloubka: 5, kam: 6, zdvih: 2.5 }) },
     ],
   },
 
@@ -974,14 +980,23 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "jen mostovka", navrh: dvoukridly("7-02", 24, 6, null, { zamek: false }) },
       { nazev: "bez zámku uprostřed: písty tlačí proti sobě", navrh: dvoukridly("7-02", 24, 6, { hloubka: 5, kam: 6, zdvih: 2.5 }, { zamek: false }) },
       { nazev: "malý zdvih", navrh: dvoukridly("7-02", 24, 6, { hloubka: 5, kam: 6, zdvih: 1.5 }) },
+      {
+        nazev: "píst jen vlevo: pravé křídlo po odemknutí spadne",
+        navrh: navrh("7-02", (k) => {
+          kridlo(k, 0, 12, 6, { hloubka: 5, kam: 6, zdvih: 2.5 });
+          kridlo(k, 24, 12, 6, null);
+          k.bod(12, 0, { zamek: true });
+        }),
+      },
     ],
   },
 
   // Dlouhé křídlo, 16 m: píst blízko čepu je na hraně síly (přetlakový ventil povoluje) a
   // konec křídla udeří do opěry; z hlubší kotvy zvedá klidně, ale potřebuje větší zdvih.
+  // Zdvih smí křídlo zvednout nejvýš o 70°: z mělké kotvy do styčníku 6 m je to 2 m.
   "7-03": {
     pruchod: sklopny("7-03", 16, 4, { hloubka: 3, kam: 4, zdvih: 1.75 }),
-    rozpocet: sklopny("7-03", 16, 6, { hloubka: 3, kam: 6, zdvih: 2.5 }),
+    rozpocet: sklopny("7-03", 16, 6, { hloubka: 3, kam: 6, zdvih: 2 }),
     mistrovska: sklopny("7-03", 16, 4, { hloubka: 6, kam: 4, zdvih: 2.5 }),
     pady: [
       { nazev: "jen mostovka", navrh: sklopny("7-03", 16, 6, null, { zamek: false }) },
@@ -990,17 +1005,25 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
     ],
   },
 
-  // Velký přístav, 32 m: dvě šestnáctimetrová křídla s těžší vozovkou. Písty z mělkých kotev
-  // je zvednou, ale zavřený most pod autobusem neudrží; z hlubokých ano. Trojúhelník nad
+  // Velký přístav, 32 m: dvě šestnáctimetrová křídla s těžší vozovkou. Píst z mělké kotvy má
+  // k čepu krátké rameno: křídlo zvedne, ale zvednuté ho neudrží (ventil povolí, křídlo klesne
+  // a loď do něj narazí). Z hluboké kotvy má rameno delší a křídlo udrží. Trojúhelník nad
   // kořenem křídla bere mostovce ohyb.
   "7-04": {
-    pruchod: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 3 }),
+    pruchod: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.25 }),
     rozpocet: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.5 }),
-    mistrovska: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 3 }, { trojuhelnik: 4 }),
+    mistrovska: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.25 }, { trojuhelnik: 4 }),
     pady: [
       { nazev: "jen mostovka", navrh: dvoukridly("7-04", 32, 4, null, { zamek: false }) },
-      { nazev: "písty z mělkých kotev", navrh: dvoukridly("7-04", 32, 4, { hloubka: 3, kam: 4, zdvih: 2 }) },
-      { nazev: "bez zámku uprostřed", navrh: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 3 }, { zamek: false }) },
+      { nazev: "písty z mělkých kotev", navrh: dvoukridly("7-04", 32, 4, { hloubka: 3, kam: 4, zdvih: 1.75 }) },
+      { nazev: "bez zámku uprostřed", navrh: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.25 }, { zamek: false }) },
+      {
+        nazev: "křídla, která se uprostřed nepotkají",
+        navrh: navrh("7-04", (k) => {
+          kridlo(k, 0, 15, 5, { hloubka: 6, kam: 5, zdvih: 2.25 });
+          kridlo(k, 32, 17, 5, { hloubka: 6, kam: 5, zdvih: 2.25 });
+        }),
+      },
     ],
   },
 };

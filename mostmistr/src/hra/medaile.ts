@@ -58,22 +58,33 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
   return seznam;
 }
 
-/** Naplní seznam `<ul class="medaile">` medailemi úrovně. */
-export function vypisMedaile(seznam: HTMLElement, uroven: Uroven, medaile: Readonly<Medaile>): void {
+/**
+ * Naplní seznam `<ul class="medaile">` medailemi úrovně. S `drive` (medaile z rekordu úrovně)
+ * odliší medaili, kterou tenhle most nezískal, ale hráč ji už má z jiného pokusu: medaile se
+ * mezi pokusy sčítají a prázdný kosočtverec by vypadal, jako by o ni přišel.
+ */
+export function vypisMedaile(
+  seznam: HTMLElement,
+  uroven: Uroven,
+  medaile: Readonly<Medaile>,
+  drive?: Readonly<Medaile>,
+): void {
+  const zDrivejska = drive ? radky(uroven, drive).map((r) => r.ziskana) : [];
   seznam.replaceChildren(
-    ...radky(uroven, medaile).map((radek) => {
+    ...radky(uroven, medaile).map((radek, i) => {
       const polozka = document.createElement("li");
-      polozka.dataset.ziskana = String(radek.ziskana);
+      const uzMa = !radek.ziskana && zDrivejska[i] === true;
+      polozka.dataset.ziskana = uzMa ? "drive" : String(radek.ziskana);
       const znak = document.createElement("span");
       znak.className = "medaile__znak";
-      znak.textContent = radek.ziskana ? ZNAK_ZISKANE : ZNAK_CHYBEJICI;
-      znak.title = t(radek.ziskana ? "medaile.ziskana" : "medaile.chybi");
+      znak.textContent = radek.ziskana || uzMa ? ZNAK_ZISKANE : ZNAK_CHYBEJICI;
+      znak.title = t(radek.ziskana ? "medaile.ziskana" : uzMa ? "medaile.drive" : "medaile.chybi");
       const nazev = document.createElement("span");
       nazev.className = "medaile__nazev";
       nazev.textContent = t(radek.nazev);
       const podminka = document.createElement("span");
       podminka.className = "medaile__podminka";
-      podminka.textContent = radek.podminka;
+      podminka.textContent = uzMa ? `${radek.podminka} ${t("medaile.drive.poznamka")}` : radek.podminka;
       polozka.append(znak, nazev, podminka);
       return polozka;
     }),

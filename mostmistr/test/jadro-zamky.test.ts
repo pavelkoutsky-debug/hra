@@ -6,6 +6,7 @@ import { pistyVCili, posunPisty, vytvorPisty, type Pisty } from "../src/jadro/pi
 import { Simulace } from "../src/jadro/simulace";
 import { popisPruziny, prepoctiHmoty, sestavSoustavu, type PopisSoustavy, type Soustava } from "../src/jadro/soustava";
 import { volneStupne } from "../src/jadro/stupne";
+import { odpojKonec, rozdelPrvek } from "../src/jadro/topologie";
 import {
   odemkniZamky,
   posunZamky,
@@ -74,6 +75,9 @@ function jednoKridlo(): PopisSoustavy {
   };
 }
 
+/** Číslo prutu, kterým pravé křídlo vede do zámku. */
+const PRUT_PRAVEHO = 7;
+
 /** Dvě křídla s čepy v (0, 0) a (16, 0), která se potkávají ve společném styčníku (8, 0). */
 function dveKridla(): PopisSoustavy {
   return {
@@ -89,8 +93,8 @@ function dveKridla(): PopisSoustavy {
     prvky: [
       { ...HEB200, a: 0, b: 1, kloubA: true },
       { ...HEB200, a: 1, b: 2, kloubB: true },
-      { ...HEB200, a: 2, b: 3, kloubA: true },
-      { ...HEB200, a: 3, b: 4, kloubB: true },
+      { ...HEB200, a: 2, b: 3, kloubA: true, prut: PRUT_PRAVEHO },
+      { ...HEB200, a: 3, b: 4, kloubB: true, prut: PRUT_PRAVEHO + 1 },
       popisPruziny(5, 1, TUHOST_PISTU, 2e5, 50),
       popisPruziny(6, 3, TUHOST_PISTU, 2e5, 50),
     ],
@@ -103,7 +107,7 @@ function bez(most: Most, doCasu: number): void {
 
 describe("zámek na opěře", () => {
   it("zamčený je podpora; odemčený pustí konec křídla vzhůru a při sklopení ho zachytí dosedací plocha", () => {
-    const most = postav(jednoKridlo(), [2], [{ stycnik: 2, prvky: [] }]);
+    const most = postav(jednoKridlo(), [2], [{ stycnik: 2, pruty: [] }]);
     const { s, sim, pisty, zamky } = most;
     expect(zamkyZamcene(zamky)).toBe(true);
     expect(s.invHmotaY[2]).toBe(0);
@@ -148,7 +152,7 @@ describe("zámek na opěře", () => {
 
   it("rychlé sklápění udeří do opěry víc než pomalé", () => {
     const raz = (rychlost: number): number => {
-      const most = postav(jednoKridlo(), [2], [{ stycnik: 2, prvky: [] }], rychlost);
+      const most = postav(jednoKridlo(), [2], [{ stycnik: 2, pruty: [] }], rychlost);
       odemkniZamky(most.s, most.zamky);
       most.sim.poZmeneStavby();
       most.pisty.vysunout = true;
@@ -168,8 +172,8 @@ describe("zámek na opěře", () => {
 
 describe("zámek mezi křídly", () => {
   it("zamčená křídla nesou břemeno uprostřed společně; odemčená se rozejdou a po sklopení zase zapadnou", () => {
-    // Prvky 2 a 3 jsou pravé křídlo: při odemknutí přejdou na nový styčník.
-    const most = postav(dveKridla(), [4, 5], [{ stycnik: 2, prvky: [2] }]);
+    // Prvky 2 a 3 jsou pravé křídlo: ten, který vede do zámku, přejde při odemknutí na nový styčník.
+    const most = postav(dveKridla(), [4, 5], [{ stycnik: 2, pruty: [PRUT_PRAVEHO] }]);
     const { s, sim, pisty, zamky } = most;
     const stycniku = s.pocetStycniku;
     const klid = s.y[2]!;
@@ -226,5 +230,61 @@ describe("zámek mezi křídly", () => {
     expect(pokles).toBeGreaterThan(0.0005);
     expect(klid - s.y[pravy]!).toBeGreaterThan(0.8 * pokles);
     expect(sim.rozpadla).toBe(false);
+  });
+});
+
+describe("zámek mezi křídly po porušení", () => {
+  /** Jako `dveKridla`, jen pravé křídlo vede do zámku svým koncem b (tak vznikají zrcadlená křídla). */
+  function zrcadlenaKridla(): PopisSoustavy {
+    const popis = dveKridla();
+    popis.prvky[2] = { ...HEB200, a: 3, b: 2, kloubB: true, prut: PRUT_PRAVEHO };
+    popis.prvky[3] = { ...HEB200, a: 4, b: 3, kloubA: true, prut: PRUT_PRAVEHO + 1 };
+    return popis;
+  }
+
+  it("prvek u zámku rozdělený porušením se při odemknutí najde podle prutu a křídla se rozejdou", () => {
+    const most = postav(zrcadlenaKridla(), [4, 5], [{ stycnik: 2, pruty: [PRUT_PRAVEHO] }]);
+    const { s, sim, pisty, zamky } = most;
+    // Plastický kloub nebo rozlomení dělí prvek: původní číslo si nechá díl u konce a,
+    // konec u zámku (b) teď nese nový prvek.
+    const { prvek: novy } = rozdelPrvek(s, 2, 0.5);
+    sim.poZmeneStavby();
+    expect(s.prvekB[2]).not.toBe(2);
+    expect(s.prvekB[novy]).toBe(2);
+    const stycniku = s.pocetStycniku;
+
+    expect(odemkniZamky(s, zamky)).toBe(1);
+    sim.poZmeneStavby();
+    const pravy = zamky.druhy[0]!;
+    expect(pravy).toBe(stycniku);
+    expect(s.prvekB[novy]).toBe(pravy);
+    // Žádný osiřelý styčník: nový konec má hmotu svého křídla.
+    expect(s.invHmotaY[pravy]!).toBeGreaterThan(0);
+    pisty.vysunout = true;
+    bez(most, 6);
+    expect(s.y[2]!).toBeGreaterThan(1.5);
+    expect(s.y[pravy]!).toBeGreaterThan(1.5);
+    expect(s.x[pravy]! - s.x[2]!).toBeGreaterThan(0.5);
+    expect(sim.rozpadla).toBe(false);
+  });
+
+  it("zámek, jehož druhé křídlo se utrhlo, nic nerozpojí, nepodepře a už nezapadne", () => {
+    const most = postav(zrcadlenaKridla(), [4, 5], [{ stycnik: 2, pruty: [PRUT_PRAVEHO] }]);
+    const { s, sim, zamky } = most;
+    odpojKonec(s, 2, true);
+    sim.poZmeneStavby();
+    const stycniku = s.pocetStycniku;
+
+    expect(odemkniZamky(s, zamky)).toBe(1);
+    sim.poZmeneStavby();
+    expect(s.pocetStycniku).toBe(stycniku);
+    expect(zamky.druhy[0]).toBe(-1);
+    // Konec levého křídla visí ve vzduchu: zámek mu nedá dosedací plochu ani ho nezamkne.
+    const fy = s.fy[2]!;
+    pridejSilyZamku(s, zamky);
+    expect(s.fy[2]).toBe(fy);
+    expect(pridavnaFrekvenceZamku(s, zamky)).toBe(0);
+    expect(zamkniZamky(s, zamky)).toBe(0);
+    expect(zamkyZamcene(zamky)).toBe(false);
   });
 });

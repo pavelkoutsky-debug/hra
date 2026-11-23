@@ -155,10 +155,20 @@ describe("zvedací most", () => {
     await stranka.locator('[data-prvek="mostovka-ocel"]').click();
     await tahni([0, 0], [6, 0]);
     await tahni([6, 0], [12, 0]);
-    // Svar ve styčníku uprostřed křídla.
+    // Svar ve styčníku uprostřed křídla a hned potom zámek na pravou opěru, jak radí zadání.
+    // Kliknutí na Zámek v paletě jen přepne nástroj: svařený styčník, který po sobě svar
+    // nechal vybraný, zámek nedostane.
     await stranka.locator('[data-pridavek="svar"]').click();
     const stred = await bodSveta(6, 0);
     await stranka.mouse.click(stred.x, stred.y);
+    await stranka.locator('[data-pridavek="zamek"]').click();
+    expect((await mostNaVykresu()).stycniky.find((s) => s.x === 6 && s.y === 0)).toEqual({ id: 1, x: 6, y: 0, svar: true });
+    // Klik zámkem vedle mostu poradí, že zámek patří do styčníku.
+    const vedle = await bodSveta(9, 4);
+    await stranka.mouse.click(vedle.x, vedle.y);
+    expect(await udaj("hlaseni")).toContain("Tady žádný styčník není");
+    const opera = await bodSveta(12, 0);
+    await stranka.mouse.click(opera.x, opera.y);
     // Píst z kotvy ve zdi do středu křídla; po nakreslení je vybraný a jde mu nastavit zdvih.
     await stranka.locator('[data-prvek="pist"]').click();
     await tahni([0, -3], [6, 0]);
@@ -168,11 +178,22 @@ describe("zvedací most", () => {
     expect(await udaj("zdvih")).toBe("vysune se o 1,00 m");
     for (let i = 0; i < 4; i++) await akce("zdvih-plus").click();
     expect(await telo("zdvih")).toBe("2.00");
-    expect(await udaj("zdvih-poznamka")).toContain("Nejvýš 3,25 m");
-    // Zámek na pravou opěru.
-    await stranka.locator('[data-pridavek="zamek"]').click();
-    const opera = await bodSveta(12, 0);
-    await stranka.mouse.click(opera.x, opera.y);
+    // Panel říká rozsah, o kolik se křídlo zvedne a kolik píst unese.
+    const poznamka = await udaj("zdvih-poznamka");
+    expect(poznamka).toContain("Nejvýš 3,25 m");
+    expect(poznamka).toContain("Křídlo se zvedne o 59°");
+    expect(poznamka).toContain("Píst tlačí i táhne nejvýš 1500 kN");
+    expect(await telo("otoceni")).toBe("59");
+    // O krok dál by píst křídlo zvedl přes 70°: panel varuje a zkouška se nepustí.
+    await akce("zdvih-plus").click();
+    expect(await udaj("zdvih-poznamka")).toContain("víc než 70°");
+    await stranka.locator(PLATNO).focus();
+    await stranka.keyboard.press("Space");
+    expect(await telo("rezim")).toBe("stavba");
+    expect(await udaj("hlaseni")).toContain("Píst by křídlo zvedl o víc než 70°");
+    // Zpátky na dva metry: píst je pořád vybraný.
+    await akce("zdvih-min").click();
+    expect(await telo("zdvih")).toBe("2.00");
     const most = await mostNaVykresu();
     expect(most.pruty.map((p) => p.prvek).sort()).toEqual(["mostovka-ocel", "mostovka-ocel", "pist"]);
     expect(most.pruty.find((p) => p.prvek === "pist")!.zdvih).toBe(2);
@@ -193,10 +214,21 @@ describe("zvedací most", () => {
     expect(text).toContain("zvednuto v");
     expect(text).toContain("loď proplula v");
     expect(text).toContain("zamčeno v");
-    expect(await udaj("vysledek-pist")).toMatch(/nejvýš \d+ kN z 1 ?500 kN/);
-    expect(await udaj("vysledek-dosednuti")).toMatch(/ráz \d+ kN/);
+    expect((await udaj("vysledek-pist")).replace(/\s/g, " ")).toMatch(/nejvýš \d+ kN z 1500 kN/);
+    // Ráz při dosednutí s mezí medaile: tenhle most ji nesplní (píst z mělké kotvy).
+    const dosednuti = (await udaj("vysledek-dosednuti")).replace(/\s/g, " ");
+    expect(dosednuti).toMatch(/ráz \d+ kN, \d,\d× víc než v klidu; medaile chce nejvýš 250 kN/);
+    expect(dosednuti).not.toContain("splněno");
     // Průchod a rozpočet; měkké dosednutí pro mistrovskou tenhle most nemá.
     expect(await medaile()).toEqual(["true", "true", "false"]);
+    // Klik na píst řekne, kolik nejvíc tlačil (píst nemá využití jako prut).
+    await akce("prehrat-znovu").click();
+    // Ve druhé sekundě je most ještě dole a píst leží tam, kde byl nakreslen.
+    await nastavCas(2);
+    const napul = await bodSveta(3, -1.5);
+    await stranka.mouse.click(napul.x, napul.y);
+    expect((await udaj("hlaseni")).replace(/\s/g, " ")).toMatch(/Prut 3 \(píst\): největší síla \d+ kN z 1500 kN \(tlačil\)/);
+    await naKonec();
     await stranka.screenshot({ path: `${SLOZKA}/p4-vysledek-zvedaci-most.png` });
   }, 240_000);
 
@@ -208,12 +240,21 @@ describe("zvedací most", () => {
     await stranka.screenshot({ path: `${SLOZKA}/p5-lod-narazila.png` });
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
     const shrnuti = await udaj("vysledek-shrnuti");
-    expect(shrnuti).toContain("Loď narazila do mostu");
+    // Výsledek řekne, do kterého prutu loď narazila, a proč se most nezvedl.
+    expect(shrnuti).toMatch(/Loď narazila do mostu: v jejím plavebním profilu zůstal prut \d+ \(ocelová mostovka\)/);
     expect(shrnuti).toContain("Píst most nezvedl");
     expect(await stranka.locator('[data-udaj="vysledek-pohyb"]').getAttribute("data-narazilo")).toBe("1");
+    const radek = await udaj("vysledek-pohyb");
+    expect(radek).toMatch(/loď narazila v .* do prutu \d+/);
+    // Most bez zámku se nezamyká: o zamčení se nepíše.
+    expect(radek).not.toContain("zamčeno");
+    expect(radek).not.toContain("zámky nezapadly");
+    // Medaile z předchozího mostu hráči zůstávají a výsledek to říká.
+    expect(await medaile()).toEqual(["drive", "drive", "false"]);
+    expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="drive"]').first().innerText()).toContain("už ji máš z dřívějška");
   }, 240_000);
 
-  it("zámek uprostřed svařeného křídla nerozpojí právě dvě části: hra zkoušku nepustí a řekne proč", async () => {
+  it("zámek ve styčníku, kam vede i píst, by spojoval tři části: hra zkoušku nepustí a řekne proč", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["7-01"]!.rozpocet));
     // Nástroj Zámek mohl zůstat zapnutý z dřívějška: nejdřív ho odložit, pak zapnout.
@@ -223,11 +264,13 @@ describe("zvedací most", () => {
     await stranka.locator('[data-pridavek="zamek"]').click();
     const stred = await bodSveta(6, 0);
     await stranka.mouse.click(stred.x, stred.y);
-    expect((await mostNaVykresu()).stycniky.find((st) => st.x === 6 && st.y === 0)!.zamek).toBe(true);
+    // Zámek je čep: svar ze styčníku zmizel.
+    expect((await mostNaVykresu()).stycniky.find((st) => st.x === 6 && st.y === 0)).toMatchObject({ zamek: true });
+    expect((await mostNaVykresu()).stycniky.find((st) => st.x === 6 && st.y === 0)!.svar).toBeUndefined();
     await stranka.locator(PLATNO).focus();
     await stranka.keyboard.press("Space");
     expect(await telo("rezim")).toBe("stavba");
-    expect(await udaj("hlaseni")).toContain("Tenhle zámek nic nerozpojí");
+    expect(await udaj("hlaseni")).toContain("potkávají víc než dvě části mostu");
     await stranka.screenshot({ path: `${SLOZKA}/p5b-zamek-nedeli.png` });
   });
 });
@@ -235,6 +278,9 @@ describe("zvedací most", () => {
 describe("dvě křídla", () => {
   it("křídla se uprostřed rozpojí, pustí loď a zase spojí; autobus pak přejede přes zámek", async () => {
     await otevri("7-02");
+    // Razítko v rohu zakrývá pravou dolní kotvu pro píst: zprůhlední, aby byla vidět.
+    expect(await stranka.locator("#obrazovka-uroven .pole").getAttribute("class")).toContain("pole--pruhledne");
+    await stranka.screenshot({ path: `${SLOZKA}/p6a-dve-kridla-prazdny.png` });
     await nactiMost(navrhNaText(RESENI["7-02"]!.rozpocet));
     await stranka.screenshot({ path: `${SLOZKA}/p6-dve-kridla.png` });
     await spust();

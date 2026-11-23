@@ -203,8 +203,9 @@ export function nastavZamek(navrh: NavrhMostu, stycniky: ReadonlySet<number>, za
   const nove = navrh.stycniky.map((s) => {
     if (!stycniky.has(s.id) || (s.zamek === true) === zamek) return s;
     zmena = true;
-    const { zamek: _stary, ...bez } = s;
-    return zamek ? { ...bez, zamek: true } : bez;
+    // Zámek je čep: ohyb nepřenáší, takže svar v témže styčníku by nic nedržel a jen stál peníze.
+    const { zamek: _stary, svar: _svar, ...bez } = s;
+    return zamek ? { ...bez, zamek: true } : { ...bez, ...(s.svar ? { svar: true } : {}) };
   });
   return zmena ? { ...navrh, stycniky: nove } : navrh;
 }
@@ -213,7 +214,8 @@ export function nastavZamek(navrh: NavrhMostu, stycniky: ReadonlySet<number>, za
 export function nastavSvar(navrh: NavrhMostu, stycniky: ReadonlySet<number>, svar: boolean): NavrhMostu {
   let zmena = false;
   const nove = navrh.stycniky.map((s) => {
-    if (!stycniky.has(s.id) || (s.svar === true) === svar) return s;
+    // Styčník se zámkem svařit nejde: zámek je čep.
+    if (!stycniky.has(s.id) || (s.svar === true) === svar || (svar && s.zamek)) return s;
     zmena = true;
     const { svar: _stary, ...bez } = s;
     return svar ? { ...bez, svar: true } : bez;
@@ -237,13 +239,15 @@ export function posunStycnik(navrh: NavrhMostu, id: number, kam: Bod): NavrhMost
  * s kloubem uprostřed (kloub v tlačeném pásu by most složil). Spojuje jen pruty stejného
  * prvku ležící v přímce, jejichž společná délka se do jednoho prutu vejde, a jen ve
  * styčnících bez svaru, závaží, tlumiče a zámku, které neleží v bodech `pevne` (kotvy,
- * základy). `nove` jsou id prutů, které zrcadlení právě přidalo.
+ * základy). `nove` jsou id prutů, které zrcadlení právě přidalo. S `bezMostovky` se mostovka
+ * nespojuje (pohyblivý most má v ose styčník pro zámek mezi křídly).
  */
 export function spojNaOse(
   navrh: NavrhMostu,
   osa: number,
   nove: ReadonlySet<number>,
   pevne: readonly Bod[],
+  bezMostovky = false,
 ): NavrhMostu {
   let vysledek = navrh;
   for (const stred of navrh.stycniky) {
@@ -255,6 +259,8 @@ export function spojNaOse(
     if (prvni.prvek !== druhy.prvek || nove.has(prvni.id) === nove.has(druhy.id)) continue;
     const druh = KATALOG[prvni.prvek].druh;
     if (druh !== "prut" && druh !== "mostovka") continue;
+    // Na pohyblivém mostě se v ose potkávají křídla: styčník tam má zůstat, patří do něj zámek.
+    if (bezMostovky && druh === "mostovka") continue;
     const podleId = new Map(vysledek.stycniky.map((s) => [s.id, s]));
     const a = podleId.get(prvni.a === stred.id ? prvni.b : prvni.a);
     const b = podleId.get(druhy.a === stred.id ? druhy.b : druhy.a);

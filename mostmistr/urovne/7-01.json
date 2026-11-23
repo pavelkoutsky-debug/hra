@@ -80,7 +80,7 @@
   "inzenyrskyRozpocet": 403000,
   "mistrovska": {
     "druh": "dosednuti",
-    "limit": 350000
+    "limit": 250000
   },
   "povolenePrvky": [
     "mostovka-ocel",

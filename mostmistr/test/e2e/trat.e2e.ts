@@ -214,8 +214,9 @@ describe("rychlík: pohodlí cestujících", () => {
     const hluboka = Number(await stranka.locator('[data-udaj="vysledek-autobus"]').getAttribute("data-zrychleni"));
     expect(hluboka).toBeLessThan(0.3);
     expect(hluboka).toBeLessThan(melka / 2);
-    // Hluboká příhrada je dražší než inženýrský rozpočet, zato má mistrovskou.
-    expect(await medaile()).toEqual(["true", "false", "true"]);
+    // Hluboká příhrada je dražší než inženýrský rozpočet, zato má mistrovskou. Medaile za
+    // rozpočet z předchozího mostu hráči zůstává a výsledek ji tak označí.
+    expect(await medaile()).toEqual(["true", "drive", "true"]);
     await stranka.screenshot({ path: `${SLOZKA}/t6-vysledek-rychlik.png` });
   }, 300_000);
 });

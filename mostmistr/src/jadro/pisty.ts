@@ -123,6 +123,21 @@ export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
     if ((zbyva > 0 && posun >= zbyva) || (zbyva < 0 && posun <= zbyva)) {
       klidova = cil;
       rychlost = 0;
+      // Ventil platí i při dojezdu: když se křídlo v tu chvíli ještě hýbe, zastavený píst by
+      // ho škrcením brzdil silou nad svou mez. Řízená rychlost proto zůstane tak blízko
+      // skutečné, aby mez platila, a píst se zastaví až v dalších krocích.
+      if (tlumic > 0) {
+        const pruzina = s.tuhostOsova[e]! * (delka - klidova);
+        const nejvys = skutecna + (p.nejvetsiSila + pruzina) / tlumic;
+        const nejniz = skutecna - (p.nejvetsiSila - pruzina) / tlumic;
+        if (nejvys < 0) {
+          rychlost = nejvys;
+          pretizen = 1;
+        } else if (nejniz > 0) {
+          rychlost = nejniz;
+          pretizen = 1;
+        }
+      }
     } else {
       klidova += posun;
     }
