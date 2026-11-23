@@ -256,6 +256,7 @@ describe("paleta: laděný tlumič mezi prvky a pokusy", () => {
 
 describe("laděný tlumič a analytický panel při stavbě", () => {
   let spickaBez = 0;
+  let spickaPrazdneho = 0;
   let vrcholuBez = 0;
 
   it("analytický panel ukáže rezonanční křivku mostu s lidmi a její špičku", async () => {
@@ -274,13 +275,17 @@ describe("laděný tlumič a analytický panel při stavbě", () => {
     spickaBez = await cisloKrivky("nejvyssi");
     vrcholuBez = await cisloKrivky("vrcholu");
     expect(spickaBez).toBeGreaterThan(0);
-    // Špička mostu s běžci leží v jejich pásmu kolem 2,6 Hz.
+    // Špička mostu s běžci leží pod frekvencí prázdného mostu (2,7 Hz): těla ho zpomalí víc než jejich váha.
     const popis = await udaj("krivka-popis");
-    expect(popis).toMatch(/^Nejvyšší špička s lidmi: \d+,\d\d m\/s² na 1 kN při 2,[3-7]\d Hz\.$/);
+    expect(popis).toMatch(/^Nejvyšší špička s lidmi: \d+,\d\d m\/s² na 1 kN při 2,[1-5]\d Hz\.$/);
+    spickaPrazdneho = await cisloKrivky("nejvyssi-prazdny");
+    expect(await cisloKrivky("vrcholu-prazdny")).toBeGreaterThanOrEqual(1);
+    // S lidmi je špička nižší než u prázdného mostu: těla kmitání tlumí.
+    expect(spickaBez).toBeLessThan(spickaPrazdneho);
     await stranka.screenshot({ path: `${SLOZKA}/61-rezonancni-krivka.png` });
   });
 
-  it("tlumič se zavěsí pod vybraný styčník, naladí se na most s lidmi a zdraží most", async () => {
+  it("tlumič se zavěsí pod vybraný styčník, naladí se na rytmus běžců a zdraží most", async () => {
     const cenaPred = await udaj("cena");
     await stranka.keyboard.press("v");
     await klikni([16, 0]);
@@ -290,7 +295,7 @@ describe("laděný tlumič a analytický panel při stavbě", () => {
     await stranka.keyboard.press("l");
     expect(await udaj("ladeny-prepnout")).toBe("Odebrat");
     expect(await udaj("ladeny-hmota")).toBe("300 kg");
-    expect(await udaj("ladeny-frekvence")).toMatch(/^2,[3-7]\d? Hz$/);
+    expect(await udaj("ladeny-frekvence")).toBe("2,60 Hz");
     expect(await udaj("cena")).not.toBe(cenaPred);
     // Těžší závaží až po mez úrovně.
     for (let i = 0; i < 14; i++) await akce("ladeny-hmota-plus").click();
@@ -301,9 +306,11 @@ describe("laděný tlumič a analytický panel při stavbě", () => {
     await stranka.screenshot({ path: `${SLOZKA}/62-ladeny-tlumic.png` });
   });
 
-  it("tlumič rozdělí rezonanční špičku na dvě nižší", async () => {
-    await expect.poll(() => cisloKrivky("nejvyssi"), { timeout: 10_000 }).toBeLessThan(0.5 * spickaBez);
-    expect(await cisloKrivky("vrcholu")).toBeGreaterThan(vrcholuBez);
+  it("tlumič rozdělí rezonanční špičku prázdného mostu na dvě nižší a sníží i tu s lidmi", async () => {
+    await expect.poll(() => cisloKrivky("nejvyssi-prazdny"), { timeout: 10_000 }).toBeLessThan(0.5 * spickaPrazdneho);
+    expect(await cisloKrivky("vrcholu-prazdny")).toBeGreaterThanOrEqual(2);
+    expect(await cisloKrivky("nejvyssi")).toBeLessThan(spickaBez);
+    expect(await cisloKrivky("vrcholu")).toBeGreaterThanOrEqual(vrcholuBez);
     await stranka.screenshot({ path: `${SLOZKA}/63-rozdelena-spicka.png` });
   });
 
@@ -437,7 +444,7 @@ describe("zkouška s davem", () => {
     expect(await udaj("vysledek-shrnuti")).toContain("víc, než zadání dovoluje (0,5 m/s²)");
   }, 180_000);
 
-  it("průvod s kapelou: tlumič naladěný na most s lidmi", async () => {
+  it("průvod s kapelou: tlumič naladěný na takt kapely", async () => {
     await otevri("5-03");
     await nactiMost(navrhNaText(RESENI["5-03"]!.mistrovska));
     await spust();

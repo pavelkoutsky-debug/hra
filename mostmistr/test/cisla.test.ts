@@ -79,3 +79,32 @@ describe("škála využití", () => {
     expect(barvaVyuziti(0.1)).not.toBe(barvaVyuziti(0));
   });
 });
+
+describe("čísla využití u mostu z mnoha prutů", () => {
+  it("popíše jen nejvíc namáhané pruty; prut u meze má číslo vždycky", async () => {
+    const { NEJVIC_CISEL, VZDY_OD } = await import("../src/vykres/cisla");
+    const texty: string[] = [];
+    const ctx = {
+      save() {},
+      restore() {},
+      fillRect() {},
+      strokeRect() {},
+      measureText: (text: string) => ({ width: 6 * text.length }),
+      fillText: (text: string) => texty.push(text),
+    } as unknown as CanvasRenderingContext2D;
+    // Čtyřicet prutů pod sebou, daleko od sebe: nic se nepřekrývá. Využití 1 % až 40 %.
+    const polozky = Array.from({ length: 40 }, (_, i) => ({ a: { x: 0, y: 40 * i }, b: { x: 200, y: 40 * i }, vyuziti: (i + 1) / 100 }));
+    nakresliCislaVyuziti(ctx, polozky);
+    expect(texty).toHaveLength(NEJVIC_CISEL);
+    expect(texty[0]).toBe("40 %");
+    expect(texty.at(-1)).toBe("25 %");
+    // Pruty u meze se popíšou všechny, i když jich je víc než strop.
+    texty.length = 0;
+    nakresliCislaVyuziti(ctx, polozky.map((p) => ({ ...p, vyuziti: VZDY_OD + p.vyuziti })));
+    expect(texty).toHaveLength(40);
+    // Malý most se popíše celý.
+    texty.length = 0;
+    nakresliCislaVyuziti(ctx, polozky.slice(0, 9));
+    expect(texty).toHaveLength(9);
+  });
+});

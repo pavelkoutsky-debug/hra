@@ -633,8 +633,8 @@ body[data-sandbox] .pole__bunka:nth-child(3) {
   left: 50%;
   transform: translateX(-50%);
   color: var(--popisek);
-  font-size: 9px;
-  line-height: 1.1;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .rozpocet__castka {
@@ -806,9 +806,44 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
   font-size: 11px;
 }
 
+/* Výňatek ze zadání: pár řádků, celé je v okně (tlačítko nahoře i odkaz pod výňatkem). */
 .paleta__zadani {
+  display: -webkit-box;
+  flex-shrink: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 12px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+}
+
+.paleta__odkaz {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--popisek);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.paleta__odkaz:hover {
+  color: var(--cara-silna);
+}
+
+/* Nástroje ve dvou sloupcích: krátké popisky, ať se vejdou vedle sebe. */
+.paleta__nastroje {
+  flex-shrink: 0;
+}
+
+.paleta__nastroje .paleta__tlacitko {
+  gap: 6px;
+  padding-inline: 6px;
+  white-space: nowrap;
 }
 
 /* Medaile: seznam s podmínkami */
@@ -1026,8 +1061,9 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   color: var(--cara);
   font-size: 12px;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  /* Příčina je na konci věty; vedle tlačítka Další úroveň se do dvou řádků nevešla. */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 /* Medaile v pruhu: tři značky s názvem, získané svítí. */
@@ -1138,6 +1174,13 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 }
 
 .vysledek__rozdil {
+  display: block;
+  color: var(--popisek);
+  font-size: 11px;
+}
+
+/* Poznámka pod číslem výsledku: na jaké frekvenci most kmital a čí je to rytmus. */
+.vysledek__poznamka {
   display: block;
   color: var(--popisek);
   font-size: 11px;
@@ -1255,6 +1298,11 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
+}
+
+.osa__polozky[data-pretika="true"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 }
 
 .osa .lista__skupina {
@@ -1823,6 +1871,47 @@ body[data-rezim="stavba"] .uroven .legenda {
   text-transform: uppercase;
 }
 
+/* Nápověda po krocích: volba mostu (průchod, medaile), skica principu, soupis, obrys. */
+.napoveda__mosty {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.napoveda__mosty .tlacitko[aria-pressed="true"] {
+  background: var(--zvyrazneni);
+  border-color: var(--cara-silna);
+}
+
+.napoveda__mosty .tlacitko[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.napoveda__krok h3 {
+  margin: 12px 0 4px;
+  color: var(--popisek);
+  font-size: 11px;
+  font-weight: normal;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.napoveda__krok p {
+  margin: 4px 0;
+}
+
+.napoveda__skica {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: 120px;
+  margin: 6px 0;
+  border: 1px solid rgb(207 227 255 / 0.3);
+  background: var(--pozadi);
+}
+
 .okno__seznam {
   margin: 0 0 14px;
   padding: 0;
@@ -1872,6 +1961,12 @@ body[data-rezim="stavba"] .uroven .legenda {
   margin: 4px 0 0;
   color: var(--popisek);
   font-size: 12px;
+}
+
+/* Údaje o vybraných prutech: každý údaj na vlastním řádku. */
+[data-udaj="vyber-udaje"] {
+  color: var(--cara);
+  white-space: pre-line;
 }
 
 /* Analytický panel: rozbalovací pruh při horním okraji výkresu, nad mostem */
@@ -2036,7 +2131,7 @@ body[data-rezim="stavba"] .uroven .legenda {
 .frekvence {
   position: relative;
   flex: none;
-  width: 250px;
+  width: 280px;
   height: 30px;
 }
 
@@ -2077,6 +2172,21 @@ body[data-rezim="stavba"] .uroven .legenda {
   border-left: 1px dashed var(--popisek);
 }
 
+/* Trojnásobek kroku tečkovaně a nižší: je ze složek kroku nejslabší. */
+.frekvence__krok--trojnasobek {
+  top: 5px;
+  height: 9px;
+  border-left: 1px dotted var(--popisek);
+}
+
+/* Silná složka (běh, skákání) je výrazná, i když jde o násobek kroku. */
+.frekvence__krok--silna {
+  top: 0;
+  height: 14px;
+  border-left-width: 2px;
+  border-left-color: var(--voda, #8fd0ff);
+}
+
 /* Pásmo kroku skupiny, která nejde jedním rytmem (dav, běžecký závod). */
 .frekvence__pasmo {
   position: absolute;
@@ -2102,21 +2212,96 @@ body[data-rezim="stavba"] .uroven .legenda {
   opacity: 0.55;
 }
 
-.osa__frekvence[data-stav="shoda"] .frekvence__most {
-  border-bottom-color: var(--varovani);
+/* Vlastní frekvence za koncem osy: šipka doprava u pravého okraje. */
+.frekvence__mimo {
+  position: absolute;
+  top: 17px;
+  width: 0;
+  height: 0;
+  margin-left: -9px;
+  border: 5px solid transparent;
+  border-right: 0;
+  border-left: 9px solid var(--cara-silna);
 }
 
+/* Druhá a další vlastní frekvence: menší trojúhelník. */
+.frekvence__most--dalsi {
+  margin-left: -4px;
+  border-width: 0 4px 6px;
+}
+
+/* Laděný tlumič: kosočtverec na ose; ladí se na trojúhelník mostu s lidmi. */
+.frekvence__tlumic {
+  position: absolute;
+  top: 10px;
+  width: 7px;
+  height: 7px;
+  margin-left: -4px;
+  border: 1px solid var(--cara-silna);
+  background: var(--lista);
+  transform: rotate(45deg);
+}
+
+/* Složka kroku, která most podle odhadu rozkmitá nejvíc: v barvě stavu odhadu. */
+.osa__frekvence[data-stav="u-meze"] .frekvence__krok--hlavni,
+.osa__frekvence[data-stav="nad-mezi"] .frekvence__krok--hlavni {
+  top: 0;
+  height: 14px;
+  border-left: 3px solid var(--varovani);
+  margin-left: -1px;
+}
+
+.osa__frekvence[data-stav="nad-mezi"] .frekvence__krok--hlavni {
+  border-left-color: var(--neuspech);
+}
+
+/* Věta k ose smí mít dva řádky: jízdní řád vedle ní nesmí zmizet. */
 .frekvence__popis {
+  display: -webkit-box;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 270px;
   overflow: hidden;
   color: var(--cara-silna);
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 12px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  /* Věta nese odhad, kdo most rozkmitá, a radu: rada je na konci a nesmí se uříznout. */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
-.osa__frekvence[data-stav="shoda"] .frekvence__popis {
+@media (min-width: 1500px) {
+  .frekvence__popis {
+    max-width: 480px;
+  }
+}
+
+/*
+ * V užším okně se věta k ose (odhad kmitání, kdo ho působí a co pomůže) nevejde vedle nadpisů:
+ * nadpisy lišty ustoupí, jízdní řád i osa se poznají samy.
+ */
+@media (max-width: 1500px) {
+  .uroven .osa__rad .osa__nadpis,
+  .uroven .osa__frekvence .osa__nadpis {
+    display: none;
+  }
+
+  .frekvence__popis {
+    max-width: 440px;
+  }
+}
+
+.osa__frekvence[data-stav="u-meze"] .frekvence__popis {
   color: var(--varovani);
+}
+
+.osa__frekvence[data-stav="nad-mezi"] .frekvence__popis {
+  color: var(--neuspech);
+}
+
+.osa__frekvence[data-stav="klid"][data-zkouska] .frekvence__popis {
+  color: var(--uspech);
 }
 
 .legenda__kmitani:empty {
@@ -2133,6 +2318,8 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 .osa__rad {
   flex: 1 1 auto;
+  /* Aspoň první položka jízdního řádu zůstane vidět, ať je osa frekvencí jakkoli výřečná. */
+  min-width: 200px;
 }
 
 .osa__frekvence {
@@ -2290,8 +2477,15 @@ body[data-rezim="stavba"] .uroven .legenda {
   border-top: 1px solid rgb(207 227 255 / 0.6);
 }
 
-/* Nízké okno: prvky palety těsněji, ať je jich vidět víc najednou. */
-@media (max-height: 820px) {
+/*
+ * Okno nižší než 960 px: z karet prvků zmizí ukázka tloušťky (název a cena stačí) a prvky
+ * palety jsou těsněji, ať se nástroje, prvky i pokusy vejdou bez posouvání.
+ */
+@media (max-height: 960px) {
+  .paleta__ukazka {
+    display: none;
+  }
+
   .paleta {
     gap: 3px;
   }
@@ -2321,6 +2515,16 @@ body[data-rezim="stavba"] .uroven .legenda {
 
   .lista__uroven {
     flex-shrink: 0.2;
+  }
+}
+
+/*
+ * Do 1500 px šířky se na obrazovce úrovně nevejde název hry i celý název úrovně: zůstane
+ * název úrovně, do přehledu vede tlačítko Kampaň.
+ */
+@media (max-width: 1500px) {
+  #obrazovka-uroven .lista__nazev {
+    display: none;
   }
 }
 
@@ -2403,8 +2607,11 @@ body[data-rezim="stavba"] .uroven .legenda {
     min-width: 0;
   }
 
+  /* Věta k ose (odhad, kdo ho působí, rada) se v úzkém okně neořezává: dostane celý řádek. */
   .uroven .frekvence__popis {
-    flex: 1 1 200px;
+    display: block;
+    flex: 1 1 100%;
+    max-width: none;
     overflow: visible;
     white-space: normal;
   }

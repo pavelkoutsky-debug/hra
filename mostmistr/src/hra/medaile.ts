@@ -23,6 +23,21 @@ const KLIC_CESTUJICICH = {
   oboji: "medaile.mistrovska.cestujiciObojich",
 } as const;
 
+/** Podmínka mistrovské medaile slovy; null, když ji úroveň nemá. */
+export function podminkaMistrovske(uroven: Uroven): string | null {
+  const bonus = uroven.mistrovska;
+  if (bonus === null) return null;
+  return bonus.druh === "rezerva"
+    ? t("medaile.mistrovska.rezerva", { limit: procenta(bonus.limit) })
+    : bonus.druh === "komfort-chodcu"
+      ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
+      : bonus.druh === "komfort-cestujicich"
+        ? t(KLIC_CESTUJICICH[kdoCestuje(uroven) ?? "autobus"], { limit: cislo(bonus.limit, 2) })
+        : bonus.druh === "dosednuti"
+          ? t("medaile.mistrovska.dosednuti", { limit: cislo(bonus.limit / 1000, 0) })
+          : t("medaile.mistrovska.jina");
+}
+
 function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
   // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá.
   const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
@@ -38,23 +53,8 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
       ziskana: medaile.rozpocet,
     });
   }
-  const bonus = uroven.mistrovska;
-  if (bonus !== null) {
-    seznam.push({
-      nazev: "medaile.mistrovska",
-      podminka:
-        bonus.druh === "rezerva"
-          ? t("medaile.mistrovska.rezerva", { limit: procenta(bonus.limit) })
-          : bonus.druh === "komfort-chodcu"
-            ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
-            : bonus.druh === "komfort-cestujicich"
-              ? t(KLIC_CESTUJICICH[kdoCestuje(uroven) ?? "autobus"], { limit: cislo(bonus.limit, 2) })
-              : bonus.druh === "dosednuti"
-                ? t("medaile.mistrovska.dosednuti", { limit: cislo(bonus.limit / 1000, 0) })
-                : t("medaile.mistrovska.jina"),
-      ziskana: medaile.mistrovska,
-    });
-  }
+  const mistrovska = podminkaMistrovske(uroven);
+  if (mistrovska !== null) seznam.push({ nazev: "medaile.mistrovska", podminka: mistrovska, ziskana: medaile.mistrovska });
   return seznam;
 }
 

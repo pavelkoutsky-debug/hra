@@ -2,6 +2,7 @@
 // Stejné zprávy tečou ve hře přes Web Worker a v testech přímo v Node, takže každou
 // zkoušku lze spustit bez prohlížeče a přehrát přesně znovu.
 
+import type { OdhadKmitani } from "./odhad";
 import type { NavrhMostu } from "../data/navrh";
 import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
@@ -51,6 +52,34 @@ export interface BudicZkousky {
   trvani: number;
 }
 
+/** Co rozbor spočítal o laděném tlumiči (viz `RozborMostu.tlumic`). */
+export interface RadaKTlumici {
+  /**
+   * Rytmus, na který se vyplatí ladit, Hz: ze složek kroku, které most bez tlumičů rozkmitají
+   * nejvíc, ta, se kterou naladěný tlumič odhad sníží nejvíc.
+   */
+  cil: number;
+  /** Položka jízdního řádu a násobek kroku, kterým ten rytmus patří. */
+  polozka: number;
+  nasobek: 1 | 2 | 3 | 4;
+  /**
+   * Most bez tlumiče: odhad s jedním tlumičem největší dovolené hmotnosti zavěšeným ve
+   * styčníku mostovky, kde most kmitá nejvíc, naladěným na `cil`. Null u mostu s tlumičem
+   * a tam, kde se rada nepočítala.
+   */
+  novy: number | null;
+  /** Most s tlumiči: tytéž tlumiče naladěné na `cil`. Null, když už tak naladěné jsou. */
+  preladeny: number | null;
+  /** Most s tlumiči: tytéž tlumiče s největším dovoleným závažím. Null, když ho už mají. */
+  tezsi: number | null;
+  /**
+   * Most s tlumiči: nejtěžší tlumič přenesený do styčníku mostovky, kde most bez tlumičů kmitá
+   * nejvíc (`jindeX` je jeho vzdálenost od levého konce mostovky, m). Null, když tam už visí.
+   */
+  jinde: number | null;
+  jindeX: number | null;
+}
+
 /** Rozbor mostu ve stavebním režimu: maticový výpočet bez časové simulace. */
 export interface RozborMostu {
   /** Most má pod vlastní tíhou klidovou polohu; mechanismus ji nemá a frekvence nejsou. */
@@ -58,10 +87,44 @@ export interface RozborMostu {
   /** Nejnižší vlastní frekvence prázdného mostu v Hz, vzestupně. */
   frekvence: number[];
   /**
-   * Totéž s největší skupinou lidí z jízdního řádu rozestavenou po mostovce. Lidé přidávají
-   * hmotu, takže frekvence klesnou; prázdné pole v úrovni bez lidí.
+   * Na jaké frekvenci týž tvar nejvíc odpovídá, když na mostě uprostřed stojí největší skupina
+   * lidí z jízdního řádu (Hz, ve stejném pořadí jako `frekvence`). Tělo člověka je hmota na
+   * pružině: most pod jejím kmitočtem (kolem 3 Hz) lidé zpomalí, most nad ním mírně zrychlí.
+   * Prázdné pole v úrovni bez lidí.
    */
   frekvenceObsazeneho: number[];
+  /**
+   * Vlastní frekvence mostu bez laděných tlumičů, prázdného a obsazeného lidmi (Hz). Osa
+   * frekvencí ukazuje tenhle most a tlumiče zvlášť: `frekvence` a `frekvenceObsazeneho` už
+   * tlumiče obsahují a rezonanci, kterou mají krotit, ukazují rozštěpenou. Null u mostu bez tlumičů.
+   */
+  bezTlumicu: { prazdny: number[]; obsazeny: number[] } | null;
+  /**
+   * Odhad kmitání mostu pod lidmi úrovně (viz `odhad.ts`): ustálená odezva mostu, na kterém
+   * skupiny z jízdního řádu stojí a budí ho krokem. Null v úrovni bez lidí a bez osy frekvencí.
+   */
+  odhad: OdhadKmitani | null;
+  /** Tentýž odhad pro most bez laděných tlumičů; null u mostu, který žádný nemá. */
+  odhadBezTlumicu: OdhadKmitani | null;
+  /**
+   * Co by s odhadem udělal tužší a těžší most: poměr k dnešnímu odhadu pro každou ze změn
+   * `ZMENY_PRO_RADU` (pod 1 by kmital míň). Počítá se se všemi skupinami lidí: tužší most může
+   * jednomu rytmu ujet a jiný trefit. Null bez odhadu, u mostu, který kmitá hluboko pod mezí
+   * (rada není potřeba), a u mostu s laděným tlumičem, kterému pomůže úprava tlumiče.
+   */
+  smer: { tuzsi: [number, number]; tezsi: [number, number] } | null;
+  /**
+   * Laděný tlumič: na jaký rytmus ho ladit a co by s odhadem udělaly jeho úpravy (poměr
+   * k dnešnímu odhadu, pod 1 by most kmital míň). Null v úrovni, která tlumič nedovoluje,
+   * a tam, kde odhad není.
+   */
+  tlumic: RadaKTlumici | null;
+  /**
+   * Co by s odhadem udělal viskózní tlumič z každé kotvy pod mostovkou k nejbližšímu styčníku
+   * mostovky, kam dosáhne: poměr k dnešnímu odhadu (pod 1 by most kmital míň), lepší ze dvou
+   * zkoušených tlumení. Null v úrovni bez tlumiče nebo bez takové kotvy a tam, kde se rady nepočítají.
+   */
+  viskozni: number | null;
   /**
    * Tvary kmitání prázdného mostu ke každé frekvenci z `frekvence`: posuny styčníků návrhu
    * (dx0, dy0, dx1, dy1, …) v pořadí, v jakém jsou v návrhu. Největší posun má velikost 1.
@@ -77,6 +140,13 @@ export interface RozborMostu {
    * které visí povolené, a null u prutu, který lano není.
    */
   tahyLan: (number | null)[];
+  /**
+   * Průvěs mostovky pod vlastní tíhou: o kolik metrů se styčník mostovky nejvíc liší od výkresu,
+   * který to je (pořadí v návrhu) a jestli leží nad výkresem (přetažená lana), ne pod ním.
+   * U mostu s lany prozradí špatně nastavené napínáky. Null, když most nemá klidovou polohu
+   * nebo mostovku.
+   */
+  pruves: { metru: number; stycnik: number; nad: boolean } | null;
   /**
    * Kde a proč se skládá most bez klidové polohy (viz `slozeni.ts`); null u mostu, který ji má,
    * a když se místo určit nedá.
@@ -210,6 +280,16 @@ export interface KomfortZkousky {
   cas: number;
   /** Třída komfortu: 1 výborný, 2 střední, 3 nízký, 4 nepřijatelný. */
   trida: 1 | 2 | 3 | 4;
+  /**
+   * Styčník soustavy (pořadí v polohách snímku), ve kterém největší zrychlení nastalo; −1,
+   * když se nic nenaměřilo. Podle něj se ze záznamu pozná, na jaké frekvenci most kmital.
+   */
+  stycnik: number;
+  /**
+   * Kdy kmitání poprvé přesáhlo mez, se kterou úroveň most ještě přijme, v sekundách; null,
+   * když ji nepřesáhlo (nebo se s mezí neměřilo, jako u cestujících).
+   */
+  prekroceno: number | null;
 }
 
 export interface VysledekZkousky {
@@ -267,6 +347,12 @@ export interface VysledekZkousky {
   medaile: Medaile;
   /** Obálka namáhání; pořadí odpovídá prutům návrhu. */
   obalka: ObalkaPrutu[];
+  /**
+   * Obálka namáhání do chvíle, než se na mostě něco poprvé porušilo nebo sjelo z podpory: co
+   * most nesl, dokud byl celý. Po porušení se pruty namáhají pádem a ta čísla o návrhu nic
+   * neříkají. Prut, který povolil první, tu má využití aspoň 100 %. Null, když se nic neporušilo.
+   */
+  obalkaDoPoruseni: ObalkaPrutu[] | null;
   /** Reakce v podporách: pro každý podepřený styčník návrhu největší síly za zkoušku. */
   reakce: ReakcePodpory[];
   /** Most neměl pod vlastní tíhou klidovou polohu (chybí mu ztužení) a zkouška začala z nakreslené. */
@@ -284,8 +370,11 @@ export type ZpravaProZkousku =
   | { typ: "ahoj" }
   | { typ: "start"; vstup: VstupZkousky }
   | { typ: "stop" }
-  /** Žádost o rozbor mostu; `id` se vrátí v odpovědi, aby šla poznat zastaralá. */
-  | { typ: "rozbor"; id: number; uroven: Uroven; navrh: NavrhMostu }
+  /**
+   * Žádost o rozbor mostu; `id` se vrátí v odpovědi, aby šla poznat zastaralá. `nasada` je
+   * násada, se kterou most pojede zkouška: odhad kmitání podle ní zná fáze kroků jednotlivců.
+   */
+  | { typ: "rozbor"; id: number; uroven: Uroven; navrh: NavrhMostu; nasada?: number }
   /** Žádost o automatické dopnutí lan; `id` se vrátí v odpovědi. */
   | { typ: "dopnuti"; id: number; uroven: Uroven; navrh: NavrhMostu };
 

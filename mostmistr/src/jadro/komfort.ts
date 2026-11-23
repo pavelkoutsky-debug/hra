@@ -14,7 +14,7 @@ import type { Soustava } from "./soustava";
 /** Časové konstanty filtrů v sekundách: 1/(2π·10 Hz), 1/(2π·0,5 Hz) a okno průměrování. */
 const RC_DOLNI_PROPUST = 1 / (2 * Math.PI * 10);
 const RC_HORNI_PROPUST = 1 / (2 * Math.PI * 0.5);
-const OKNO_PRUMERU = 1;
+export const OKNO_PRUMERU = 1;
 
 /** Meze tříd komfortu v m/s²: do první výborný, do druhé střední, do třetí nízký, nad ní nepřijatelný. */
 export const MEZE_KOMFORTU = [0.5, 1, 2.5] as const;
@@ -49,10 +49,16 @@ export interface MereniKomfortu {
   stycnik: number;
   /** Okamžitá hodnota: největší zrychlení přes měřené styčníky v posledním kroku. */
   okamzite: number;
+  /** Mez v m/s², jejíž první překročení se zaznamená, a kdy k němu došlo (−1, dokud ne). */
+  mez: number;
+  prekroceni: number;
 }
 
-/** Připraví měření ve styčnících `stycniky`; výchozí stav je klid. */
-export function vytvorMereniKomfortu(s: Soustava, stycniky: Iterable<number>): MereniKomfortu {
+/**
+ * Připraví měření ve styčnících `stycniky`; výchozí stav je klid. `mez` je zrychlení, jehož
+ * první započítané překročení si měření zapamatuje (kdy přestal být most pro lidi přijatelný).
+ */
+export function vytvorMereniKomfortu(s: Soustava, stycniky: Iterable<number>, mez = Infinity): MereniKomfortu {
   const seznam = Int32Array.from(stycniky);
   const n = seznam.length;
   const m: MereniKomfortu = {
@@ -66,6 +72,8 @@ export function vytvorMereniKomfortu(s: Soustava, stycniky: Iterable<number>): M
     cas: 0,
     stycnik: -1,
     okamzite: 0,
+    mez,
+    prekroceni: -1,
   };
   for (let k = 0; k < n; k++) m.rychlost[k] = s.vy[seznam[k]!]!;
   return m;
@@ -104,5 +112,6 @@ export function zmerKomfort(s: Soustava, m: MereniKomfortu, dt: number, cas: num
     m.nejvetsi = hodnota;
     m.cas = cas;
     m.stycnik = kde;
+    if (m.prekroceni < 0 && hodnota > m.mez) m.prekroceni = cas;
   }
 }

@@ -174,6 +174,7 @@ describe("brnknutí", () => {
     expect(vysledek.ucastniku).toBe(0);
     expect(vysledek.medaile).toEqual({ pruchod: false, rozpocet: false, mistrovska: false });
     expect(vysledek.komfort).toBeNull();
+    // Tuhá lávka kmitá rychle: brnknutí se sleduje nejkratší dobu, čtyři sekundy.
     expect(vysledek.trvani).toBeCloseTo(4, 1);
   });
 

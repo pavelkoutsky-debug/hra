@@ -500,13 +500,19 @@ export class Editor {
   }
 
   /**
-   * Přidá nebo ubere vybraným styčníkům jeden krok závaží (`smer` ±1); všechny dostanou
+   * Přidá nebo ubere vybraným styčníkům `kroku` kroků závaží (`smer` ±1); všechny dostanou
    * stejnou hodnotu. Nad největší závaží, které úroveň dovolí, nejde.
    */
-  zmenZavazi(smer: 1 | -1): boolean {
+  zmenZavazi(smer: 1 | -1, kroku = 1): boolean {
     const dosavadni = this.zavaziVyberu;
     if (dosavadni === null) return false;
-    const nove = Math.max(0, Math.min(this.uroven.nejvetsiZavazi, dosavadni + smer * KROK_ZAVAZI));
+    return this.nastavZavaziVyberu(dosavadni + smer * kroku * KROK_ZAVAZI);
+  }
+
+  /** Dá vybraným styčníkům závaží `kg` (v mezích úrovně, na celé kroky); 0 ho odebere. */
+  nastavZavaziVyberu(kg: number): boolean {
+    if (this.zavaziVyberu === null) return false;
+    const nove = Math.max(0, Math.min(this.uroven.nejvetsiZavazi, Math.round(kg / KROK_ZAVAZI) * KROK_ZAVAZI));
     return this.#zmen(nastavZavazi(this.#navrh, this.vybraneStycniky, () => nove), "zavazi");
   }
 
@@ -544,6 +550,17 @@ export class Editor {
     if (!dosavadni) return false;
     const frekvence = frekvenceTlumice(dosavadni.frekvence + kroku * LADENY_TLUMIC.krokFrekvence);
     return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence } : t)), "ladeny");
+  }
+
+  /**
+   * Naladí laděné tlumiče ve vybraných styčnících na frekvenci `frekvence` (Hz), zaokrouhlenou
+   * na krok ladění a omezenou na vyrobitelný rozsah. Vrací false, když není co ladit nebo už
+   * tak naladěné jsou.
+   */
+  naladTlumic(frekvence: number): boolean {
+    if (!this.ladenyTlumicVyberu) return false;
+    const nova = frekvenceTlumice(frekvence);
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence: nova } : t)), "ladeny");
   }
 
   #hmotaTlumice(hmota: number): number {

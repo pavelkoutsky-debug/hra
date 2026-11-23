@@ -509,7 +509,7 @@ export const LADENY_TLUMIC = {
   krokHmoty: 50,
   /** Rozsah a krok ladění, Hz. */
   nejmensiFrekvence: 0.8,
-  nejvetsiFrekvence: 6,
+  nejvetsiFrekvence: 8,
   krokFrekvence: 0.05,
   /** Poměrný útlum tlumiče mezi závažím a mostem. */
   utlum: 0.1,

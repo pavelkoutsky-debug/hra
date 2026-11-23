@@ -177,16 +177,23 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await akce("brnknout").getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("osa ukáže vlastní frekvenci mostu a varuje, když je u kroku útvaru", async () => {
+  it("osa ukáže vlastní frekvenci mostu a odhad kmitání pod útvarem, který ho rozkmitá", async () => {
     expect(await osa().isVisible()).toBe(true);
     // První rozbor prázdného návrhu dorazí z pracovního vlákna až za okamžik.
     await expect.poll(() => udaj("frekvence-popis"), { timeout: 10_000 }).toBe("most zatím nemá vlastní kmitání");
     await nactiMost(navrhNaText(RESENI["2-04"]!.pady[1]!.navrh));
     await expect.poll(frekvenceMostu, { timeout: 10_000 }).toBeGreaterThan(2.4);
     expect(await frekvenceMostu()).toBeLessThan(2.9);
-    expect(await osa().getAttribute("data-stav")).toBe("shoda");
-    expect(await udaj("frekvence-popis")).toBe("krok 2,3 Hz je u vlastní frekvence");
-    expect(await stranka.locator(".frekvence__krok:not(.frekvence__krok--dvojnasobek)").count()).toBe(3);
+    expect(await osa().getAttribute("data-stav")).toBe("nad-mezi");
+    expect(await osa().getAttribute("data-hlavni")).toBe("utvar;1;2.3");
+    expect((await stranka.locator('[data-udaj="frekvence-popis"]').evaluate((uzel) => uzel.textContent ?? "")).replace(/[  ]/g, " ")).toMatch(
+      // Rada je nástroj, který úroveň učí, a číslo k němu rozbor spočítal.
+      /^Odhad kmitání \d,\d m\/s², mez je 2,5: pochodující útvar, krok 2,3 Hz\. Pomohl by tlumič mezi mostem a kotvou: odhad asi \d,\d+ m\/s²\.$/,
+    );
+    // Tři útvary, každý svým krokem: tři značky kroku, k nim dvojnásobky a trojnásobky.
+    expect(await stranka.locator('.frekvence__krok[data-nasobek="1"]').count()).toBe(3);
+    expect(await stranka.locator(".frekvence__krok--dvojnasobek").count()).toBe(3);
+    expect(await stranka.locator(".frekvence__krok--trojnasobek").count()).toBe(3);
     await stranka.screenshot({ path: `${SLOZKA}/42-osa-frekvenci.png` });
   });
 
@@ -204,18 +211,38 @@ describe("osa frekvencí, závaží a tlumič", () => {
     await expect.poll(async () => (await frekvenceMostu()) ?? 99, { timeout: 10_000 }).toBeLessThan(pred - 0.05);
     await akce("zavazi-min").click();
     expect(await udaj("zavazi")).toBe("900 kg");
+    // Podržené tlačítko krok opakuje; se Shiftem je krok pětinásobný.
+    await akce("zavazi-plus").click({ modifiers: ["Shift"] });
+    expect(await udaj("zavazi")).toBe("1400 kg");
+    await akce("zavazi-min").click({ modifiers: ["Shift"] });
+    expect(await udaj("zavazi")).toBe("900 kg");
+    const plus = (await akce("zavazi-plus").boundingBox())!;
+    await stranka.mouse.move(plus.x + plus.width / 2, plus.y + plus.height / 2);
+    await stranka.mouse.down();
+    await expect.poll(async () => Number((await udaj("zavazi")).replace(/\D/g, "")), { timeout: 5_000 }).toBeGreaterThanOrEqual(1300);
+    await stranka.mouse.up();
+    const poDrzeni = Number((await udaj("zavazi")).replace(/\D/g, ""));
+    // Puštění tlačítka krok navíc nepřidá.
+    await stranka.waitForTimeout(250);
+    expect(Number((await udaj("zavazi")).replace(/\D/g, ""))).toBe(poDrzeni);
+    while (Number((await udaj("zavazi")).replace(/\D/g, "")) > 900) await akce("zavazi-min").click();
+    expect(await udaj("zavazi")).toBe("900 kg");
     await stranka.screenshot({ path: `${SLOZKA}/43-zavazi.png` });
     await stranka.keyboard.press("Escape");
     expect(await nastaveni.isVisible()).toBe(false);
 
-    // Totéž jde z palety: položka Závaží a kliknutí na styčník mu dá první stovku kilogramů.
+    // Totéž jde z palety: položka Závaží a kliknutí na styčník. Nové závaží začíná na hmotnosti,
+    // kterou hráč nastavil naposledy, takže stejná závaží v řadě styčníků jsou po jednom kliknutí.
     const polozka = stranka.locator('[data-pridavek="zavazi"]');
     await polozka.click();
     expect(await polozka.getAttribute("aria-pressed")).toBe("true");
     expect(await udaj("hlaseni")).toContain("Klikni na styčník, do kterého chceš závaží");
     await klikni([12, 0]);
     expect(await nastaveni.isVisible()).toBe(true);
-    expect(await udaj("zavazi")).toBe("100 kg");
+    expect(await udaj("zavazi")).toBe("900 kg");
+    // Řádek rad říká, co kliknutí udělá: přidá (neodebírá), množství se nastaví dole.
+    expect(await stranka.locator('[data-udaj="rada-stavby"]').getAttribute("data-rada")).toBe("zavazi");
+    expect(await udaj("rada-stavby")).toContain("klikni na styčník: přidá závaží");
     // Styčník, který závaží už má, se jen vybere.
     await klikni([16, 0]);
     expect(await udaj("zavazi")).toBe("900 kg");
@@ -266,7 +293,11 @@ describe("brnknutí", () => {
     const namerena = Number(await telo("brnknuti"));
     expect(namerena).toBeGreaterThan(0.93 * vlastni);
     expect(namerena).toBeLessThan(1.07 * vlastni);
-    expect(await udaj("vysledek-shrnuti")).toMatch(/^Most kmitá na \d,\d\d Hz\.$/);
+    // Brnknutí, osa i tvary kmitání mluví o téže frekvenci, a výsledek to řekne.
+    expect(await udaj("vysledek-shrnuti")).toMatch(
+      /^Most kmitá na \d,\d\d Hz\. To je 1\. vlastní frekvence prázdného mostu; na ose frekvencí je to plný trojúhelník u \d,\d\d Hz\.$/,
+    );
+    expect(await telo("pokus-tvar")).toBe("1");
     // Pokus se nepočítá: žádné medaile, žádná další úroveň.
     expect(await stranka.locator('[data-udaj="vysledek-medaile"]').isVisible()).toBe(false);
     expect(await udaj("medaile")).not.toContain("◆");
@@ -281,7 +312,14 @@ describe("kmitání mostovky rozhoduje", () => {
     expect(await vyzkousej()).toBe("MOST NEOBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toMatch(/(Přešli a přejeli|Přešli|Přejeli) všichni/);
     expect(await udaj("vysledek-shrnuti")).toContain("rozkmital víc, než se dá snést");
-    expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · nepřijatelné · v čase \d+,\d s$/);
+    // Pod číslem je i frekvence, na které most kmital, a čí je to rytmus.
+    expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · nepřijatelné · v čase \d+,\d s\s*nejvíc na 2,3 Hz \(pochodující útvar, krok 2,3 Hz\)$/);
+    // Mez překročil už útvar s krokem 2,0 Hz; nejvíc pak most kmital pod útvarem 2,3 Hz. Výsledek řekne obojí.
+    const shrnuti = (await udaj("vysledek-shrnuti")).replace(/[  ]/g, " ");
+    expect(shrnuti).toContain("Most rozkmital krok lidí: pochodující útvar, krok 2,0 Hz.");
+    expect(shrnuti).toContain("Nejvíc pak kmital pod jiným rytmem: pochodující útvar, krok 2,3 Hz.");
+    expect(shrnuti).toMatch(/Trefuje se do 1\. vlastní frekvence mostu \(2,\d\d Hz, s lidmi 2,\d\d Hz\)\./);
+    expect(shrnuti).toMatch(/Pomohl by tlumič mezi mostem a kotvou: odhad asi \d,\d+ m\/s²\./);
     // Odkaz skočí do okamžiku největšího kmitání; legenda ukazuje okamžitou hodnotu.
     await rozbalVysledek();
     await stranka.locator('[data-udaj="vysledek-kmitani"] button').click();

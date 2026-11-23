@@ -96,6 +96,28 @@
               <span data-text="sandbox.tlacitko"></span>
             </button>
           </div>
+          <!-- Nástroje jsou hned pod zadáním: na dlouhé paletě (lana, pískoviště) by jinak byly až pod okrajem okna. -->
+          <h2 data-text="paleta.nastroje"></h2>
+          <div class="paleta__dvojice paleta__nastroje">
+            <button type="button" class="paleta__tlacitko" data-akce="vyber" data-popis="paleta.vyber.popis" aria-pressed="false">
+              <kbd>V</kbd><span data-text="paleta.vyber"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="zrcadlit" data-popis="paleta.zrcadlit.popis">
+              <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
+              <kbd>Del</kbd><span data-text="paleta.smazat"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="smazat-vse" data-popis="paleta.smazatVse.popis">
+              <span data-text="paleta.smazatVse"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="zpet" data-popis="paleta.zpet.popis">
+              <span data-text="paleta.zpet"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="znovu" data-popis="paleta.znovu.popis">
+              <span data-text="paleta.znovu"></span>
+            </button>
+          </div>
           <h2 data-text="paleta.prvky"></h2>
           <div class="paleta__prvky"></div>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek paleta__tlacitko--akce" data-akce="dopnout" data-popis="paleta.dopnout.popis" hidden>
@@ -121,29 +143,11 @@
             </div>
           </div>
 
-          <h2 data-text="paleta.nastroje"></h2>
-          <button type="button" class="paleta__tlacitko" data-akce="vyber" aria-pressed="false">
-            <kbd>V</kbd><span data-text="paleta.vyber"></span>
-          </button>
-          <button type="button" class="paleta__tlacitko" data-akce="zrcadlit">
-            <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
-          </button>
-          <div class="paleta__dvojice">
-            <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
-              <kbd>Del</kbd><span data-text="paleta.smazat"></span>
-            </button>
-            <button type="button" class="paleta__tlacitko" data-akce="smazat-vse" data-popis="paleta.smazatVse.popis">
-              <span data-text="paleta.smazatVse"></span>
-            </button>
-            <button type="button" class="paleta__tlacitko" data-akce="zpet" data-popis="paleta.zpet.popis">
-              <span data-text="paleta.zpet"></span>
-            </button>
-            <button type="button" class="paleta__tlacitko" data-akce="znovu" data-popis="paleta.znovu.popis">
-              <span data-text="paleta.znovu"></span>
-            </button>
-          </div>
-
           <div class="paleta__nastaveni-obal">
+          <div class="paleta__nastaveni" data-nastaveni="vyber" hidden>
+            <h2 data-udaj="vyber-nadpis"></h2>
+            <p class="paleta__poznamka" data-udaj="vyber-udaje"></p>
+          </div>
           <div class="paleta__nastaveni" data-nastaveni="zavazi" hidden>
             <h2 data-text="paleta.zavazi"></h2>
             <div class="paleta__krokovac">
@@ -178,6 +182,10 @@
               <output data-udaj="ladeny-frekvence"></output>
               <button type="button" class="paleta__tlacitko" data-akce="ladeny-frekvence-plus" data-popis="paleta.ladeny.vys">+</button>
             </div>
+            <p class="paleta__poznamka" data-udaj="ladeny-cil" hidden></p>
+            <button type="button" class="paleta__tlacitko" data-akce="ladeny-naladit" data-popis="paleta.ladeny.naladit.popis" hidden>
+              <span data-text="paleta.ladeny.naladit"></span>
+            </button>
           </div>
           <div class="paleta__nastaveni" data-nastaveni="predpeti" hidden>
             <h2 data-text="paleta.napinak"></h2>
@@ -227,6 +235,7 @@
 
           <h2 data-text="paleta.zadani"></h2>
           <p class="paleta__zadani" data-udaj="zadani"></p>
+          <button type="button" class="paleta__odkaz" data-akce="zadani-cele" data-text="paleta.zadani.cele"></button>
           <ul class="medaile" data-udaj="podminky" data-jen-kampan></ul>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
             <span data-text="vazba.tlacitko"></span>
@@ -243,7 +252,7 @@
           <canvas class="vykres__platno" tabindex="0"></canvas>
           <p class="vykres__hlaseni" data-udaj="hlaseni" role="status"></p>
           <output class="vykres__souradnice" data-udaj="souradnice"></output>
-          <p class="vykres__napoveda" data-text="napoveda.ovladani" data-jen="stavba"></p>
+          <p class="vykres__napoveda" data-udaj="rada-stavby" data-jen="stavba"></p>
           <p class="vykres__napoveda" data-text="napoveda.zkouska" data-jen="zkouska"></p>
           <p class="vykres__chyba" data-udaj="chyba" role="alert" hidden></p>
 
@@ -258,6 +267,9 @@
               <kbd>C</kbd><span data-text="legenda.cisla"></span>
             </button>
             <output class="legenda__kmitani" data-udaj="kmitani" data-popis="legenda.kmitani.popis"></output>
+            <button type="button" class="legenda__prepinac" data-akce="zvetseni" data-popis="legenda.zvetseni.popis" aria-pressed="true" hidden>
+              <span data-udaj="zvetseni"></span>
+            </button>
           </div>
 
           <section class="analyza" data-udaj="analyza" hidden>
@@ -277,6 +289,7 @@
             <div class="analyza__cast analyza__cast--uzka" data-cast="tvary">
               <h3 data-text="analyza.tvary"></h3>
               <div class="analyza__tvary" data-udaj="tvary"></div>
+              <p class="analyza__popis" data-udaj="tvary-poznamka" hidden></p>
             </div>
             <div class="analyza__cast analyza__cast--prubeh" data-cast="graf-pruhyb">
               <h3 data-text="analyza.pruhyb"></h3>
@@ -456,12 +469,26 @@
     <dialog class="okno okno--napoveda" id="okno-napoveda">
       <form method="dialog">
         <h2 data-text="napoveda.nadpis"></h2>
-        <p data-text="napoveda.uvod"></p>
-        <ul class="okno__seznam" data-udaj="napoveda-soupis"></ul>
-        <p data-udaj="napoveda-cena"></p>
-        <p class="okno__poznamka" data-text="napoveda.obrys.popis"></p>
+        <div class="napoveda__mosty" data-udaj="napoveda-mosty"></div>
+        <p class="okno__poznamka" data-udaj="napoveda-zamceno" data-text="napoveda.zamceno" hidden></p>
+        <section class="napoveda__krok" data-krok="1">
+          <h3 data-text="napoveda.krok.princip"></h3>
+          <p data-udaj="napoveda-uvod"></p>
+          <canvas class="napoveda__skica" data-udaj="napoveda-skica" role="img" data-popis="napoveda.skica.popis"></canvas>
+          <p data-udaj="napoveda-princip"></p>
+        </section>
+        <section class="napoveda__krok" data-krok="2" hidden>
+          <h3 data-text="napoveda.krok.material"></h3>
+          <ul class="okno__seznam" data-udaj="napoveda-soupis"></ul>
+          <p data-udaj="napoveda-cena"></p>
+        </section>
+        <section class="napoveda__krok" data-krok="3" hidden>
+          <h3 data-text="napoveda.krok.obrys"></h3>
+          <p class="okno__poznamka" data-text="napoveda.obrys.popis"></p>
+        </section>
         <div class="okno__tlacitka">
-          <button type="button" class="tlacitko" data-akce="napoveda-obrys" aria-pressed="false"></button>
+          <button type="button" class="tlacitko" data-akce="napoveda-dalsi"></button>
+          <button type="button" class="tlacitko" data-akce="napoveda-obrys" aria-pressed="false" hidden></button>
           <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>

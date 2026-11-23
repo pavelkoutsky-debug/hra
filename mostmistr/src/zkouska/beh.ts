@@ -44,7 +44,7 @@ export class BehZkousky {
         let rozbor: RozborMostu | null = null;
         try {
           const prekazky = zkontrolujNavrh(zprava.navrh, zprava.uroven).filter((p) => p.druh !== "nad-rozpocet");
-          if (prekazky.length === 0) rozbor = rozeberMost(zprava.uroven, zprava.navrh);
+          if (prekazky.length === 0) rozbor = rozeberMost(zprava.uroven, zprava.navrh, zprava.nasada);
         } catch {
           rozbor = null;
         }

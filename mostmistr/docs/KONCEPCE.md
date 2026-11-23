@@ -391,6 +391,31 @@ Ne každý most, kterému výpočet nenajde klidovou polohu, spadne: řetěz mos
 
 Výsledek je úzký pruh nahoře nad výkresem, aby most zůstal vidět: verdikt, jedna věta s příčinou, tři medaile a hlavní tlačítko (po výhře Další úroveň, po prohře Upravit most). Do rohu výkresu nad popisové pole padne razítko SCHVÁLENO nebo ZAMÍTNUTO. Čísla, podmínky medailí, výzvy a hlášení chyby jsou v podrobnostech na rozkliknutí. Když most neprojde kvůli poruše, přijde výsledek chvíli po ní a hráč nečeká nad troskami do konce časové osy; po návratu ke stavbě zůstane na výkresu značka, kde to povolilo první, dokud most nezmění.
 
+**Kmitání čitelně** *(M11)*
+
+Síla kroku není čistý sinus: vedle rytmu kroku budí most i na jeho dvojnásobku a trojnásobku (běh a skákání dokonce silně). A lidé na mostě nejsou mrtvá váha: tělo je hmota na pružině s kmitočtem kolem 3 Hz a velkým útlumem. Most, který kmitá pomaleji, lidé zpomalí víc, než kolik váží (lávka 2,7 Hz rezonuje s čtyřiadvaceti lidmi na 2,2 Hz), most, který kmitá rychleji, o něco zrychlí, a vždycky ho tlumí. Nástroje kmitání proto ukazují všechno, co o výsledku rozhoduje, a mluví o týchž číslech jako zkouška:
+
+- **Osa frekvencí** má značky kroku každé skupiny lidí i jeho násobků (krok plnou čarou, dvojnásobek čárkovaně, trojnásobek tečkovaně; silné složky výrazně) a vlastní frekvence mostu, prázdného i s lidmi, až tři. Sahá na celý hertz za nejvyšší složku kroku v úrovni (6 až 8 Hz); první vlastní frekvenci za koncem osy zastupuje šipka u okraje.
+- **Odhad kmitání** vedle osy říká předem to, co zkouška potvrdí: „odhad kmitání 5,7 m/s², mez je 2,5: pochodující útvar, krok 2,3 Hz. Pomohl by tlumič mezi mostem a kotvou: odhad asi 0,92 m/s².“ Počítá ustálené kmitání mostu, na kterém lidé z jízdního řádu stojí (těla jako hmoty na pružinách) a budí ho krokem, a počítá ho tak, jak ho zkouška měří: se všemi, kdo jsou na mostě zároveň, po celé cestě skupiny mostem a se sekundovým průměrem měření; lidé v taktu se sčítají, volně jdoucí jen zčásti. Má tři stavy: pod třemi čtvrtinami meze klid, nad pěti čtvrtinami nad mezí, mezi tím žlutě „u meze, rozhodne zkouška“ (tak přesný odhad je: na tisíci mostech nezávislé kontroly vyšel na 0,69 až 1,27násobek zkoušky, jen pod volně jdoucím davem v rezonanci víc, a žádnému mostu, který na kmitání propadl, neřekl „klid“). Jmenuje toho, kdo most rozkmitá nejvíc, a jeho složku kroku; ta je na ose zvýrazněná. Rada je vždycky další odhad, který si rozbor spočítal (most tužší a těžší o třetinu a dvakrát, laděný tlumič nový, přeladěný, těžší nebo jinde, tlumič do kotvy), v pořadí od nástroje, který úroveň učí, a jen to, co úroveň dovoluje postavit. O mostě rozhoduje zkouška: po ní osa u téhož mostu ukazuje naměřenou hodnotu.
+- **Most s laděným tlumičem** se na ose ukazuje bez tlumiče (trojúhelníky) a tlumič zvlášť (kosočtverec). **Tlumič se ladí na rytmus, který most rozkmitá nejvíc**: budicí frekvence je daná lidmi a tlumič pomáhá nejvíc na frekvenci, na kterou je naladěný. Nastavení tlumiče ten rytmus říká a tlačítkem „Naladit na rytmus“ ho nastaví; odhad vedle osy ukazuje, jak moc tlumič pomáhá (lehký tlumič nestačí, i když je naladěný). Tvary kmitání a pokusy měří soustavu i s tlumičem a říkají to.
+- **Brnknutí a budič** k výsledku připíšou, kolikátá vlastní frekvence z rozboru to je. Brnknutí čte frekvenci ze spektra výchylky brnknutého styčníku a sleduje most šest kmitů jeho první vlastní frekvence (visutý most až šestnáct sekund). Most, který se do klidu vrátí bez překmitu (přetlumený), frekvenci nemá a hra to řekne.
+- **Při zkoušce** se svislý pohyb celého mostu kreslí zvětšený proti klidové poloze (2× až 200×, podle největšího průhybu mostu; popisek a vypínač v legendě), protože skutečné kmitání je zlomek pixelu. Zvětšuje se jen v úrovních s osou frekvencí, u mostu, který zůstal celý a nezvedá se.
+- **Když kmitání přesáhne mez úrovně**, hra to řekne ve chvíli, kdy se to stalo, a výsledek ukáže tři sekundy děje poté, ne až na konci osy. Výsledek jmenuje příčinu: čí krok most rozkmital („Kmitání 4,78 m/s² (mez 2,5). Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz.“), jestli se trefuje do vlastní frekvence mostu, a co by pomohlo. Příčina se čte ze záznamu zkoušky: sečte se, kolik kmitání nesou všechny násobky každého rytmu, a jmenuje se ten, který převažuje, ve chvíli, kdy most mez překročil. Když pak most kmital nejvíc pod jinou skupinou, řekne výsledek obojí.
+
+**Nápověda po krocích** *(M11)*
+
+Nápověda prozrazuje most autora hry po třech krocích: **princip** (věta a skica, čím most nese: příhrada nad mostovkou, pilíře, lana z pylonu, zvedací křídlo…), **materiál** (soupis prvků a cena) a **obrys** na výkresu. Věta i skica se skládají z rysů mostu (`src/data/rysy.ts`), takže o něm nemůžou tvrdit nic, co na něm není; skica je schéma, ne tvar mostu. Zvlášť je nápověda k medailím (most pro medaili za rozpočet a pro mistrovskou), která se odemkne, až hráč úrovní projde.
+
+**Čitelnost stavby** *(M11)*
+
+- Čísla využití se u mostu z mnoha prutů píšou jen u šestnácti nejvíc namáhaných a u každého prutu nad 80 %; při přehrávání zkoušky se vybírají podle celé zkoušky, aby nepřeskakovala.
+- Nástroje jsou v paletě nahoře ve dvou sloupcích; výňatek ze zadání má pět řádků a odkaz na celé zadání; v nízkém okně karty prvků nemají ukázku tloušťky.
+- Řádek rad pod výkresem se mění podle nástroje a výběru (číslice mění prvek vybraných prutů, Shift+klik přidává do výběru).
+- Dole v paletě jsou údaje o vybraných prutech: prvek, délka, cena a největší využití z poslední zkoušky.
+- Most s lany, jehož mostovka se pod vlastní tíhou liší od výkresu o víc než 10 cm, má při stavbě značku s průvěsem a radou dopnout lana (a říká, jestli mostovka visí pod výkresem, nebo ji přetažená lana zvedla nad něj).
+- Závaží: kliknutí nástrojem ho přidá s hmotností nastavenou naposledy; tlačítka − a + jdou držet a se Shiftem krokují po 500 kg.
+- Po zkoušce, při které se něco zlomilo, ukazuje stavba i výsledek namáhání z doby, kdy byl most celý; co se dělo při pádu, o návrhu nic neříká. Most, který povolí hned, tam má pruty přetížené už vlastní vahou se skutečným využitím (třeba 160 %).
+
 **Pro testování**
 
 - Tlačítko „Nahlásit chybu“ v podrobnostech výsledku: verze hry, úroveň, návrh mostu a výsledek zkoušky jako text, který mi pošleš.
