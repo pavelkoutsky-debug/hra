@@ -50,7 +50,8 @@ import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
 import { nakresliCislaVyuziti, type CisloVyuziti } from "../vykres/cisla";
 import { nakresliKrivku, nakresliPrubeh, stropGrafu, vrcholyKrivky, type BodKrivky } from "../vykres/grafy";
-import { nakresliVykres } from "../vykres/vykres";
+import { nakresliSpodekVykresu, nakresliVrsekVykresu, nakresliVykres } from "../vykres/vykres";
+import { UlozenaVrstva } from "../vykres/vrstva";
 import { frekvenceBudice, jeStaly } from "../zkouska/budic";
 import { KlientZkousky } from "../zkouska/klient";
 import { jeClovek, type PopisUcastnika } from "../zkouska/provoz";
@@ -390,12 +391,18 @@ export function spustUroven(
     return beh !== null && !beh.pokus && beh.vysledek !== null && beh.navrh === editor.navrh ? beh.vysledek : null;
   }
 
+  /** Spodní vrstva výkresu uložená pro přehrávání zkoušky. */
+  const spodekVykresu = new UlozenaVrstva();
+
   function kresli(ctx: CanvasRenderingContext2D, rozmer: { sirka: number; vyska: number }): void {
     if (rezim === "zkouska" && beh) {
       const cas = prehravani.cas;
       // Loď, která do mostu narazila, se od té chvíle kreslí barvou varování.
       const { odemceno, narazene } = stavPohybu(beh.udalosti, cas);
-      nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, cas, narazeneLode: narazene });
+      // Rastr, voda a terén se při přehrávání nemění: kreslí se jednou a pak se přenášejí.
+      const stav = { uroven, kamera, rozmer, kurzor: null, cas, narazeneLode: narazene };
+      spodekVykresu.nakresli(ctx, rozmer, `${kamera.x};${kamera.y};${kamera.meritko}`, (kam) => nakresliSpodekVykresu(kam, stav));
+      nakresliVrsekVykresu(ctx, stav);
       const stavba = beh.zaznam.stavV(prehravani.cas, snimek);
       if (stavba) {
         if (beh.oznaceny !== null) zvyrazniPrut(ctx, stavba, beh.oznaceny);

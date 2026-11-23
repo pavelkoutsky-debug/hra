@@ -43,11 +43,27 @@ function mezi(v: number, min: number, max: number): number {
  * CSS pixel (viz `Platno`).
  */
 export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
+  nakresliSpodekVykresu(ctx, s);
+  nakresliVrsekVykresu(ctx, s);
+}
+
+/**
+ * Spodní vrstva výkresu: podklad s rastrem, voda, terén a zakázané zóny. Nezávisí na čase
+ * zkoušky ani na kurzoru, takže ji přehrávání smí nakreslit jednou a pak jen přenášet
+ * (viz `UlozenaVrstva`).
+ */
+export function nakresliSpodekVykresu(ctx: Kontext, s: StavVykresu): void {
   ctx.save();
   nakresliPodklad(ctx, s.kamera, s.rozmer);
   nakresliVodu(ctx, s);
   nakresliTeren(ctx, s);
   for (const zona of s.uroven.zakazaneZony) nakresliZakazanouZonu(ctx, s, zona);
+  ctx.restore();
+}
+
+/** Vrchní vrstva výkresu: lodě, základy, trasy, osa a kóta rozpětí, kotvy, okraj, popisky a kurzor. */
+export function nakresliVrsekVykresu(ctx: Kontext, s: StavVykresu): void {
+  ctx.save();
   nakresliLode(ctx, s);
   for (const zaklad of s.uroven.zaklady) nakresliZaklad(ctx, s, zaklad);
   for (const trasa of s.uroven.trasy) nakresliTrasu(ctx, s, trasa);
