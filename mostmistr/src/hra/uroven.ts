@@ -72,6 +72,8 @@ import { DRUHY_VYZEV, prahyVyzev, unosnostNaKorunu } from "../data/vyzvy";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { zatizeniZlomu, ZKOUSKA_DO_ZLOMU } from "../zkouska/zlom";
 import type { NastaveniSandboxu } from "../data/sandbox";
+import { RESENI } from "../../urovne/reseni";
+import { pripojNapovedu, type Napoveda } from "./napoveda";
 import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
@@ -295,6 +297,13 @@ export function spustUroven(
   let prehravani: StavPrehravani = { cas: 0, bezi: false, rychlost: 1 };
   const snimek: Snimek = prazdnySnimek();
   let rekord: Rekord | undefined = uloziste.rekord(uroven.id);
+  /** Most, který úrovní projde: z něj je nápověda. Sandbox a zkušební výkres žádný nemají. */
+  const reseniUrovne = sandbox ? undefined : RESENI[uroven.id]?.pruchod;
+  /** Nápověda úrovně (soupis a obrys mostu, který projde); null, kde úroveň referenční most nemá. */
+  let napoveda: Napoveda | null = null;
+  /** Kolik zkoušek s provozem v téhle návštěvě neprošlo; po třetí hra nápovědu nabídne. */
+  let nezdaru = 0;
+  let napovedaNabidnuta = false;
   /** Výzvy o efektivitu: co dokázaly referenční mosty a prahy z toho; null, kde úroveň referenční mosty nemá. */
   const zakladVyzevUrovne = zakladVyzev(uroven);
   const prahy = zakladVyzevUrovne ? prahyVyzev(zakladVyzevUrovne) : null;
@@ -430,6 +439,37 @@ export function spustUroven(
     });
     if (cisla && obalka && !editor.tah) nakresliCislaVyuziti(ctx, cislaZObalky(obalka.map((o) => o.vyuziti)));
     if (brnk) nakresliBrnknuti(ctx, brnk);
+    if (stavi && napoveda?.obrys && reseniUrovne) nakresliObrys(ctx, reseniUrovne);
+  }
+
+  /** Obrys mostu z nápovědy: tečkované čáry, kudy vedou jeho pruty, a kroužky ve styčnících. */
+  function nakresliObrys(ctx: CanvasRenderingContext2D, most: NavrhMostu): void {
+    const podleId = new Map(most.stycniky.map((s) => [s.id, s]));
+    ctx.save();
+    ctx.strokeStyle = "rgb(255 255 255 / 0.55)";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "butt";
+    ctx.setLineDash([3, 6]);
+    ctx.beginPath();
+    for (const p of most.pruty) {
+      const a = podleId.get(p.a);
+      const b = podleId.get(p.b);
+      if (!a || !b) continue;
+      const od = bodNavrhu(a);
+      const po = bodNavrhu(b);
+      ctx.moveTo(od.x, od.y);
+      ctx.lineTo(po.x, po.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1.5;
+    for (const st of most.stycniky) {
+      const misto = bodNavrhu(st);
+      ctx.beginPath();
+      ctx.arc(misto.x, misto.y, 5, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   /** Síla brnknutí v newtonech podle toho, jak daleko hráč styčník stáhl. */
@@ -1862,6 +1902,12 @@ export function spustUroven(
     panelVysledku.hidden = true;
     document.body.dataset.rezim = rezim;
     skryjHlaseni();
+    // Po třetí zkoušce, která neprošla, hra jednou připomene nápovědu.
+    if (napoveda && !napovedaNabidnuta && nezdaru >= 3 && rekord?.medaile.pruchod !== true) {
+      napovedaNabidnuta = true;
+      ukazHlaseni(t("napoveda.nabidka"), "info", false);
+      zapis("napoveda.nabidnuta", { zkousek: zkousekVUrovni, sekund: sekundVUrovni() });
+    }
     obnovMedaile();
     obnovStavbu();
     obnovOsu();
@@ -1893,6 +1939,7 @@ export function spustUroven(
         klient?.ukonci();
         klient = null;
         if (!b.pokus) {
+          nezdaru = vysledek.pruchod ? 0 : nezdaru + 1;
           predchoziVysledek = posledniVysledek;
           posledniVysledek = vysledek;
           if (!vysledek.rozpad) {
@@ -2832,6 +2879,19 @@ export function spustUroven(
   priKliknuti("cely-vykres", ukazCelyVykres);
   priKliknuti("zkouska", () => (rezim === "stavba" ? spustZkousku() : zpetKeStavbe()));
   priKliknuti("vyber", prepniVyber);
+  // Nápověda: jen na úrovních, které mají referenční most.
+  const tlacitkoNapovedy = prvek('[data-akce="napoveda"]', HTMLButtonElement);
+  tlacitkoNapovedy.hidden = reseniUrovne === undefined;
+  if (reseniUrovne) {
+    napoveda = pripojNapovedu(reseniUrovne, {
+      nastavObrys: () => platno.prekresli(),
+      pouzita: (krok) => zapis("napoveda", { krok, zkousek: zkousekVUrovni, sekund: sekundVUrovni(), projito: rekord?.medaile.pruchod === true }),
+    });
+    tlacitkoNapovedy.addEventListener("click", () => {
+      if (rezim === "stavba") napoveda?.otevri();
+    });
+  }
+
   // Sandbox: okno s nastavením údolí a provozu. Nové nastavení se uloží a stránka se načte
   // znovu, protože se změnila celá úroveň; most zůstane, pokud se nezměnilo údolí.
   const tlacitkoSandboxu = prvek('[data-akce="sandbox"]', HTMLButtonElement);

@@ -212,6 +212,9 @@
           <button type="button" class="paleta__tlacitko" data-akce="zadani">
             <span data-text="paleta.zadaniOkno"></span>
           </button>
+          <button type="button" class="paleta__tlacitko" data-akce="napoveda" data-popis="napoveda.tlacitko.popis" hidden>
+            <span data-text="napoveda.tlacitko"></span>
+          </button>
           <button type="button" class="paleta__tlacitko" data-akce="sandbox" data-popis="sandbox.tlacitko.popis" hidden>
             <span data-text="sandbox.tlacitko"></span>
           </button>
@@ -413,6 +416,20 @@
           <button type="button" class="tlacitko" data-akce="okno-kopirovat" data-text="okno.kopirovat"></button>
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="okno-nacist" data-text="okno.nacist"></button>
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--napoveda" id="okno-napoveda">
+      <form method="dialog">
+        <h2 data-text="napoveda.nadpis"></h2>
+        <p data-text="napoveda.uvod"></p>
+        <ul class="okno__seznam" data-udaj="napoveda-soupis"></ul>
+        <p data-udaj="napoveda-cena"></p>
+        <p class="okno__poznamka" data-text="napoveda.obrys.popis"></p>
+        <div class="okno__tlacitka">
+          <button type="button" class="tlacitko" data-akce="napoveda-obrys" aria-pressed="false"></button>
+          <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>
     </dialog>

@@ -327,3 +327,57 @@ describe("sandbox", () => {
     expect(chyby).toEqual([]);
   });
 });
+
+describe("nápověda", () => {
+  it("řekne, z čeho je most, který úrovní projde, a na další kliknutí ukáže jeho obrys", async () => {
+    await otevri("1-02");
+    expect(await akce("napoveda").isVisible()).toBe(true);
+    await akce("napoveda").click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await telo("napoveda")).toBe("soupis");
+    const soupis = (await stranka.locator('[data-udaj="napoveda-soupis"] li').allInnerTexts()).map((v) => v.replace(/[  ]/g, " "));
+    expect(soupis[0]).toMatch(/^Dřevěná mostovka: \d+× \(dohromady 12 m\)$/);
+    expect(soupis.some((r) => r.startsWith("Lehký trám: "))).toBe(true);
+    expect(await udaj("napoveda-cena")).toMatch(/^Stojí [\d ]+ Kč\./);
+    await stranka.screenshot({ path: `${SLOZKA}/r8-napoveda.png` });
+
+    await akce("napoveda-obrys").click();
+    // S obrysem se staví: okno uhne a obrys zůstane na výkresu.
+    expect(await stranka.locator("#okno-napoveda[open]").count()).toBe(0);
+    expect(await telo("napoveda")).toBe("obrys");
+    await stranka.screenshot({ path: `${SLOZKA}/r9-napoveda-obrys.png` });
+    await akce("napoveda").click();
+    expect(await akce("napoveda-obrys").innerText()).toBe("Schovat obrys");
+    await akce("napoveda-obrys").click();
+    expect(await telo("napoveda")).toBe("soupis");
+    await stranka.keyboard.press("Escape");
+  });
+
+  it("po třetí zkoušce, která neprojde, hra nápovědu sama připomene", async () => {
+    await nactiMost(navrhNaText(RESENI["1-02"]!.pady[0]!.navrh));
+    for (let pokus = 1; pokus <= 3; pokus++) {
+      await spust();
+      expect(await naKonec()).toBe("MOST NEOBSTÁL");
+      await akce("upravit").click();
+      const hlaseni = await udaj("hlaseni");
+      if (pokus < 3) expect(hlaseni).not.toContain("Nedaří se?");
+      else expect(hlaseni).toContain("Nedaří se? V paletě je Nápověda");
+    }
+    // Připomene ji jen jednou.
+    await spust();
+    await naKonec();
+    await akce("upravit").click();
+    expect(await udaj("hlaseni")).not.toContain("Nedaří se?");
+  }, 240_000);
+
+  it("sandbox nápovědu nemá: není tam most, podle kterého by radila", async () => {
+    await stranka.goto(`${adresa}?sandbox=1`);
+    await stranka.locator(PLATNO).waitFor();
+    expect(await akce("napoveda").isVisible()).toBe(false);
+    expect(await akce("sandbox").isVisible()).toBe(true);
+  });
+
+  it("během nápovědy prohlížeč nehlásil žádnou chybu", () => {
+    expect(chyby).toEqual([]);
+  });
+});
