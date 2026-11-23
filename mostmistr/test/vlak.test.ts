@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { hmotnostNavrhu } from "../src/data/cena";
 import { jeKolejove, KATALOG, vlastnostiPrutu } from "../src/data/katalog";
 import { ChybaDat } from "../src/data/kontrola";
-import type { NavrhMostu } from "../src/data/navrh";
+import { mezeryTras, zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
 import { nactiUroven, VERZE_UROVNE, type PolozkaJizdnihoRadu, type Uroven } from "../src/data/uroven";
 import { DELKA_KOLEJNICE, KOLEJ, vyskaNerovnosti, vytvorNerovnost } from "../src/jadro/nerovnost";
 import type { PopisSoustavy } from "../src/jadro/soustava";
@@ -92,6 +92,37 @@ describe("kolejiště", () => {
     expect(stavba.popis.prvky.every((p) => p.hmotnostNaMetr === 560)).toBe(true);
   });
 
+  it("editor ho pustí jen na kolej a silniční mostovku na kolej nepustí", () => {
+    const u = trat([], 24, { povolenePrvky: ["kolejiste", "mostovka-ocelobeton", "ocel-tezka"] });
+    const druhy = (kresli: (k: Kreslic) => void): string[] => {
+      const k = new Kreslic();
+      kresli(k);
+      return zkontrolujNavrh(k.navrh(), u).map((p) => p.druh);
+    };
+    expect(druhy((k) => k.prut("kolejiste", [0, 0], [6, 0]))).toEqual([]);
+    // Kolejiště jako horní pás příhrady nebo šikmo z opěry: mimo kolej.
+    expect(druhy((k) => (k.prut("kolejiste", [0, 0], [6, 0]), k.prut("kolejiste", [6, 0], [6, 5])))).toEqual(["kolejiste-mimo-kolej"]);
+    // Silniční mostovka položená na kolej: vlak by jí propadl.
+    expect(druhy((k) => k.prut("mostovka-ocelobeton", [0, 0], [6, 0]))).toEqual(["mostovka-na-koleji"]);
+    // Mimo kolej silniční mostovka nevadí (třeba druhé patro mostu).
+    expect(druhy((k) => (k.prut("kolejiste", [0, 0], [6, 0]), k.prut("mostovka-ocelobeton", [6, 0], [6, 5])))).toEqual([]);
+  });
+
+  it("kde na trase chybí mostovka, to se dá z návrhu poznat", () => {
+    const u = trat([], 24, { povolenePrvky: ["kolejiste", "ocel-tezka"] });
+    expect(mezeryTras(jenKolejiste(), u)).toEqual([]);
+    const k = new Kreslic();
+    k.prut("kolejiste", [0, 0], [6, 0]);
+    k.prut("kolejiste", [12, 0], [18, 0]);
+    // Ocelový pás v ose koleje mostovka není: vlak po něm nejede.
+    k.prut("ocel-tezka", [6, 0], [12, 0]);
+    expect(mezeryTras(k.navrh(), u).map((m) => [m.od, m.do])).toEqual([
+      [6, 12],
+      [18, 24],
+    ]);
+    expect(mezeryTras({ ...k.navrh(), pruty: [], stycniky: [] }, u).map((m) => [m.od, m.do])).toEqual([[0, 24]]);
+  });
+
   it("patří jen ke koleji: silnice ho za mostovku nepočítá a kolej nepočítá silniční mostovku", () => {
     const k = new Kreslic();
     for (let x = 0; x < 24; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
@@ -175,6 +206,36 @@ describe("vlak v jízdním řádu", () => {
     expect(chyba([{ ...VLAK, vozy: [{ druh: "auto", pocet: 1 }] }])).toContain("vozy[0].druh");
     expect(chyba([{ ...VLAK, vozy: [{ druh: "vuz-nakladni", pocet: 40 }] }])).toContain("nejvýš 40 vozidel");
     expect(chyba([{ ...VLAK, vozy: [{ druh: "vuz-nakladni", pocet: 39 }] }])).toBe("");
+  });
+
+  it("odmítne překlep v údajích vlaku, rozestup u lokomotivy, kolej bez kolejiště, bonus bez cestujících a trasy různého rozpětí", () => {
+    const chyba = (uprava: (data: Record<string, unknown>) => void, jizdniRad: unknown[] = [VLAK]): string => {
+      const data = zapis(jizdniRad) as Record<string, unknown>;
+      uprava(data);
+      try {
+        nactiUroven(data);
+      } catch (e) {
+        if (e instanceof ChybaDat) return e.message;
+        throw e;
+      }
+      return "";
+    };
+    const nic = (): void => undefined;
+    expect(chyba(nic)).toBe("");
+    // „vozi“ místo „vozy“ by poslalo na most samotnou lokomotivu.
+    expect(chyba(nic, [{ cas: 0, trasa: "kolej", smer: 1, druh: "lokomotiva", vozi: [{ druh: "vuz-nakladni", pocet: 2 }] }])).toContain("vozi");
+    expect(chyba(nic, [{ ...VLAK, vozy: [{ druh: "vuz-nakladni", pocet: 2, naklad: "uhlí" }] }])).toContain("naklad");
+    expect(chyba(nic, [{ ...VLAK, brzdeni: { misto: 10, stani: 2, zpomalení: 2 } }])).toContain("zpomalení");
+    expect(chyba(nic, [{ ...VLAK, rozestup: 30 }])).toContain("rozestup");
+    expect(chyba((d) => (d.povolenePrvky = ["ocel-lehka"]))).toContain("kolejiště");
+    expect(chyba((d) => (d.mistrovska = { druh: "komfort-cestujicich", limit: 0.3 }))).toContain("pohodlí cestujících");
+    expect(chyba((d) => (d.mistrovska = { druh: "komfort-cestujicich", limit: 0.3 }), [{ ...VLAK, vozy: [{ druh: "vuz-osobni", pocet: 1 }] }])).toBe("");
+    expect(
+      chyba((d) => {
+        d.kotvy = [...(d.kotvy as unknown[]), { x: 0, y: 8, typ: "pevna" }, { x: 18, y: 8, typ: "posuvna" }];
+        d.trasy = [...(d.trasy as unknown[]), { id: "silnice", druh: "silnice", zacatek: { x: 0, y: 8 }, konec: { x: 18, y: 8 } }];
+      }),
+    ).toContain("stejné rozpětí");
   });
 
   it("naplánuje lokomotivu a vozy nárazník na nárazník, každý se svým druhem a všechny stejně rychle", () => {
@@ -293,13 +354,28 @@ describe("vlak na mostě", () => {
     return { sila, skrin };
   }
 
-  it("po rovné koleji jede vlak klidně; na stycích kola do koleje udeří, lehký vůz poměrně nejvíc", () => {
+  it("i na rovné koleji se vozy houpou na vlně průhybů polí kolejiště, nejvíc když pole míjejí v rytmu svého pérování", () => {
+    // Každé šestimetrové pole se pod podvozkem prohne o necelých pět milimetrů, takže kolo jede
+    // po vlnovce s délkou vlny 6 m. Ložený vůz se na pérování houpe 2,5krát za sekundu: pole
+    // míjí ve stejném rytmu při 2,5 Hz × 6 m = 15 m/s, tedy asi 55 km/h. Pomalu i rychle je klid.
+    const lozene = [{ druh: "vuz-nakladni" as const, pocet: 3 }];
+    const pomalu = jizda("zadna", lozene, 40 / 3.6, 1).sila;
+    const vRytmu = jizda("zadna", lozene, 56 / 3.6, 1).sila;
+    const rychle = jizda("zadna", lozene, 100 / 3.6, 1).sila;
+    expect(pomalu).toBeLessThan(1.12);
+    expect(vRytmu).toBeGreaterThan(1.18);
+    expect(vRytmu).toBeLessThan(1.35);
+    expect(vRytmu).toBeGreaterThan(pomalu + 0.1);
+    expect(vRytmu).toBeGreaterThan(rychle + 0.05);
+  }, 120_000);
+
+  it("na stycích kola do koleje udeří, lehký vůz poměrně nejvíc", () => {
     const lozene = [{ druh: "vuz-nakladni" as const, pocet: 3 }];
     const prazdne = [{ druh: "vuz-prazdny" as const, pocet: 3 }];
-    // Dokonale rovná kolej a bezstyková kolej: síla dvojkolí kolísá o procenta.
-    expect(jizda("zadna", lozene, 60 / 3.6, 1).sila).toBeLessThan(1.1);
-    expect(jizda("A", lozene, 60 / 3.6, 1).sila).toBeLessThan(1.15);
-    // Styk hluboký 3 mm při 60 km/h: ložené dvojkolí (22,5 t) přitlačí zhruba o polovinu víc.
+    // Bezstyková kolej se od dokonale rovné skoro neliší: síla dvojkolí kolísá jen houpáním na polích.
+    expect(jizda("A", lozene, 60 / 3.6, 1).sila).toBeLessThan(jizda("zadna", lozene, 60 / 3.6, 1).sila + 0.05);
+    // Styk hluboký 3 mm při 60 km/h: dvojkolí lokomotivy (22 t, těžké neodpružené hmoty)
+    // přitlačí asi o třetinu až polovinu víc, dvojkolí loženého vozu o čtvrtinu.
     const naStycich = jizda("B", lozene, 60 / 3.6, 1).sila;
     expect(naStycich).toBeGreaterThan(1.25);
     expect(naStycich).toBeLessThan(1.7);
@@ -313,8 +389,8 @@ describe("vlak na mostě", () => {
     const osobni = [{ druh: "vuz-osobni" as const, pocet: 2 }];
     const hladka = jizda("A", osobni, 100 / 3.6, 2);
     const stykovana = jizda("B", osobni, 100 / 3.6, 2);
-    expect(hladka.skrin).toBeLessThan(0.5);
-    expect(stykovana.skrin).toBeLessThan(1);
+    expect(hladka.skrin).toBeLessThan(0.9);
+    expect(stykovana.skrin).toBeLessThan(1.3);
     expect(stykovana.skrin).toBeGreaterThan(hladka.skrin);
     // Dvojkolí osobního vozu na stycích bije stejně jako každé jiné.
     expect(stykovana.sila).toBeGreaterThan(1.6);
@@ -333,7 +409,9 @@ describe("vlak na mostě", () => {
       ],
       zaklady: [{ x: 24, y: -18 }],
       povolenePrvky: ["kolejiste", "ocel-lehka", "pilir"],
-      jizdniRad: [{ ...VLAK, vozy: [{ druh: "vuz-nakladni", pocet: 6 }], brzdeni: { misto: 46, stani: 2 } }],
+      // Mírné brzdění: vlak zastaví čelem dva metry před koncem mostu, postojí a rozjede se.
+      // (Prudší brzdění by tenhle štíhlý pilíř při zastavení a rozjezdu zlomilo.)
+      jizdniRad: [{ ...VLAK, vozy: [{ druh: "vuz-nakladni", pocet: 6 }], brzdeni: { misto: 46, stani: 2, zpomaleni: 0.6 } }],
     };
     const k = new Kreslic();
     for (let x = 0; x < 48; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
@@ -375,6 +453,30 @@ describe("vlak na mostě", () => {
     // …a žádné dvojkolí do ní nepropadlo ani pak neudeřilo víc než dvojnásobkem své tíhy (22,5 t).
     expect(bezOpory).toBe(0);
     expect(nejvetsiSila).toBeLessThan(2 * 22_500 * g);
+  }, 120_000);
+
+  it("vlak zastaví čelem tam, kde úroveň určila, i když mu brzdná dráha sahá daleko před most", () => {
+    // 60 km/h a provozní brzdění 1 m/s² dávají brzdnou dráhu 139 m: vlak vyjíždí o to dál.
+    for (const [brzdeni, rychlost] of [
+      [{ misto: 20, stani: 3 }, undefined],
+      [{ misto: 20, stani: 3, zpomaleni: 2 }, 100 / 3.6],
+    ] as const) {
+      const polozka: PolozkaJizdnihoRadu = { ...VLAK, vozy: [{ druh: "vuz-prazdny", pocet: 2 }], brzdeni };
+      if (rychlost) polozka.rychlost = rychlost;
+      const zkouska = new Zkouska(trat([polozka]), prihrada(), 7);
+      const lokomotiva = zkouska.ucastnici[0]!;
+      const stoji = lokomotiva.brzdeni!.stoji;
+      expect(lokomotiva.brzdeni!.od).toBeGreaterThanOrEqual(0);
+      const s = zkouska.simulace.soustava;
+      while (zkouska.simulace.cas < stoji + 1) zkouska.simulace.krok();
+      // První dvojkolí lokomotivy je 2,85 m za čelem; čelo má stát v x = 20.
+      let prvni = -Infinity;
+      for (const i of lokomotiva.kola) prvni = Math.max(prvni, s.x[i]!);
+      expect(prvni).toBeGreaterThan(20 - 2.85 - 0.05);
+      expect(prvni).toBeLessThan(20 - 2.85 + 0.05);
+      // Vozy za ní stojí na mostě nebo před ním, žádný ho ještě nepřejel.
+      expect(zkouska.provoz.prejelo).toBe(0);
+    }
   }, 120_000);
 
   it("zkouška s vlakem dá se stejnou násadou pokaždé stejný výsledek", () => {

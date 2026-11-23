@@ -267,7 +267,8 @@ describe("dvě patra: kolej a silnice nad sebou", () => {
 
   it("svislice a diagonály spojí obě mostovky v jednu příhradu: vlak dole i auta nahoře přejedou", async () => {
     await akce("upravit").click();
-    await nactiMost(navrhNaText(RESENI["6-04"]!.pruchod));
+    // Těžké svislice jen u podpor: nejlevnější most, který projde, a s ním i rozpočtová medaile.
+    await nactiMost(navrhNaText(RESENI["6-04"]!.rozpocet));
     await stranka.screenshot({ path: `${SLOZKA}/t10-dve-patra-most.png` });
     await spust();
     await nastavCas(3.4);

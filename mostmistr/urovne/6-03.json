@@ -117,7 +117,7 @@
       "brzdeni": {
         "misto": 70,
         "stani": 3,
-        "zpomaleni": 2
+        "zpomaleni": 2.5
       }
     }
   ]

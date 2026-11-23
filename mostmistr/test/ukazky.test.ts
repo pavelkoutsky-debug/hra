@@ -93,6 +93,23 @@ describe("ukázky k úrovním", () => {
       const a = prehraj(ukazka.a);
       const b = prehraj(ukazka.b);
 
+      // Ukázka 6-02 je o pohodlí ve voze: oba mosty rychlík unesou, liší se tím, jak se pod ním prohnou.
+      if (uroven.id === "6-02") {
+        it("oba mosty vlak unesou; v mělké příhradě se cestující houpou mnohonásobně víc", () => {
+          for (const strana of [a, b]) expect(strana).toMatchObject({ pruchod: true, spadlo: 0, poruseni: 0, rozpad: false });
+          const melka = a.komfortCestujicich!.zrychleni;
+          const hluboka = b.komfortCestujicich!.zrychleni;
+          // Vlevo víc než dvojnásobek toho, co norma bere jako velmi dobré pohodlí (1 m/s²); vpravo s rezervou pod mezí medaile.
+          expect(melka).toBeGreaterThan(2);
+          expect(hluboka).toBeLessThan(0.8 * uroven.mistrovska!.limit);
+          expect(melka).toBeGreaterThan(6 * hluboka);
+        });
+        it("ukázka netrvá déle než půl minuty", () => {
+          expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(32);
+        });
+        return;
+      }
+
       it("levý most neobstojí, pravý ano", () => {
         expect(a.pruchod).toBe(false);
         expect(b.pruchod).toBe(true);

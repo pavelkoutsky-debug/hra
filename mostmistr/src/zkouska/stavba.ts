@@ -3,7 +3,7 @@
 import { KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu, type IdPrvku, type VlastnostiPrutu } from "../data/katalog";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import type { NavrhMostu } from "../data/navrh";
-import type { Uroven } from "../data/uroven";
+import { bodNaTrase, TOLERANCE_TRASY, type Uroven } from "../data/uroven";
 import {
   LANO,
   NOSNIK,
@@ -65,8 +65,6 @@ const DIL_LANA = 2;
 const NEJVIC_DILU_LANA = 16;
 /** Hmotnost pružiny a tlumiče na metr délky (kování, píst), kg/m. */
 const HMOTNOST_PRUZINY = 20;
-/** Jak daleko od spojnice trasy smí ležet styčník mostovky, aby k trase patřil, v metrech. */
-const TOLERANCE_TRASY = 0.5;
 
 /**
  * Na kolik dílů se skrytě rozdělí nosník délky `delka`. Dva díly vystihnou první ohybový
@@ -167,8 +165,17 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
     const zaklad = popisZVlastnosti(vlastnosti, druh === "lano", neseVybaveni(prut.prvek) ? uroven.hmotnostVybaveni : 0);
     if (jeMostovka) mostovka.push(cislo);
 
-    const dilu =
+    let dilu =
       druh === "lano" ? pocetDiluLana(delka) : pocetDiluNosniku(delka, zaklad.EI, zaklad.hmotnostNaMetr);
+    // Mostovka, po které jezdí kola (silnice a kolej), se dělí vždy aspoň na dva díly, i když
+    // kmitá nad pásmem: kolo jede po ohybové čáře prutu a tu má jen prut se styčníkem uprostřed.
+    // Nedělené kloubové pole by vozidlu ukazovalo rovnou tětivu, takže by přejezd polí vozy
+    // nerozhoupal, ať se prohýbají jakkoli. Chodec jde pomalu a průhyb pole pod ním se mění
+    // jen zvolna, proto lávky zůstávají, jak byly.
+    if (jeMostovka && dilu < 2 && delka >= 2 * NEJKRATSI_DIL) {
+      const podKoly = uroven.trasy.some((t) => t.druh !== "lavka" && bodNaTrase(t, sa) && bodNaTrase(t, sb));
+      if (podKoly) dilu = 2;
+    }
     // Předpětí lana: klidová délka se zkrátí tak, aby v napnutém laně byla zadaná síla;
     // záporné předpětí lano naopak prodlouží (viz `PREDPETI_LANA`).
     const predpeti = druh === "lano" ? (prut.predpeti ?? 0) * vlastnosti.unosnost.tah : 0;

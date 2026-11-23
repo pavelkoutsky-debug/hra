@@ -57,6 +57,12 @@ function vyrezUkazky(uroven: Uroven, navrhy: readonly NavrhMostu[]): Obdelnik {
     yMin: dno,
     yMax: trasa.zacatek.y + 0.22 * rozpeti,
   };
+  // Další trasy (druhé patro mostu): i vozidla na nich se musí vejít celá.
+  for (const dalsi of uroven.trasy) {
+    vyrez.xMin = Math.min(vyrez.xMin, dalsi.zacatek.x - okraj);
+    vyrez.xMax = Math.max(vyrez.xMax, dalsi.konec.x + okraj);
+    vyrez.yMax = Math.max(vyrez.yMax, Math.max(dalsi.zacatek.y, dalsi.konec.y) + 5);
+  }
   for (const navrh of navrhy) {
     for (const st of navrh.stycniky) {
       vyrez.xMin = Math.min(vyrez.xMin, st.x - 2);
@@ -90,7 +96,7 @@ export class Ukazka {
   constructor(koren: HTMLElement, zadani: UkazkaUrovne) {
     this.#koren = koren;
     this.#rychlost = zadani.rychlost ?? 1;
-    this.#vyrez = vyrezUkazky(zadani.a.uroven, [zadani.a.navrh, zadani.b.navrh]);
+    this.#vyrez = zadani.vyrez ?? vyrezUkazky(zadani.a.uroven, [zadani.a.navrh, zadani.b.navrh]);
     this.#poznamka = koren.querySelector<HTMLElement>("[data-poznamka]")!;
     this.#strany = (["a", "b"] as const).map((ktera) => {
       const uzel = koren.querySelector<HTMLElement>(`[data-strana="${ktera}"]`)!;
@@ -255,12 +261,17 @@ export class Ukazka {
     let text: string;
     if (this.#cas >= vysledek.trvani) {
       const verdikt = t(vysledek.pruchod ? "ukazka.obstal" : "ukazka.neobstal");
+      // Kde úroveň hodnotí pohodlí cestujících, říká ukázka, jak se jim jelo.
+      const cestujici =
+        strana.zadani.uroven.mistrovska?.druh === "komfort-cestujicich" ? vysledek.komfortCestujicich : null;
       const podrobnost =
         vysledek.spadlo > 0
           ? t("ukazka.spadlo", { spadlo: vysledek.spadlo, pocet: vysledek.ucastniku })
           : vysledek.komfort
             ? t("ukazka.nejvic", { zrychleni: cislo(vysledek.komfort.zrychleni, 1) })
-            : "";
+            : cestujici && cestujici.zrychleni > 0
+              ? t("ukazka.cestujici", { zrychleni: cislo(cestujici.zrychleni, 1) })
+              : "";
       text = podrobnost ? `${verdikt} · ${podrobnost}` : verdikt;
       strana.stav.dataset.verdikt = vysledek.pruchod ? "obstal" : "neobstal";
     } else {

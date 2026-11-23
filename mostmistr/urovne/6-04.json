@@ -6,16 +6,16 @@
     "xMin": -12,
     "yMin": -17,
     "xMax": 60,
-    "yMax": 20
+    "yMax": 21
   },
   "teren": [
     {
       "x": -12,
-      "y": 8
+      "y": 9
     },
     {
       "x": 0,
-      "y": 8
+      "y": 9
     },
     {
       "x": 1,
@@ -35,11 +35,11 @@
     },
     {
       "x": 48,
-      "y": 8
+      "y": 9
     },
     {
       "x": 60,
-      "y": 8
+      "y": 9
     }
   ],
   "hladina": -12,
@@ -56,12 +56,12 @@
     },
     {
       "x": 0,
-      "y": 8,
+      "y": 9,
       "typ": "posuvna"
     },
     {
       "x": 48,
-      "y": 8,
+      "y": 9,
       "typ": "posuvna"
     }
   ],
@@ -85,11 +85,11 @@
       "druh": "silnice",
       "zacatek": {
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "konec": {
         "x": 48,
-        "y": 8
+        "y": 9
       }
     }
   ],
@@ -97,10 +97,10 @@
   "hmotnostVybaveni": 600,
   "nerovnost": "B",
   "rozpocet": 2600000,
-  "inzenyrskyRozpocet": 2130000,
+  "inzenyrskyRozpocet": 2150000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.6
+    "limit": 0.55
   },
   "povolenePrvky": [
     "kolejiste",

@@ -22,7 +22,7 @@ Poslední aktualizace: 22. 11. 2026
 
 ## M5 — výsledek
 
-Železnice: kolejiště, vlak, kapitola 6 „Trať“ a cestou dvě opravy fyziky. Verze hry 0.11.0, verze fyziky 6, formát úrovně 5.
+Železnice: kolejiště, vlak, kapitola 6 „Trať“ a cestou dvě opravy fyziky. Verze hry 0.11.0, verze fyziky 7 (po recenzích, viz níže), formát úrovně 5.
 
 **Opravy fyziky**
 
@@ -30,14 +30,14 @@ Poslední aktualizace: 22. 11. 2026
 - **Dilatační spára.** Konec mostovky na posuvném ložisku se pod brzdícím vlakem odsune od předmostí i o deset centimetrů. Kola do vzniklé mezery propadala a vracela se rázem několika meganewtonů (falešný smyk v krajním poli, pětinásobná reakce opěry). Kolo teď spáru do půl metru přejede po předmostí, pokud kraj mostovky zůstal ve výšce předmostí (`vDilatacniSpare` v `src/jadro/trasa.ts`); utržený díl spáru netvoří. Hlídá to test s vlakem brzdícím na vysokém pilíři (`test/vlak.test.ts`).
 - Cestou nalezena a opravena příčina vzácného rozpadu výpočtu: tlumič kontaktu kola bral skok výšky mezi dvěma kusy utržené mostovky jako rychlost (`NEJVYSSI_RYCHLOST_POVRCHU` v `src/jadro/bremena.ts`).
 
-**Kolejiště** (`kolejiste` v katalogu): kolej na dubových mostnicích a dvou podélnících IPE 600 (2 × 92 080 cm⁴, 560 kg na metr i s kolejnicemi, 16 000 Kč/m, do 6 m). Je to jedna kolej: šířka mostovky ho nenásobí a hmotnost vybavení úrovně nenese. Patří jen k trase druhu „kolej“; vlak po silniční mostovce nejede a auto po pražcích také ne. Původně zamýšlené IPE 500 se pod podvozkem loženého vozu prohýbaly o centimetr a šestimetrová pole pak vozy rozhoupala v jejich vlastní frekvenci; s IPE 600 je průhyb 5 mm (1/1 200 rozpětí), jak se u železničních mostů žádá.
+**Kolejiště** (`kolejiste` v katalogu): kolej na dubových mostnicích a dvou podélnících IPE 600 (2 × 92 080 cm⁴, 560 kg na metr i s kolejnicemi, 16 000 Kč/m, do 6 m). Je to jedna kolej: šířka mostovky ho nenásobí a hmotnost vybavení úrovně nenese. Patří jen k trase druhu „kolej“; vlak po silniční mostovce nejede a auto po pražcích také ne. Původně zamýšlené IPE 500 se pod podvozkem loženého vozu prohýbaly o centimetr; s IPE 600 je průhyb 5 mm (1/1 200 rozpětí), jak se u železničních mostů žádá. I tak je to pro kola vlnovka s délkou vlny 6 m: ložený vůz, který se na pérování houpe 2,5krát za sekundu, míjí pole ve stejném rytmu při 55 km/h a síla jeho dvojkolí pak kolísá o čtvrtinu (při 40 km/h o desetinu, při 100 km/h o šestinu). Původní závěr, že IPE 600 houpání odstranily, byl chyba modelu, kterou našla kontrola fyziky: nedělené pole ukazovalo kolu rovnou tětivu.
 
 **Vlak** (`src/zkouska/vozidla.ts`, `src/zkouska/provoz.ts`)
 
 - Položka jízdního řádu druhu „lokomotiva“ se seznamem vozů (`vozy`, formát úrovně 5). Lokomotiva a každý vůz jsou samostatní účastníci nárazník na nárazník, všichni jedou rychlostí lokomotivy. Kolejová vozidla smějí jen na trasu druhu „kolej“.
 - Lokomotiva 88 t (4 × 22 t), ložený nákladní vůz 90 t, prázdný 22 t, osobní vůz 45 t; každé vozidlo má čtyři dvojkolí ve dvou podvozcích. Lokomotiva a osobní vůz mají dvoustupňové vypružení (dvojkolí – rám podvozku – skříň), nákladní vůz jen prvotní. Hodnoty jsou typické, ne změřené.
-- Uložení koleje pod dvojkolím má tuhost 120 MN/m. Kolej má vlastní nerovnosti (`src/jadro/nerovnost.ts`): třída A je svařená kolej s milimetrovými vlnami, B má po 25 m styky hluboké 3 mm, C zanedbané styky 6 mm. Naměřeno na zkušebním mostě: na rovné a svařené koleji kolísá síla dvojkolí o procenta, na stycích třídy B přitlačí ložené dvojkolí asi o polovinu víc a prázdné více než dvojnásobkem, což odpovídá tomu, že ráz na styku skoro nezávisí na nákladu.
-- Vlak umí na mostě zabrzdit (výchozí zpomalení 1 m/s², úroveň smí předepsat jiné) a rozjet se.
+- Uložení koleje pod dvojkolím má tuhost 120 MN/m. Kolej má vlastní nerovnosti (`src/jadro/nerovnost.ts`): třída A je svařená kolej s milimetrovými vlnami, B má po 25 m styky hluboké 3 mm, C zanedbané styky 6 mm. Naměřeno na zkušebním mostě při 60 km/h: styk třídy B přidá dvojkolí lokomotivy (těžké neodpružené hmoty) asi polovinu klidové síly, dvojkolí loženého vozu pětinu až čtvrtinu a prázdnému vozu víc než jeho celou tíhu. Přírůstek v kilonewtonech je u loženého a prázdného vozu skoro stejný (50 až 65 kN): ráz na styku na nákladu skoro nezávisí.
+- Vlak umí na mostě zabrzdit (výchozí zpomalení 1 m/s², úroveň smí předepsat jiné) a rozjet se. Vyjíždí tak daleko před mostem, aby mu na zastavení v určeném místě stačila brzdná dráha; brzdná a tažná síla nabíhá a doznívá 1,5 s.
 - Pohodlí cestujících se měří i na skříních osobních vozů; výsledek a mistrovská medaile pak mluví o vlaku.
 
 **Ve hře:** kolejiště se kreslí s pražci, lokomotiva se sběračem a vozy jako bokorysy, trasa vedená skálou má tunel s portálem, zadání má větu o stavu koleje, jízdní řád vypisuje složení vlaku. Zvuk je stávající obecné valení a klapání spár (ladění zvuků patří do M9).
@@ -47,9 +47,9 @@ Poslední aktualizace: 22. 11. 2026
 | Úroveň | Co učí | Referenční řešení |
 |---|---|---|
 | 6-01 První vlak, 30 m | Vlak je těžký (6 t/m) a delší než most; pod mostem se stavět nesmí | lehká příhrada od 3 m výšky; těžký tlačený pás pro mistrovskou |
-| 6-02 Rychlík, 36 m | Tuhost: průhyb mostu rozhoupe skříň vozu; nad kolejí je trolej | příhrada pod kolejí; 3 m unese, 6 m dá jízdu pod 0,3 m/s² |
-| 6-03 Uhelný vlak, 72 m | Vlak nouzově zabrzdí a sílu nesou jen vysoké pilíře | svar hlavy pilíře s kolejištěm, nebo vzpěry z půlky pilíře |
-| 6-04 Dvě patra, 48 m | Kolej a silnice nad sebou jsou pásy jedné příhrady | svislice a diagonály mezi patry, tlačené svislice z těžkého profilu |
+| 6-02 Rychlík, 36 m | Tuhost: průhyb mostu rozhoupe skříň vozu; nad kolejí je trolej | příhrada pod kolejí; 2 m unese (2,2 m/s² ve voze), 6 m dá jízdu pod 0,3 m/s² |
+| 6-03 Uhelný vlak, 72 m | Vlak nouzově zabrzdí (2,5 m/s²) a sílu nesou jen vysoké pilíře | svar hlavy pilíře s kolejištěm (pilíř na 97 %), nebo těžké vzpěry z půlky pilíře (49 %) |
+| 6-04 Dvě patra, 48 m | Kolej a silnice devět metrů nad sebou jsou pásy jedné příhrady | svislice a diagonály mezi patry; svislice u podpor z těžkého profilu, z lehkého vybočí a most spadne |
 
 Fakta v odstavcích „Ve skutečnosti“ jsou ověřená vyhledáním (22. 11. 2026): Negrelliho viadukt, mez zrychlení ve voze a mostovky podle evropské normy, most přes Firth of Forth, most přes Øresund. Původně zamýšlený údaj o normové brzdné síle se ověřit nepodařilo, proto v textech není.
 
@@ -64,7 +64,52 @@ Fakta v odstavcích „Ve skutečnosti“ jsou ověřená vyhledáním (22. 11. 
 - Každá náprava nese svůj díl skříně samostatně (jako u silničních vozidel): kývání skříně mezi podvozky se nepočítá.
 - Vozy vlaku nejsou svisle spřažené; když jeden spadne, ostatní jedou dál.
 - Třecí tlumení nákladního podvozku je nahrazené viskózním (útlum 12 %).
-- Nouzové brzdění v 6-03 (2 m/s²) je víc, než dokáže skutečný nákladní vlak (kolem 1 m/s²); odpovídá tomu, že se mosty navrhují na brzdnou sílu blízkou mezi adheze.
+- Nouzové brzdění v 6-03 (2,5 m/s²) je víc, než dokáže skutečný nákladní vlak (kolem 1 m/s²); odpovídá tomu, že se mosty navrhují na brzdnou sílu blízkou mezi adheze. Při 2 m/s² by holé pilíře držely staticky s rezervou 10 % a padaly jen díky rozhoupání, o chlup.
+- Brzdná síla nabíhá a doznívá lineárně za 1,5 s (auta 0,3 s), kinematika vozidla přitom zůstává předepsaná; kolejnice nepřenášejí podélnou sílu do předmostí a otevřená dilatační spára je bez následků.
+- Posudek ohybu se dělá ve čtvrtinách prutu: skutečné maximum pod kolem bývá o jednotky procent vyšší (vlastnost už z M1b).
+- Ložený vůz má rozměry řady Eas, ale 90 t odpovídá traťové třídě D (22,5 t na nápravu); komentář u modelu to říká.
+
+### Nezávislé recenze M5 (23. 11. 2026)
+
+Tři recenze nad hotovým milníkem: recenze kódu, hraní kapitoly 6 v prohlížeči očima nováčka a nezávislá kontrola výpočtů. Hrubou chybu výpočtu nenašla žádná; vlastní tíha, kolejiště, klidová poloha vozidel i síly v příhradách sedí s ručním výpočtem do procent.
+
+**Zapracováno z kontroly fyziky** (verze fyziky 7)
+
+- *Kolo nevidělo průhyb neděleného pole kolejiště.* Pole 6 m kmitá nad pásmem 30 Hz, proto se skrytě nedělilo, a kloubový prut bez styčníku uprostřed ukazuje kolu rovnou tětivu. Mostovka silnice a koleje se teď dělí vždy aspoň na dva díly; lávky zůstávají, jak byly (chodec jde pomalu). Vozy se na vlně průhybů houpou, nejvíc kolem 55 km/h (viz „Kolejiště“ výše); na referenční mosty to má vliv do 5 %.
+- *Brzdná síla mizela skokem.* Po zastavení se most rozkmital o ±9 cm a vodorovná reakce vycházela o polovinu větší než kvazistatická; o zlomení pilíře pak rozhodovala fáze kmitu při rozjezdu. Síla teď nabíhá a doznívá lineárně (vlak 1,5 s, auto 0,3 s), impuls zůstává hmotnost × změna rychlosti.
+- *Přenos tíhy mezi nápravami nesplňoval rovnováhu momentů* (u čtyř náprav dával jen dvě třetiny klopného momentu a druhé dvojkolí předního podvozku odlehčoval). Nápravy se teď přitěžují úměrně vzdálenosti od těžiště; u dvou náprav vychází totéž co dřív.
+- Úroveň 6-03 padala s holými pilíři jen díky dynamice a o chlup (využití 1,001 až 1,19, staticky 0,90). Brzdění je teď 2,5 m/s²: holé pilíře se zlomí i s těžkými pásy a s šestimetrovou příhradou (oba mosty jsou mezi těmi, které neprojdou).
+- Opravené popisy: co na styku přidá lokomotiva a co vůz, vlastní frekvence vozidel v komentářích modelů, označení loženého vozu.
+
+**Zapracováno z recenze kódu**
+
+- *Vlak s výchozím zpomalením nezastavil tam, kde měl.* Brzdná dráha 139 m se do rozjezdu před mostem nevešla a plán ji mlčky ořízl: vlak zastavil až 76 m za místem. Kdo má na mostě zastavit, vyjíždí teď o brzdnou dráhu dřív (test hlídá polohu zastavení).
+- Ukázky kapitoly 6 běží v prohlížečovém testu; ukázka mostu o dvou patrech má ve výřezu i vozidla horního patra.
+- Pohodlí cestujících se měří u každého autobusu a osobního vozu zvlášť a jen po dobu, kdy sám jede po mostě; počítá se jen vozidlo, které most přejelo (spadlý autobus už nehlásí „nepřijatelné“). Kde jede autobus i osobní vůz, mluví řádek výsledku a medaile obecně o cestujících.
+- Kontrola dat úrovně odmítne překlep v údajích vlaku, rozestup u lokomotivy, kolej bez kolejiště v povolených prvcích, bonus za pohodlí bez cestujících a trasy různého rozpětí.
+- Pražce na předmostí stojí při posunu pohledu na místě. Regresní sada má scénář s vlakem (styky, brzdění, podvozky), takže stránka shody výpočtu hlídá i tyto cesty.
+
+**Zapracováno z hraní**
+
+- *Špatná nebo chybějící mostovka: vozidla propadla a hra neřekla proč.* Kolejiště jde položit jen na kolej a silniční mostovka na kolej ne (s hláškou při kreslení); když někdo spadne a na trase kus mostovky chybí, výsledek řekne kde. U mostu o více patrech jsou nivelety popsané slovy.
+- *Vlak se za mostem rozpadal.* Kdo most přejel, jede dál po předmostí a je vidět, dokud nevyjede z obrazu.
+- *Vlak zakrýval příhradu a čísla.* Skříně vozů jsou poloprůhledné, čísla využití se kreslí přes vozidla, sběrač lokomotivy je stažený.
+- *6-04 byla příliš snadná a varování nic nestálo.* Silnice je devět metrů nad kolejí: lehké svislice u podpor vybočí a most spadne (je mezi mosty, které neprojdou). Inženýrský rozpočet (2 150 000 Kč) je těsně nad mostem s těžkými krajními svislicemi; referenční most pro průchod má těžké všechny svislice a rozpočtovou medaili nedá.
+- *6-03: rada posílala do pádu.* Zadání říká, že každé pole potřebuje vlastní příhradu a že vzpěry z půlky pilíře mají být z těžkého profilu; referenční řešení vedou vzpěry ze styčníku, kde editor pilíř dělí sám. Ukázka se dívá na jeden pilíř zblízka.
+- *6-02: ukázka byla řešením a vlevo se most lámal, i když text mluví o tuhosti.* Ukázka teď srovnává dvoumetrovou a osmimetrovou příhradu: obě vlak unesou, v mělké cítí cestující 2,2 m/s², v hluboké 0,2. Pohodlí ve vlaku se neřadí do tříd pro lávky, ale poměřuje s mezí velmi dobrého pohodlí podle normy (1 m/s²).
+- Texty, které neseděly s čísly (síla brzdícího vlaku, průhyb, styky při stovce, „vybočí“ u prutu, který selže tlakem), a čeština.
+- Zrcadlení spojí pás dotažený k ose s jeho obrazem v jeden prut (kloub na ose by tlačený pás složil). Dlouhý jízdní řád se v úzkém okně dá posunout.
+
+**Nezapracováno (a proč)**
+
+- **Styky kolejnic a trolej nejsou na výkresu vidět.** Polohy styků zná až plán provozu ve zkoušce; kreslení patří do doladění (M8).
+- **Horní lišta se v okně užším než asi 1000 px nevejde** (týká se všech kapitol). Do M8.
+- **Spadlému vozu v 6-04 terén vykopne podvozek, který je ještě v tunelu.** Jen vzhled pádu, výsledek zkoušky nemění.
+- **Zvuk v 6-04:** spáry obou mostovek jsou v jedné množině a kola vlaku klapou i na spárách silniční mostovky. Zvuky jsou pracovní, řeší se v M9.
+- **Trosky vozů se po pádu prolínají;** tunel je jen nevyšrafovaný obdélník s portálem. Na technickém výkresu snesitelné.
+- **Úroveň starší verze s trasou „kolej“ a autem** by nově neprošla kontrolou; žádná taková neexistuje.
+- **Tvar styku** (zaoblené V) dává proti jedinému zlomu při 80 až 100 km/h až o polovinu větší ráz lokomotivy; řád i nezávislost na nákladu sedí. Parametry Jenkinsova vzorce z normy se recenzentovi dohledat nepodařilo.
+- Mrtvý kód (`jeVozidlo` už jen v testech, příznak `predbezne`) zůstal; nic neovlivňuje.
 
 ## M4c — výsledek
 

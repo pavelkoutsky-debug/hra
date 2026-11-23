@@ -19,6 +19,11 @@ const OKNO_PRUMERU = 1;
 /** Meze tříd komfortu v m/s²: do první výborný, do druhé střední, do třetí nízký, nad ní nepřijatelný. */
 export const MEZE_KOMFORTU = [0.5, 1, 2.5] as const;
 export type TridaKomfortu = 1 | 2 | 3 | 4;
+/**
+ * Svislé zrychlení ve voze, do kterého evropská norma pro železniční mosty mluví o velmi
+ * dobrém pohodlí cestujících, m/s².
+ */
+export const MEZ_POHODLI_VE_VOZE = 1;
 
 /** Třída komfortu pro dané zrychlení: 1 výborný až 4 nepřijatelný. */
 export function tridaKomfortu(zrychleni: number): TridaKomfortu {
