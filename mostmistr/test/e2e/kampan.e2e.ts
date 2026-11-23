@@ -138,7 +138,9 @@ describe("kampaň od první úrovně do poslední", () => {
     expect(await postup.getAttribute("data-dokonceno")).toBe("true");
     // Dokončená kampaň má vlastní oznámení; věta přilepená za čísla postupu by zanikla.
     expect(await udaj("prehled-postup")).toMatch(/^Projito 28 z 28 úrovní · /);
-    expect(await udaj("prehled-dokonceno")).toMatch(/^Kampaň dokončena\. Všechny úrovně jsou projité\./);
+    // Nadpis oznámení je verzálkami (styl), proto bez ohledu na velikost písmen.
+    expect(await udaj("prehled-dokonceno")).toMatch(/^Kampaň dokončena\. Všechny úrovně jsou projité\./i);
+    await stranka.screenshot({ path: `${SLOZKA}/k2-kampan-dokoncena.png` });
     // Každá karta ukazuje aspoň jednu získanou medaili a součet stupňů výzev.
     for (const uroven of kampan) {
       expect(await stranka.locator(`[data-uroven="${uroven.id}"] .karta__medaile`).innerText(), uroven.id).toContain("◆");
