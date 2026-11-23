@@ -42,6 +42,54 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vykres.trasa.silnice": "road",
   "vykres.trasa.lavka": "footbridge",
   "vykres.zaklad": "footing",
+  "pojmy.odkaz": "glossary",
+  "pojmy.nadpis": "Glossary",
+  "pojmy.uvod": "Words the game uses. In texts they have a dotted underline: click one to have it explained.",
+  "pojem.mostovka": "Deck",
+  "pojem.mostovka.text": "The part of the bridge people walk and drive on. It must run from bank to bank; its panels are joined by hinges, so by itself it folds at them.",
+  "pojem.podpora": "Support: fixed and sliding",
+  "pojem.podpora.text": "Where the bridge rests on the bank. A fixed support holds it in place. A sliding one carries only vertically and gives sideways, so the bridge can expand.",
+  "pojem.kotva": "Anchor",
+  "pojem.kotva.text": "A fixed point in a slope or a wall that a member, a cable or a cylinder may bear on. Nowhere else can you build below ground.",
+  "pojem.rozpeti": "Span",
+  "pojem.rozpeti.text": "The distance between supports. Forces in the bridge grow quickly with it: a span twice as long loads the members roughly four times as much.",
+  "pojem.kloub": "Hinge",
+  "pojem.kloub.text": "A joint where members can rotate freely against one another. Every joint is a hinge until you weld it; that is why only a triangle of members keeps its shape.",
+  "pojem.prihrada": "Truss",
+  "pojem.prihrada.text": "A girder made of triangles: two chords one above the other, with verticals and diagonals between them. The taller it is, the smaller the forces in it.",
+  "pojem.pas": "Chord",
+  "pojem.pas.text": "The top or bottom lengthwise row of members of a truss. When a bridge supported at its ends carries a load, the top chord is in compression and the bottom one in tension.",
+  "pojem.tah-tlak": "Tension and compression",
+  "pojem.tah-tlak.text": "A member in tension is stretched, one in compression squeezed. A cable can only take tension. A member in compression may bow sideways before it crushes: see buckling.",
+  "pojem.vzper": "Buckling",
+  "pojem.vzper.text": "A long member in compression does not crush but bows sideways, at a far smaller force. A shorter member, a heavier element or a brace at mid-length helps.",
+  "pojem.vyuziti": "Utilisation",
+  "pojem.vyuziti.text": "What percentage of its capacity a member carries. At 100% it gives way. The numbers and colours of members show the highest utilisation over the whole test.",
+  "pojem.svar": "Weld",
+  "pojem.svar.text": "A rigid connection of members at a joint: it does not rotate and it transfers bending. You pay for every member that runs into a welded joint.",
+  "pojem.plasticky-kloub": "Plastic hinge",
+  "pojem.plasticky-kloub.text": "A spot where overloaded steel at a welded joint has bent permanently. It did not crack, but it can carry no more there; during the test a ring marks it.",
+  "pojem.vlastni-frekvence": "Natural frequency",
+  "pojem.vlastni-frekvence.text": "The rhythm at which the bridge vibrates by itself when you nudge it. A stiffer bridge vibrates faster, a heavier one slower. The frequency axis under the drawing shows it.",
+  "pojem.rezonance": "Resonance",
+  "pojem.rezonance.text": "When the rhythm of footsteps (or a multiple of it) hits the bridge’s natural frequency, every step adds to the vibration and the bridge starts swinging.",
+  "pojem.tlumic": "Damper",
+  "pojem.tlumic.text": "An element that carries no weight and only brakes the movement between its ends. It does not prevent vibration, but it saps its strength.",
+  "pojem.ladeny-tlumic": "Tuned mass damper",
+  "pojem.ladeny-tlumic.text": "A weight on a spring hung under the bridge. Tuned to the rhythm that sets the bridge vibrating, it vibrates in the bridge’s place.",
+  "pojem.dopnuti": "Cable tensioning",
+  "pojem.dopnuti.text": "Shortening a cable with its turnbuckle so that it pulls even at rest and the deck stays level under its own weight. Without it the cable hangs slack and the bridge is soft.",
+  "pojem.plavebni-profil": "Navigation clearance",
+  "pojem.plavebni-profil.text": "The space above the water reserved for ships. You cannot build in it, and while a ship is passing not even the raised bridge may reach into it.",
+  "pojem.inzenyrsky-rozpocet": "Engineer’s budget",
+  "pojem.inzenyrsky-rozpocet.text": "The stricter amount for the Budget medal; a tick marks it on the cost gauge. For a Pass it is enough to stay within the level budget.",
+  "vedeni.prvni": "Start here: drag the deck from here to here",
+  "vedeni.dalsi": "Next deck piece: from here to here",
+  "vedeni.vyber": "Pick {prvek} in the palette and drag from here to here",
+  "vedeni.pevna": "fixed support: holds the bridge in place",
+  "vedeni.posuvna": "sliding support: carries, but gives sideways",
+  "vedeni.pevna.kratce": "fixed support",
+  "vedeni.posuvna.kratce": "sliding support",
   "souradnice.bod": "x = {x} m · y = {y} m",
   "chyba.nacteni": "The drawing could not be loaded: {duvod}",
   "lista.zkusebna": "Solver test lab",
@@ -155,6 +203,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "legenda.zvetseni": "motion {nasobek}×",
   "legenda.zvetseni.popis.skutecne": "The bridge is drawn at true scale. Click to magnify its vertical motion {nasobek}× so that you can see it bend and vibrate.",
   "legenda.zvetseni.popis": "The vertical motion of the bridge is drawn magnified so that you can see it bend and vibrate. Click to switch to true scale; the true deflection is also in the graph under Analysis.",
+  "legenda.hlucho": "calm {nasobek}×",
+  "legenda.hlucho.popis": "Calm stretches of the test (the bridge is empty, or far from its limits and not at its peak vibration) play faster. Click to turn that off.",
+  "legenda.hlucho.popis.vypnuto": "The whole test plays at the chosen speed. Click to let calm stretches speed up (up to {nasobek}×).",
   "legenda.cisla": "numbers",
   "legenda.cisla.popis": "Show utilisation as a percentage next to members (C). On a bridge with many members only the most loaded ones are labelled; the colour and a click on a member tell the rest.",
   "zkouska.prehrat": "▶ Play",
@@ -399,6 +450,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "paleta.tlumeni.hodnota": "{hodnota} kN·s/m",
   "brnknuti.tah": "Pluck with a force of {sila} kN",
   "brnknuti.navod": "Pull one of the bridge’s joints down and release.",
+  "brnknuti.nahoru": "Plucking goes downwards: pull the joint below its place and release.",
+  "brnknuti.slabe": "That was too gentle. Pull the joint lower and release.",
+  "zavazi.naPodpore": "A weight at a joint on a support does nothing: the support carries its weight and the bridge does not move with it. Put it at a joint between the supports.",
   "brnknuti.mechanismus": "The bridge has no rest position; there is nothing to pluck.",
   "analyza.tlacitko": "Analysis",
   "analyza.popis": "Analysis panel: resonance curve, vibration modes, time histories and forces (A)",
@@ -495,13 +549,17 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "frekvence.popis.odhad": "The estimate is the steady vibration of the bridge with people standing on it and driving it with their steps. The test decides.",
   "frekvence.popis.zkouska": "The test of this bridge measured {a} m/s²; the estimate was {odhad}.",
   "frekvence.popis.mistrovska": "Master medal: {podminka}.",
+  "frekvence.legenda.popis": "What the marks on the axis mean",
+  "frekvence.legenda.nadpis": "Marks on the frequency axis",
+  "frekvence.legenda": "Solid line: the rhythm of people’s steps.\nDashed and dotted line: twice and three times the step, weaker components of the same step.\nLight band: the range of steps of a group that does not keep one rhythm.\nSolid triangle: a natural frequency of the bridge; the smaller ones are the second and higher.\nPale triangle: the bridge with people standing on it.\nDiamond: a tuned mass damper.\nA line above a triangle means resonance.",
   "frekvence.znacka.most": "natural frequency no. {poradi} of the bridge: {f} Hz",
   "frekvence.znacka.obsazeny": "natural frequency no. {poradi} of the bridge with people standing on it: {f} Hz",
   "frekvence.znacka.tlumic": "tuned mass damper: {f} Hz. Tune it to the rhythm that sets the bridge vibrating.",
   "frekvence.znacka.mimo": "natural frequency no. 1 of the bridge is {f} Hz, beyond the end of the axis ({konec} Hz)",
   "frekvence.znacka.slozka": "{kdo}: {slozka} ({f} Hz), force {sila} of a person's weight",
   "legenda.kmitani": "vibration {zrychleni} m/s²",
-  "legenda.kmitani.popis": "Instantaneous deck acceleration, used to assess pedestrian comfort",
+  "legenda.kmitani.prazdny": "vibration {zrychleni} m/s² (nobody walking, not counted)",
+  "legenda.kmitani.popis": "Instantaneous deck acceleration, used to assess pedestrian comfort; it only counts while someone is walking on the bridge",
   "vysledek.kmitani": "Deck vibration",
   "vysledek.kmitaniHodnota": "{zrychleni} m/s² · {trida} · at {cas}",
   "vysledek.kmitaniZadne": "none",
@@ -617,6 +675,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.provoz.zleva": "from the left",
   "zadani.provoz.zprava": "from the right",
   "zadani.stavba": "What you build with",
+  "zadani.stavba.souhrn": "· {prvku} elements · budget {castka}",
+  "zadani.vice": "More about the task",
   "zadani.stavba.prvek": "{prvek}: {cena}",
   "zadani.stavba.rozpocet": "budget {castka}",
   "zadani.stavba.zavazi": "Weight at a joint: {zaKg} per kilogram, at most {kg} kg",
@@ -647,6 +707,18 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "ukazka.1-01.a": "Deck only",
   "ukazka.1-01.b": "Deck with a triangle",
   "ukazka.1-01.popis": "Two deck panels joined by a hinge fold in the middle. A triangle of timbers props the hinge and stops it dropping.",
+  "ukazka.1-02.a": "One strut",
+  "ukazka.1-02.b": "A strut under every hinge",
+  "ukazka.1-02.popis": "A deck of three panels has two hinges and each needs propping: with a single strut the other one drops. A strut from an anchor in the slope is short, so it costs less than a truss above the deck.",
+  "ukazka.1-03.a": "End diagonals in light timber",
+  "ukazka.1-03.b": "End diagonals in heavy timber",
+  "ukazka.1-03.popis": "The same truss, a different timber at the ends. Both carry the car. Under the van the long light-timber diagonal in compression bows sideways and breaks; the heavy timber holds.",
+  "ukazka.1-04.a": "Light truss across the whole valley",
+  "ukazka.1-04.b": "Strutted frames from the anchors in the slopes",
+  "ukazka.1-04.popis": "Twenty-four metres is too much for a light-timber truss: it breaks under the cars. Strutted frames resting on the anchors in the slopes prop the deck at two points and divide the bridge into three short spans.",
+  "ukazka.2-01.a": "Top chord with no diagonals",
+  "ukazka.2-01.b": "Truss with diagonals",
+  "ukazka.2-01.popis": "Steel carries far more than timber, but the shape still has to hold. A quadrilateral of members joined by hinges skews and the bridge folds; a diagonal turns it into two triangles.",
   "ukazka.2-02.a": "Running at the bridge’s rhythm (3.4 Hz)",
   "ukazka.2-02.b": "Same bridge, slower running (2.5 Hz)",
   "ukazka.2-02.popis":
@@ -705,7 +777,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "ukazka.4-03.a": "Cables to the deck only",
   "ukazka.4-03.b": "With anchor cables to the abutments",
   "ukazka.4-03.popis":
-    "The convoy drives onto the left half of the bridge. The cables carrying it pull the head of the pylon to the left and nothing holds it back: the concrete pylon bends and breaks. Anchor cables run from the pylon head to the abutments at the ends of the bridge and take up that pull.",
+    "The longer span of the bridge pulls the pylon head to the right and nothing holds it: the concrete pylon bends and breaks under the bridge’s own weight alone. Anchor cables run from the pylon head to the abutments at the ends of the bridge and take up that pull.",
   "ukazka.4-04.a": "Cables as laid out in the drawing",
   "ukazka.4-04.b": "After automatic tensioning",
   "ukazka.4-04.popis":
@@ -891,18 +963,18 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "medaile.mistrovska": "Master",
   "medaile.pruchod.podminka": "everyone crosses, no one falls",
   "medaile.pruchod.podminkaSKmitanim": "everyone crosses and the bridge does not vibrate under them above {limit} m/s²",
-  "medaile.mistrovska.komfort": "a pass and deck vibration of at most {limit} m/s²",
-  "medaile.rozpocet.podminka": "a pass with a bridge costing up to {castka}",
-  "medaile.mistrovska.rezerva": "a pass and no member utilised above {limit}",
-  "medaile.mistrovska.cestujici": "a pass and acceleration on the bus of at most {limit} m/s²",
-  "medaile.mistrovska.cestujiciVlaku": "a pass and acceleration in the coach of at most {limit} m/s²",
-  "medaile.mistrovska.dosednuti": "a pass and the bridge landing on the abutment with a force of at most {limit} kN",
-  "medaile.mistrovska.cestujiciObojich": "a pass and acceleration on both the bus and the coach of at most {limit} m/s²",
+  "medaile.mistrovska.komfort": "the Budget medal plus deck vibration of at most {limit} m/s²",
+  "medaile.rozpocet.podminka": "a pass with a bridge costing up to {castka} and nothing breaking on it",
+  "medaile.mistrovska.rezerva": "the Budget medal plus no member utilised above {limit}",
+  "medaile.mistrovska.cestujici": "the Budget medal plus acceleration on the bus of at most {limit} m/s²",
+  "medaile.mistrovska.cestujiciVlaku": "the Budget medal plus acceleration in the coach of at most {limit} m/s²",
+  "medaile.mistrovska.dosednuti": "the Budget medal plus the bridge landing on the abutment with a force of at most {limit} kN",
+  "medaile.mistrovska.cestujiciObojich": "the Budget medal plus acceleration on both the bus and the coach of at most {limit} m/s²",
   "medaile.mistrovska.jina": "the game does not yet measure this level’s bonus",
   "medaile.ziskana": "earned",
   "medaile.chybi": "not yet",
   "vyzvy.nadpis": "Efficiency challenges",
-  "vyzvy.uvod": "For those who want to fine-tune the bridge: three measures with bronze, silver and gold tiers. They count for a bridge that passes the test; the result shows the tiers.",
+  "vyzvy.uvod": "For those who want to fine-tune the bridge: three measures with bronze, silver and gold tiers. They count for a bridge that passes the test with nothing on it failing; the result shows the tiers.",
   "vyzva.cena": "Cheapest bridge",
   "vyzva.hmotnost": "Lightest bridge",
   "vyzva.zlom": "Load capacity per koruna",
@@ -915,6 +987,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vyzva.zlom.zastaralo": "your old record was measured with an older version of the calculation: run To failure again",
   "vyzva.zlom.hodnota": "{tun} t per 100,000 Kč",
   "vyzva.rekord": "record {rekord} (this bridge {tento})",
+  "vyzva.poruseny": "this bridge does not count: something on it failed",
   "vyzva.dalsi.do": "{stupen} at {prah} or less",
   "vyzva.dalsi.od": "{stupen} at {prah} or more",
   "vyzva.lepsiNezAutor": "{podil} better than the game author’s bridge",
@@ -1009,6 +1082,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "kapitola.7.nazev": "Harbour",
   "kapitola.7.tema": "A bridge that moves. The hydraulic cylinder, the span lock, the steel deck, ships and the bridge landing on its abutment.",
   "prehled.zamceno": "Locked: complete level {uroven} first.",
+  "prehled.zamceno.kapitola": "Locked: complete {zbyva} levels of chapter {kapitola} first.",
+  "prehled.zamceno.kapitola.jedna": "Locked: complete one more level of chapter {kapitola} first.",
   "prehled.nejlepsiCena": "cheapest bridge {cena}",
   "prehled.rozpracovano": "in progress",
   "prehled.nezkouseno": "no bridge yet",
@@ -1147,61 +1222,117 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.0-00":
     "A test drawing for debugging the game: a valley with water, a no-build zone and a footing for a pier. It is not part of the campaign and no traffic runs on it.",
   "zadani.1-01":
-    "Three pedestrians need to cross the brook. The deck, made of two panels, has a hinge in the middle and cannot even hold itself up: prop its centre with a triangle of timbers. The triangle is the only shape made of members that holds without rigid connections.",
+    "Two parties, thirty-six people, cross the brook from opposite sides and meet in the middle of the footbridge. The deck, made of two panels, has a hinge in the middle and cannot even hold itself up: prop its centre with a triangle of timbers.",
+  "zadani.1-01.vice":
+    "The triangle is the only shape made of members that holds without rigid connections. The flatter it is, the harder its members work; a member in tension withstands more than an equally long one in compression.",
   "zadani.1-02":
-    "Twelve metres for cyclists and pedestrians in both directions. There are two extra anchors in the slopes below the bridge: a strut from an anchor is shorter and cheaper than a truss above the deck.",
+    "Twelve metres of cycle path on a Sunday afternoon: sixty pedestrians in both directions and five cyclists among them. There are two extra anchors in the slopes below the bridge: rest struts on them.",
+  "zadani.1-02.vice":
+    "A strut from an anchor is shorter and cheaper than a truss above the deck. Where it leads matters too: a short strut carries more than a long one.",
   "zadani.1-03":
-    "The first car: a tonne and a half on sixteen metres, plus a pedestrian and a cyclist. Light timbers are no longer enough for everything. A higher truss has smaller forces in its chords; a heavy timber carries more but costs twice as much.",
+    "Sixteen metres: first a pedestrian and a cyclist, then the first car, a tonne and a half, and finally a van, three and a half tonnes. Light timbers are no longer enough for everything; nothing may be built below the deck.",
+  "zadani.1-03.vice":
+    "The spring flood reaches right up under the deck, so you build only above it. A long timber in compression bows sideways under the van: a higher truss has smaller forces in its chords; a heavy timber carries more but costs more than twice as much.",
   "zadani.1-04":
-    "Twenty-four metres without a single support in the middle, two cars one behind the other. The anchors in the slopes lie six metres below the deck. Rest strutted frames on them, or build a truss across the whole valley.",
+    "Twenty-four metres without a single support in the middle: two cars one behind the other, a van coming the other way and two cyclists. The anchors in the slopes lie six metres below the deck: rest strutted frames on them.",
+  "zadani.1-04.vice":
+    "Or build a truss across the whole valley. The six-metre post above an anchor is long and in compression; under the van it is at its limit. A heavy timber helps it, and so does a brace at mid-height that shortens it.",
   "zadani.2-01":
-    "The first steel footbridge: twenty-four metres for pedestrians and one runner. A steel section carries far more than timber and may be up to twelve metres long. New at the bottom is the frequency axis: it shows the frequency at which the bridge vibrates and the rhythm at which people cross it. Here the two are far apart; watch how the frequency changes with the height of the truss. You can try out the vibration with the Pluck tool.",
+    "The first steel footbridge: twenty-four metres for pedestrians and one runner. Build it from steel section and keep an eye on the new frequency axis at the bottom.",
+  "zadani.2-01.vice":
+    "A steel section carries far more than timber and may be up to twelve metres long. The frequency axis shows the frequency at which the bridge vibrates and the rhythm at which people cross it. Here the two are far apart; watch how the frequency changes with the height of the truss. You can try out the vibration with the Pluck tool.",
   "zadani.2-02":
-    "Four runners jogging in the same rhythm, three footfalls per second. A bridge that vibrates just as fast, or exactly twice as fast, they will set swinging so much that it cannot be walked on. More steel will not help; a different frequency will: adjust the height of the truss so that the natural frequency on the axis falls between the runners’ step and twice that step, or well above both.",
+    "Four runners jogging in the same rhythm, three footfalls per second. A bridge that vibrates just as fast, or exactly twice as fast, they will set swinging so much that it cannot be walked on.",
+  "zadani.2-02.vice":
+    "More steel will not help; a different frequency will: adjust the height of the truss so that the natural frequency on the axis falls between the runners’ step and twice that step, or well above both.",
   "zadani.2-03":
-    "A guard of honour, twenty-four people at a quick march. A power line runs above the deck and there is a navigation clearance below it, so a higher truss cannot be built and a low one vibrates almost in time with the march. If the bridge cannot be stiffened, it can be slowed down: hang weights at the deck joints (select a joint and add kilograms in the palette on the left). A heavier bridge vibrates more slowly.",
+    "A guard of honour, twenty-four people at a quick march. A higher truss cannot be built here and a low one vibrates almost in time with the march: if the bridge cannot be stiffened, it can be slowed down with weights.",
+  "zadani.2-03.vice":
+    "A power line runs above the deck and there is a navigation clearance below it. Hang the weights at the deck joints: select a joint and add kilograms in the palette on the left. A heavier bridge vibrates more slowly.",
   "zadani.3-01":
-    "A district road, twenty-four metres, two lanes. A van, two cars and a service bus will cross. You build in steel and the deck is steel-concrete: it can carry even a lorry, but it weighs over four tonnes per metre itself. The whole deck comes to a hundred tonnes, the bus to eighteen. Here the bridge mainly carries itself, and a low truss will break before anything drives onto it. A lane runs under the bridge, so you can build only above the deck.",
+    "A district road, twenty-four metres: a van, two cars and a service bus will cross. The steel-concrete deck weighs a hundred tonnes by itself, so here the bridge mainly carries itself.",
+  "zadani.3-01.vice":
+    "You build in steel. The deck can carry even a lorry, but it weighs over four tonnes per metre; the bus comes to eighteen tonnes. A low truss will break before anything drives onto it. A lane runs under the bridge, so you can build only above the deck.",
   "zadani.3-02":
-    "Thirty-six metres and a high-voltage power line above the road: you cannot build higher than three metres, and there is an underpass beneath the bridge. Two lorries one behind the other, a bus and a van will cross. The top chord of a low truss is in heavy compression, and a long compression member does not crush but bows sideways: that is called buckling. The light section is not enough here. The heavy steel section costs twice as much and withstands ten times more in buckling. Put it where the compression is and economise elsewhere.",
+    "Thirty-six metres for two lorries, a bus and a van; you cannot build higher than three metres. The top chord of a low truss is in heavy compression and the light section will buckle in it.",
+  "zadani.3-02.vice":
+    "A high-voltage power line runs above the road and there is an underpass beneath the bridge. A long compression member does not crush but bows sideways: that is called buckling. The heavy steel section costs twice as much and withstands ten times more in buckling. Put it where the compression is and economise elsewhere.",
   "zadani.3-03":
-    "Thirty metres across a deep ravine, buses in both directions and two cars. This time there is plenty of room under the bridge. Try building the truss below the deck: the compression is then carried by the concrete deck, which is good at it, and the steel below only pulls. The road surface is new and smooth, so the bus passengers will feel only how the bridge deflects beneath them. The Master medal asks for a ride with almost no bouncing; for that the bridge must be stiff.",
+    "Thirty metres across a deep ravine, buses in both directions and two cars. This time there is plenty of room under the bridge: try building the truss below the deck.",
+  "zadani.3-03.vice":
+    "The compression is then carried by the concrete deck, which is good at it, and the steel below only pulls. The road surface is new and smooth, so the bus passengers will feel only how the bridge deflects beneath them. The Master medal asks for a ride with almost no bouncing; for that the bridge must be stiff.",
   "zadani.3-04":
-    "Forty-eight metres in two spans. Both ends of the bridge rest on sliding bearings; the only fixed point is on the rock in the middle of the valley. A convoy of four lorries arrives, brakes on the bridge, stands for three seconds and sets off again; a bus comes the other way. Braking wheels push the roadway forwards with half their weight, over fifty tonnes in all, and the bridge must carry that force into the rock. The pier’s legs are long and in compression: watch out for buckling.",
+    "Forty-eight metres in two spans; a convoy of four lorries brakes on the bridge and a bus comes the other way. The braking force, over fifty tonnes, has to get from the bridge into the rock in the middle of the valley.",
+  "zadani.3-04.vice":
+    "Both ends of the bridge rest on sliding bearings; the only fixed point is on the rock. The convoy stands for three seconds and sets off again. Braking wheels push the roadway forwards with half their weight. The pier’s legs are long and in compression: watch out for buckling.",
   "zadani.4-01":
-    "Fifty-four metres across a river. Two articulated lorries will cross, with a lorry and two cars coming the other way. It is too much for a single span: the forces in a truss grow with the square of the span, and one that big would not fit the budget. But there are two footings in the river. Build concrete piers on them; they divide the bridge into three eighteen-metre spans, and a light truss can carry each. A pier may stand only on a footing or on another pier. It takes compression superbly and bending poorly.",
+    "Fifty-four metres across a river for two articulated lorries, a lorry and two cars. It is too much for a single span, but there are two footings in the river: build piers on them.",
+  "zadani.4-01.vice":
+    "The forces in a truss grow with the square of the span, and one that big would not fit the budget. Concrete piers divide the bridge into three eighteen-metre spans, and a light truss can carry each. A pier may stand only on a footing or on another pier. It takes compression superbly and bending poorly.",
   "zadani.4-02":
-    "Forty-eight metres, three footings, and nothing may be built above the roadway. A deck laid on piers will fold between them, because its panels are joined by hinges. New here is the weld: click Weld in the palette and then a joint. A welded joint does not bend; the members at it transfer bending and the deck becomes a continuous beam that needs no truss. Overloaded steel at a weld does not crack at once but bends permanently; during the test such a spot is marked by a ring, a plastic hinge. A convoy of three lorries, a bus and an articulated lorry will cross.",
+    "Forty-eight metres, three footings, and nothing may be built above the roadway; a convoy of three lorries, a bus and an articulated lorry will cross. A deck laid on piers will fold at its hinges: new here, you can weld it.",
+  "zadani.4-02.vice":
+    "Click Weld in the palette and then a joint. A welded joint does not bend; the members at it transfer bending and the deck becomes a continuous beam that needs no truss. Overloaded steel at a weld does not crack at once but bends permanently; during the test such a spot is marked by a ring, a plastic hinge.",
   "zadani.4-03":
-    "Sixty metres and a single footing in the middle of the valley. Build a tall pier on it, a pylon, and run cables from its head to the deck joints: that is what a cable-stayed bridge looks like. A cable can only pull and may be up to sixty metres long. Do not forget the cables to the abutments at both ends; they hold the pylon head when the convoy loads only half the bridge. The Tension cables button (N) sets the turnbuckles so that the deck stays level under its own weight; fine-tune individual cables with the Cable turnbuckle item. On the frequency axis you will see that slack cables hang and the bridge is soft, whereas tightened ones stiffen it. A convoy of four lorries, a bus and an articulated lorry will cross.",
+    "Sixty metres and a single footing, closer to the left bank; a convoy of four lorries, a bus and an articulated lorry will cross. Build a pylon on the footing, run cables from its head to the deck joints and tension them (N).",
+  "zadani.4-03.vice":
+    "That is what a cable-stayed bridge looks like. A cable can only pull and may be up to sixty metres long. The longer span pulls the pylon head towards itself, and only the anchor cable to the left abutment holds it: left slack, it first has to stretch, the pylon bends in the meantime and breaks under the convoy. The Tension cables button (N) sets the turnbuckles so that the deck stays level under its own weight; fine-tune individual cables with the Cable turnbuckle item. On the frequency axis you will see that slack cables hang and the bridge is soft, whereas tightened ones stiffen it.",
   "zadani.4-04":
-    "Seventy-two metres across a ravine where there is nowhere to put a pier. A low-loader carrying a hundred and twenty tonnes will cross at walking pace, followed by two lorries. Build a suspension bridge: two pylons on the footings on the banks, a main cable over their heads sagging in a curve, and vertical hangers from it to the deck joints. Behind the pylons, fix the main cable to the anchors in the ground. The main cable is four times stronger than an ordinary one, which would snap here. Under the weight of the deck it settles into a curve by itself and the hangers must match it in length: without tensioning (N) the deck will sag by tens of centimetres.",
+    "Seventy-two metres across a ravine where there is nowhere to put a pier; a low-loader carrying a hundred and twenty tonnes will cross, followed by two lorries. Build a suspension bridge: two pylons, a main cable over their heads and hangers from it to the deck.",
+  "zadani.4-04.vice":
+    "The pylons stand on the footings on the banks; between them the main cable sags in a curve, and behind the pylons you fix it to the anchors in the ground. The hangers run vertically to the deck joints. The main cable is four times stronger than an ordinary one, which would snap here. Under the weight of the deck it settles into a curve by itself and the hangers must match it in length: without tensioning (N) the deck will sag by tens of centimetres.",
   "zadani.5-01":
-    "A footbridge on the embankment, forty-eight metres, and a crowd on it: a hundred and twenty people, each at their own pace of around 1.7 Hz. No one is marching, so they will not set the bridge swinging as much as a column would, but together they weigh almost ten tonnes and with them the bridge vibrates differently from when it is empty: people are not dead weight, their bodies are springy. So on the frequency axis watch the second triangle too, the bridge with people, and the vibration estimate next to the axis. The promenade should be calm: vibration must not exceed 0.5 m/s². The Analysis button at the bottom opens the resonance curve, which shows how strongly the bridge responds to each rhythm.",
+    "A footbridge on the embankment, forty-eight metres, and a crowd on it: a hundred and twenty people, each at their own pace of around 1.7 Hz. The promenade should be calm: vibration must not exceed 0.5 m/s².",
+  "zadani.5-01.vice":
+    "No one is marching, so they will not set the bridge swinging as much as a column would, but together they weigh almost ten tonnes and with them the bridge vibrates differently from when it is empty: people are not dead weight, their bodies are springy. So on the frequency axis watch the second triangle too, the bridge with people, and the vibration estimate next to the axis. The Analysis button at the bottom opens the resonance curve, which shows how strongly the bridge responds to each rhythm.",
   "zadani.5-02":
-    "A city run: forty runners, each at their own pace of around 2.6 footfalls per second. An overhead line runs above the footbridge, you cannot build higher than a metre, and a bridge that low vibrates right at their rhythm. New here is the tuned mass damper: select a deck joint and press L to hang a weight on a spring beneath it. Tune it to the runners’ rhythm: a damper helps most at the frequency it is tuned to. In the analysis panel you will see the peak of the resonance curve split into two lower ones. With the shaker (U) you can set the bridge vibrating yourself and find the resonance by experiment.",
+    "A city run: forty runners, each at their own pace of around 2.6 footfalls per second. You cannot build higher than a metre, and a bridge that low vibrates right at their rhythm: new here is the tuned mass damper.",
+  "zadani.5-02.vice":
+    "An overhead line runs above the footbridge. Select a deck joint and press L to hang a weight on a spring beneath it. Tune it to the runners’ rhythm: a damper helps most at the frequency it is tuned to. In the analysis panel you will see the peak of the resonance curve split into two lower ones. With the shaker (U) you can set the bridge vibrating yourself and find the resonance by experiment.",
   "zadani.5-03":
-    "A festive parade: a band in front, sixteen people marching in time at 2.0 Hz, followed by a crowd walking freely. The empty bridge vibrates a little faster than the band, but people slow it down and the band hits it. So do not tune the tuned mass damper to the empty bridge but to the band’s beat. Even a roughly tuned one will manage a Pass; you get the Master medal only for one tuned precisely.",
+    "A festive parade: a band in front, sixteen people marching in time at 2.0 Hz, followed by a crowd walking freely. Do not tune the tuned mass damper to the empty bridge but to the band’s beat.",
+  "zadani.5-03.vice":
+    "The empty bridge vibrates a little faster than the band, but people slow it down and the band hits it. Even a roughly tuned damper will manage a Pass; you get the Master medal only for one tuned precisely.",
   "zadani.5-04":
-    "A concert on the bridge: thirty people walk to the middle and jump for eight seconds at a rhythm of 2.2 Hz. The landings are short and hard, so they also excite the bridge at twice and three times the rhythm, that is at 4.4 and 6.6 Hz. You cannot build higher than two metres. Find which of those three rhythms hits your bridge and tune the damper to it. A deck of long panels will start rattling under the landings all by itself; build it from short ones.",
+    "A concert on the bridge: thirty people walk to the middle and jump for eight seconds at a rhythm of 2.2 Hz. The landings also excite the bridge at twice and three times the rhythm: find which of them hits your bridge and tune the damper to it.",
+  "zadani.5-04.vice":
+    "The landings are short and hard, which is why they also act at 4.4 and 6.6 Hz. You cannot build higher than two metres. A deck of long panels will start rattling under the landings all by itself; build it from short ones.",
   "zadani.6-01":
-    "Thirty metres across a river and, for the first time, rails. The track deck is a track on two steel stringers: it is new in the palette and each of its panels is at most six metres long. A locomotive and three loaded wagons will cross, 358 tonnes in all. The train is longer than the bridge and loads the whole of it at once, with six tonnes on every metre; the lorry from the district road weighed barely three per metre. There is a navigation channel under the bridge, so you build only above the track. The track is welded, with no rail joints, so the train runs smoothly and the bridge mainly carries its weight.",
+    "Thirty metres across a river and, for the first time, rails: a locomotive and three loaded wagons will cross, 358 tonnes in all. The train is longer than the bridge and loads the whole of it at once, with six tonnes on every metre.",
+  "zadani.6-01.vice":
+    "The track deck is a track on two steel stringers: it is new in the palette and each of its panels is at most six metres long. The lorry from the district road weighed barely three tonnes per metre. There is a navigation channel under the bridge, so you build only above the track. The track is welded, with no rail joints, so the train runs smoothly and the bridge mainly carries its weight.",
   "zadani.6-02":
-    "Thirty-six metres and an express: a locomotive and four coaches at 100 km/h, on track with rail joints where the wheels clatter. An overhead line runs above the track, so the truss has to go under the bridge; the valley is deep enough. Carrying a passenger train is not hard: a coach weighs half as much as a loaded wagon. What matters is stiffness. The bridge deflects under every coach, the coach body on its soft springs starts bouncing on that, and the passengers feel it. The deeper the truss, the smaller the deflection. The Master medal asks for a ride on which the coffee does not spill.",
+    "Thirty-six metres and an express: a locomotive and four coaches at 100 km/h on track with rail joints. Carrying it is not hard; what matters is stiffness, so that the coaches do not start bouncing on the bridge.",
+  "zadani.6-02.vice":
+    "An overhead line runs above the track, so the truss has to go under the bridge; the valley is deep enough. A coach weighs half as much as a loaded wagon. The bridge deflects under every coach, the coach body on its soft springs starts bouncing on that, and the passengers feel it. The deeper the truss, the smaller the deflection. The Master medal asks for a ride on which the coffee does not spill.",
   "zadani.6-03":
-    "A viaduct, seventy-two metres, with two footings in the valley eighteen metres below the track. A coal train will cross: a locomotive and ten loaded wagons, almost a thousand tonnes and a hundred and sixty metres. It makes an emergency stop on the bridge, stands for three seconds and sets off again. A braking train pushes the bridge forwards with a quarter of the weight of the wagons that are on it at that moment. Both ends of the bridge rest on sliding bearings, so the piers have to carry that force away, and a tall pier pushed horizontally at the top bends like a rod stuck in the ground. Each span between the piers needs its own truss to carry it. Then help the pier not to bend: weld its head to the track deck, or run diagonal struts from halfway up the pier to the track deck. The struts are long and in compression; in light section they will buckle.",
+    "A viaduct, seventy-two metres, with two footings in the valley: a coal train of almost a thousand tonnes will cross and make an emergency stop on the bridge. The tall piers have to carry the braking force away, and it bends them.",
+  "zadani.6-03.vice":
+    "The footings lie eighteen metres below the track. The train has a locomotive and ten loaded wagons and is a hundred and sixty metres long; it stands for three seconds and sets off again. A braking train pushes the bridge forwards with a quarter of the weight of the wagons that are on it at that moment. Both ends of the bridge rest on sliding bearings, and a tall pier pushed horizontally at the top bends like a rod stuck in the ground. Each span between the piers needs its own truss to carry it. Then help the pier not to bend: weld its head to the track deck, or run diagonal struts from halfway up the pier to the track deck. The struts are long and in compression; in light section they will buckle.",
   "zadani.6-04":
-    "Forty-eight metres and two decks: below, a railway from tunnel to tunnel; nine metres above it, a road. A locomotive with four loaded wagons will run on the rails, and two lorries and a bus on the road. Lay each deck on its own grade line: the track deck belongs on the track, the steel-concrete deck on the road. A train will not run on a road deck, nor a car on sleepers. Two decks one above the other are like the chords of one tall truss. You only need to connect them, but beware: the verticals at the supports are in compression and nine metres long; in light section they will buckle.",
+    "Forty-eight metres and two decks: a railway below and a road nine metres above it. A locomotive with four loaded wagons will run on the rails, two lorries and a bus on the road; each deck belongs on its own grade line.",
+  "zadani.6-04.vice":
+    "The railway runs from tunnel to tunnel. The track deck belongs on the track, the steel-concrete deck on the road: a train will not run on a road deck, nor a car on sleepers. Two decks one above the other are like the chords of one tall truss. You only need to connect them, but beware: the verticals at the supports are in compression and nine metres long; in light section they will buckle.",
   "zadani.7-01":
-    "A canal twelve metres wide, with ships on it. The bridge has to rise: in the fifth second the lock unlocks and the cylinder starts raising the leaf; a ship eight metres tall arrives in the twelfth. The leaf rotates about a pivot in the left abutment; run the cylinder from the anchor in the wall below the pivot to one of the deck joints and set its stroke. Put a lock on the right abutment, otherwise the bearing holds the leaf in place. Weld the deck so that the leaf is all one piece. The steel deck is new too: it is almost three times lighter than the steel-concrete one, and whatever is lifted should be light. The Master medal wants the leaf to land softly on the abutment when lowering: a cylinder from a deeper anchor will help.",
+    "A canal twelve metres wide, with ships on it: the bridge has to rise before a ship eight metres tall arrives in the twelfth second. The leaf rotates about a pivot in the left abutment and a cylinder raises it.",
+  "zadani.7-01.vice":
+    "In the fifth second the lock unlocks and the cylinder starts raising the leaf. Run the cylinder from the anchor in the wall below the pivot to one of the deck joints and set its stroke. Put a lock on the right abutment, otherwise the bearing holds the leaf in place. Weld the deck so that the leaf is all one piece. The steel deck is new too: it is almost three times lighter than the steel-concrete one, and whatever is lifted should be light. The Master medal wants the leaf to land softly on the abutment when lowering: a cylinder from a deeper anchor will help.",
   "zadani.7-02":
-    "Twenty-four metres and a pivot in each abutment: the bridge will be two leaves facing each other. Each has its own pivot and a cylinder from the anchor in the wall; they meet in the middle at a lock. Locked, the lock joins them into one bridge; unlocked, it lets them part. Build one leaf, put a lock on its end and mirror it to make the other. Mind what the bridge carries when it is closed: there is no abutment in the middle, and the bus there is held up only by the leaves resting on the cylinders.",
+    "Twenty-four metres and a pivot in each abutment: the bridge will be two leaves facing each other, meeting in the middle at a lock. Build one leaf, put a lock on its end and mirror it to make the other.",
+  "zadani.7-02.vice":
+    "Each leaf has its own pivot and a cylinder from the anchor in the wall. Locked, the lock joins them into one bridge; unlocked, it lets them part. Mind what the bridge carries when it is closed: there is no abutment in the middle, and the bus there is held up only by the leaves resting on the cylinders.",
   "zadani.7-03":
-    "Sixteen metres in a single leaf. There are two anchors in the wall: three and six metres below the pivot. A cylinder from the shallow anchor has a short lever arm to the pivot: it lifts quickly, but it is at the edge of its force and the end of the leaf flies towards the abutment faster. A cylinder from the deep anchor lifts steadily and the leaf lands more softly; it just needs a larger stroke to raise the leaf to the same height. The Master medal asks for a soft landing.",
+    "Sixteen metres in a single leaf, and two anchors for the cylinder in the wall: three and six metres below the pivot. The Master medal asks for a soft landing; pick the anchor from which the cylinder lowers the leaf steadily.",
+  "zadani.7-03.vice":
+    "A cylinder from the shallow anchor has a short lever arm to the pivot: it lifts quickly, but it is at the edge of its force and the end of the leaf flies towards the abutment faster. A cylinder from the deep anchor lifts steadily and the leaf lands more softly; it just needs a larger stroke to raise the leaf to the same height.",
   "zadani.7-04":
-    "The great harbour: thirty-two metres, two sixteen-metre leaves and a heavier roadway. The ship is eleven metres tall and the leaf must stay up until it has passed. A raised leaf is held only by the cylinder, and the shorter its lever arm to the pivot, the greater the force it needs: a cylinder from the shallow anchor close to the pivot cannot hold it, the relief valve opens and the leaf drops into the ship’s path. A cylinder from the deep anchor, or one attached further from the pivot, has a longer arm. A long leaf also bends a lot: a triangle above its root, holding the end of the leaf with a tie, will help.",
+    "The great harbour: thirty-two metres, two sixteen-metre leaves and a heavier roadway. The ship is eleven metres tall and the leaf must stay up until it has passed: only the cylinder holds it.",
+  "zadani.7-04.vice":
+    "The shorter the cylinder’s lever arm to the pivot, the greater the force it needs to hold the leaf: a cylinder from the shallow anchor close to the pivot cannot hold it, the relief valve opens and the leaf drops into the ship’s path. A cylinder from the deep anchor, or one attached further from the pivot, has a longer arm. A long leaf also bends a lot: a triangle above its root, holding the end of the leaf with a tie, will help.",
   "zadani.2-04":
-    "A march-past: the column crosses three times, at a slow, a normal and a quick march. Each rhythm sets a bridge of a different height swinging. Either find a height that avoids all three, or build a bridge that does not mind resonance: put viscous dampers between the deck and the anchors in the slopes. A damper carries no weight; it only brakes movement. Once you select it, set its strength in the palette.",
+    "A march-past: the column crosses three times, at a slow, a normal and a quick march, and each rhythm sets a bridge of a different height swinging. Either find a height that avoids all three, or damp the bridge.",
+  "zadani.2-04.vice":
+    "A bridge that does not mind resonance has viscous dampers between the deck and the anchors in the slopes. A damper carries no weight; it only brakes movement. Once you select it, set its strength in the palette.",
 };
 
 /** Anglické názvy úrovní podle id; české jsou v souborech úrovní. */

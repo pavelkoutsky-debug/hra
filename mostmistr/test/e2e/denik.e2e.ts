@@ -465,7 +465,7 @@ describe("stránka správce", () => {
     // Nápovědu si hráč neotevřel a do zlomu nezkoušel.
     expect(bunky[9]).toBe("0 / 0");
     expect(bunky[10]).toBe("0 / 0");
-    expect(bunky[11]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 33 500 Kč");
+    expect(bunky[11]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 32 500 Kč");
     // (Čtvrtý trám hráč nakreslil s vypnutým záznamem, takže o něm deník neví.)
     expect(bunky[12]).toBe("drevo-lehke 3×, mostovka-drevo 2×");
     // Souhrn za delší období: sčítá dny, ze kterých deník je.

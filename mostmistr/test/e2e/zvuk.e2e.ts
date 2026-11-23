@@ -154,9 +154,11 @@ describe("zvuk ve hře", () => {
   });
 
   it("stavění mostu je potichu; zvuk vznikne až se spuštěním zkoušky", async () => {
-    await otevriUroven("1-03");
+    // Samotná mostovka přes hluboké údolí: složí se hned a obě auta, která vyjíždějí v čase 0,
+    // do ní vjedou (v 1-03 jede první auto až ve 12,5 s, dlouho po výsledku).
+    await otevriUroven("1-04");
     await zavriZadani();
-    await nactiMost(navrhNaText(RESENI["1-03"]!.pady[0]!.navrh));
+    await nactiMost(navrhNaText(RESENI["1-04"]!.pady.find((p) => p.nazev === "jen mostovka")!.navrh));
     expect(await spion()).toEqual({ __kontextu: 0, __startu: 0 });
     await stranka.screenshot({ path: `${SLOZKA}/60-zvuk-v-liste.png` });
   });
@@ -174,6 +176,10 @@ describe("zvuk ve hře", () => {
   });
 
   it("skok po časové ose a krokování zpět jsou potichu", async () => {
+    // Po výsledku přehrávání běží dál a hraje (auta dojíždějí k propadlé mostovce). Skoky se
+    // zkoušejí na zastaveném záznamu, ať se do počtů nepřimíchá zvuk z běžícího děje.
+    if ((await akce("prehrat").innerText()).includes("Pozastavit")) await akce("prehrat").click();
+    expect(await akce("prehrat").innerText()).toContain("Přehrát");
     const pred = await spion();
     const zlomu = await zaznelo("zlom");
     await stranka.locator("#cas").evaluate((tahlo) => {
@@ -320,8 +326,13 @@ describe("stránka se zvuky", () => {
     expect(mereni.zriceni!.nejhlasitejsiSekunda).toBeGreaterThan(2 * mereni.pochod!.nejhlasitejsiSekunda);
     expect(mereni.auto!.nejhlasitejsiSekunda).toBeGreaterThan(mereni.chodci!.nejhlasitejsiSekunda);
     expect(mereni.pochod!.rms).toBeGreaterThan(mereni.chodci!.rms);
-    // Při přehrávání obvyklou rychlostí se skoro žádný zvuk nevynechá.
-    expect(mereni.chodci!.vynechano + mereni.auto!.vynechano + mereni.pochod!.vynechano).toBeLessThan(5);
+    // Při přehrávání obvyklou rychlostí se u řídkého provozu skoro žádný zvuk nevynechá (v 1-03
+    // jede dodávka těsně za autem: pár spár a drncnutí padne do stejných setin sekundy).
+    expect(mereni.auto!.vynechano + mereni.pochod!.vynechano).toBeLessThan(8);
+    // Šestatřicet lidí na osmi metrech lávky šlape přes sebe: kroky do dvou setin sekundy po
+    // jiném kroku by splynuly a syntezátor je vynechává záměrně. Většina kroků ale zazní.
+    expect(mereni.chodci!.zahrano).toBeGreaterThan(150);
+    expect(mereni.chodci!.vynechano / (mereni.chodci!.zahrano + mereni.chodci!.vynechano)).toBeLessThan(0.35);
   }, 180_000);
 
   it("ze zkušebny na stránku vede odkaz", async () => {

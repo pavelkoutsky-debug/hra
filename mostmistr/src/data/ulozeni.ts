@@ -33,7 +33,7 @@ const PREVODY_ULOZENI: readonly Prevod[] = [
   },
 ];
 
-/** Tři nezávislé medaile úrovně (koncepce, kap. 4). */
+/** Tři medaile úrovně, každá vyšší stojí na nižší: průchod, rozpočtová, mistrovská (koncepce, kap. 4). */
 export interface Medaile {
   pruchod: boolean;
   rozpocet: boolean;
@@ -134,6 +134,7 @@ export function vylepsiRekord(
   cena: number,
   verzeFyziky: number,
   hmotnost?: number,
+  celistvy = true,
 ): Rekord {
   const stare = dosavadni?.medaile ?? BEZ_MEDAILI;
   const nove: Medaile = {
@@ -142,10 +143,13 @@ export function vylepsiRekord(
     mistrovska: stare.mistrovska || ziskane.mistrovska,
   };
   const dosavadniCena = dosavadni?.nejlepsiCena ?? null;
-  const nejlepsiCena = ziskane.pruchod && (dosavadniCena === null || cena < dosavadniCena) ? cena : dosavadniCena;
+  // Do výzev o nejlevnější a nejlehčí most se počítá jen most, na kterém se při zkoušce nic
+  // neporušilo (`celistvy`): most, kterému povolil prut a lidé přesto přešli, levný není.
+  const plati = ziskane.pruchod && celistvy;
+  const nejlepsiCena = plati && (dosavadniCena === null || cena < dosavadniCena) ? cena : dosavadniCena;
   const dosavadniHmotnost = dosavadni?.nejlepsiHmotnost ?? null;
   const nejlepsiHmotnost =
-    ziskane.pruchod && hmotnost !== undefined && hmotnost > 0 && (dosavadniHmotnost === null || hmotnost < dosavadniHmotnost)
+    plati && hmotnost !== undefined && hmotnost > 0 && (dosavadniHmotnost === null || hmotnost < dosavadniHmotnost)
       ? hmotnost
       : dosavadniHmotnost;
   const zmena =

@@ -835,6 +835,105 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
   color: var(--cara-silna);
 }
 
+.paleta__odkazy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+/* Pojem ze slovníčku v textu: vypadá jako text, tečkované podtržení říká, že jde rozkliknout. */
+.pojem {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.pojem:hover,
+.pojem:focus-visible {
+  color: var(--cara-silna);
+  text-decoration-style: solid;
+}
+
+.pojem-bublina {
+  position: fixed;
+  inset: auto;
+  width: min(340px, calc(100vw - 16px));
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--cara);
+  background: #0b2f5e;
+  color: var(--cara);
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.45);
+}
+
+.pojem-bublina span {
+  white-space: pre-line;
+}
+
+/* Otazník u osy frekvencí: legenda značek pro ty, kdo nemají myš (a pro všechny ostatní). */
+.osa__otaznik {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--popisek);
+  border-radius: 50%;
+  background: none;
+  color: var(--popisek);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: help;
+}
+
+.osa__otaznik:hover,
+.osa__otaznik:focus-visible {
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.pojem-bublina strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--cara-silna);
+}
+
+.okno--pojmy {
+  width: min(640px, calc(100vw - 24px));
+}
+
+.pojmy {
+  margin: 0 0 14px;
+}
+
+.pojmy dt {
+  margin-top: 10px;
+  color: var(--cara-silna);
+  font-weight: bold;
+}
+
+.pojmy dt.pojmy__vybrany {
+  color: var(--varovani);
+}
+
+.pojmy dd {
+  margin: 2px 0 0;
+  color: var(--cara);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 /* Nástroje ve dvou sloupcích: krátké popisky, ať se vejdou vedle sebe. */
 .paleta__nastroje {
   flex-shrink: 0;
@@ -1871,6 +1970,40 @@ body[data-rezim="stavba"] .uroven .legenda {
   text-transform: uppercase;
 }
 
+/* Sbalené části zadání: nadpis vypadá jako ostatní nadpisy okna a dá se rozkliknout. */
+.okno__vice {
+  margin: 0 0 12px;
+}
+
+.okno__vice > summary {
+  margin: 0 0 6px;
+  padding: 4px 0;
+  color: var(--popisek);
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.okno__vice > summary:hover,
+.okno__vice > summary:focus-visible {
+  color: var(--cara-silna);
+}
+
+.okno__vice[open] > summary {
+  color: var(--cara);
+}
+
+.okno__souhrn {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.okno p.okno__zadani--vice {
+  color: var(--cara);
+  font-size: 13px;
+}
+
 /* Nápověda po krocích: volba mostu (průchod, medaile), skica principu, soupis, obrys. */
 .napoveda__mosty {
   display: flex;
@@ -2519,6 +2652,21 @@ body[data-rezim="stavba"] .uroven .legenda {
 }
 
 /*
+ * Při zkoušce je na liště přehrávání tolik tlačítek, že táhlu času zbývalo při šířce 1280 px
+ * kolem 80 px a značky dějů na něm splývaly. V užším okně proto táhlo dostane vlastní řádek.
+ */
+@media (max-width: 1400px) {
+  body[data-rezim="zkouska"] .uroven .osa {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  body[data-rezim="zkouska"] .uroven .osa__drah {
+    flex: 1 1 420px;
+  }
+}
+
+/*
  * Do 1500 px šířky se na obrazovce úrovně nevejde název hry i celý název úrovně: zůstane
  * název úrovně, do přehledu vede tlačítko Kampaň.
  */
@@ -2806,6 +2954,17 @@ body[data-rezim="stavba"] .uroven .legenda {
   .legenda__prepinac {
     min-height: 32px;
     padding-inline: 8px;
+  }
+
+  /* Otazník osy frekvencí a pojmy v textu: dost velké na prst. */
+  .osa__otaznik {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+  }
+
+  .pojem {
+    padding-block: 4px;
   }
 
   /* Táhlo času: vyšší pruh, ať se dá chytit. */

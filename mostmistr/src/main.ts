@@ -8,12 +8,14 @@ import { spustPrehled } from "./hra/prehled";
 import { skladProhlizece, Uloziste } from "./hra/uloziste";
 import { spustUroven } from "./hra/uroven";
 import { doplnTexty } from "./ui/dom";
+import { pripojPojmy } from "./ui/pojmy";
 import { prepnutyJazyk, pripravJazyk } from "./ui/jazyk";
 import { t } from "./ui/slovnik";
 
 // Jazyk musí být známý dřív, než se do stránky doplní první text.
 pripravJazyk();
 doplnTexty();
+pripojPojmy();
 try {
   const uloziste = new Uloziste(skladProhlizece());
   const kampan = nactiKampan();

@@ -160,7 +160,25 @@ describe("osa frekvencí", () => {
     expect(await osa().getAttribute("data-stav")).toBe("klid");
     expect(Number(await osa().getAttribute("data-odhad"))).toBeLessThan(1);
     expect(bezMezer(await udaj("frekvence-popis"))).toMatch(/^odhad kmitání 0,\d\d m\/s² \(mez 2,5\): nejvíc běžci v taktu, (dvojnásobek kroku|krok) 3,0 Hz$/);
-    // První vlastní frekvence leží za koncem osy: šipka u pravého okraje.
+    // Most pro mistrovskou má první vlastní frekvenci 4,6 Hz, na ose: šipka u okraje není.
+    expect(await osa().locator(".frekvence__mimo").count()).toBe(0);
+
+    // Vysoká příhrada s krátkými poli (tři metry nad mostovkou, pole po dvou metrech) je tak
+    // tuhá, že její první vlastní frekvence leží za koncem osy: zastupuje ji šipka u pravého okraje.
+    const k = new Kreslic("2-02");
+    const O = "ocel-lehka" as const;
+    for (let x = 0; x < 28; x += 2) k.prut("mostovka-drevo", [x, 0], [x + 2, 0]);
+    const horni = Array.from({ length: 13 }, (_, i) => [2 * (i + 1), 3] as [number, number]);
+    k.prut(O, [0, 0], horni[0]!);
+    k.prut(O, horni.at(-1)!, [28, 0]);
+    for (let i = 0; i + 1 < horni.length; i++) k.prut(O, horni[i]!, horni[i + 1]!);
+    for (const [x, y] of horni) k.prut(O, [x, 0], [x, y]);
+    for (let i = 0; i + 1 < horni.length; i++) {
+      const kStredu = horni[i]![0] < 14;
+      k.prut(O, kStredu ? horni[i]! : [horni[i]![0], 0], kStredu ? [horni[i + 1]![0], 0] : horni[i + 1]!);
+    }
+    await nactiMost(k.navrh());
+    expect(await osa().getAttribute("data-stav")).toBe("klid");
     expect(await osa().locator(".frekvence__mimo").count()).toBe(1);
     expect(bezMezer((await osa().locator(".frekvence__mimo").getAttribute("title")) ?? "")).toMatch(/^1\. vlastní frekvence mostu je 7,\d\d Hz, za koncem osy \(7 Hz\)$/);
   });
@@ -499,7 +517,7 @@ describe("nápověda po krocích", () => {
     expect(await udaj("napoveda-princip")).toBe("Mostovku podpírá pár prutů zdola: tvoří s ní trojúhelník a ten se neprohne.");
     expect(await stranka.locator("#okno-napoveda").getAttribute("data-soustava")).toBe("trojuhelnik-pod");
     await akce("napoveda-dalsi").click();
-    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč a splní podmínku mistrovské medaile: průchod a žádný prut využitý nad 9 %\.$/);
+    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč a splní podmínku mistrovské medaile: rozpočtová medaile a k ní žádný prut využitý nad \d+ %\.$/);
     // Most pro medaili za rozpočet má vlastní kroky: začíná principem.
     await medaile.nth(1).click();
     expect(await telo("napoveda")).toBe("princip");

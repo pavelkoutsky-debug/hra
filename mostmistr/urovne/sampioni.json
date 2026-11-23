@@ -1,0 +1,811 @@
+{
+  "verzeFyziky": 8,
+  "urovne": {
+    "1-01": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":3,"x":4,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":3,"x":4,"y":1}
+        ]
+      }
+    },
+    "1-02": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "upravy": []
+      }
+    },
+    "1-03": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":5,"x":4,"y":2},
+          {"stycnik":6,"x":12,"y":2},
+          {"stycnik":5,"x":5,"y":1},
+          {"stycnik":6,"x":11,"y":1},
+          {"stycnik":7,"x":8,"y":2}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":5,"x":4,"y":2},
+          {"stycnik":6,"x":12,"y":2}
+        ]
+      }
+    },
+    "1-04": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"prut":6,"prvek":"drevo-lehke"},
+          {"prut":11,"prvek":"drevo-lehke"},
+          {"stycnik":8,"x":7,"y":-2}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"prut":6,"prvek":"drevo-lehke"},
+          {"prut":11,"prvek":"drevo-lehke"},
+          {"stycnik":8,"x":7,"y":-2}
+        ]
+      }
+    },
+    "2-01": {
+      "cena": {
+        "z": "rozpocet",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "upravy": []
+      }
+    },
+    "2-02": {
+      "cena": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":11,"x":13,"y":2},
+          {"stycnik":12,"x":17,"y":1},
+          {"stycnik":8,"x":5,"y":1},
+          {"stycnik":9,"x":23,"y":1},
+          {"stycnik":13,"x":19,"y":1},
+          {"stycnik":11,"x":14,"y":2},
+          {"stycnik":13,"x":18,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":11,"x":13,"y":2},
+          {"stycnik":12,"x":17,"y":1},
+          {"stycnik":9,"x":23,"y":1},
+          {"stycnik":8,"x":5,"y":1},
+          {"stycnik":13,"x":19,"y":1},
+          {"stycnik":11,"x":14,"y":2},
+          {"stycnik":13,"x":18,"y":1}
+        ]
+      }
+    },
+    "2-03": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":3,"zavazi":0},
+          {"stycnik":9,"x":5,"y":1},
+          {"stycnik":10,"x":27,"y":1},
+          {"stycnik":11,"x":9,"y":1},
+          {"stycnik":12,"x":13,"y":1},
+          {"stycnik":14,"x":19,"y":1},
+          {"stycnik":15,"x":23,"y":1},
+          {"stycnik":4,"zavazi":1900},
+          {"stycnik":4,"zavazi":1800},
+          {"stycnik":4,"zavazi":1700},
+          {"stycnik":4,"zavazi":1600},
+          {"stycnik":4,"zavazi":1500},
+          {"stycnik":4,"zavazi":1400},
+          {"stycnik":9,"x":6,"y":1},
+          {"stycnik":10,"x":26,"y":1},
+          {"stycnik":11,"x":10,"y":1},
+          {"stycnik":12,"x":14,"y":1},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":15,"x":22,"y":1},
+          {"stycnik":4,"zavazi":1300},
+          {"stycnik":4,"zavazi":1200},
+          {"stycnik":4,"zavazi":1100},
+          {"stycnik":4,"zavazi":1000},
+          {"stycnik":4,"zavazi":900}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":3,"zavazi":0},
+          {"stycnik":4,"zavazi":1900},
+          {"stycnik":4,"zavazi":1800},
+          {"stycnik":4,"zavazi":1700},
+          {"stycnik":4,"zavazi":1600},
+          {"stycnik":4,"zavazi":1500},
+          {"stycnik":10,"x":27,"y":1},
+          {"stycnik":9,"x":5,"y":1},
+          {"stycnik":11,"x":9,"y":1},
+          {"stycnik":12,"x":13,"y":1},
+          {"stycnik":14,"x":19,"y":1},
+          {"stycnik":15,"x":23,"y":1},
+          {"stycnik":10,"x":26,"y":1},
+          {"stycnik":9,"x":6,"y":1},
+          {"stycnik":11,"x":10,"y":1},
+          {"stycnik":12,"x":14,"y":1},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":15,"x":22,"y":1},
+          {"stycnik":4,"zavazi":1400},
+          {"stycnik":4,"zavazi":1300},
+          {"stycnik":4,"zavazi":1200},
+          {"stycnik":4,"zavazi":1100},
+          {"stycnik":4,"zavazi":1000},
+          {"stycnik":4,"zavazi":900}
+        ]
+      }
+    },
+    "2-04": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":9,"x":5,"y":1},
+          {"stycnik":10,"x":27,"y":1},
+          {"stycnik":11,"x":9,"y":1},
+          {"stycnik":15,"x":23,"y":1},
+          {"stycnik":12,"x":13,"y":2},
+          {"stycnik":14,"x":19,"y":2},
+          {"stycnik":12,"x":14,"y":2},
+          {"stycnik":14,"x":18,"y":2},
+          {"stycnik":9,"x":6,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "upravy": []
+      }
+    },
+    "3-01": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":5,"x":7,"y":3},
+          {"stycnik":6,"x":17,"y":3},
+          {"stycnik":5,"x":7,"y":2},
+          {"stycnik":6,"x":17,"y":2},
+          {"stycnik":7,"x":12,"y":3},
+          {"stycnik":7,"x":12,"y":2}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":6,"x":17,"y":3},
+          {"stycnik":5,"x":7,"y":3},
+          {"stycnik":5,"x":7,"y":2},
+          {"stycnik":6,"x":17,"y":2},
+          {"stycnik":7,"x":12,"y":3},
+          {"stycnik":7,"x":12,"y":2}
+        ]
+      }
+    },
+    "3-02": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":8,"x":13,"y":2},
+          {"stycnik":7,"x":7,"y":1},
+          {"stycnik":10,"x":23,"y":2},
+          {"stycnik":11,"x":29,"y":1},
+          {"stycnik":9,"x":18,"y":2},
+          {"prut":12,"pryc":true},
+          {"prut":16,"pryc":true},
+          {"stycnik":7,"x":8,"y":2},
+          {"stycnik":7,"x":9,"y":2},
+          {"stycnik":7,"x":10,"y":2},
+          {"stycnik":7,"x":11,"y":2},
+          {"stycnik":11,"x":28,"y":2},
+          {"stycnik":8,"x":14,"y":2},
+          {"stycnik":10,"x":22,"y":2},
+          {"stycnik":8,"x":15,"y":2},
+          {"stycnik":10,"x":21,"y":2},
+          {"stycnik":11,"x":27,"y":2}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"prut":6,"prvek":"ocel-lehka"},
+          {"prut":7,"prvek":"ocel-lehka"},
+          {"prut":17,"prvek":"ocel-lehka"},
+          {"prut":18,"prvek":"ocel-lehka"},
+          {"prut":19,"prvek":"ocel-lehka"},
+          {"prut":20,"prvek":"ocel-lehka"},
+          {"prut":12,"prvek":"ocel-lehka"},
+          {"prut":13,"prvek":"ocel-lehka"},
+          {"prut":14,"prvek":"ocel-lehka"},
+          {"prut":15,"prvek":"ocel-lehka"},
+          {"prut":16,"prvek":"ocel-lehka"},
+          {"stycnik":9,"x":13,"y":2},
+          {"stycnik":11,"x":23,"y":2},
+          {"stycnik":10,"x":18,"y":2},
+          {"stycnik":9,"x":14,"y":2},
+          {"stycnik":11,"x":22,"y":2},
+          {"stycnik":9,"x":15,"y":2},
+          {"stycnik":11,"x":21,"y":2}
+        ]
+      }
+    },
+    "3-03": {
+      "cena": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":8,"x":11,"y":-1},
+          {"stycnik":9,"x":18,"y":-1},
+          {"stycnik":6,"x":6,"y":-1},
+          {"stycnik":7,"x":24,"y":-1},
+          {"stycnik":8,"x":10,"y":-1},
+          {"stycnik":8,"x":9,"y":-1}
+        ]
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":8,"x":11,"y":-1},
+          {"stycnik":9,"x":18,"y":-1},
+          {"stycnik":6,"x":6,"y":-1},
+          {"stycnik":7,"x":24,"y":-1},
+          {"stycnik":8,"x":10,"y":-1},
+          {"stycnik":8,"x":9,"y":-1}
+        ]
+      }
+    },
+    "3-04": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":13,"pryc":true},
+          {"stycnik":9,"x":7,"y":3},
+          {"stycnik":10,"x":41,"y":3},
+          {"stycnik":11,"x":13,"y":3},
+          {"stycnik":15,"x":35,"y":3},
+          {"stycnik":9,"x":8,"y":2},
+          {"stycnik":10,"x":40,"y":2},
+          {"stycnik":12,"x":18,"y":3},
+          {"stycnik":11,"x":14,"y":2},
+          {"stycnik":14,"x":30,"y":3},
+          {"stycnik":15,"x":34,"y":2},
+          {"stycnik":12,"x":18,"y":2},
+          {"stycnik":14,"x":30,"y":2},
+          {"stycnik":11,"x":15,"y":1},
+          {"stycnik":12,"x":17,"y":1},
+          {"stycnik":15,"x":33,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":13,"pryc":true},
+          {"stycnik":9,"x":7,"y":3},
+          {"stycnik":10,"x":41,"y":3},
+          {"stycnik":11,"x":13,"y":3},
+          {"stycnik":15,"x":35,"y":3},
+          {"stycnik":9,"x":8,"y":2},
+          {"stycnik":10,"x":40,"y":2},
+          {"stycnik":12,"x":18,"y":3},
+          {"stycnik":11,"x":14,"y":2},
+          {"stycnik":14,"x":30,"y":3},
+          {"stycnik":15,"x":34,"y":2},
+          {"stycnik":12,"x":18,"y":2},
+          {"stycnik":14,"x":30,"y":2},
+          {"stycnik":11,"x":15,"y":1},
+          {"stycnik":12,"x":17,"y":1},
+          {"stycnik":15,"x":33,"y":1}
+        ]
+      }
+    },
+    "4-01": {
+      "cena": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":14,"x":6,"y":-1},
+          {"stycnik":15,"x":48,"y":-1},
+          {"stycnik":11,"x":18,"y":-5},
+          {"stycnik":13,"x":36,"y":-5},
+          {"stycnik":11,"x":18,"y":-4},
+          {"stycnik":13,"x":36,"y":-4},
+          {"stycnik":11,"x":18,"y":-3},
+          {"stycnik":13,"x":36,"y":-3},
+          {"stycnik":11,"x":18,"y":-2},
+          {"stycnik":13,"x":36,"y":-2}
+        ]
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":14,"x":6,"y":-1},
+          {"stycnik":15,"x":48,"y":-1},
+          {"stycnik":11,"x":18,"y":-5},
+          {"stycnik":13,"x":36,"y":-5},
+          {"stycnik":11,"x":18,"y":-4},
+          {"stycnik":13,"x":36,"y":-4},
+          {"stycnik":11,"x":18,"y":-3},
+          {"stycnik":13,"x":36,"y":-3},
+          {"stycnik":11,"x":18,"y":-2},
+          {"stycnik":13,"x":36,"y":-2}
+        ]
+      }
+    },
+    "4-02": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": []
+      }
+    },
+    "4-03": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":13,"x":24,"y":12},
+          {"stycnik":12,"x":24,"y":10},
+          {"stycnik":13,"x":24,"y":11},
+          {"stycnik":12,"x":24,"y":9},
+          {"stycnik":12,"x":24,"y":8},
+          {"stycnik":12,"x":24,"y":7},
+          {"stycnik":12,"x":24,"y":6}
+        ]
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":13,"x":24,"y":12},
+          {"stycnik":12,"x":24,"y":10},
+          {"stycnik":13,"x":24,"y":11},
+          {"stycnik":12,"x":24,"y":9},
+          {"stycnik":12,"x":24,"y":8},
+          {"stycnik":12,"x":24,"y":7},
+          {"stycnik":12,"x":24,"y":6}
+        ]
+      }
+    },
+    "4-04": {
+      "cena": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":14,"x":-3,"y":11},
+          {"stycnik":17,"x":6,"y":8},
+          {"stycnik":18,"x":13,"y":6},
+          {"stycnik":27,"x":65,"y":8},
+          {"stycnik":26,"x":59,"y":6},
+          {"stycnik":27,"x":64,"y":7},
+          {"stycnik":26,"x":60,"y":6}
+        ]
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "upravy": [
+          {"stycnik":16,"x":76,"y":11},
+          {"stycnik":27,"x":65,"y":8},
+          {"stycnik":26,"x":59,"y":6},
+          {"stycnik":17,"x":7,"y":8},
+          {"stycnik":18,"x":13,"y":6},
+          {"stycnik":27,"x":65,"y":7},
+          {"stycnik":17,"x":8,"y":7},
+          {"stycnik":26,"x":60,"y":6},
+          {"stycnik":18,"x":12,"y":6},
+          {"stycnik":14,"x":-4,"y":11},
+          {"stycnik":19,"x":19,"y":4},
+          {"stycnik":20,"x":24,"y":3},
+          {"stycnik":19,"x":18,"y":4}
+        ]
+      }
+    },
+    "5-01": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":13,"x":5,"y":3},
+          {"stycnik":14,"x":43,"y":3},
+          {"stycnik":15,"x":9,"y":3},
+          {"stycnik":16,"x":13,"y":3},
+          {"stycnik":17,"x":17,"y":3},
+          {"stycnik":18,"x":21,"y":3},
+          {"stycnik":23,"x":39,"y":3},
+          {"stycnik":22,"x":35,"y":3},
+          {"stycnik":21,"x":31,"y":3},
+          {"stycnik":20,"x":27,"y":3},
+          {"stycnik":13,"x":6,"y":2},
+          {"stycnik":14,"x":42,"y":2},
+          {"stycnik":15,"x":10,"y":2},
+          {"stycnik":16,"x":14,"y":2},
+          {"stycnik":23,"x":38,"y":2},
+          {"stycnik":19,"x":24,"y":3},
+          {"stycnik":22,"x":36,"y":2},
+          {"stycnik":17,"x":18,"y":3},
+          {"stycnik":18,"x":22,"y":3},
+          {"stycnik":20,"x":26,"y":3}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":13,"x":5,"y":3},
+          {"stycnik":14,"x":43,"y":3},
+          {"stycnik":15,"x":9,"y":3},
+          {"stycnik":23,"x":39,"y":3},
+          {"stycnik":22,"x":35,"y":3},
+          {"stycnik":21,"x":31,"y":3},
+          {"stycnik":20,"x":27,"y":3},
+          {"stycnik":16,"x":13,"y":3},
+          {"stycnik":17,"x":17,"y":3},
+          {"stycnik":18,"x":21,"y":3},
+          {"stycnik":14,"x":42,"y":2},
+          {"stycnik":13,"x":6,"y":2},
+          {"stycnik":15,"x":10,"y":2},
+          {"stycnik":23,"x":38,"y":2},
+          {"stycnik":22,"x":34,"y":2},
+          {"stycnik":19,"x":24,"y":3},
+          {"stycnik":16,"x":12,"y":2},
+          {"stycnik":21,"x":30,"y":3},
+          {"stycnik":18,"x":22,"y":3},
+          {"stycnik":20,"x":26,"y":3}
+        ]
+      }
+    },
+    "5-02": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":4,"tlumic":300},
+          {"stycnik":4,"tlumic":150},
+          {"stycnik":9,"x":5,"y":1},
+          {"stycnik":10,"x":27,"y":1},
+          {"stycnik":11,"x":9,"y":1},
+          {"stycnik":12,"x":13,"y":1},
+          {"stycnik":14,"x":19,"y":1},
+          {"stycnik":15,"x":23,"y":1},
+          {"stycnik":9,"x":6,"y":1},
+          {"stycnik":10,"x":26,"y":1},
+          {"stycnik":11,"x":10,"y":1},
+          {"stycnik":12,"x":14,"y":1},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":15,"x":22,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":4,"tlumic":300},
+          {"stycnik":4,"tlumic":150},
+          {"stycnik":9,"x":5,"y":1},
+          {"stycnik":10,"x":27,"y":1},
+          {"stycnik":11,"x":9,"y":1},
+          {"stycnik":12,"x":13,"y":1},
+          {"stycnik":15,"x":23,"y":1},
+          {"stycnik":14,"x":19,"y":1},
+          {"stycnik":10,"x":26,"y":1},
+          {"stycnik":9,"x":6,"y":1},
+          {"stycnik":11,"x":10,"y":1},
+          {"stycnik":12,"x":14,"y":1},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":15,"x":22,"y":1}
+        ]
+      }
+    },
+    "5-03": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":4,"tlumic":300},
+          {"stycnik":10,"x":5,"y":1},
+          {"stycnik":11,"x":31,"y":1},
+          {"stycnik":12,"x":9,"y":1},
+          {"stycnik":13,"x":13,"y":1},
+          {"stycnik":14,"x":17,"y":1},
+          {"stycnik":16,"x":23,"y":1},
+          {"stycnik":17,"x":27,"y":1},
+          {"stycnik":10,"x":6,"y":1},
+          {"stycnik":11,"x":30,"y":1},
+          {"stycnik":12,"x":10,"y":1},
+          {"stycnik":13,"x":14,"y":1},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":16,"x":22,"y":1},
+          {"stycnik":17,"x":26,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":4,"tlumic":300},
+          {"stycnik":11,"x":31,"y":1},
+          {"stycnik":10,"x":5,"y":1},
+          {"stycnik":12,"x":9,"y":1},
+          {"stycnik":13,"x":13,"y":1},
+          {"stycnik":14,"x":17,"y":1},
+          {"stycnik":16,"x":23,"y":1},
+          {"stycnik":17,"x":27,"y":1},
+          {"stycnik":11,"x":30,"y":1},
+          {"stycnik":10,"x":6,"y":1},
+          {"stycnik":13,"x":14,"y":1},
+          {"stycnik":12,"x":10,"y":1},
+          {"stycnik":17,"x":26,"y":1},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":16,"x":22,"y":1}
+        ]
+      }
+    },
+    "5-04": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":7,"tlumic":0},
+          {"stycnik":9,"tlumic":500},
+          {"stycnik":1,"pryc":true},
+          {"stycnik":15,"pryc":true},
+          {"stycnik":4,"pryc":true},
+          {"stycnik":12,"pryc":true},
+          {"stycnik":23,"x":29,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":7,"tlumic":0},
+          {"stycnik":9,"tlumic":500},
+          {"stycnik":15,"pryc":true},
+          {"stycnik":1,"pryc":true},
+          {"stycnik":4,"pryc":true},
+          {"stycnik":12,"pryc":true},
+          {"stycnik":23,"x":29,"y":1}
+        ]
+      }
+    },
+    "6-01": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":8,"x":15,"y":5},
+          {"stycnik":7,"x":9,"y":4},
+          {"stycnik":6,"x":4,"y":2},
+          {"stycnik":9,"x":21,"y":4},
+          {"stycnik":10,"x":26,"y":2},
+          {"stycnik":8,"x":15,"y":4},
+          {"stycnik":7,"x":9,"y":3},
+          {"stycnik":9,"x":21,"y":3},
+          {"stycnik":8,"x":15,"y":3},
+          {"stycnik":7,"x":10,"y":2},
+          {"stycnik":6,"x":5,"y":2}
+        ]
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":8,"x":15,"y":5},
+          {"stycnik":7,"x":9,"y":4},
+          {"stycnik":6,"x":4,"y":2},
+          {"stycnik":9,"x":21,"y":4},
+          {"stycnik":10,"x":26,"y":2},
+          {"stycnik":8,"x":15,"y":4},
+          {"stycnik":7,"x":9,"y":3},
+          {"stycnik":9,"x":21,"y":3},
+          {"stycnik":8,"x":15,"y":3},
+          {"stycnik":7,"x":10,"y":2},
+          {"stycnik":6,"x":5,"y":2}
+        ]
+      }
+    },
+    "6-02": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":9,"x":11,"y":-2},
+          {"stycnik":11,"x":25,"y":-2},
+          {"stycnik":10,"x":18,"y":-2},
+          {"stycnik":7,"x":6,"y":-2},
+          {"stycnik":8,"x":30,"y":-2},
+          {"stycnik":7,"x":6,"y":-1},
+          {"stycnik":9,"x":10,"y":-1},
+          {"stycnik":8,"x":30,"y":-1},
+          {"stycnik":11,"x":26,"y":-2},
+          {"stycnik":11,"x":27,"y":-2},
+          {"stycnik":9,"x":9,"y":-1},
+          {"prut":17,"pryc":true},
+          {"prut":16,"pryc":true},
+          {"stycnik":8,"x":31,"y":-1}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":9,"x":11,"y":-2},
+          {"stycnik":11,"x":25,"y":-2},
+          {"stycnik":10,"x":18,"y":-2},
+          {"stycnik":7,"x":6,"y":-2},
+          {"stycnik":8,"x":30,"y":-2},
+          {"stycnik":7,"x":6,"y":-1},
+          {"stycnik":9,"x":10,"y":-1},
+          {"stycnik":8,"x":30,"y":-1},
+          {"stycnik":11,"x":26,"y":-2},
+          {"stycnik":11,"x":27,"y":-2},
+          {"stycnik":9,"x":9,"y":-1},
+          {"prut":17,"pryc":true},
+          {"prut":16,"pryc":true},
+          {"stycnik":8,"x":31,"y":-1}
+        ]
+      }
+    },
+    "6-03": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":1,"svar":true},
+          {"stycnik":2,"svar":true},
+          {"stycnik":3,"svar":true},
+          {"stycnik":4,"svar":true},
+          {"stycnik":5,"svar":true},
+          {"stycnik":6,"svar":true},
+          {"stycnik":7,"svar":true},
+          {"stycnik":8,"svar":true},
+          {"stycnik":9,"svar":true},
+          {"stycnik":10,"svar":true},
+          {"stycnik":11,"svar":true},
+          {"stycnik":24,"pryc":true},
+          {"stycnik":25,"pryc":true},
+          {"stycnik":19,"pryc":true},
+          {"stycnik":22,"pryc":true},
+          {"prut":19,"pryc":true},
+          {"prut":25,"pryc":true},
+          {"stycnik":21,"x":13,"y":-2},
+          {"stycnik":21,"x":14,"y":-1},
+          {"stycnik":23,"x":43,"y":-2},
+          {"stycnik":3,"svar":false},
+          {"stycnik":11,"svar":false},
+          {"stycnik":26,"x":66,"y":-2},
+          {"stycnik":29,"x":46,"y":-6},
+          {"stycnik":10,"svar":false},
+          {"stycnik":21,"x":15,"y":-1},
+          {"stycnik":23,"x":44,"y":-1},
+          {"stycnik":29,"x":47,"y":-6},
+          {"stycnik":17,"x":48,"y":-8},
+          {"stycnik":17,"x":48,"y":-7},
+          {"stycnik":28,"x":22,"y":-7},
+          {"stycnik":21,"x":16,"y":-1},
+          {"stycnik":20,"x":17,"y":-2},
+          {"stycnik":28,"x":23,"y":-7},
+          {"stycnik":14,"x":24,"y":-8},
+          {"stycnik":23,"x":45,"y":-2},
+          {"stycnik":14,"x":24,"y":-7},
+          {"stycnik":23,"x":46,"y":-2},
+          {"prut":42,"pryc":true},
+          {"stycnik":26,"x":65,"y":-2},
+          {"stycnik":26,"x":64,"y":-2}
+        ]
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "upravy": [
+          {"stycnik":1,"svar":true},
+          {"stycnik":2,"svar":true},
+          {"stycnik":3,"svar":true},
+          {"stycnik":4,"svar":true},
+          {"stycnik":5,"svar":true},
+          {"stycnik":6,"svar":true},
+          {"stycnik":7,"svar":true},
+          {"stycnik":8,"svar":true},
+          {"stycnik":9,"svar":true},
+          {"stycnik":10,"svar":true},
+          {"stycnik":11,"svar":true},
+          {"stycnik":24,"pryc":true},
+          {"stycnik":19,"pryc":true},
+          {"stycnik":25,"pryc":true},
+          {"stycnik":22,"pryc":true},
+          {"prut":19,"pryc":true},
+          {"prut":25,"pryc":true},
+          {"stycnik":21,"x":13,"y":-2},
+          {"stycnik":21,"x":14,"y":-1},
+          {"stycnik":23,"x":43,"y":-2},
+          {"stycnik":26,"x":66,"y":-2},
+          {"stycnik":29,"x":46,"y":-6},
+          {"stycnik":21,"x":15,"y":-1},
+          {"stycnik":28,"x":22,"y":-6},
+          {"stycnik":23,"x":44,"y":-1},
+          {"stycnik":29,"x":47,"y":-6},
+          {"stycnik":17,"x":48,"y":-8},
+          {"stycnik":17,"x":48,"y":-7},
+          {"stycnik":20,"x":18,"y":-2},
+          {"stycnik":21,"x":16,"y":-1},
+          {"stycnik":14,"x":24,"y":-8},
+          {"stycnik":28,"x":23,"y":-6},
+          {"stycnik":14,"x":24,"y":-7},
+          {"stycnik":21,"x":17,"y":-1},
+          {"stycnik":20,"x":18,"y":-1},
+          {"stycnik":23,"x":45,"y":-2},
+          {"stycnik":23,"x":46,"y":-2},
+          {"prut":44,"pryc":true}
+        ]
+      }
+    },
+    "6-04": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": [
+          {"prut":17,"prvek":"ocel-lehka"},
+          {"prut":18,"prvek":"ocel-lehka"},
+          {"prut":19,"prvek":"ocel-lehka"},
+          {"prut":20,"prvek":"ocel-lehka"},
+          {"prut":21,"prvek":"ocel-lehka"}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"prut":17,"prvek":"ocel-lehka"},
+          {"prut":18,"prvek":"ocel-lehka"},
+          {"prut":19,"prvek":"ocel-lehka"},
+          {"prut":20,"prvek":"ocel-lehka"},
+          {"prut":21,"prvek":"ocel-lehka"}
+        ]
+      }
+    },
+    "7-01": {
+      "cena": {
+        "z": "rozpocet",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": []
+      }
+    },
+    "7-02": {
+      "cena": {
+        "z": "mistrovska",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": [
+          {"stycnik":5,"pryc":true},
+          {"stycnik":10,"pryc":true}
+        ]
+      }
+    },
+    "7-03": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "upravy": []
+      }
+    },
+    "7-04": {
+      "cena": {
+        "z": "pruchod",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "upravy": []
+      }
+    }
+  }
+}

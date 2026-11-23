@@ -20,6 +20,9 @@ const chyby: string[] = [];
 /** Text údaje s obyčejnými mezerami: hra v číslech a před jednotkami píše nezlomitelné. */
 const udaj = async (jmeno: string): Promise<string> =>
   (await stranka.locator(`[data-udaj="${jmeno}"]`).innerText()).replace(/[  ]/g, " ");
+/** Text prvku, i když je ve sbalené části okna (`innerText` sbaleného obsahu je prázdný). */
+const celyText = async (jmeno: string): Promise<string> =>
+  ((await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "").replace(/[\u202f\u00a0]/g, " ");
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 
@@ -136,11 +139,13 @@ describe("první vlak: kolejiště", () => {
     await otevri("6-01", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-nazev")).toBe("První vlak");
-    expect(await udaj("zadani-text")).toContain("Kolejiště je kolej na dvou ocelových podélnících");
+    // Zadání jsou dvě věty; co je kolejiště, vysvětluje „Více o úloze“ (sbalené, stejně jako seznam prvků).
+    expect(await udaj("zadani-text")).toContain("poprvé koleje: pojede lokomotiva a tři ložené vozy");
+    expect(await celyText("zadani-vice")).toContain("Kolejiště je kolej na dvou ocelových podélnících");
     expect(await udaj("zadani-provoz")).toContain("vlak (lokomotiva, 3× ložený vůz) zleva, vyráží v čase 0 s");
     expect(await udaj("zadani-provoz")).toContain("Kolej je svařená, bez styků");
-    expect(await udaj("zadani-stavba")).toContain("Kolejiště: 16 000 Kč/m · do 6 m");
-    expect(await udaj("zadani-skutecnost")).toContain("Negrelliho viadukt");
+    expect(await celyText("zadani-stavba")).toContain("Kolejiště: 16 000 Kč/m · do 6 m");
+    expect(await celyText("zadani-skutecnost")).toContain("Negrelliho viadukt");
     await stranka.screenshot({ path: `${SLOZKA}/t1-zadani-prvni-vlak.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
 
@@ -166,16 +171,18 @@ describe("první vlak: kolejiště", () => {
     await stranka.screenshot({ path: `${SLOZKA}/t3-vlak-na-moste.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(4\)\.$/);
-    expect(await ziskaneMedaile()).toBe(1);
+    // Průchod a rozpočet (826 731 Kč se vejde do 835 000 Kč a nic se neporušilo); na mistrovskou je využití 68 % moc.
+    expect(await medaile()).toEqual(["true", "true", "false"]);
     await stranka.screenshot({ path: `${SLOZKA}/t4-vysledek-prvni-vlak.png` });
   }, 240_000);
 
-  it("těžký horní pás dá mistrovskou medaili; pod kolejí stavět nejde", async () => {
+  it("trojúhelníková příhrada s oblým pásem má všechny tři medaile; pod kolejí stavět nejde", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["6-01"]!.mistrovska));
     await spust();
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await ziskaneMedaile()).toBe(2);
+    // Mistrovská je rozpočtová a k ní bonus: most se do inženýrského rozpočtu vejde a má všechny tři.
+    expect(await medaile()).toEqual(["true", "true", "true"]);
     await akce("upravit").click();
     const predtim = await telo("pruty");
     await stranka.locator('.paleta__prvky button[data-prvek="ocel-lehka"]').click();
@@ -186,14 +193,14 @@ describe("první vlak: kolejiště", () => {
 });
 
 describe("rychlík: pohodlí cestujících", () => {
-  it("mělká příhrada vlak unese, ale ve voze to houpe; hluboká dá jízdu skoro bez houpání", async () => {
+  it("třímetrová příhrada vlak unese, ale ve voze to houpe; hlubší srazí houpání na polovinu a pod mez medaile", async () => {
     await otevri("6-02", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-provoz")).toContain("vlak (lokomotiva, 4× osobní vůz), 100 km/h zleva");
     expect(await udaj("zadani-provoz")).toContain("Kolej má po 25 metrech styky kolejnic");
-    expect(await udaj("zadani-skutecnost")).toContain("velmi dobré pohodlí");
+    expect(await celyText("zadani-skutecnost")).toContain("velmi dobré pohodlí");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
-    expect(await stranka.locator('[data-udaj="podminky"]').innerText()).toContain("zrychlení v osobním voze nejvýš 0,30 m/s²");
+    expect(await stranka.locator('[data-udaj="podminky"]').innerText()).toContain("rozpočtová medaile a k ní zrychlení v osobním voze nejvýš 0,50 m/s²");
 
     await nactiMost(navrhNaText(RESENI["6-02"]!.pruchod));
     await spust();
@@ -212,21 +219,22 @@ describe("rychlík: pohodlí cestujících", () => {
     await spust();
     expect(await naKonec()).toBe("MOST OBSTÁL");
     const hluboka = Number(await stranka.locator('[data-udaj="vysledek-autobus"]').getAttribute("data-zrychleni"));
-    expect(hluboka).toBeLessThan(0.3);
+    // Mez mistrovské medaile je 0,50 m/s²: hlubší příhrada se pod ni dostane a houpe míň než z poloviny.
+    expect(hluboka).toBeLessThan(0.5);
     expect(hluboka).toBeLessThan(melka / 2);
-    // Hluboká příhrada je dražší než inženýrský rozpočet, zato má mistrovskou. Medaile za
-    // rozpočet z předchozího mostu hráči zůstává a výsledek ji tak označí.
-    expect(await medaile()).toEqual(["true", "drive", "true"]);
+    // Mistrovská je rozpočtová a k ní bonus: příhrada se třemi dolními styčníky se do inženýrského
+    // rozpočtu vejde, takže tenhle most má všechny tři medaile sám.
+    expect(await medaile()).toEqual(["true", "true", "true"]);
     await stranka.screenshot({ path: `${SLOZKA}/t6-vysledek-rychlik.png` });
   }, 300_000);
 });
 
 describe("uhelný vlak: brzdění na viaduktu", () => {
-  it("pilíře bez vzpěr brzdící vlak zlomí; se vzpěrami do kolejiště viadukt obstojí", async () => {
+  it("pilíře bez vzpěr a svarů brzdící vlak zlomí; s hlavami pilířů svařenými s kolejištěm viadukt obstojí", async () => {
     await otevri("6-03", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-provoz")).toContain("vlak (lokomotiva, 10× ložený vůz) zleva, vyráží v čase 0 s; na mostě zabrzdí, 3 s stojí a rozjede se");
-    expect(await udaj("zadani-skutecnost")).toContain("Firth of Forth");
+    expect(await celyText("zadani-skutecnost")).toContain("Firth of Forth");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await udaj("jizdni-rad")).toContain("na mostě zabrzdí");
 
@@ -256,7 +264,7 @@ describe("dvě patra: kolej a silnice nad sebou", () => {
     // Nerovná silnice i kolej se styky mají v zadání každá svou větu.
     expect(provoz).toContain("Vozovka je běžná");
     expect(provoz).toContain("Kolej má po 25 metrech styky kolejnic");
-    expect(await udaj("zadani-skutecnost")).toContain("Øresund");
+    expect(await celyText("zadani-skutecnost")).toContain("Øresund");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     await stranka.screenshot({ path: `${SLOZKA}/t9-dve-patra-prazdny-vykres.png` });
 

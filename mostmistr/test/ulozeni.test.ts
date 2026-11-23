@@ -129,6 +129,19 @@ describe("rekord úrovně", () => {
     expect(rekord.nejlepsiHmotnost).toBe(1100);
   });
 
+  it("most, na kterém se při zkoušce něco porušilo, medaili za průchod dostane, ale do výzev se nepočítá", () => {
+    let rekord = vylepsiRekord(undefined, pruchod, 9000, 1, 1200);
+    rekord = vylepsiRekord(rekord, pruchod, 5000, 1, 600, false);
+    expect(rekord.medaile.pruchod).toBe(true);
+    expect(rekord.nejlepsiCena).toBe(9000);
+    expect(rekord.nejlepsiHmotnost).toBe(1200);
+    // První průchod s povoleným prutem: medaile ano, rekord ceny a hmotnosti zatím žádný.
+    const prvni = vylepsiRekord(undefined, pruchod, 5000, 1, 600, false);
+    expect(prvni.medaile.pruchod).toBe(true);
+    expect(prvni.nejlepsiCena).toBeNull();
+    expect(prvni.nejlepsiHmotnost).toBeNull();
+  });
+
   it("zkouška do zlomu: únosnost na korunu se jen zvyšuje a medaile ani cenu nemění", () => {
     // Zkoušet do zlomu jde i most, který zkouškou s provozem ještě neprošel.
     const prvni = vylepsiZlom(undefined, 2.5, 3);

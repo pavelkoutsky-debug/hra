@@ -17,6 +17,8 @@ let adresa: string;
 const chyby: string[] = [];
 
 const udaj = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).innerText();
+/** Text údaje ve sbalené části okna zadání („Více o úloze“, seznam prvků): `innerText` je tam prázdný. */
+const sbaleny = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).evaluate((uzel) => uzel.textContent ?? "");
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 const osa = () => stranka.locator('[data-udaj="osa-frekvenci"]');
@@ -137,7 +139,9 @@ describe("osa frekvencí, závaží a tlumič", () => {
   it("zadání úrovně mluví o tlumičích a paleta je nabízí", async () => {
     await stranka.goto(`${adresa}?uroven=2-04`);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-text")).toContain("viskózní tlumiče");
+    // Zadání jsou dvě věty; čím se most tlumí, vysvětluje až „Více o úloze“.
+    expect(await udaj("zadani-text")).toContain("nebo most utlum");
+    expect(await sbaleny("zadani-vice")).toContain("viskózní tlumiče");
     expect(await udaj("zadani-provoz")).toContain("útvar 24 lidí, krok 1,7 Hz");
     expect(await udaj("zadani-medaile")).toContain("nerozkmitá nad 2,5 m/s²");
     expect(await udaj("zadani-medaile")).toContain("kmitání mostovky nejvýš 1,2 m/s²");
@@ -157,7 +161,7 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(Number(await ukazka.getAttribute("data-zvetseni"))).toBeGreaterThanOrEqual(10);
     expect(await ukazka.locator("[data-poznamka]").innerText()).toMatch(/^Pohyb mostu je \d+× zvětšený/);
     expect(await udaj("ukazka-popis")).toContain("píst ve válci s olejem");
-    expect(await udaj("zadani-skutecnost")).toContain("Millennium Bridge");
+    expect(await sbaleny("zadani-skutecnost")).toContain("Millennium Bridge");
     // Během přehrávání ukazuje každá strana okamžité kmitání.
     await expect.poll(() => bez.locator("[data-stav]").innerText(), { timeout: 15_000 }).toMatch(/kmitání \d,\d m\/s²/);
     await stranka.waitForTimeout(9000);
@@ -169,7 +173,7 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await stranka.locator('[data-prvek="tlumic"]').innerText()).toContain("Tlumič");
     expect(prvky[3]).toContain("Závaží");
     expect(prvky[3]).toContain("10\u00a0Kč/kg · do\u00a02000\u00a0kg");
-    expect(await udaj("zadani-stavba")).toContain("Závaží do styčníku: 10\u00a0Kč za kilogram, nejvýš 2000 kg");
+    expect(await sbaleny("zadani-stavba")).toContain("Závaží do styčníku: 10\u00a0Kč za kilogram, nejvýš 2000 kg");
     // Brnknutí je vidět i bez mostu a poradí, co mu chybí.
     expect(await akce("brnknout").isDisabled()).toBe(false);
     await akce("brnknout").click();
@@ -328,7 +332,7 @@ describe("kmitání mostovky rozhoduje", () => {
     await akce("upravit").click();
   });
 
-  it("stejná lávka s tlumiči projde a získá mistrovskou medaili", async () => {
+  it("nízká lávka s tlumiči do kotev projde a získá všechny tři medaile", async () => {
     await nactiMost(navrhNaText(RESENI["2-04"]!.mistrovska));
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
@@ -338,15 +342,25 @@ describe("kmitání mostovky rozhoduje", () => {
     await akce("na-konec").click();
     await stranka.locator(".vysledek").waitFor({ state: "visible" });
     expect(await udaj("vysledek-nadpis")).toBe("MOST OBSTÁL");
-    expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count()).toBe(2);
+    // Medaile jdou po schodech: most se vejde do inženýrského rozpočtu, nic se na něm neporušilo
+    // a kmitá pod 1,2 m/s², takže má průchod, rozpočtovou i mistrovskou.
+    expect(
+      await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana]').evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-ziskana"))),
+    ).toEqual(["true", "true", "true"]);
     expect(await udaj("vysledek-kmitani")).toMatch(/· (střední|nízký) komfort ·/);
     await stranka.screenshot({ path: `${SLOZKA}/48-vysledek-s-kmitanim.png` });
   });
 
-  it("úroveň bez ukázky má aspoň souvislost se skutečností", async () => {
+  it("první úroveň kapitoly má ukázku a pod „Více o úloze“ souvislost se skutečností", async () => {
     await stranka.goto(`${adresa}?uroven=2-01`);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await stranka.locator('[data-udaj="ukazka"]').isVisible()).toBe(false);
+    // Od M12 má ukázku každá úroveň kampaně; 2-01 předvádí, že i ocel potřebuje diagonály.
+    expect(await stranka.locator('[data-udaj="ukazka"]').isVisible()).toBe(true);
+    expect(await udaj("ukazka-a")).toBe("Horní pás bez diagonál");
+    expect(await udaj("ukazka-b")).toBe("Příhrada s diagonálami");
+    // Souvislost se skutečností je sbalená; po rozbalení ji hráč vidí.
+    expect(await stranka.locator('[data-udaj="zadani-skutecnost"]').isVisible()).toBe(false);
+    await stranka.locator('[data-udaj="zadani-vice-obal"] > summary').click();
     expect(await udaj("zadani-skutecnost")).toContain("vlastní frekvence počítá dřív než únosnost");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
   });

@@ -85,7 +85,7 @@
   "inzenyrskyRozpocet": 940000,
   "mistrovska": {
     "druh": "komfort-cestujicich",
-    "limit": 0.3
+    "limit": 0.5
   },
   "povolenePrvky": [
     "kolejiste",

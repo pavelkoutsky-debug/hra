@@ -58,6 +58,30 @@ const LIDE: ReadonlySet<string> = new Set([
   "skakajici-dav",
 ]);
 
+/**
+ * Je v zaznamenaném okamžiku na mostě (mezi konci své trasy) aspoň jeden člověk? `stavy`
+ * a `polohy` jsou ze snímku záznamu. Stejná podmínka jako `Provoz.lideNaMoste`, podle které
+ * zkouška počítá kmitání do hodnocení: kdo záznam ukazuje, pozná podle ní, jestli se
+ * okamžité kmitání právě počítá.
+ */
+export function lideNaMosteVeSnimku(
+  uroven: Pick<Uroven, "trasy" | "jizdniRad">,
+  ucastnici: readonly PopisUcastnika[],
+  stavy: ArrayLike<number>,
+  polohy: ArrayLike<number>,
+): boolean {
+  for (let k = 0; k < ucastnici.length; k++) {
+    if (stavy[k] !== JEDE) continue;
+    const u = ucastnici[k]!;
+    if (!LIDE.has(u.druh)) continue;
+    const idTrasy = uroven.jizdniRad[u.polozka]?.trasa;
+    const trasa = uroven.trasy.find((t) => t.id === idTrasy);
+    const x = polohy[2 * u.kola[0]!];
+    if (trasa && x !== undefined && x >= trasa.zacatek.x && x <= trasa.konec.x) return true;
+  }
+  return false;
+}
+
 /** Je daný druh provozu člověk (nebo skupina lidí)? */
 export function jeClovek(druh: string): boolean {
   return LIDE.has(druh);

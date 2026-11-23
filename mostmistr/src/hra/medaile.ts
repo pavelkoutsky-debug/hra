@@ -23,6 +23,11 @@ const KLIC_CESTUJICICH = {
   oboji: "medaile.mistrovska.cestujiciObojich",
 } as const;
 
+/** Jde číslo beze ztráty napsat na jedno desetinné místo? Limit 0,25 by jinak vyšel jako 0,3. */
+function naDesetiny(hodnota: number): boolean {
+  return Math.abs(hodnota * 10 - Math.round(hodnota * 10)) < 1e-9;
+}
+
 /** Podmínka mistrovské medaile slovy; null, když ji úroveň nemá. */
 export function podminkaMistrovske(uroven: Uroven): string | null {
   const bonus = uroven.mistrovska;
@@ -30,7 +35,7 @@ export function podminkaMistrovske(uroven: Uroven): string | null {
   return bonus.druh === "rezerva"
     ? t("medaile.mistrovska.rezerva", { limit: procenta(bonus.limit) })
     : bonus.druh === "komfort-chodcu"
-      ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
+      ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, naDesetiny(bonus.limit) ? 1 : 2) })
       : bonus.druh === "komfort-cestujicich"
         ? t(KLIC_CESTUJICICH[kdoCestuje(uroven) ?? "autobus"], { limit: cislo(bonus.limit, 2) })
         : bonus.druh === "dosednuti"

@@ -82,10 +82,10 @@
   "hmotnostVybaveni": 0,
   "nerovnost": "A",
   "rozpocet": 1050000,
-  "inzenyrskyRozpocet": 800000,
+  "inzenyrskyRozpocet": 835000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.5
+    "limit": 0.6
   },
   "povolenePrvky": [
     "kolejiste",

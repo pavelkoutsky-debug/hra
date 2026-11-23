@@ -34,6 +34,8 @@ export const KLIC_ZVUKU = "mostmistr.zvuk";
 export const KLIC_ZABERU = "mostmistr.zaber";
 /** Kreslit při zkoušce pohyb mostu zvětšeně, aby bylo kmitání vidět? */
 export const KLIC_ZVETSENI = "mostmistr.zvetseni";
+/** Zrychlovat při přehrávání zkoušky úseky, kdy se nic neděje? */
+export const KLIC_CEKANI = "mostmistr.cekani";
 /** Otisky mostů, které úrovní prošly: zkouška do zlomu se do výzvy počítá jen jim. */
 export const KLIC_PROSLYCH = "mostmistr.prosle";
 /** Kolik posledních prošlých mostů si hra na úroveň pamatuje. */
@@ -109,8 +111,8 @@ export class Uloziste {
   }
 
   /** Započítá výsledek zkoušky do rekordu úrovně a vrátí nový rekord. */
-  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number): Rekord {
-    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost);
+  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number, celistvy = true): Rekord {
+    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost, celistvy);
     this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
     this.#zapis();
     return rekord;
@@ -161,6 +163,15 @@ export class Uloziste {
 
   set zpomaleniPadu(zapnuto: boolean) {
     this.#pis(KLIC_ZABERU, zapnuto ? "1" : "0");
+  }
+
+  /** Zrychlit při přehrávání zkoušky čekání, kdy se na mostě nic neděje? Dokud hráč nezvolí jinak, ano. */
+  get zrychleniCekani(): boolean {
+    return this.#cti(KLIC_CEKANI) !== "0";
+  }
+
+  set zrychleniCekani(zapnuto: boolean) {
+    this.#pis(KLIC_CEKANI, zapnuto ? "1" : "0");
   }
 
   /** Kreslit pohyb celého mostu při zkoušce zvětšeně? Dokud hráč nezvolí jinak, ano. */

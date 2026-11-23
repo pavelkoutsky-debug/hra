@@ -36,7 +36,8 @@ function prehraj(strana: StranaUkazky): VysledekZkousky {
 describe("ukázky k úrovním", () => {
   it("mají je úrovně, které učí něco nového, a ke každé jsou texty", () => {
     const sUkazkou = kampan.filter((u) => ukazkaUrovne(u) !== null).map((u) => u.id);
-    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "4-01", "4-02", "4-03", "4-04", "5-01", "5-02", "5-03", "5-04", "6-01", "6-02", "6-03", "6-04", "7-01", "7-02", "7-03", "7-04"]);
+    // Od M12 má ukázku každá úroveň, která zavádí něco nového: i 1-02 až 2-01.
+    expect(sUkazkou).toEqual(["1-01", "1-02", "1-03", "1-04", "2-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "4-01", "4-02", "4-03", "4-04", "5-01", "5-02", "5-03", "5-04", "6-01", "6-02", "6-03", "6-04", "7-01", "7-02", "7-03", "7-04"]);
     for (const id of sUkazkou) {
       for (const cast of ["a", "b", "popis"]) expect(jeKlicTextu(`ukazka.${id}.${cast}`), `${id}.${cast}`).toBe(true);
     }
@@ -136,7 +137,8 @@ describe("ukázky k úrovním", () => {
       }
 
       // Ukázky první, třetí, čtvrté a šesté kapitoly jsou o pevnosti: vlevo se most zlomí, vpravo zůstane celý.
-      const oPevnosti = ["1-", "3-", "4-", "6-"].some((kapitola) => uroven.id.startsWith(kapitola));
+      // Patří k nim i první ocelová lávka (2-01): ukazuje, že tvar musí držet, ne jak most kmitá.
+      const oPevnosti = ["1-", "2-01", "3-", "4-", "6-"].some((kapitola) => uroven.id.startsWith(kapitola));
       if (oPevnosti) {
         it("rozdíl dělá pevnost: vlevo se most zlomí, vpravo zůstane celý a nikdo nespadne", () => {
           // Zlomí se, složí se v kloubech (mostovka bez podpory), nebo se prověsí tak, že po něm nejde jet: někdo spadne.

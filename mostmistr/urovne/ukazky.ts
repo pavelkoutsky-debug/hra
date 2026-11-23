@@ -5,7 +5,7 @@
 import type { Obdelnik } from "../src/data/geometrie";
 import type { NavrhMostu } from "../src/data/navrh";
 import type { PolozkaJizdnihoRadu, Uroven } from "../src/data/uroven";
-import { RESENI, trat } from "./reseni";
+import { MOSTY_UKAZEK, RESENI, trat } from "./reseni";
 
 export interface StranaUkazky {
   uroven: Uroven;
@@ -98,8 +98,43 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
   const trasa = uroven.trasy[0]!.id;
   switch (uroven.id) {
     // Mostovka s kloubem uprostřed proti téže mostovce podepřené trojúhelníkem.
-    case "1-01":
-      return { a: { uroven, navrh: reseni.pady[0]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+    // Ukázka nepotřebuje obě výpravy z úrovně: princip předvedou tři chodci.
+    case "1-01": {
+      const chodci = sProvozem(uroven, [
+        { cas: 0, trasa, smer: 1, druh: "chodec", pocet: 2, kadence: 1.8 },
+        { cas: 2, trasa, smer: -1, druh: "chodec", pocet: 1, kadence: 2.0 },
+      ]);
+      return { a: { uroven: chodci, navrh: reseni.pady[0]!.navrh }, b: { uroven: chodci, navrh: reseni.pruchod } };
+    }
+
+    // Mostovka se dvěma klouby: jedna vzpěra z kotvy podepře jen jeden, druhý se propadne.
+    // Výletníků stačí pár; hustý provoz úrovně by ukázku jen prodloužil.
+    case "1-02": {
+      const vylet = sProvozem(uroven, [
+        { cas: 0, trasa, smer: 1, druh: "cyklista", pocet: 2 },
+        { cas: 1, trasa, smer: -1, druh: "chodec", pocet: 4, kadence: 1.9 },
+      ]);
+      return { a: { uroven: vylet, navrh: reseni.pady[1]!.navrh }, b: { uroven: vylet, navrh: reseni.mistrovska } };
+    }
+
+    // Stejná příhrada: krajní šikminy z lehkého a z těžkého trámu. Osobní auto unesou obě,
+    // pod dodávkou se lehká vzepře a zlomí. Chodec a cyklista z úrovně ukázku nezdržují.
+    case "1-03": {
+      const vozy = sProvozem(uroven, [
+        { cas: 0, trasa, smer: 1, druh: "auto" },
+        { cas: 2.5, trasa, smer: -1, druh: "dodavka" },
+      ]);
+      const lehka = reseni.pady.find((p) => p.nazev === "vysoká příhrada jen z lehkého trámu")!.navrh;
+      return { a: { uroven: vozy, navrh: lehka }, b: { uroven: vozy, navrh: reseni.pruchod } };
+    }
+
+    // Lehká příhrada přes celé údolí proti vzpěradlům z kotev ve svazích.
+    case "1-04":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
+
+    // Ocel unese víc než dřevo, ale tvar musí držet stejně: horní pás bez diagonál se zkosí.
+    case "2-01":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod }, rychlost: 1.5 };
 
     // Stejná nízká lávka, jiný rytmus běhu: vlevo přesně na její vlastní frekvenci, vpravo pomaleji.
     case "2-02": {
@@ -118,13 +153,13 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
       const pochod = sProvozem(uroven, [{ cas: 0, trasa, smer: 1, druh: "utvar", pocet: 24, kadence: 2.3 }]);
       return {
         a: { uroven: pochod, navrh: reseni.pady[1]!.navrh },
-        b: { uroven: pochod, navrh: sTlumenim(reseni.mistrovska, 100_000) },
+        b: { uroven: pochod, navrh: sTlumenim(MOSTY_UKAZEK["2-04"], 100_000) },
       };
     }
 
     // Stejná mostovka, příhrada metr a tři metry vysoká: nízká neunese ani sebe.
     case "3-01":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
 
     // Stejný tvar s dvanáctimetrovým horním pásem: z lehkého profilu vybočí, z těžkého ne.
     case "3-02": {
@@ -144,7 +179,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejné lehké příhrady pod mostovkou: bez pilířů a na pilířích.
     case "4-01":
-      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: MOSTY_UKAZEK["4-01"] } };
 
     // Stejná mostovka na pilířích: s klouby mezi poli a svařená.
     case "4-02":
@@ -168,7 +203,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejný most i závaží, jiné ladění: daleko od mostu a na most s lidmi.
     case "5-03":
-      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: reseni.mistrovska }, rychlost: 2 };
+      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: MOSTY_UKAZEK["5-03"] }, rychlost: 2 };
 
     // Stejný most pod skákajícím davem: bez tlumičů a se třemi naladěnými na dvojnásobek rytmu.
     case "5-04": {
@@ -181,8 +216,8 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
       return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
     // Stejná ocel pod rychlíkem: příhrada dva a osm metrů hluboká. Unesou ho obě; liší se tím,
-    // jak se pod ním prohnou a co to udělá s cestujícími. (Mistrovskou dá už šest metrů; ukázka
-    // schválně ukazuje víc, než je potřeba.)
+    // jak se pod ním prohnou a co to udělá s cestujícími. (Osmimetrová se do inženýrského
+    // rozpočtu nevejde; ukázka schválně ukazuje víc, než mistrovská medaile chce.)
     case "6-02":
       return { a: { uroven, navrh: reseni.rozpocet }, b: { uroven, navrh: trat("6-02", 36, -8, "ocel-lehka", "ocel-lehka") } };
 
@@ -191,7 +226,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
     case "6-03":
       return {
         a: { uroven, navrh: reseni.pady[3]!.navrh },
-        b: { uroven, navrh: reseni.mistrovska },
+        b: { uroven, navrh: MOSTY_UKAZEK["6-03"] },
         rychlost: 3,
         vyrez: { xMin: 6, yMin: -20, xMax: 42, yMax: 7 },
       };
@@ -206,7 +241,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejná dvě křídla: bez zámku uprostřed jsou jeden kus a písty tlačí proti sobě.
     case "7-02":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
 
     // Stejné křídlo a stejná hluboká kotva: s malým zdvihem se nezvedne dost vysoko.
     case "7-03":

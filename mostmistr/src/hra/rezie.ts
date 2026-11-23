@@ -10,7 +10,7 @@ import type { Bod } from "../data/geometrie";
 import { NASLEDEK_KLOUB } from "../jadro/poruseni";
 import type { Udalost } from "../zkouska/protokol";
 import { OKAMZIK_SLOZENI } from "../zkouska/slozeni";
-import { mistoPrutu, prazdnySnimek, type Snimek, type Zaznam } from "../zkouska/zaznam";
+import { mistoPrutu, prazdnySnimek, STYCNIK_SKRYTY, type Snimek, type Zaznam } from "../zkouska/zaznam";
 import { MERITKO_MAX, type Kamera, type Rozmer } from "../vykres/kamera";
 
 /** Co záběr sleduje, když se místo během pádu hýbe: styčník, prut, nebo nic (místo stojí). */
@@ -220,4 +220,124 @@ export function zaberNaPoruchu(
   if (u.druh === "pad") return naStycnik(ucastnici.find((p) => p.polozka === u.polozka && p.clen === u.clen)?.kola[0]);
   const kde = mistoPrutu(stavba, snimek, u.prut!);
   return kde ? { okamzik: u.cas, misto: kde.misto, rozsah: kde.rozsah, cil: { druh: "prut", prut: u.prut! } } : null;
+}
+
+// ——— Klidné úseky zkoušky ———
+
+/**
+ * Dlouhá zkouška (dav jde mostem přes minutu, tři útvary za sebou, budič přelaďuje přes celý
+ * rozsah) je z velké části klidná: most je daleko od meze kmitání i únosnosti a není na co se
+ * dívat. Přehrávání takové úseky samo zrychlí a k tomu, co stojí za vidění, se vrátí zvolenou
+ * rychlostí. Dva stupně: **prázdno** (přes most nikdo nejde, nic se nehýbe, neproplouvá loď)
+ * a **klid** (někdo jde, ale most se sotva hýbe a žádný prut není blízko meze).
+ */
+export const HLUCHO = {
+  /** Jak dlouhý úsek stojí za zrychlení, s. */
+  nejkratsi: 3,
+  /** Jak dlouho po začátku úseku zrychlení začne a jak dlouho před jeho koncem skončí, s. */
+  odstup: 0.75,
+  predstih: 1.5,
+  /** Rychlost přehrávání, když je most prázdný, a když je na něm klid (násobek skutečného času). */
+  rychlost: 8,
+  rychlostKlidu: 3,
+  /** Od jakého okamžitého kmitání mostovky (m/s²) a rychlosti styčníku (m/s) se prázdný most ještě hýbe. */
+  kmitani: 0.05,
+  pohyb: 0.02,
+  /** Od jakého využití prutu a rychlosti styčníku mostu (m/s) už klid není. */
+  vyuziti: 0.7,
+  pohybKlidu: 0.3,
+  /** Jak dlouhá zkouška (s) je dlouhá: kratší se zrychluje, jen když je most prázdný. */
+  dlouha: 25,
+} as const;
+
+/** Stav účastníka provozu „jede“ (viz `src/zkouska/provoz.ts`); tady jen číslo, ať režie nezná zkoušku. */
+const UCASTNIK_JEDE = 1;
+
+/** Úsek děje, který se přehrává zrychleně: od, do (s) a kolikrát rychleji. */
+export interface KlidnyUsek {
+  od: number;
+  po: number;
+  rychlost: number;
+}
+
+/** Co klidné úseky potřebují vědět o zkoušce navíc k záznamu. */
+export interface VolbyKlidu {
+  /** Úseky, kdy se něco děje, i když to ze záznamu není poznat (průjezd lodi). */
+  rusno?: readonly (readonly [number, number])[];
+  /**
+   * Od jakého okamžitého kmitání mostovky (m/s²) už klid není: zlomek meze úrovně, u budiče
+   * zlomek největšího kmitání, které našel. Bez údaje se ke kmitání nepřihlíží.
+   */
+  kmitani?: number;
+  /**
+   * Zrychlit jen úseky, kdy na mostě nikdo není. Krátká zkouška se má vidět celá: stupeň
+   * „klid“ (někdo jde, ale most je daleko od mezí) je pro zkoušky dlouhé aspoň `HLUCHO.dlouha`.
+   */
+  jenPrazdno?: boolean;
+}
+
+/**
+ * Klidné úseky záznamu zkoušky, zkrácené o odstup na začátku a předstih na konci. Úsek, který
+ * sahá až na konec záznamu, je klidný až do konce.
+ */
+export function klidneUseky(zaznam: Zaznam, volby: VolbyKlidu = {}): KlidnyUsek[] {
+  const { snimky } = zaznam;
+  const rusno = volby.rusno ?? [];
+  const useky: KlidnyUsek[] = [];
+  let zacatek = 0;
+  let stupen = 0;
+  const uzavri = (konec: number, doKonce: boolean): void => {
+    if (stupen > 0) {
+      const od = zacatek + HLUCHO.odstup;
+      const po = doKonce ? konec : konec - HLUCHO.predstih;
+      if (po - od >= HLUCHO.nejkratsi) useky.push({ od, po, rychlost: stupen === 2 ? HLUCHO.rychlost : HLUCHO.rychlostKlidu });
+    }
+    stupen = 0;
+  };
+  for (let i = 0; i < snimky.length; i++) {
+    const s = snimky[i]!;
+    const minuly = snimky[i - 1];
+    // 2 prázdno, 1 klid, 0 něco se děje.
+    let ted = rusno.some(([od, po]) => s.cas >= od && s.cas <= po) || (minuly !== undefined && minuly.topologie !== s.topologie) ? 0 : 2;
+    if (ted === 2 && s.kmitani >= HLUCHO.kmitani) ted = 1;
+    if (ted === 2) for (let k = 0; k < s.provoz.length; k++) if (s.provoz[k] === UCASTNIK_JEDE) ted = 1;
+    if (ted > 0 && volby.kmitani !== undefined && s.kmitani >= volby.kmitani) ted = 0;
+    if (ted > 0) {
+      for (let e = 0; e < s.vyuziti.length; e++) {
+        const v = s.vyuziti[e]!;
+        if (v >= HLUCHO.vyuziti || v <= -HLUCHO.vyuziti) {
+          ted = 0;
+          break;
+        }
+      }
+    }
+    if (ted > 0 && minuly && minuly.polohy.length === s.polohy.length && s.cas > minuly.cas) {
+      // Jak rychle se most hýbe (zvedá se, dosedá, doznívá). Styčníky břemen se nepočítají:
+      // kdo most přejel, jede dál a nikoho už nezajímá.
+      const znacky = zaznam.topologie[s.topologie]?.znacky;
+      const mezPrazdna = HLUCHO.pohyb * (s.cas - minuly.cas);
+      const mezKlidu = HLUCHO.pohybKlidu * (s.cas - minuly.cas);
+      for (let k = 0; k < s.polohy.length && ted > 0; k++) {
+        if (znacky?.[k >> 1] === STYCNIK_SKRYTY) continue;
+        const posun = Math.abs(s.polohy[k]! - minuly.polohy[k]!);
+        if (posun > mezKlidu) ted = 0;
+        else if (posun > mezPrazdna) ted = 1;
+      }
+    }
+    if (ted === 1 && volby.jenPrazdno) ted = 0;
+    if (ted !== stupen) {
+      uzavri(s.cas, false);
+      stupen = ted;
+      zacatek = s.cas;
+    }
+  }
+  const posledni = snimky[snimky.length - 1];
+  if (posledni) uzavri(posledni.cas, true);
+  return useky;
+}
+
+/** Klidný úsek, ve kterém leží čas `cas`; null, když v žádném. */
+export function klidnyUsek(useky: readonly KlidnyUsek[], cas: number): KlidnyUsek | null {
+  for (const usek of useky) if (cas >= usek.od && cas < usek.po) return usek;
+  return null;
 }

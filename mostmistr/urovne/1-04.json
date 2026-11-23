@@ -85,10 +85,10 @@
   "hmotnostVybaveni": 100,
   "nerovnost": "A",
   "rozpocet": 200000,
-  "inzenyrskyRozpocet": 125000,
+  "inzenyrskyRozpocet": 133000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.2
+    "limit": 0.65
   },
   "povolenePrvky": [
     "mostovka-drevo",
@@ -108,22 +108,14 @@
       "cas": 3,
       "trasa": "cesta",
       "smer": -1,
-      "druh": "auto"
+      "druh": "dodavka"
     },
     {
-      "cas": 4,
+      "cas": 5,
       "trasa": "cesta",
       "smer": 1,
       "druh": "cyklista",
       "pocet": 2
-    },
-    {
-      "cas": 6,
-      "trasa": "cesta",
-      "smer": -1,
-      "druh": "chodec",
-      "pocet": 2,
-      "kadence": 2.0
     }
   ]
 }

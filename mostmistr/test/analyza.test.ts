@@ -87,7 +87,9 @@ describe("reakce v podporách", () => {
 
   it("s autem jsou reakce větší o jeho váhu; posuvná podpora vodorovnou sílu nenese", () => {
     const navrh = RESENI["1-03"]!.pruchod;
-    const sAutem = zkousej(u103, navrh).vysledek.reakce;
+    // Jen osobní auto: úroveň sama posílá po mostě i dodávku, a ta je víc než dvakrát těžší.
+    const jenAuto: Uroven = { ...u103, jizdniRad: [{ cas: 0, trasa: u103.trasy[0]!.id, smer: 1, druh: "auto" }] };
+    const sAutem = zkousej(jenAuto, navrh).vysledek.reakce;
     const bez = zkousej({ ...u103, jizdniRad: [] }, navrh).vysledek.reakce;
     const soucet = (reakce: typeof bez): number => reakce.reduce((s, r) => s + r.svisla, 0);
     // Největší reakce každé podpory nastanou v jinou chvíli, takže součet maxim přesáhne tíhu mostu s autem jen o trochu.

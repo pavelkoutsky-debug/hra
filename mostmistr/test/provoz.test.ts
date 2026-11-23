@@ -4,10 +4,12 @@ import type { PolozkaJizdnihoRadu, Uroven } from "../src/data/uroven";
 import { krok, spoctiSily, TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
 import { sestavSoustavu, type Soustava } from "../src/jadro/soustava";
 import { pridejKontaktSTerenem, vyskaTerenuV, vytvorTeren } from "../src/jadro/teren";
-import { CEKA, JEDE, PREJEL } from "../src/zkouska/provoz";
+import { CEKA, JEDE, lideNaMosteVeSnimku, PREJEL } from "../src/zkouska/provoz";
 import { Kreslic, urovenRegrese } from "../src/zkouska/regrese";
 import { hmotnostUcastnika, modelUcastnika } from "../src/zkouska/vozidla";
 import { Zkouska } from "../src/zkouska/zkouska";
+import { nactiKampan, nasadaUrovne } from "../urovne/index";
+import { RESENI } from "../urovne/reseni";
 
 const g = TIHOVE_ZRYCHLENI;
 
@@ -196,5 +198,31 @@ describe("dopad na terén", () => {
     // Skončil v údolí, ne zarytý v břehu.
     expect(s.x[0]!).toBeGreaterThan(0);
     expect(s.y[0]!).toBeLessThan(-15);
+  });
+});
+
+describe("kmitání pod lidmi a bez nich", () => {
+  it("v 1-03 mostovku nejvíc rozhoupe dodávka, ale do výsledku se počítá jen kmitání, když po mostě někdo jde", () => {
+    const uroven = nactiKampan().find((u) => u.id === "1-03")!;
+    const zkouska = new Zkouska(uroven, RESENI["1-03"]!.pruchod, nasadaUrovne(uroven));
+    let sLidmi = 0;
+    let bezLidi = 0;
+    let pojistka = 0;
+    while (!zkouska.hotovo) {
+      for (const snimek of zkouska.pokracuj(1).snimky) {
+        // Stejná otázka, jakou si při přehrávání klade legenda: počítá se tohle kmitání?
+        if (lideNaMosteVeSnimku(uroven, zkouska.ucastnici, snimek.provoz, snimek.polohy)) sLidmi = Math.max(sLidmi, snimek.kmitani);
+        else bezLidi = Math.max(bezLidi, snimek.kmitani);
+      }
+      expect(pojistka++).toBeLessThan(400);
+    }
+    const vysledek = zkouska.vysledek();
+    expect(vysledek.pruchod).toBe(true);
+    const zmereno = vysledek.komfort!.zrychleni;
+    // Chodec a cyklista most skoro nerozhoupou; dodávka, která jede až po nich, několikrát víc.
+    expect(sLidmi).toBeGreaterThan(0);
+    expect(sLidmi).toBeLessThanOrEqual(zmereno + 1e-9);
+    expect(bezLidi).toBeGreaterThan(3 * zmereno);
+    expect(zkouska.kmitaniNadMezi).toBe(false);
   });
 });

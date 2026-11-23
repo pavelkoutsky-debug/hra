@@ -322,7 +322,8 @@ describe("pohodlí cestujících v autobusu", () => {
     const tuhy = jed(prihradovyMost()).komfortCestujicich!.zrychleni;
     const houpavy = jed(mekky()).komfortCestujicich!.zrychleni;
     const limit = (tuhy + houpavy) / 2;
-    const bonus: Partial<Uroven> = { mistrovska: { druh: "komfort-cestujicich", limit } };
+    // Mistrovská je rozpočtová a k ní bonus: úroveň proto má i inženýrský rozpočet, do kterého se oba mosty vejdou.
+    const bonus: Partial<Uroven> = { rozpocet: 1e9, inzenyrskyRozpocet: 1e9, mistrovska: { druh: "komfort-cestujicich", limit } };
     expect(jed(prihradovyMost(), bonus).medaile).toMatchObject({ pruchod: true, mistrovska: true });
     expect(jed(mekky(), bonus).medaile).toMatchObject({ pruchod: true, mistrovska: false });
     // Bez autobusu bonus získat nejde.

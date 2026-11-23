@@ -479,6 +479,15 @@ export class Zkouska {
     return this.simulace.cas >= this.#konec || this.simulace.rozpadla;
   }
 
+  /**
+   * Překročilo už kmitání pod lidmi mez úrovně? Od té chvíle most zkouškou neprojde, ať se
+   * stane cokoli; kdo zkouší mnoho mostů za sebou, nemusí zbytek počítat. Kmitání prázdného
+   * mostu (po autě, když lidé odešli) se do meze nepočítá, stejně jako ve výsledku.
+   */
+  get kmitaniNadMezi(): boolean {
+    return this.#budic === null && this.#komfort !== null && this.#komfort.prekroceni >= 0;
+  }
+
   /** Provoz a po prvním porušení i dopad trosek mostu na terén a do vody. */
   #zatizeni(teren: Teren, stycnikuMostu: number): Zatizeni {
     const provoz = this.provoz;
@@ -1053,12 +1062,16 @@ export class Zkouska {
         nedolozeno: !this.bezRovnovahy && this.#zlomCas === null && this.#zlomHodiny < NEJDELSI_ZLOM,
       };
     }
+    // Medaile jdou po schodech: rozpočtová je průchod pod inženýrským rozpočtem, při kterém
+    // se nic neporušilo (most, který někde povolil a lidé přesto přešli, levný není, jen měl
+    // štěstí); mistrovská je rozpočtová a k ní bonus úrovně. Mistrovskou tak nejde koupit
+    // drahým mostem.
+    const rozpoctova = zkouska && pruchod && poruseni === 0 && uroven.inzenyrskyRozpocet !== null && cena <= uroven.inzenyrskyRozpocet;
     const medaile: Medaile = {
       pruchod: pruchod && zkouska,
-      rozpocet: zkouska && pruchod && uroven.inzenyrskyRozpocet !== null && cena <= uroven.inzenyrskyRozpocet,
+      rozpocet: rozpoctova,
       mistrovska:
-        zkouska &&
-        pruchod &&
+        rozpoctova &&
         bonus !== null &&
         ((bonus.druh === "rezerva" && nejvetsiVyuziti <= bonus.limit) ||
           (bonus.druh === "komfort-chodcu" && komfort !== null && komfort.zrychleni <= bonus.limit) ||

@@ -29,6 +29,29 @@ const B = (x: number, y: number) => ({ x, y });
 const kampan = new Map(nactiKampan().map((u) => [u.id, u]));
 const zavesena = kampan.get("4-03")!;
 const visuta = kampan.get("4-04")!;
+/**
+ * Úroveň 4-03 se základem uprostřed údolí, jak ji hra měla do M12 (dnes leží o pole vlevo, aby
+ * dopnutí lan rozhodovalo). Testy editoru a napínáků kreslí vlastní souměrný most s pylonem
+ * v x = 30; na tom, kde základ je, v nich nezáleží.
+ */
+const soumerna: Uroven = {
+  ...zavesena,
+  zaklady: [{ x: 30, y: -10 }],
+  teren: [
+    { x: -10, y: 0 },
+    { x: 0, y: 0 },
+    { x: 5, y: -9 },
+    { x: 14, y: -13 },
+    { x: 24, y: -13 },
+    { x: 27, y: -10 },
+    { x: 33, y: -10 },
+    { x: 36, y: -13 },
+    { x: 46, y: -13 },
+    { x: 55, y: -9 },
+    { x: 60, y: 0 },
+    { x: 70, y: 0 },
+  ],
+};
 
 /** Údolí 60 m se základem uprostřed a se vším, co čtvrtá kapitola dovoluje. */
 function udoli(): Uroven {
@@ -137,7 +160,7 @@ describe("úpravy návrhu s lany a svary", () => {
 });
 
 describe("editor: napínák, svar a pilíř", () => {
-  const editor = (): Editor => new Editor(zavesena, prazdnyNavrh(zavesena.id));
+  const editor = (): Editor => new Editor(soumerna, prazdnyNavrh(soumerna.id));
   const nakresli = (e: Editor, prvek: Parameters<Editor["zvolPrvek"]>[0], od: [number, number], k: [number, number]): boolean => {
     e.zvolPrvek(prvek);
     e.stiskni(B(od[0], od[1]));
@@ -152,7 +175,7 @@ describe("editor: napínák, svar a pilíř", () => {
     expect(e.posledniDuvod).toBe("pilir-mimo-zaklad");
     expect(nakresli(e, "pilir", [30, -10], [30, 0])).toBe(true);
     expect(nakresli(e, "pilir", [30, 0], [30, 12])).toBe(true);
-    expect(zkontrolujNavrh(e.navrh, zavesena)).toEqual([]);
+    expect(zkontrolujNavrh(e.navrh, soumerna)).toEqual([]);
   });
 
   it("nakreslené lano zůstane vybrané a napínák ho po milimetrech dotahuje a povoluje", () => {
@@ -179,14 +202,14 @@ describe("editor: napínák, svar a pilíř", () => {
     e.zmenPredpeti(-30);
     expect(1000 * e.predpetiVyberu!.zkraceni).toBeCloseTo(-7, 6);
     expect(e.predpetiVyberu!.predpeti).toBeLessThan(0);
-    expect(zkontrolujNavrh(e.navrh, zavesena)).toEqual([]);
+    expect(zkontrolujNavrh(e.navrh, soumerna)).toEqual([]);
     // Úpravu jde vzít zpět.
     e.zpet();
     expect(1000 * e.predpetiVyberu!.zkraceni).toBeCloseTo(23, 6);
   });
 
   it("společný krok zachová rozdíly mezi lany a výsledek dopnutí se zapíše jedním krokem historie", () => {
-    const e = new Editor(zavesena, zaveseny(0.05));
+    const e = new Editor(soumerna, zaveseny(0.05));
     const lana = e.navrh.pruty.filter((p) => p.prvek === "lano");
     expect(e.nastavPredpetiLan(new Map([[lana[0]!.id, 0.1], [lana[1]!.id, 0.3]]))).toBe(true);
     e.vyberVse();
@@ -202,7 +225,7 @@ describe("editor: napínák, svar a pilíř", () => {
   });
 
   it("svar vybraných styčníků se přepíná; kde svary povolené nejsou, nejde to", () => {
-    const e = new Editor(zavesena, zaveseny(0.05));
+    const e = new Editor(soumerna, zaveseny(0.05));
     expect(e.svarVyberu).toBeNull();
     expect(e.prepniSvar()).toBe(false);
     const stred = e.navrh.stycniky.find((s) => s.x === 12 && s.y === 0)!;
@@ -219,7 +242,7 @@ describe("editor: napínák, svar a pilíř", () => {
     e.prepniSvar();
     expect(e.navrh.stycniky.some((s) => s.svar)).toBe(false);
 
-    const bezSvaru = new Editor({ ...zavesena, povoleneSvary: false }, zaveseny(0.05));
+    const bezSvaru = new Editor({ ...soumerna, povoleneSvary: false }, zaveseny(0.05));
     bezSvaru.vyberJenStycnik(stred.id);
     expect(bezSvaru.prepniSvar()).toBe(false);
   });
@@ -347,13 +370,15 @@ describe("automatické dopnutí lan", () => {
   it("jde vyžádat zprávou; most proti pravidlům úrovně dopnout nejde", () => {
     const zpravy: ZpravaZeZkousky[] = [];
     const beh = new BehZkousky((zprava) => zpravy.push(zprava));
-    const navrh = RESENI["4-03"]!.pady.find((p) => p.nazev === "bez kotevních lan")!.navrh;
+    // Most pro průchod s lany na výchozím předpětí: dopnutí ho srovná na zlomek milimetru.
+    const dopnuty = RESENI["4-03"]!.pruchod;
+    const navrh = { ...dopnuty, pruty: dopnuty.pruty.map((p) => (p.prvek === "lano" ? { ...p, predpeti: PREDPETI_LANA.vychozi } : p)) };
     beh.prijmi({ typ: "dopnuti", id: 7, uroven: zavesena, navrh });
     beh.prijmi({ typ: "dopnuti", id: 8, uroven: { ...zavesena, povolenePrvky: ["mostovka-ocelobeton"] }, navrh });
     expect(zpravy.map((z) => z.typ)).toEqual(["dopnuti", "dopnuti"]);
     const [prvni, druha] = zpravy as Extract<ZpravaZeZkousky, { typ: "dopnuti" }>[];
     expect(prvni!.id).toBe(7);
-    expect(prvni!.dopnuti!.predpeti).toHaveLength(8);
+    expect(prvni!.dopnuti!.predpeti).toHaveLength(10);
     expect(prvni!.dopnuti!.po).toBeLessThan(0.001);
     expect(druha).toEqual({ typ: "dopnuti", id: 8, dopnuti: null });
     expect(beh.bezi).toBe(false);
@@ -375,7 +400,8 @@ describe("milník: zavěšený a visutý most unesou kolonu kamionů", () => {
       }
       const vysledek = zkouska.vysledek();
       expect(vysledek).toMatchObject({ pruchod: true, prejelo: 4, spadlo: 0, poruseni: 0, bezRovnovahy: false, rozpad: false });
-      expect(vysledek.nejvetsiVyuziti).toBeLessThan(0.7);
+      // Zavěšený most úrovně 4-03 je nesouměrný a hlava pylonu pracuje: rezerva je menší než u visutého.
+      expect(vysledek.nejvetsiVyuziti).toBeLessThan(0.85);
     }, 60_000);
   }
 });
@@ -607,11 +633,13 @@ describe("nálezy nezávislých recenzí M4b", () => {
 
   it("volně visící lano mostu klidovou polohu nebere; samotné povolené lano zkoušku nezasekne", () => {
     const ref = RESENI["4-03"]!.pruchod;
-    const hlava = ref.stycniky.find((st) => st.x === 30 && st.y === 16)!.id;
+    // Hlava pylonu je nejvyšší styčník mostu; volné lano z ní vede šest metrů do vzduchu.
+    const vrchol = ref.stycniky.reduce((a, b) => (b.y > a.y ? b : a));
+    const hlava = vrchol.id;
     const volny = Math.max(...ref.stycniky.map((st) => st.id)) + 1;
     const sLanem: NavrhMostu = {
       ...ref,
-      stycniky: [...ref.stycniky, { id: volny, x: 36, y: 16 }],
+      stycniky: [...ref.stycniky, { id: volny, x: vrchol.x + 6, y: vrchol.y }],
       pruty: [...ref.pruty, { id: Math.max(...ref.pruty.map((p) => p.id)) + 1, a: hlava, b: volny, prvek: "lano", predpeti: 0.05 }],
     };
     const s = sestavSoustavu(sestavMost(zavesena, sLanem).popis);

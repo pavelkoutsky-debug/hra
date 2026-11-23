@@ -1,4 +1,6 @@
 // Každá úroveň kampaně jde vyhrát, každou medaili lze získat a triviální most neprojde.
+// Medaile jdou po schodech (rozpočtová je průchod do inženýrského rozpočtu bez porušení,
+// mistrovská je rozpočtová a k ní bonus úrovně) a referenční mosty to ukazují.
 import { describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../src/data/cena";
 import { KATALOG } from "../src/data/katalog";
@@ -23,6 +25,23 @@ function zkousej(uroven: Uroven, navrh: NavrhMostu): VysledekZkousky {
 }
 
 const kampan = nactiKampan();
+
+/**
+ * Hodnota, kterou měří bonus úrovně: největší využití prutu, kmitání mostovky nebo zrychlení
+ * cestujících (m/s²), ráz dosednutí (N). Menší je lepší; bonus ji chce nejvýš `limit`.
+ */
+function hodnotaBonusu(uroven: Uroven, vysledek: VysledekZkousky): number {
+  const druh = uroven.mistrovska!.druh;
+  if (druh === "rezerva") return vysledek.nejvetsiVyuziti;
+  if (druh === "komfort-chodcu") return vysledek.komfort!.zrychleni;
+  if (druh === "komfort-cestujicich") return vysledek.komfortCestujicich!.zrychleni;
+  if (druh === "dosednuti") return vysledek.pohyb!.razDosednuti;
+  throw new Error(`bonus ${druh} test neumí změřit`);
+}
+
+/** O kolik má most pro mistrovskou splnit bonus s rezervou a most pro rozpočtovou ho minout. */
+const REZERVA_BONUSU = 0.95;
+const ODSTUP_OD_BONUSU = 1.15;
 
 describe("kampaň", () => {
   it("má úrovně všech kapitol v pořadí a ke každé referenční řešení", () => {
@@ -80,25 +99,30 @@ for (const uroven of kampan) {
       const cena = cenaNavrhu(reseni.rozpocet);
       expect(cena).toBeLessThanOrEqual(uroven.inzenyrskyRozpocet!);
       expect(cena).toBeGreaterThan(0.9 * uroven.inzenyrskyRozpocet!);
+      // Mistrovská je rozpočtová a k ní bonus: i její most se do inženýrského rozpočtu vejde.
+      expect(cenaNavrhu(reseni.mistrovska)).toBeLessThanOrEqual(uroven.inzenyrskyRozpocet!);
     });
 
-    it("řešení pro průchod projde", () => {
+    it("řešení pro průchod projde a mistrovskou medaili nedostane", () => {
       const vysledek = zkousej(uroven, reseni.pruchod);
       expect(vysledek).toMatchObject({ pruchod: true, spadlo: 0, poruseni: 0 });
       expect(vysledek.prejelo).toBe(vysledek.ucastniku);
+      expect(vysledek.medaile).toMatchObject({ pruchod: true, mistrovska: false });
     }, 60_000);
 
-    it("řešení pro rozpočet projde pod inženýrským rozpočtem", () => {
+    it("řešení pro rozpočet projde pod inženýrským rozpočtem bez porušení a bonus s odstupem nesplní", () => {
       const vysledek = zkousej(uroven, reseni.rozpocet);
-      expect(vysledek.medaile).toMatchObject({ pruchod: true, rozpocet: true });
+      expect(vysledek.medaile).toEqual({ pruchod: true, rozpocet: true, mistrovska: false });
       expect(vysledek.poruseni).toBe(0);
+      // Bonus není zadarmo ke každému levnému mostu: tenhle ho mine aspoň o 15 %.
+      expect(hodnotaBonusu(uroven, vysledek)).toBeGreaterThanOrEqual(ODSTUP_OD_BONUSU * uroven.mistrovska!.limit);
     }, 60_000);
 
-    it("řešení pro mistrovskou medaili projde a splní bonus", () => {
+    it("řešení pro mistrovskou medaili má všechny tři medaile a bonus plní s rezervou", () => {
       const vysledek = zkousej(uroven, reseni.mistrovska);
-      expect(vysledek.medaile).toMatchObject({ pruchod: true, mistrovska: true });
-      // Bonus není zadarmo: řešení pro průchod ho nesplní.
-      expect(zkousej(uroven, reseni.pruchod).medaile.mistrovska).toBe(false);
+      expect(vysledek.medaile).toEqual({ pruchod: true, rozpocet: true, mistrovska: true });
+      expect(vysledek.poruseni).toBe(0);
+      expect(hodnotaBonusu(uroven, vysledek)).toBeLessThanOrEqual(REZERVA_BONUSU * uroven.mistrovska!.limit);
     }, 60_000);
 
     for (const pad of reseni.pady) {

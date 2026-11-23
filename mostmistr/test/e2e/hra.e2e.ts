@@ -19,6 +19,8 @@ let adresa: string;
 const chyby: string[] = [];
 
 const udaj = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).innerText();
+/** Text prvku, i když je zrovna sbalený (seznam prvků a „Více o úloze“ v okně se zadáním). */
+const obsah = async (jmeno: string): Promise<string> => (await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "";
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 
@@ -129,6 +131,8 @@ describe("přehled kampaně", () => {
     expect(await stranka.locator('.karta[data-uroven^="1-"]').count()).toBe(4);
     expect(await stranka.locator('.karta[data-zamceno="false"]').count()).toBe(1);
     expect(await stranka.locator('.karta[data-uroven="1-02"]').innerText()).toContain("nejdřív projdi úroveň 1-01");
+    // První úroveň další kapitoly čeká na dvě úrovně téhle, ne na všechny čtyři.
+    expect(await stranka.locator('.karta[data-uroven="2-01"]').innerText()).toContain("nejdřív projdi 2 úrovně kapitoly 1");
     await stranka.screenshot({ path: `${SLOZKA}/20-prehled.png` });
   });
 
@@ -145,17 +149,23 @@ describe("přehled kampaně", () => {
     await okno.waitFor({ state: "visible" });
     expect(await udaj("zadani-list")).toBe("ÚROVEŇ 1-01");
     expect(await udaj("zadani-nazev")).toBe("Lávka přes potok");
-    expect(await udaj("zadani-text")).toContain("Přes potok mají přejít tři chodci");
-    expect(await udaj("zadani-provoz")).toContain("2× chodec");
-    expect(await udaj("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
+    expect(await udaj("zadani-text")).toContain("Přes potok jdou proti sobě dvě výpravy, šestatřicet lidí");
+    expect(await udaj("zadani-provoz")).toContain("dav, 12 lidí zleva");
+    expect(await udaj("zadani-provoz")).toContain("6× chodec zprava");
+    // Seznam prvků s cenami je sbalený (ukazuje ho i paleta); obsah v něm je.
+    expect(await stranka.locator('[data-udaj="zadani-stavba"]').isVisible()).toBe(false);
+    expect(await obsah("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
     expect(await stranka.locator('[data-udaj="zadani-medaile"] li').count()).toBe(3);
+    expect(await udaj("zadani-medaile")).toContain("průchod s mostem do 32\u202f500\u00a0Kč, na kterém se nic neporušilo");
     // Ukázka: mostovka sama spadne, s trojúhelníkem obstojí. Obě strany se doopravdy spočítají.
     const ukazka = stranka.locator('[data-udaj="ukazka"]');
     await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 30_000 });
     expect(await udaj("ukazka-a")).toBe("Jen mostovka");
     expect(await ukazka.locator('[data-strana="a"]').getAttribute("data-pruchod")).toBe("false");
     expect(await ukazka.locator('[data-strana="b"]').getAttribute("data-pruchod")).toBe("true");
-    expect(await udaj("zadani-skutecnost")).toContain("jeřáby i stožáry");
+    // Souvislost se skutečností je pod „Více o úloze“, sbalená.
+    expect(await stranka.locator('[data-udaj="zadani-skutecnost"]').isVisible()).toBe(false);
+    expect(await obsah("zadani-skutecnost")).toContain("jeřáby i stožáry");
     // Okno se vejde na obrazovku a začíná odshora.
     expect(await stranka.locator("#okno-zadani").evaluate((okno) => okno.scrollTop)).toBe(0);
     expect(await stranka.locator('[data-udaj="zadani-nazev"]').isVisible()).toBe(true);
@@ -167,7 +177,7 @@ describe("přehled kampaně", () => {
     expect(await okno.isVisible()).toBe(false); // mezerník zmáčkl tlačítko „Jdu stavět“
 
     // Zadání zůstává vlevo a okno jde otevřít znovu.
-    expect(await udaj("zadani")).toContain("Přes potok mají přejít tři chodci");
+    expect(await udaj("zadani")).toContain("Přes potok jdou proti sobě dvě výpravy");
     await akce("zadani").click();
     await okno.waitFor({ state: "visible" });
     await stranka.keyboard.press("Escape");
@@ -175,7 +185,7 @@ describe("přehled kampaně", () => {
     expect(await udaj("nazev")).toBe("Lávka přes potok");
     expect(await stranka.locator(".paleta__prvky button").count()).toBe(2);
     expect(await udaj("rozpocet")).toBe("0 Kč / 45 000 Kč");
-    expect(await udaj("jizdni-rad")).toContain("2× chodec");
+    expect(await udaj("jizdni-rad")).toContain("6× chodec");
     await stranka.screenshot({ path: `${SLOZKA}/21-prazdna-uroven.png` });
   });
 });
@@ -270,14 +280,15 @@ describe("stavba myší", () => {
     expect(await udaj("hlaseni")).toBe("Most je dražší než rozpočet. Před zkouškou ho zlevni.");
     for (let i = 0; i < 4; i++) await stranka.keyboard.press("Control+z");
     expect(await pocetPrutu()).toBe(5);
-    expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("inz");
+    // 33 133 Kč se do rozpočtu vejde, do inženýrského (32 500 Kč) ne.
+    expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("ok");
   });
 });
 
 describe("zkouška a vyhodnocení", () => {
   let otisk = "";
 
-  it("věšadlo zkouškou projde a získá medaile", async () => {
+  it("věšadlo zkouškou projde a získá medaili za průchod", async () => {
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 60_000 });
@@ -286,9 +297,12 @@ describe("zkouška a vyhodnocení", () => {
     await akce("na-konec").click();
     await stranka.locator(".vysledek").waitFor({ state: "visible" });
     expect(await udaj("vysledek-nadpis")).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(3\)\.$/);
-    // Průchod a rozpočet (33 133 Kč se vejde do 33 500 Kč).
-    expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count()).toBeGreaterThanOrEqual(2);
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(36\)\.$/);
+    // Jen průchod: dvoumetrové věšadlo stojí 33 133 Kč a inženýrský rozpočet je 32 500 Kč, takže
+    // rozpočtovou nemá, a mistrovská je rozpočtová a k ní bonus.
+    expect(
+      await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana]').evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-ziskana"))),
+    ).toEqual(["true", "false", "false"]);
     otisk = (await telo("otisk")) ?? "";
     expect(otisk).toMatch(/^[0-9a-f]{8,}$/);
     expect(await akce("dalsi").isVisible()).toBe(true);
@@ -423,7 +437,7 @@ describe("zkouška a vyhodnocení", () => {
 });
 
 describe("další úrovně kapitoly", () => {
-  it("auto přejede referenční most úrovně 1-03", async () => {
+  it("auto i dodávka přejedou referenční most úrovně 1-03", async () => {
     await otevriUroven("1-03");
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-03"]!.pruchod));
@@ -432,10 +446,11 @@ describe("další úrovně kapitoly", () => {
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 60_000 });
-    await nastavCas(1.1);
+    // Chodec a cyklista jdou první; auto vyjíždí ve 12,5 s a dodávka proti němu v 15 s.
+    await nastavCas(14.2);
     await stranka.screenshot({ path: `${SLOZKA}/28-auto-na-moste.png` });
-    await nastavCas(5.6);
-    await stranka.screenshot({ path: `${SLOZKA}/29-auto-a-cyklista.png` });
+    await nastavCas(16.8);
+    await stranka.screenshot({ path: `${SLOZKA}/29-dodavka-na-moste.png` });
     await akce("na-konec").click();
     await stranka.locator(".vysledek").waitFor({ state: "visible" });
     expect(await udaj("vysledek-nadpis")).toBe("MOST OBSTÁL");

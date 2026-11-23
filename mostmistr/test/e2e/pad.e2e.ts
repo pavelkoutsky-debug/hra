@@ -88,7 +88,7 @@ async function prehrajBezZaberu(kdy: number): Promise<void> {
         if ((await telo("zaber")) === "bezi") throw new Error("Záběr běží, a neměl by.");
         return cas();
       },
-      { timeout: 30_000, interval: 50 },
+      { timeout: 60_000, interval: 50 },
     )
     .toBeGreaterThan(kdy);
 }
@@ -237,8 +237,9 @@ describe("zpomalený záběr na první porušení", () => {
     expect(await akce("zaber").getAttribute("aria-pressed")).toBe("false");
     const domov = await pohled();
     await pust();
-    // Prut povolí kolem 1,35 s: přehrávání přes ten okamžik projde plnou rychlostí a bez přiblížení.
-    await prehrajBezZaberu(2.4);
+    // Prut povolí kolem 13,8 s, pod prvním autem: přehrávání přes ten okamžik projde plnou
+    // rychlostí a bez přiblížení.
+    await prehrajBezZaberu(14.9);
     expect((await pohled()).meritko).toBeCloseTo(domov.meritko, 6);
     expect(await udaj("hlaseni")).toMatch(/^Jako první povolil prut \d+ /);
     await dopocitej();
@@ -256,23 +257,24 @@ describe("zpomalený záběr na první porušení", () => {
   it("kdo si čas posouvá sám (krok, táhlo, Na konec), záběr nedostane", async () => {
     await nactiZnovu();
     const domov = await pohled();
-    // Krok po ose a pak zase přehrávání.
+    // Krok po ose a pak zase přehrávání (prut povolí kolem 13,8 s).
     await pust();
     await akce("krok-vpred").click();
     await akce("prehrat").click();
-    await prehrajBezZaberu(2.4);
+    await prehrajBezZaberu(14.9);
     expect((await pohled()).meritko).toBeCloseTo(domov.meritko, 6);
     await stranka.keyboard.press("Escape");
     await stranka.keyboard.press("Escape");
     expect(await telo("rezim")).toBe("stavba");
     // Táhlo času.
     await pust();
+    await dopocitej();
     await stranka.locator("#cas").evaluate((tahlo) => {
-      (tahlo as HTMLInputElement).value = "0.1";
+      (tahlo as HTMLInputElement).value = "12.5";
       tahlo.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await akce("prehrat").click();
-    await prehrajBezZaberu(2.4);
+    await prehrajBezZaberu(14.9);
     expect((await pohled()).meritko).toBeCloseTo(domov.meritko, 6);
     await stranka.keyboard.press("Escape");
     await stranka.keyboard.press("Escape");
@@ -458,7 +460,7 @@ describe("pruh výsledku a razítko", () => {
     expect(await akce("dalsi").evaluate((u) => u.classList.contains("tlacitko--hlavni"))).toBe(true);
     expect(await akce("upravit").evaluate((u) => u.classList.contains("tlacitko--hlavni"))).toBe(false);
     // Přes lávku jdou jen chodci: „přešli“, ne „přešli a přejeli“.
-    expect(await udaj("vysledek-veta")).toBe("Přešli všichni (3).");
+    expect(await udaj("vysledek-veta")).toBe("Přešli všichni (36).");
     const pruh = (await stranka.locator(".vysledek").boundingBox())!;
     expect(pruh.y + pruh.height).toBeLessThan(await vyskaNaStrance(0));
     await stranka.screenshot({ path: `${SLOZKA}/p5-schvaleno.png` });

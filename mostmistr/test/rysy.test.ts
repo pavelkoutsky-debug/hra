@@ -17,7 +17,7 @@ const MOSTY = ["pruchod", "rozpocet", "mistrovska"] as const;
  */
 const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSoustava]> = {
   "1-01": ["trojuhelnik-nad", "trojuhelnik-nad", "trojuhelnik-pod"],
-  "1-02": ["prihrada-nad", "vzpery", "prihrada-obe"],
+  "1-02": ["prihrada-nad", "vzpery", "vzpery"],
   "1-03": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
   "1-04": ["vzpery", "vzpery", "vzpery"],
   "2-01": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
@@ -27,7 +27,7 @@ const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSous
   "3-01": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
   "3-02": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
   "3-03": ["prihrada-nad", "prihrada-pod", "prihrada-pod"],
-  "3-04": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "3-04": ["prihrada-nad", "prihrada-nad", "vzpery"],
   "4-01": ["prihrada-nad", "prihrada-pod", "prihrada-pod"],
   "4-02": ["nosnik", "nosnik", "nosnik"],
   "4-03": ["zaveseny", "zaveseny", "zaveseny"],
@@ -61,16 +61,28 @@ describe("rysy referenčních mostů", () => {
     // 2-04: mistrovský most má navíc viskózní tlumiče.
     expect(rysyMostu(RESENI["2-04"]!.pruchod, u("2-04")).viskozniTlumice).toBe(false);
     expect(rysyMostu(RESENI["2-04"]!.mistrovska, u("2-04")).viskozniTlumice).toBe(true);
-    // 7-02: mistrovský most má křídla ztužená pruty.
-    expect(rysyMostu(RESENI["7-02"]!.pruchod, u("7-02")).ztuzeni).toBe(false);
-    expect(rysyMostu(RESENI["7-02"]!.mistrovska, u("7-02")).ztuzeni).toBe(true);
+    // 7-02: most pro průchod má křídla ztužená pruty (do inženýrského rozpočtu se nevejde),
+    // most pro mistrovskou ne.
+    expect(rysyMostu(RESENI["7-02"]!.pruchod, u("7-02")).ztuzeni).toBe(true);
+    expect(rysyMostu(RESENI["7-02"]!.mistrovska, u("7-02")).ztuzeni).toBe(false);
   });
 
   it("vzpěry do kotev pod mostovkou nejsou příhrada s dolním pásem", () => {
     const u = (id: string) => kampan.find((x) => x.id === id)!;
-    // 1-04: vzpěradla opřená o svahy; most pro průchod má navíc věšadlo nad mostovkou.
-    expect(principMostu(rysyMostu(RESENI["1-04"]!.pruchod, u("1-04")))).toEqual(["vzpery", "vesadlo.navic"]);
+    // 1-04: vzpěradla opřená o svahy; s věšadlem nad mostovkou navíc to věta řekne.
+    expect(principMostu(rysyMostu(RESENI["1-04"]!.pruchod, u("1-04")))).toEqual(["vzpery"]);
     expect(principMostu(rysyMostu(RESENI["1-04"]!.rozpocet, u("1-04")))).toEqual(["vzpery"]);
+    const zaklad = RESENI["1-04"]!.pruchod;
+    const misto = (id: number): [number, number] => {
+      const st = zaklad.stycniky.find((x) => x.id === id)!;
+      return [st.x, st.y];
+    };
+    const sVesadlem = new Kreslic("1-04");
+    for (const p of zaklad.pruty) sVesadlem.prut(p.prvek, misto(p.a), misto(p.b));
+    sVesadlem.prut("drevo-lehke", [8, 0], [12, 2]);
+    sVesadlem.prut("drevo-lehke", [12, 2], [16, 0]);
+    sVesadlem.prut("drevo-lehke", [12, 0], [12, 2]);
+    expect(principMostu(rysyMostu(sVesadlem.navrh(), u("1-04")))).toEqual(["vzpery", "vesadlo.navic"]);
     // 3-04: příhrada nad mostovkou a k tomu nohy na skálu uprostřed údolí. Most, který má
     // spadnout, protože je nemá, dostane jinou větu.
     expect(principMostu(rysyMostu(RESENI["3-04"]!.pruchod, u("3-04")))).toEqual(["prihrada-nad", "vzpery.navic"]);
@@ -137,8 +149,8 @@ describe("věta o principu", () => {
   it("zvedací most popisuje křídla, zámek a ztužení; ostatní soustavu a přídavky v daném pořadí", () => {
     const rysy = (id: string, most: (typeof MOSTY)[number] = "pruchod") => rysyMostu(RESENI[id]![most], kampan.find((x) => x.id === id)!);
     expect(principMostu(rysy("7-01"))).toEqual(["zvedaci.jedno", "zamek.breh"]);
-    expect(principMostu(rysy("7-02"))).toEqual(["zvedaci.dve", "zamek.mezi"]);
-    expect(principMostu(rysy("7-02", "mistrovska"))).toEqual(["zvedaci.dve", "zamek.mezi", "ztuzeni"]);
+    expect(principMostu(rysy("7-02", "mistrovska"))).toEqual(["zvedaci.dve", "zamek.mezi"]);
+    expect(principMostu(rysy("7-02"))).toEqual(["zvedaci.dve", "zamek.mezi", "ztuzeni"]);
     expect(principMostu(rysy("4-02"))).toEqual(["nosnik.svareny"]);
     expect(principMostu(rysy("4-01"))).toEqual(["prihrada-nad", "pilire"]);
     expect(principMostu(rysy("2-03"))).toEqual(["prihrada-nad", "zavazi"]);

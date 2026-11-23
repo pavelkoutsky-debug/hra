@@ -254,11 +254,12 @@ describe("porušení a pády", () => {
       // Do vody každý šplouchne nejvýš jednou.
       expect(dopady.filter((z) => z.druh === "splouchnuti").length).toBeLessThanOrEqual(1);
     }
-    // Auto je velké, takže šplouchne víc než člověk nebo jízdní kolo.
+    // Auto i dodávka jsou velké, takže šplouchnou víc než člověk nebo jízdní kolo.
     const doVody = zvuky.filter((z) => z.druh === "splouchnuti" && z.puvod >= 0);
-    expect(doVody.some((z) => zdroj.ucastnici[z.puvod]!.druh === "auto")).toBe(true);
+    const vuz = (z: (typeof doVody)[number]): boolean => ["auto", "dodavka"].includes(zdroj.ucastnici[z.puvod]!.druh);
+    expect(doVody.some(vuz)).toBe(true);
     for (const z of doVody) {
-      if (zdroj.ucastnici[z.puvod]!.druh === "auto") expect(z.velikost).toBeGreaterThan(0.6);
+      if (vuz(z)) expect(z.velikost).toBeGreaterThan(0.6);
       else expect(z.velikost).toBeLessThan(0.3);
     }
   });
@@ -316,7 +317,14 @@ describe("porušení a pády", () => {
 
 describe("kroky a kola", () => {
   it("chodci dupou v rytmu svého kroku, jen když jsou na mostě", () => {
-    const u = uroven("1-01");
+    // Tři chodci místo obou výprav z úrovně: kroky lidí, kteří došlápnou spolu, zní jako jeden.
+    const u: Uroven = {
+      ...uroven("1-01"),
+      jizdniRad: [
+        { cas: 0, trasa: "cesta", smer: 1, druh: "chodec", pocet: 2, kadence: 1.8 },
+        { cas: 2, trasa: "cesta", smer: -1, druh: "chodec", pocet: 1, kadence: 2.0 },
+      ],
+    };
     const navrh = RESENI["1-01"]!.pruchod;
     const zdroj = zaznamenej(u, navrh);
     const zvuky = poslechni(new Poslech(u, navrh), zdroj);
