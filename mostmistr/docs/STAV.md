@@ -23,7 +23,7 @@ Poslední aktualizace: 22. 11. 2026
 ## Kde práce stojí (23. 11. 2026)
 
 - **M5** je sloučený do `main` (pull request 13).
-- **M6** je hotový a odeslaný jako pull request 14; běží na něm tři nezávislé recenze (kód, hraní kapitoly 7, kontrola výpočtů). Po zapracování nálezů a zeleném sestavení se slučuje.
+- **M6** je hotový včetně zapracování tří nezávislých recenzí (kód, hraní kapitoly 7, kontrola výpočtů; viz „Nezávislé recenze M6“) a slučuje se pull requestem 14.
 - **M7 Režimy** je další na řadě; plán níže. Pak M8 (výkon, dotyk, angličtina) a M9 (zvuky načisto, se schválením zadavatele).
 
 ## M7 — plán
@@ -52,14 +52,14 @@ Pohyblivé mosty: píst, dělicí zámek, ocelová mostovka, fáze zkoušky, lod
 
 **Dělicí zámek** (`src/jadro/zamky.ts`, přídavek styčníku, 25 000 Kč). Na začátku je zamčený přesně (podpora nebo společný styčník), takže klidová poloha i rozbor mostu jsou stejné jako bez zámku.
 
-- *Na opěře* (styčník v pevné nebo posuvné kotvě): odemknutí vezme podporu a nechá dosedací plochu, která umí jen tlačit vzhůru (200 MN/m, útlum 30 %); po sklopení se podpora vrátí tam, kde konec dosedl.
-- *Mezi dvěma částmi mostu*: odemknutí rozdělí styčník na dva (`rozdelStycnik`); po sklopení je spojí čep, který zapadne bez rázu a konce k sobě stáhne rychlostí 0,1 m/s.
+- *Na opěře s ložiskem* (styčník v posuvné kotvě): odemknutí vezme podporu a nechá dosedací plochu, která umí jen tlačit vzhůru (200 MN/m, útlum 30 %); po sklopení se podpora vrátí tam, kde konec dosedl. Na čep (pevnou kotvu), do vetknutí ani na základ zámek nepatří a kontrola návrhu ho tam odmítne.
+- *Mezi dvěma částmi mostu*: odemknutí rozdělí styčník na dva (`rozdelStycnik`); po sklopení je spojí čep (4 000 MN/m, řádově jako mostovka křídla v tahu), který zapadne bez rázu a konce k sobě stáhne rychlostí 0,1 m/s.
 - Zapadne, jen když jsou konce do 5 cm od sebe a nehýbou se vůči sobě rychleji než 0,2 m/s.
-- Které pruty patří ke které části, pozná `zamkyNavrhu` z návrhu: části jsou to, co zbyde souvislé po vyjmutí zámků. Zámek, který nespojuje právě dvě části, zkouška odmítne s vysvětlením.
+- Které pruty patří ke které části, pozná `zamkyNavrhu` z návrhu: části jsou to, co zbyde souvislé po vyjmutí zámků. Zámek, který nespojuje právě dvě části (nic nerozpojí, nebo se v něm potkávají tři, třeba i s pístem), zkouška odmítne s vysvětlením. Zámek je čep: svar v témže styčníku editor odebere.
 
 **Fáze zkoušky a lodě** (formát úrovně 6: `pohyb: { zvednout, sklopit }`, `lode`). V čase `zvednout` se zámky odemknou a písty vysouvají, v čase `sklopit` se vracejí a po dojetí se zámky zkoušejí zamknout. Loď pluje kolmo k výkresu: po dobu průjezdu nesmí do jejího plavebního profilu (obdélník nad hladinou) zasahovat žádný prut; náraz most nepoškodí, ale zkouška neprojde. Průchod = všichni přejeli, všechny lodě propluly a most je na konci zamčený. Výsledek ukazuje průběh zvedání, největší sílu v pístu a ráz při dosednutí na opěru proti klidové síle. Nový bonus mistrovské medaile `dosednuti` (největší síla dosednutí v N).
 
-**Ocelová mostovka** (`mostovka-ocel`): ortotropní plech 14 mm s lichoběžníkovými žebry, 196 kg na metr šířky (ocelobetonová 520), 33 600 cm⁴, 26 000 Kč/m, do 6 m. Hodnoty jsou spočítané z typického průřezu, ne převzaté z tabulek.
+**Ocelová mostovka** (`mostovka-ocel`): ortotropní plech 14 mm s lichoběžníkovými žebry, 196 kg na metr šířky (ocelobetonová 520), 33 300 cm⁴, plastický modul 2 127 cm³, 26 000 Kč/m, do 6 m. Hodnoty jsou spočítané z typického průřezu, ne převzaté z tabulek. Mostovka mostu, který se zvedá, se skrytě dělí po metru, aby ráz dosednutí nezávisel na tom, jak dlouhé díly hráč nakreslil.
 
 **Ve hře:** píst a ocelová mostovka v paletě, zámek jako přídavek (klik na položku, pak na styčník), nastavení zdvihu se stavem a dobou zdvihu, plavební profil lodi na výkresu při stavbě, loď a rozevřený zámek při přehrávání, zvedání a lodě na liště jízdního řádu i na časové ose, věty ve výsledku (loď narazila, píst nestačil, most se nezamkl). Zvuky jsou pracovní (klapnutí zámku, náraz lodi).
 
@@ -67,10 +67,10 @@ Pohyblivé mosty: píst, dělicí zámek, ocelová mostovka, fáze zkoušky, lod
 
 | Úroveň | Co učí | Referenční řešení |
 |---|---|---|
-| 7-01 Zvedací most, 12 m | Píst, zdvih, zámek na opěře, svařené křídlo | píst z kotvy pod čepem; z hlubší kotvy dosedne měkčeji (301 kN proti 393 až 462 kN) |
-| 7-02 Dvě křídla, 24 m | Zámek mezi křídly, zrcadlení; zavřený most nesou jen čepy a písty | dvě křídla po 12 m; trojúhelník nad kořenem křídla pro mistrovskou |
-| 7-03 Dlouhé křídlo, 16 m | Rameno pístu: z mělké kotvy rychle a na hraně síly, z hluboké klidně, ale s větším zdvihem | hluboká kotva a zdvih 2,5 m dosedne silou 686 kN, mělká 842 až 1 020 kN |
-| 7-04 Velký přístav, 32 m | Těžší křídla po 16 m: písty z mělkých kotev most po sklopení nezamknou | písty z hlubokých kotev; trojúhelník nad kořenem křídla bere mostovce ohyb (18 % proti 42 %) |
+| 7-01 Zvedací most, 12 m | Píst, zdvih, zámek na opěře, svařené křídlo | píst z kotvy pod čepem; z hlubší kotvy dosedne měkčeji (202 kN proti 310 až 353 kN, mez medaile 250 kN) |
+| 7-02 Dvě křídla, 24 m | Zámek mezi křídly, zrcadlení; zavřený most se opírá o písty | dvě křídla po 12 m; trojúhelník nad kořenem křídla pro mistrovskou (využití 8 % proti 14 až 18 %) |
+| 7-03 Dlouhé křídlo, 16 m | Rameno pístu: z mělké kotvy rychle a na hraně síly, z hluboké klidně, ale s větším zdvihem | hluboká kotva a zdvih 2,5 m dosedne silou 576 kN, mělká 690 až 827 kN (mez medaile 630 kN) |
+| 7-04 Velký přístav, 32 m | Těžší křídla po 16 m: píst s krátkým ramenem zvednuté křídlo neudrží, křídlo klesne a loď narazí | písty z hlubokých kotev; trojúhelník nad kořenem křídla bere mostovce ohyb (18 % proti 37 %) |
 
 Fakta v odstavcích „Ve skutečnosti“ jsou ověřená vyhledáním (23. 11. 2026): Tower Bridge (otevřen 30. 6. 1894, v prvním roce 6 194 zvednutí, dnes asi 800 ročně, křídlo přes 1 100 t, protizávaží 420 t), Erasmův most (otevřen 6. 9. 1996, sklopné pole 89 m), most Jacquese Chabana-Delmase (2013, zdvižné pole přes 100 m a asi 2 600 t, výška asi 53 m).
 
@@ -85,11 +85,53 @@ Fakta v odstavcích „Ve skutečnosti“ jsou ověřená vyhledáním (23. 11. 
 **Co ověřeno není / modelové volby**
 
 - **Protizávaží ve hře není.** Pokusy s rámem a závažím za čepem nedaly čisté chování (písty na hraně síly, převážené křídlo se nevracelo) a bez dalšího ladění by úroveň mátla. Koncepce ho nežádá; kandidát pro doladění.
-- **Píst na hraně síly zkouškou často projde:** ventil ho zpomalí, ale křídlo se zvedne. Výsledek to hlásí („přetlakový ventil povolil“), průchod to nebere.
+- **Píst na hraně síly zkouškou může projít:** ventil ho zpomalí, ale křídlo se zvedne. Výsledek to hlásí („píst pracoval na mezi své síly“), průchod to nebere. Když ventil povolí pod zvednutým křídlem, křídlo klesne a loď narazí (úroveň 7-04).
 - Víc pístů z různých kotev do jednoho křídla se pere (jejich délky se s úhlem mění různě); dva písty vedle sebe do stejných styčníků návrh neumí.
 - Loď je jen plavební profil: nemá hmotnost, nedělá vlny a do mostu „narazí“ bez síly.
 - Ráz při dosednutí závisí na tuhosti dosedací plochy (200 MN/m) a na tom, jak píst dojíždí; čísla jsou řádově věrohodná, ne změřená.
-- Zavřený dvoukřídlý most nesou jen čepy a písty (skutečné mosty mají zadní závory); pod autobusem se uprostřed prohne o centimetry až decimetr.
+- Zavřený dvoukřídlý most se opírá o písty a čepy (skutečné mosty mají zadní závory); pod autobusem se uprostřed prohne o centimetry až decimetr.
+- **Zámek mezi křídly je čep, který přenáší i tah.** Prověšený zavřený most proto nese část tíhy tahem v mostovce jako lano (v 7-04 asi třetinu); skutečný středový zámek přenáší jen smyk. Je to modelová volba: zámek začíná jako společný styčník, aby klidová poloha a rozbor seděly.
+- **Píst je rychlejší než skutečný:** zdvih trvá 5 až 7 s, skutečné mosty se zvedají minutu a déle. Dynamické špičky síly jsou proto asi 1,5× statické a konec křídla dosedá rychlostí 0,5 až 2 m/s. Tuhost válce se při vysouvání nemění (skutečný sloupec oleje ano), píst nemá vzpěr ani dorazy a ventil je i mezí držení.
+- Ložisko na opěře drží i nadzvednutí (vlastnost podpor od M1).
+
+### Nezávislé recenze M6 (23. 11. 2026)
+
+Tři recenze nad hotovým milníkem: recenze kódu, hraní kapitoly 7 v prohlížeči očima nováčka a nezávislá kontrola výpočtů. Statika, úhly, doby zdvihu, energie i geometrie lodí seděly s ručním výpočtem na procento; chyby byly v tom, co model dovolil, ve třech referenčních mostech a ve dvou měřených veličinách.
+
+**Zapracováno z kontroly fyziky a recenze kódu**
+
+- *Křídlo se překlápělo přes svislici.* Délka pístu je největší, když leží v přímce s čepem (úvrať); zdvih směl být až polovina délky pístu, což u všech kotev kapitoly vedlo za úvrať. Křídlo přepadlo dozadu nad silnici a tři referenční mosty (7-03 rozpočet, 7-04 průchod a mistrovská) tak náhodou procházely. Teď platí dvojí: kontrola návrhu odmítne zdvih, který by křídlo zvedl o víc než 70° (`otoceniKridla` v `src/data/navrh.ts`; čep křídla pozná tam, kde píst vede z kotvy a křídlo drží jediná pevná kotva), a zkouška neuzná most, jehož mostovka se otočila o víc než čtvrt kruhu (`pohyb.preklopeno`; chytí i křídlo bez pístu, které po odemknutí spadne). Panel zdvihu ukazuje, o kolik stupňů se křídlo zvedne.
+- *Most, který nedosáhl na opěru, bral medaile.* Křídlo o metr kratší než kanál nepotřebovalo zámek a kola mezeru přejela. Most s mezerou na trase teď neprojde (`VysledekZkousky.mezera`) a bonus za měkké dosednutí dostane jen most, který na opěru opravdu dosedl.
+- *„Klidová síla“ dosednutí byla špička při odlehnutí* (o 22 až 35 % víc než reakce opěry). Bere se reakce opěry těsně před odemknutím; s ručním výpočtem sedí do 2 %.
+- *Ráz dosednutí závisel na dělení mostovky* (stejné křídlo: 6 + 6 m 462 kN, 12 × 1 m 307 kN), takže šla medaile získat nebo ztratit překreslením. Mostovka mostu, který se zvedá, se skrytě dělí po metru; dál už se výsledek nemění (po půl metru 307 kN). Meze medailí jsou znovu naladěné: 7-01 250 kN, 7-03 630 kN.
+- *Zámek si pamatoval čísla prvků.* Porušení, které prvek u zámku rozdělilo, by zámek nechalo zamčený a po „zamknutí“ přivázalo střed mostu k nehybnému bodu. Zámek si pamatuje pruty druhé části a prvky dohledá při odemknutí; zámek, jehož druhé křídlo se utrhlo, už nic nespojí ani nepodepře.
+- *Po zamknutí to byl jiný most.* Čep mezi křídly (200 MN/m) byl řádově měkčí než mostovka, takže se zavřený most po prvním zvednutí prověsil víc (7-04: 232 → 335 mm, píst o 30 % víc). Čep má teď vlastní tuhost 4 000 MN/m: 232 → 246 mm, píst o 4 % víc. Krok výpočtu se tím nezkrátil.
+- *Ventil neplatil v kroku dojezdu.* Píst, který právě dojel, brzdil ještě se hýbající křídlo silou nad mez (až +31 % v jednom kroku). Ventil platí i tam.
+- Ocelová mostovka: přepočet průřezu dal moment setrvačnosti 33 300 cm⁴ (bylo 33 600), průřezový modul 1 497 cm³, plastický modul 2 127 cm³ (bylo 1 860) a smykovou plochu 77 cm².
+- Formát úrovně odmítne neznámý klíč ve fázích zkoušky a u lodi. Zámek a svar se v jednom styčníku vylučují (rozbor počítal svařený spoj, po sklopení tam byl čep). Píst má v obálce největší sílu, takže klik na něj při zkoušce řekne, kolik tlačil.
+- Texty 7-04 tvrdily, že píst z mělké kotvy neunese zavřený most; ve skutečnosti neudrží zvednuté křídlo. Zadání, ukázka i komentář jsou opravené a pád „písty z mělkých kotev“ má zdvih, který se nepřeklápí. Text 7-02 už netvrdí, že by jedno křídlo bylo moc těžké.
+
+**Zapracováno z hraní**
+
+- *Svar a hned potom zámek skončily na špatných styčnících:* klik na Zámek v paletě dal zámek na styčník, který po sobě nechal vybraný svar. Přídavek teď použije jen výběr z nástroje Výběr; klik zámkem nebo svarem mimo styčník poradí, co chybí.
+- *7-02 šlo projít s jedním pístem* (křídlo bez pístu se kývalo skrz zem a zámek ho náhodou chytil) a jedním dlouhým křídlem se zámkem na čepu. Obojí teď neprojde (překlopení, zámek na čepu).
+- Výsledek si neprotiřečí: „zamčeno“ jen u mostu se zámkem, „zvednuto“ jen s nenulovým zdvihem, píst na mezi se hlásí slovy místo čísla nad mezí, ráz po zřícení se nevypisuje, řádek dosednutí říká mez medaile, využití těsně u meze se píše na setiny procenta.
+- Náraz lodi řekne, do kterého prutu (a kliknutí ho na výkresu označí). Medaile získaná dřív jiným mostem má ve výsledku vlastní značku a poznámku.
+- Zrcadlení na pohyblivém mostě nechá v ose styčník pro zámek (dřív ho u křídla z dílů po 2 a 3 m spojilo v jeden prut) a nedá zámek na čep.
+- Razítko v rohu výkresu zprůhlední, když zakrývá kotvu, základ, styčník nebo plavební profil (v 7-02 a 7-04 zakrývalo kotvy pro písty).
+- Panel zdvihu říká i největší sílu pístu; zadání 7-01 radí, čím se dosáhne měkkého dosednutí. Inženýrský rozpočet 7-03 je 512 000 Kč, aby ho splnilo i křídlo ze čtyř dílů, na které editor šestnáctimetrový tah sám rozdělí.
+- Souhrn deníku rozlišuje neúspěch kvůli lodi, zámku, překlopení a mezeře.
+
+**Nezapracováno a proč**
+
+- Zámek mezi křídly přenáší i tah a píst je rychlejší než skutečný: modelové volby, viz výše.
+- Brnknutí na mostě s pístem dává nesmyslnou frekvenci; v kapitole 7 je brnknutí schované. Vyřeší se v M7 se sandboxem, kde se potkají.
+- Úzké okno (pod 1 000 px): razítko, posuvník času a horní lišta; patří do M8 s dotykovým ovládáním.
+- Čep a kotvy pro píst mají stejnou značku; značky na časové ose nemají nápovědu; medaile jsou v dlouhém zadání pod okrajem okna. Drobnosti pro M8.
+- Zrcadlení po změně jednoho pístu přidá obraz na obě strany (čtyři písty): zrcadlení doplňuje, nemaže.
+- V kapitole 7 je mezi mostem pro průchod a mostem pro rozpočet malý rozdíl ceny (mostovka, píst a zámek jsou skoro celá cena).
+- Roh plavebního profilu v 7-01 leží na přímce 45° od čepu, takže píst do něj při některém zdvihu zasáhne o milimetry; výsledek teď řekne který prut, profil zůstal.
+- Analýza: „průhyb uprostřed“ kreslí u zvednutého mostu zvednutí. Po 7-04 chybí zakončení kampaně (M7).
 
 ## M5 — výsledek
 
