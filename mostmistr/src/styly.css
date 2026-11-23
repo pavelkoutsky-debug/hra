@@ -1943,6 +1943,11 @@ body[data-rezim="stavba"] .uroven .legenda {
   margin-top: 0;
 }
 
+/* Medaile stojí v zadání nahoře; nadpis pod nimi potřebuje odstup jako mezi ostatními oddíly. */
+.okno__vedlejsi .medaile + h3 {
+  margin-top: 14px;
+}
+
 @media (max-width: 860px) {
   .okno__telo {
     grid-template-columns: minmax(0, 1fr);
