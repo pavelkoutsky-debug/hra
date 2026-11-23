@@ -39,6 +39,16 @@ Zadání z koncepce: písty, dělicí zámky, fáze na časové ose, lodě, kapi
 - **Kapitola 7 „Přístav“**, čtyři úrovně: jednokřídlý sklopný most (píst zvedne křídlo, zámek na opěře), protizávaží (píst má omezenou sílu: bez závaží za čepem křídlo neuzvedne), dvoukřídlý most se zámkem uprostřed, dosednutí (rychlé sklápění udeří do opěry; tlumič dosednutí nebo pomalejší píst). Fakta do odstavců „Ve skutečnosti“ ověřit vyhledáním (Tower Bridge, Erasmusbrug nebo jiný sklopný most, zdvižný most).
 - Výsledek zkoušky: průchod = všichni přejeli (před zvednutím i po sklopení), loď proplula bez nárazu, most je na konci zamčený.
 
+**Hotovo v jádře (pokračování)**
+
+- **Zámky** (`src/jadro/zamky.ts`, `test/jadro-zamky.test.ts`, `rozdelStycnik` v `src/jadro/topologie.ts`): zámek na opěře (podpora → odemčeno s dosednutím jen na tlak → po dosednutí podpora zpět) a zámek mezi křídly (společný styčník → rozdělení → čep z pružiny s tlumičem). Tlumení se počítá z hmoty spojovaných konců (pevný tlumič na lehkém styčníku rozkmital výpočet). Ověřeno: rychlé sklápění udeří do opěry několikanásobně víc než pomalé; znovu zamčená křídla nesou břemeno společně. Po odemknutí a zamknutí se volá `Simulace.poZmeneStavby` (krok, tlumení úměrné hmotě).
+
+**Ověřená fakta pro odstavce „Ve skutečnosti“ kapitoly 7** (vyhledáno 23. 11. 2026)
+
+- Tower Bridge: otevřen 30. června 1894; každé křídlo váží přes 1 100 tun a vyvažuje ho protizávaží (zdroj uvádí 420 t); dnes se zvedá asi 800krát ročně, v prvním roce 6 194krát; zvednutí trvá asi minutu.
+- Pont Jacques Chaban-Delmas v Bordeaux: otevřen 16. března 2013; zdvižné pole dlouhé 110 až 117 m (zdroje se liší) a těžké kolem 2 500 až 2 700 t se zvedá mezi čtyřmi věžemi do výšky asi 53 m nad hladinu; v roce 2013 největší zdvižný most v Evropě.
+- Erasmusbrug v Rotterdamu: otevřen 6. září 1996; sklopné pole dlouhé 89 m je největší a nejtěžší v západní Evropě.
+
 ## M5 — výsledek
 
 Železnice: kolejiště, vlak, kapitola 6 „Trať“ a cestou dvě opravy fyziky. Verze hry 0.11.0, verze fyziky 6, formát úrovně 5.
