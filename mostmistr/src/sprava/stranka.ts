@@ -2,7 +2,9 @@
 // Je to nástroj pro zadavatele, ne součást hry; proto má texty přímo u sebe. Se serverem
 // mluví přes /api/sprava a každou žádost podepisuje heslem správce.
 
+import { KATALOG } from "../data/katalog";
 import { navrhZTextu, type NavrhMostu } from "../data/navrh";
+import { ID_SANDBOXU, MEZE_SANDBOXU, urovenSandboxu, vychoziSandbox } from "../data/sandbox";
 import type { Uroven } from "../data/uroven";
 import { STAVY_VAZBY, type EvidovanaVazba, type HlavickaDeniku, type StavVazby, type UdalostDeniku } from "../denik/udalosti";
 import type { OdpovedSouhrnu, PolozkaSeznamuVazeb, SezeniDne } from "../server/obsluha";
@@ -25,6 +27,42 @@ const hlaseni = prvek<HTMLElement>("#hlaseni");
 const obsah = prvek<HTMLElement>("#obsah");
 const poleHesla = prvek<HTMLInputElement>("#heslo");
 const urovne = new Map<string, Uroven>(nactiUrovne().map((u) => [u.id, u]));
+
+/**
+ * Úroveň pro most z pískoviště. Jaké údolí si hráč nastavil, deník nenese, proto se odhadne
+ * z mostu samotného: rozpětí podle mostovky, hloubka podle nejnižšího styčníku, druh trasy
+ * podle mostovky. Stačí to k tomu, aby byl most na výkresu vidět v měřítku.
+ */
+function urovenProSandbox(navrh: NavrhMostu): Uroven | undefined {
+  const podleId = new Map(navrh.stycniky.map((st) => [st.id, st]));
+  const mez = (h: number, rozsah: { min: number; max: number }): number => Math.max(rozsah.min, Math.min(rozsah.max, Math.round(h)));
+  let rozpeti = 0;
+  let kolej = false;
+  let jenDrevo = true;
+  for (const prut of navrh.pruty) {
+    if (KATALOG[prut.prvek]?.druh !== "mostovka") continue;
+    kolej ||= prut.prvek === "kolejiste";
+    jenDrevo &&= prut.prvek === "mostovka-drevo";
+    for (const id of [prut.a, prut.b]) {
+      const st = podleId.get(id);
+      if (st && st.y === 0) rozpeti = Math.max(rozpeti, st.x);
+    }
+  }
+  let dno = 0;
+  for (const st of navrh.stycniky) dno = Math.min(dno, st.y);
+  try {
+    return urovenSandboxu({
+      ...vychoziSandbox(),
+      rozpeti: mez(rozpeti > 0 ? rozpeti : vychoziSandbox().rozpeti, MEZE_SANDBOXU.rozpeti),
+      hloubka: mez(dno < 0 ? -dno : vychoziSandbox().hloubka, MEZE_SANDBOXU.hloubka),
+      druh: kolej ? "kolej" : jenDrevo ? "lavka" : "silnice",
+      zaklady: 0,
+      provoz: [],
+    });
+  } catch {
+    return undefined;
+  }
+}
 
 let heslo = "";
 try {
@@ -122,7 +160,8 @@ function nakresliMost(platno: HTMLCanvasElement, zapis: string | undefined, idUr
   } catch {
     return null;
   }
-  const uroven = urovne.get(idUrovne ?? navrh.uroven) ?? urovne.get(navrh.uroven);
+  const uroven =
+    urovne.get(idUrovne ?? navrh.uroven) ?? urovne.get(navrh.uroven) ?? (navrh.uroven === ID_SANDBOXU ? urovenProSandbox(navrh) : undefined);
   if (!uroven) return null;
   platno.hidden = false;
   const hustota = window.devicePixelRatio || 1;
@@ -289,7 +328,10 @@ function vykresliDetailVazby(v: EvidovanaVazba): void {
   const idUrovne = v.uroven ?? navrh?.uroven;
   odkaz.hidden = idUrovne === undefined;
   // Hra se otevře s vypnutým záznamem: zkoušení zadavatele nemá kazit čísla o hráčích.
-  if (idUrovne !== undefined) odkaz.href = `/?uroven=${encodeURIComponent(idUrovne)}&zaznam=vypnout`;
+  // Pískoviště nemá adresu úrovně: otevře se s nastavením, jaké má zadavatel u sebe.
+  if (idUrovne !== undefined) {
+    odkaz.href = idUrovne === ID_SANDBOXU ? "/?sandbox&zaznam=vypnout" : `/?uroven=${encodeURIComponent(idUrovne)}&zaznam=vypnout`;
+  }
   prvek<HTMLTextAreaElement>("#vazba-poznamka").value = v.poznamka;
   vykresliStavy();
   const udalosti = v.udalosti ?? [];
