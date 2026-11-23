@@ -2,7 +2,7 @@
 // nemění, takže historie úprav (zpět a znovu) je jen řada návrhů.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, PREDPETI_LANA, predpetiZeZkraceni, zkraceniLana, type IdPrvku } from "../data/katalog";
+import { KATALOG, nejvetsiZdvih, PREDPETI_LANA, predpetiZeZkraceni, zkraceniLana, type IdPrvku } from "../data/katalog";
 import { VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu, type TlumicStycniku } from "../data/navrh";
 
 export function prazdnyNavrh(idUrovne: string): NavrhMostu {
@@ -172,6 +172,43 @@ export function nastavPredpeti(
   return zmena ? { ...navrh, pruty: nove } : navrh;
 }
 
+/**
+ * Nastaví zdvih daných pístů v metrech (záporný se při zvedání zkracuje); `hodnota` dostane
+ * id pístu a jeho nakreslenou délku. Zdvih se omezí na to, co píst té délky dokáže.
+ */
+export function nastavZdvih(
+  navrh: NavrhMostu,
+  pruty: ReadonlySet<number>,
+  hodnota: (id: number, delka: number) => number,
+): NavrhMostu {
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  let zmena = false;
+  const nove = navrh.pruty.map((p) => {
+    const a = podleId.get(p.a);
+    const b = podleId.get(p.b);
+    if (!pruty.has(p.id) || KATALOG[p.prvek].druh !== "pist" || !a || !b) return p;
+    const delka = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+    const nejvic = nejvetsiZdvih(delka);
+    const novy = Math.max(-nejvic, Math.min(nejvic, hodnota(p.id, delka)));
+    if (novy === p.zdvih) return p;
+    zmena = true;
+    return { ...p, zdvih: novy };
+  });
+  return zmena ? { ...navrh, pruty: nove } : navrh;
+}
+
+/** Dá daným styčníkům dělicí zámek (`zamek` true), nebo jim ho odebere. */
+export function nastavZamek(navrh: NavrhMostu, stycniky: ReadonlySet<number>, zamek: boolean): NavrhMostu {
+  let zmena = false;
+  const nove = navrh.stycniky.map((s) => {
+    if (!stycniky.has(s.id) || (s.zamek === true) === zamek) return s;
+    zmena = true;
+    const { zamek: _stary, ...bez } = s;
+    return zamek ? { ...bez, zamek: true } : bez;
+  });
+  return zmena ? { ...navrh, stycniky: nove } : navrh;
+}
+
 /** Svaří dané styčníky (`svar` true), nebo z nich svar odebere. */
 export function nastavSvar(navrh: NavrhMostu, stycniky: ReadonlySet<number>, svar: boolean): NavrhMostu {
   let zmena = false;
@@ -255,7 +292,7 @@ export function zrcadli(navrh: NavrhMostu, osa: number, jen?: ReadonlySet<number
     const stavajiciB = stycnikV(vysledek, obrazB);
     if (stavajiciA && stavajiciB && prutMezi(vysledek, stavajiciA.id, stavajiciB.id)) continue;
     vysledek = pridejPrut(vysledek, obrazA, obrazB, p.prvek);
-    // Obraz má stejné nastavení jako předloha: tlumení a předpětí prutu, svar a závaží v jeho koncích.
+    // Obraz má stejné nastavení jako předloha: tlumení, předpětí a zdvih prutu, svar, zámek a závaží v jeho koncích.
     const idA = stycnikV(vysledek, obrazA)!.id;
     const idB = stycnikV(vysledek, obrazB)!.id;
     if (p.tlumeni !== undefined) {
@@ -268,8 +305,14 @@ export function zrcadli(navrh: NavrhMostu, osa: number, jen?: ReadonlySet<number
       const predpeti = p.predpeti;
       vysledek = nastavPredpeti(vysledek, new Set([obraz.id]), () => predpeti);
     }
+    if (p.zdvih !== undefined) {
+      const obraz = prutMezi(vysledek, idA, idB)!;
+      const zdvih = p.zdvih;
+      vysledek = nastavZdvih(vysledek, new Set([obraz.id]), () => zdvih);
+    }
     for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
       if (vzor.svar) vysledek = nastavSvar(vysledek, new Set([obraz]), true);
+      if (vzor.zamek) vysledek = nastavZamek(vysledek, new Set([obraz]), true);
       const zavazi = vzor.zavazi;
       if (zavazi) vysledek = nastavZavazi(vysledek, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
       const tlumic = vzor.tlumic;

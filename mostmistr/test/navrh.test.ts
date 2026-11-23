@@ -111,14 +111,15 @@ describe("kontrola návrhu proti úrovni", () => {
     expect(zkontrolujNavrh(trojuhelnik(), uroven)).toEqual([]);
   });
 
-  it("prvek, jehož vlastnosti jsou zatím jen předběžné, odmítne", () => {
-    // Hotové jsou prvky s ustálenými vlastnostmi; ostatní se zpřístupní s milníkem, kdy přijdou do hry.
+  it("všechny prvky katalogu už hra umí; nehotový by kontrola odmítla", () => {
+    // Hotové jsou prvky s ustálenými vlastnostmi. Posledním byl píst (milník M6).
     const hotove = Object.entries(KATALOG)
       .filter(([, polozka]) => polozka.hotovo)
       .map(([id]) => id);
     expect(hotove).toEqual([
       "mostovka-drevo",
       "mostovka-ocelobeton",
+      "mostovka-ocel",
       "kolejiste",
       "drevo-lehke",
       "drevo-tezke",
@@ -129,13 +130,17 @@ describe("kontrola návrhu proti úrovni", () => {
       "pilir",
       "tlumic",
       "pruzina",
+      "pist",
     ]);
     for (const polozka of Object.values(KATALOG)) {
       if (polozka.predbezne) expect(polozka.hotovo).toBe(false);
     }
+    // Píst hra umí, ale tahle úroveň ho nedovoluje.
     const sPistem = trojuhelnik();
     sPistem.pruty[1]!.prvek = "pist";
-    expect(zkontrolujNavrh(sPistem, uroven)).toContainEqual({ druh: "prvek-neni-hotovy", prut: 1 });
+    const problemy = zkontrolujNavrh(sPistem, uroven).map((p) => p.druh);
+    expect(problemy).toContain("prvek-nepovoleny");
+    expect(problemy).not.toContain("prvek-neni-hotovy");
   });
 
   it("pilíř musí stát na základu nebo na pilíři, který na základu stojí", () => {

@@ -20,6 +20,35 @@ Poslední aktualizace: 22. 11. 2026
 | M6 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
+## M6 — rozpracováno (plán)
+
+Pracuje se v místním pracovním stromu `/home/user/hra-m6` (větev `m6-priprava`, zatím neodeslaná), aby se práce nemíchala s opravami z recenzí M5. Po sloučení M5 se větev sloučí do `claude/nice-galileo-lnfnk2`.
+
+Zadání z koncepce: písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 „Přístav“ (dynamické téma: ráz při dosednutí mostu). Kritérium: most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou testem vyhratelnosti.
+
+**Hotovo**
+
+- **Píst v jádře** (`src/jadro/pisty.ts`, `test/jadro-pisty.test.ts`): osový prvek (pružina s tlumičem), jehož klidovou délku řídí zkouška; vysouvá a zasouvá se stálou rychlostí a tlačí nejvýš svou největší silou (přetlakový ventil: klidová délka se drží nejvýš o `síla/tuhost` od skutečné délky). Ověřeno na křídle s čepem: drží silou podle rovnováhy momentů, zvedne do úhlu daného délkou, slabý píst nezvedne a slabší než tíha neudrží.
+
+**Rozhodnutí (ještě neprovedeno)**
+
+- **Zámek** (`src/jadro/zamky.ts`). Dva druhy, oba začínají zamčené přesně (bez pokutových pružin, aby výchozí rovnováha seděla): *na opěře* je to obyčejná podpora styčníku; odemknutí jí vezme zadržené posuny (jako sjetí z ložiska v `loziska.ts`) a nechá jednostranné dosednutí shora (pružina s tlumičem jen na tlak v místě opěry), zamknutí po dosednutí podporu vrátí. *Mezi křídly* je to společný styčník; odemknutí ho rozdělí na dva (nová funkce vedle `odpojKonec` v `topologie.ts`: pruty vedoucí vpravo od styčníku přejdou na nový styčník), zamknutí po sklopení oba styčníky sváže tuhou pružinou s tlumičem v obou směrech. Když se křídla nesejdou na pár centimetrů, zámek nezapadne.
+- **Fáze zkoušky** jsou v úrovni: seznam povelů v čase (odemknout a zvednout, sklopit a zamknout). Platí pro všechny písty a zámky najednou. Časová osa je ukazuje značkami. Po začátku zvedání se tlumení vlastních tvarů (spočítané pro zavřený most) nahradí tlumením úměrným hmotě, jako po porušení.
+- **Loď** je průjezdný profil (obdélník nad hladinou v plavební dráze), který platí po dobu průjezdu; v bokorysu loď pluje kolmo k výkresu, takže se objeví, chvíli v dráze je a zmizí. Narazí, když do profilu zasahuje některý prut nebo styčník mostu. Nic neváží.
+- **Ve hře**: píst je prvek palety (kus, 60 000 Kč, do 8 m) s nastavením zdvihu podobným napínáku; zámek je přídavek na styčník jako svar. Pravidla: píst kreslí hráč zasunutý; zámek smí být na styčníku v posuvné kotvě úrovně nebo na styčníku mostovky.
+- **Kapitola 7 „Přístav“**, čtyři úrovně: jednokřídlý sklopný most (píst zvedne křídlo, zámek na opěře), protizávaží (píst má omezenou sílu: bez závaží za čepem křídlo neuzvedne), dvoukřídlý most se zámkem uprostřed, dosednutí (rychlé sklápění udeří do opěry; tlumič dosednutí nebo pomalejší píst). Fakta do odstavců „Ve skutečnosti“ ověřit vyhledáním (Tower Bridge, Erasmusbrug nebo jiný sklopný most, zdvižný most).
+- Výsledek zkoušky: průchod = všichni přejeli (před zvednutím i po sklopení), loď proplula bez nárazu, most je na konci zamčený.
+
+**Hotovo v jádře (pokračování)**
+
+- **Zámky** (`src/jadro/zamky.ts`, `test/jadro-zamky.test.ts`, `rozdelStycnik` v `src/jadro/topologie.ts`): zámek na opěře (podpora → odemčeno s dosednutím jen na tlak → po dosednutí podpora zpět) a zámek mezi křídly (společný styčník → rozdělení → čep z pružiny s tlumičem). Tlumení se počítá z hmoty spojovaných konců (pevný tlumič na lehkém styčníku rozkmital výpočet). Ověřeno: rychlé sklápění udeří do opěry několikanásobně víc než pomalé; znovu zamčená křídla nesou břemeno společně. Po odemknutí a zamknutí se volá `Simulace.poZmeneStavby` (krok, tlumení úměrné hmotě).
+
+**Ověřená fakta pro odstavce „Ve skutečnosti“ kapitoly 7** (vyhledáno 23. 11. 2026)
+
+- Tower Bridge: otevřen 30. června 1894; každé křídlo váží přes 1 100 tun a vyvažuje ho protizávaží (zdroj uvádí 420 t); dnes se zvedá asi 800krát ročně, v prvním roce 6 194krát; zvednutí trvá asi minutu.
+- Pont Jacques Chaban-Delmas v Bordeaux: otevřen 16. března 2013; zdvižné pole dlouhé 110 až 117 m (zdroje se liší) a těžké kolem 2 500 až 2 700 t se zvedá mezi čtyřmi věžemi do výšky asi 53 m nad hladinu; v roce 2013 největší zdvižný most v Evropě.
+- Erasmusbrug v Rotterdamu: otevřen 6. září 1996; sklopné pole dlouhé 89 m je největší a nejtěžší v západní Evropě.
+
 ## M5 — výsledek
 
 Železnice: kolejiště, vlak, kapitola 6 „Trať“ a cestou dvě opravy fyziky. Verze hry 0.11.0, verze fyziky 7 (po recenzích, viz níže), formát úrovně 5.

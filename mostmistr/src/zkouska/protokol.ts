@@ -101,7 +101,31 @@ export type Udalost = { cas: number } & (
   | { druh: "prujezd"; polozka: number; clen: number }
   /** Účastník provozu spadl. */
   | { druh: "pad"; polozka: number; clen: number }
+  /**
+   * Pohyblivý most: zámky se odemkly a písty začaly zvedat (`odemceno`), písty dojely
+   * (`zvednuto`), most se začal sklápět (`sklapeni`) a zámky zase zapadly (`zamceno`).
+   */
+  | { druh: "pohyb"; faze: "odemceno" | "zvednuto" | "sklapeni" | "zamceno" }
+  /** Loď (pořadí v úrovni) proplula, nebo narazila do prutu návrhu `prut`. */
+  | { druh: "lod"; lod: number; stav: "proplula" | "narazila"; prut?: number }
 );
+
+/** Jak dopadlo zvedání a sklápění pohyblivého mostu. */
+export interface PohybZkousky {
+  /** Písty dojely do vysunuté polohy. */
+  zvednuto: boolean;
+  /** Po sklopení všechny zámky zase zapadly; `casZamceni` říká kdy (s), null když ne. */
+  zamceno: boolean;
+  casZamceni: number | null;
+  /** Největší síla, kterou konec mostu při sklápění udeřil do dosedací plochy opěry, N; 0 bez zámku na opěře. */
+  razDosednuti: number;
+  /** Síla, kterou konec mostu na dosedací plochu tlačil v klidu po odemknutí, N. */
+  klidoveDosednuti: number;
+  /** Kolik pístů za zkoušku zastavil přetlakový ventil (nestačily silou). */
+  pretizenychPistu: number;
+  /** Největší síla v pístu za zkoušku, N (velikost). */
+  nejvetsiSilaPistu: number;
+}
 
 /** Největší namáhání prutu za celou zkoušku. */
 export interface ObalkaPrutu {
@@ -152,6 +176,10 @@ export interface VysledekZkousky {
   spadlo: number;
   /** Počet porušení prutů. */
   poruseni: number;
+  /** Zvedání a sklápění mostu; null v úrovni, kde se most nezvedá. */
+  pohyb: PohybZkousky | null;
+  /** Lodě: kolik jich mělo proplout, kolik proplulo a kolik narazilo do mostu. */
+  lode: { celkem: number; proplulo: number; narazilo: number };
   /**
    * Pohodlí cestujících: největší svislé zrychlení karoserie autobusu nebo skříně osobního
    * vozu po dobu, kdy sám jel po mostě (stejné měření a třídy jako u chodců). Počítají se jen

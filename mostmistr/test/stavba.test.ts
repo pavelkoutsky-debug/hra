@@ -224,11 +224,18 @@ describe("most sestavený z návrhu", () => {
     expect(-s.y[k.bod(4, 0)]!).toBeCloseTo(-s.osovaSila[ePruziny]! / 3e6, 9);
   });
 
-  it("píst zatím odmítne", () => {
+  it("píst je pružina o tuhosti sloupce oleje s tlumičem; jeho zdvih si stavba pamatuje", () => {
     const k = new Kreslic();
     k.prut("mostovka-drevo", [0, 0], [4, 0]);
     k.prut("pist", [0, 0], [4, 3]);
-    expect(() => sestavMost(urovenRegrese({ rozpeti: 4 }), k.navrh())).toThrow(/píst/);
+    const stavba = sestavMost(urovenRegrese({ rozpeti: 4 }), k.navrh());
+    // Píst 5 m dlouhý: 92 MN / 5 m. Výchozí zdvih je 1 m.
+    expect(stavba.pisty).toEqual([{ prut: 1, prvek: stavba.pisty[0]!.prvek, zdvih: 1 }]);
+    const prvek = stavba.popis.prvky[stavba.pisty[0]!.prvek]!;
+    expect(prvek.tuhost).toBeCloseTo(92e6 / 5, 3);
+    expect(prvek.tlumic).toBeGreaterThan(0);
+    // Úroveň bez fází zvedání zámky nezná.
+    expect(stavba.zamky).toEqual([]);
   });
 });
 

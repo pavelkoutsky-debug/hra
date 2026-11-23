@@ -946,6 +946,20 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   margin-left: -2px;
 }
 
+/* Zvedání mostu a lodě: děj úrovně, ne porucha. */
+.osa__znacka--pohyb,
+.osa__znacka--lod {
+  top: -7px;
+  bottom: auto;
+  height: 6px;
+  background: var(--voda, #8fd0ff);
+}
+
+.osa__znacka--naraz {
+  width: 4px;
+  margin-left: -2px;
+}
+
 /* Okno s textem */
 
 .okno {

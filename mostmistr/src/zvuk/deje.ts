@@ -407,6 +407,21 @@ export class Poslech {
           odstin: otisk(u.stycnik, 7),
           puvod: u.stycnik,
         });
+      } else if ((u.druh === "pohyb" && (u.faze === "odemceno" || u.faze === "zamceno")) || (u.druh === "lod" && u.stav === "narazila")) {
+        // Pracovní zvuky pohyblivého mostu (načisto až v M9): zámek klapne jako kolo na spáře,
+        // náraz lodi zní jako dopad. Místo je první styčník mostu.
+        const naraz = u.druh === "lod";
+        this.#vystup.push({
+          druh: naraz ? "dopad" : "spara",
+          cas: u.cas,
+          x: snimek.polohy[0] ?? 0,
+          y: snimek.polohy[1] ?? 0,
+          sila: naraz ? 1 : 0.8,
+          velikost: 0.8,
+          material: "ocel",
+          odstin: otisk(naraz ? 3 : 5, Math.round(u.cas * 1000)),
+          puvod: -1,
+        });
       }
     }
   }

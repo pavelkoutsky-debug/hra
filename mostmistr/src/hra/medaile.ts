@@ -49,7 +49,9 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
             ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
             : bonus.druh === "komfort-cestujicich"
               ? t(KLIC_CESTUJICICH[kdoCestuje(uroven) ?? "autobus"], { limit: cislo(bonus.limit, 2) })
-              : t("medaile.mistrovska.jina"),
+              : bonus.druh === "dosednuti"
+                ? t("medaile.mistrovska.dosednuti", { limit: cislo(bonus.limit / 1000, 0) })
+                : t("medaile.mistrovska.jina"),
       ziskana: medaile.mistrovska,
     });
   }

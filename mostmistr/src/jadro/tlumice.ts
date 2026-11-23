@@ -20,7 +20,7 @@ import type { Soustava } from "./soustava";
  * tlumení i vnějším zatížení, protože z nich odhaduje zrychlení.
  */
 export function pridejTlumice(s: Soustava, dt: number): void {
-  const { x, y, vx, vy, fx, fy, invHmotaX, invHmotaY, prvekA, prvekB, tlumic, tlumice, osovaSila } = s;
+  const { x, y, vx, vy, fx, fy, invHmotaX, invHmotaY, prvekA, prvekB, tlumic, tlumice, osovaSila, rychlostKlidove } = s;
   for (let i = 0; i < s.pocetTlumicu; i++) {
     const e = tlumice[i]!;
     const a = prvekA[e]!;
@@ -34,7 +34,8 @@ export function pridejTlumice(s: Soustava, dt: number): void {
     const ey = dy / delka;
 
     const c = tlumic[e]!;
-    const rychlost = ex * (vx[b]! - vx[a]!) + ey * (vy[b]! - vy[a]!);
+    // Píst, který se právě vysouvá, se prodlužovat má: brzdí se jen odchylka od řízené rychlosti.
+    const rychlost = ex * (vx[b]! - vx[a]!) + ey * (vy[b]! - vy[a]!) - rychlostKlidove[e]!;
     // Převrácená hodnota brzděné hmoty ve směru osy; zadržený stupeň volnosti nepřispívá.
     const poddajnost =
       ex * ex * (invHmotaX[a]! + invHmotaX[b]!) + ey * ey * (invHmotaY[a]! + invHmotaY[b]!);

@@ -32,6 +32,8 @@ export const CARA_PRUZINA = 3;
 export const CARA_SKRYTA = 4;
 /** Viskózní tlumič: prut bez tuhosti, jen s tlumením. */
 export const CARA_TLUMIC = 5;
+/** Píst pohyblivého mostu: válec s pístnicí. */
+export const CARA_PIST = 6;
 
 export const STYCNIK_BEZNY = 0;
 /** Styčník, který se nekreslí: patří břemenu a kreslí se jako kolo. */
@@ -112,15 +114,19 @@ export interface PopisKresleni {
   skryte?: Iterable<number>;
   /** Styčníky kreslené jako závaží. */
   zavazi?: Iterable<number>;
+  /** Čísla prutů, které jsou písty. */
+  pisty?: Iterable<number>;
 }
 
 /** Popíše okamžitou stavbu soustavy pro kreslení. */
 export function topologieSoustavy(s: Soustava, popis: PopisKresleni = {}): Topologie {
   const mostovka = new Set(popis.mostovka ?? []);
+  const pisty = new Set(popis.pisty ?? []);
   const cara = new Uint8Array(s.pocetPrvku);
   const klouby = new Uint8Array(s.pocetPrvku);
   for (let e = 0; e < s.pocetPrvku; e++) {
     if (s.druh[e] === LANO) cara[e] = CARA_LANO;
+    else if (s.druh[e] === PRUZINA && pisty.has(s.prut[e]!)) cara[e] = CARA_PIST;
     else if (s.druh[e] === PRUZINA) cara[e] = s.EA[e] === 0 && s.tlumic[e] !== 0 ? CARA_TLUMIC : CARA_PRUZINA;
     else if (mostovka.has(s.prut[e]!)) cara[e] = CARA_MOSTOVKA;
     // Kloubový konec se pozná podle toho, že k němu prvek nemá ohybovou tuhost.

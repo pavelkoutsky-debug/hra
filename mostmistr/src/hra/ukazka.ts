@@ -16,7 +16,8 @@ import { nakresliVykres } from "../vykres/vykres";
 import { hezkeZvetseni, nejvetsiVychylka, zvetsiPohyb } from "../vykres/zvetseni";
 import { KlientZkousky } from "../zkouska/klient";
 import type { PopisUcastnika } from "../zkouska/provoz";
-import type { VysledekZkousky } from "../zkouska/protokol";
+import type { Udalost, VysledekZkousky } from "../zkouska/protokol";
+import { nakresliZamkyZaznamu, stavPohybu, valecPrutu } from "./pohyb";
 import { prazdnySnimek, Zaznam, type Snimek } from "../zkouska/zaznam";
 import { nasadaUrovne } from "../../urovne/index";
 import type { StranaUkazky, UkazkaUrovne } from "../../urovne/ukazky";
@@ -33,6 +34,8 @@ interface Strana {
   koren: HTMLElement;
   klient: KlientZkousky | null;
   zaznam: Zaznam;
+  /** Události zkoušky; z nich se pozná, kdy jsou zámky odemčené a která loď narazila. */
+  udalosti: Udalost[];
   ucastnici: PopisUcastnika[];
   vysledek: VysledekZkousky | null;
   /** Polohy z prvního snímku; proti nim se zvětšuje pohyb. */
@@ -107,6 +110,7 @@ export class Ukazka {
         stav: uzel.querySelector<HTMLElement>("[data-stav]")!,
         klient: null,
         zaznam: new Zaznam(),
+        udalosti: [],
         ucastnici: [],
         vysledek: null,
         vychozi: null,
@@ -124,6 +128,7 @@ export class Ukazka {
     this.#poznamka.textContent = "";
     for (const strana of this.#strany) {
       strana.zaznam = new Zaznam();
+      strana.udalosti = [];
       strana.vysledek = null;
       strana.vychozi = null;
       strana.stav.textContent = t("ukazka.pocitaSe");
@@ -135,6 +140,7 @@ export class Ukazka {
         if (zprava.typ === "zacatek") strana.ucastnici = zprava.ucastnici;
         else if (zprava.typ === "zaznam") {
           for (const stavba of zprava.topologie) strana.zaznam.pridejTopologii(stavba);
+          strana.udalosti.push(...zprava.udalosti);
           for (const s of zprava.snimky) {
             if (!strana.vychozi) strana.vychozi = s.polohy.slice();
             strana.zaznam.pridej(s);
@@ -228,9 +234,10 @@ export class Ukazka {
 
     const { uroven, navrh } = strana.zadani;
     const kamera = celyVyrez(this.#vyrez, rozmer, 2);
-    nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, nahled: true, bezKot: true });
-
     const cas = Math.min(this.#cas, strana.vysledek?.trvani ?? 0);
+    const { odemceno, narazene } = stavPohybu(strana.udalosti, cas);
+    nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, nahled: true, bezKot: true, cas, narazeneLode: narazene });
+
     const stavba = strana.zaznam.stavV(cas, strana.snimek);
     if (!stavba) return;
     const snimek = strana.snimek;
@@ -252,7 +259,9 @@ export class Ukazka {
         return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
       },
       (e) => navrh.pruty[stavba.prut[e]!]?.prvek === "kolejiste",
+      (e) => valecPrutu(navrh, stavba.prut[e]!),
     );
+    nakresliZamkyZaznamu(ctx, kamera, rozmer, navrh, kresleny, odemceno);
     nakresliProvoz(ctx, kamera, rozmer, strana.ucastnici, kresleny);
 
     // Pod plátnem: během děje okamžité kmitání, na konci verdikt.

@@ -6,6 +6,7 @@ import { cislo } from "../ui/formaty";
 import {
   CARA_LANO,
   CARA_MOSTOVKA,
+  CARA_PIST,
   CARA_PRUZINA,
   CARA_SKRYTA,
   CARA_TLUMIC,
@@ -17,6 +18,7 @@ import {
 import { BARVY, PISMO } from "./barvy";
 import { nakresliPrazce } from "./kolej";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
+import { nakresliPist } from "./pohyb";
 import { barvaVyuziti } from "./skala";
 import { nakresliZnackuPodpory } from "./vykres";
 
@@ -38,6 +40,7 @@ function tuhe(t: Topologie): Uint8Array {
     pole = new Uint8Array(t.stycniku);
     for (let e = 0; e < t.prvekA.length; e++) {
       if (t.cara[e] === CARA_LANO || t.cara[e] === CARA_PRUZINA || t.cara[e] === CARA_TLUMIC) continue;
+      if (t.cara[e] === CARA_PIST) continue;
       if ((t.klouby[e]! & 1) === 0) pole[t.prvekA[e]!] = 1;
       if ((t.klouby[e]! & 2) === 0) pole[t.prvekB[e]!] = 1;
     }
@@ -94,6 +97,8 @@ export function nakresliKonstrukci(
   tloustkaPrvku?: (prvek: number) => number | undefined,
   /** Je prvek kolejiště? Kreslí se s pražci. */
   jeKolej?: (prvek: number) => boolean,
+  /** Délka válce pístu v metrech; bez ní se vezme podíl okamžité délky. */
+  valecPistu?: (prvek: number) => number | undefined,
 ): void {
   const m = kamera.meritko;
   const bod = (i: number): { x: number; y: number } =>
@@ -116,6 +121,11 @@ export function nakresliKonstrukci(
       }
       if (cara === CARA_TLUMIC) {
         nakresliTlumic(ctx, a, b, m, BARVY.cara);
+        continue;
+      }
+      if (cara === CARA_PIST) {
+        const valec = valecPistu?.(e);
+        nakresliPist(ctx, a, b, m, BARVY.caraSilna, valec !== undefined ? valec * m : 0.6 * Math.hypot(b.x - a.x, b.y - a.y));
         continue;
       }
       const vyuziti = s.vyuziti[e]!;
