@@ -1085,6 +1085,82 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   width: min(560px, 94vw);
 }
 
+/* Sandbox: nastavení údolí a provozu */
+
+.okno--sandbox {
+  width: min(620px, 94vw);
+}
+
+.okno--sandbox h3 {
+  margin: 14px 0 2px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.sandbox__pole {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin: 10px 0 0;
+}
+
+.sandbox__pole label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sandbox__pole label > span:first-child {
+  flex: 1;
+}
+
+.sandbox__volba {
+  grid-column: 1 / -1;
+}
+
+.okno--sandbox input[type="number"],
+.okno--sandbox select {
+  padding: 4px 6px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.okno--sandbox input[type="number"] {
+  width: 68px;
+}
+
+.sandbox__provoz {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.sandbox__radek {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sandbox__radek select[data-pole="druh"] {
+  flex: 1;
+  min-width: 160px;
+}
+
+@media (max-width: 560px) {
+  .sandbox__pole {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .vazba__druhy {
   display: flex;
   flex-wrap: wrap;

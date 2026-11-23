@@ -71,6 +71,8 @@ import { zakladVyzev } from "../../urovne/vyzvy";
 import { DRUHY_VYZEV, prahyVyzev, unosnostNaKorunu } from "../data/vyzvy";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { zatizeniZlomu, ZKOUSKA_DO_ZLOMU } from "../zkouska/zlom";
+import type { NastaveniSandboxu } from "../data/sandbox";
+import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
 import { pripojVazbu } from "./vazba";
@@ -198,7 +200,17 @@ function jePsaciPole(cil: EventTarget | null): boolean {
  * Spustí obrazovku úrovně. `kampan` je pořadí úrovní pro odkaz na další; úroveň mimo
  * kampaň (zkušební výkres) další nemá.
  */
-export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste: Uloziste, denik: Denik): void {
+/**
+ * Spustí obrazovku úrovně. `sandbox` je nastavení sandboxu, ze kterého úroveň vznikla; s ním
+ * má paleta tlačítko pro nastavení údolí a provozu.
+ */
+export function spustUroven(
+  uroven: Uroven,
+  kampan: readonly Uroven[],
+  uloziste: Uloziste,
+  denik: Denik,
+  sandbox: NastaveniSandboxu | null = null,
+): void {
   prvek("#obrazovka-uroven", HTMLElement).hidden = false;
 
   // ---- Deník hraní: co hráč v úrovni dělá (viz src/denik/) ----
@@ -2820,6 +2832,36 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("cely-vykres", ukazCelyVykres);
   priKliknuti("zkouska", () => (rezim === "stavba" ? spustZkousku() : zpetKeStavbe()));
   priKliknuti("vyber", prepniVyber);
+  // Sandbox: okno s nastavením údolí a provozu. Nové nastavení se uloží a stránka se načte
+  // znovu, protože se změnila celá úroveň; most zůstane, pokud se nezměnilo údolí.
+  const tlacitkoSandboxu = prvek('[data-akce="sandbox"]', HTMLButtonElement);
+  tlacitkoSandboxu.hidden = sandbox === null;
+  if (sandbox) {
+    const oknoSandboxu = pripojSandbox(sandbox, {
+      maMost: () => editor.navrh.pruty.length > 0,
+      pouzij: (nove, smazatMost) => {
+        zapis("sandbox.nastaveni", {
+          rozpeti: nove.rozpeti,
+          hloubka: nove.hloubka,
+          druh: nove.druh,
+          voda: nove.voda,
+          zaklady: nove.zaklady,
+          provoz: nove.provoz.map((p) => `${p.pocet}x${p.druh}`).join(","),
+          smazanMost: smazatMost,
+        });
+        uloziste.sandbox = nove;
+        if (smazatMost) {
+          // Editor by při odchodu ze stránky starý most zase uložil: nejdřív ho vyprázdnit.
+          editor.smazVse();
+          uloziste.smazNavrh(uroven.id);
+        }
+        window.location.reload();
+      },
+    });
+    tlacitkoSandboxu.addEventListener("click", () => {
+      if (rezim === "stavba") oknoSandboxu.otevri();
+    });
+  }
   priKliknuti("brnknout", prepniBrnknuti);
   priKliknuti("zlom", () => spustZkousku(undefined, undefined, true));
   priKliknuti("budic", prepniBudic);
@@ -3142,7 +3184,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   pripojZaznam(denik);
 
   // Před stavbou si má hráč přečíst, co ho čeká; k rozestavěnému mostu se zadání nevnucuje.
-  if (editor.navrh.pruty.length === 0) otevriZadani();
+  // Zadání se otevře samo, dokud v úrovni nic nestojí. V sandboxu jen napoprvé: po každé
+  // změně údolí je výkres prázdný a zadání by se otevíralo pořád dokola.
+  if (editor.navrh.pruty.length === 0 && !(sandbox && uloziste.sandboxNavstiven)) otevriZadani();
+  if (sandbox) uloziste.sandboxNavstiven = true;
 
   // Dotaz na verzi fyziky zároveň ověří, že pracovní vlákno se simulací funguje.
   pomocny

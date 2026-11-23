@@ -191,3 +191,139 @@ describe("výzvy o efektivitu", () => {
     expect(chyby).toEqual([]);
   });
 });
+
+describe("sandbox", () => {
+  /** Hodnota pole nebo výběru v okně sandboxu. */
+  const pole = (volic: string) => stranka.locator(`#okno-sandbox ${volic}`);
+
+  it("přehled kampaně vede do pískoviště; napoprvé se otevře zadání a paleta má všechny prvky", async () => {
+    await stranka.goto(adresa);
+    await stranka.locator('body[data-rezim="prehled"]').waitFor();
+    await akce("otevrit-sandbox").click();
+    await stranka.locator(PLATNO).waitFor();
+    await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
+    expect(await udaj("zadani-nazev")).toBe("Pískoviště");
+    expect(await udaj("zadani-text")).toContain("žádný rozpočet, žádné medaile");
+    // Výchozí provoz: dvě osobní auta zleva a nákladní auto zprava.
+    const provoz = await udaj("zadani-provoz");
+    expect(provoz).toContain("2× osobní auto");
+    expect(provoz).toContain("nákladní auto");
+    // Výzvy o efektivitu sandbox nemá: nemá referenční mosty.
+    expect(await stranka.locator('ul[data-udaj="zadani-vyzvy"]').isVisible()).toBe(false);
+    await stranka.locator('#okno-zadani button[value="zavrit"]').click();
+
+    const prvky = await stranka.locator(".paleta__prvky [data-prvek]").evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-prvek")));
+    expect(prvky).toEqual([
+      "mostovka-drevo",
+      "mostovka-ocelobeton",
+      "mostovka-ocel",
+      "drevo-lehke",
+      "drevo-tezke",
+      "ocel-lehka",
+      "ocel-tezka",
+      "lano",
+      "lano-nosne",
+      "pilir",
+      "tlumic",
+      "pruzina",
+    ]);
+    // Bez rozpočtu: ukazatel má jen cenu.
+    expect(await stranka.locator(".rozpocet").innerText()).not.toContain("/");
+    expect(await akce("sandbox").isVisible()).toBe(true);
+    expect(await akce("budic").isVisible()).toBe(true);
+    await stranka.screenshot({ path: `${SLOZKA}/r5-sandbox.png` });
+  });
+
+  it("okno nastavení mění údolí i provoz; změna provozu most nechá", async () => {
+    // Most přes výchozí údolí 24 m: ocelobetonová mostovka a příhrada nad ní.
+    const most = {
+      verze: 4,
+      uroven: "0-01",
+      stycniky: [
+        { id: 0, x: 0, y: 0 },
+        { id: 1, x: 6, y: 0 },
+        { id: 2, x: 12, y: 0 },
+        { id: 3, x: 18, y: 0 },
+        { id: 4, x: 24, y: 0 },
+        { id: 5, x: 6, y: 5 },
+        { id: 6, x: 12, y: 5 },
+        { id: 7, x: 18, y: 5 },
+      ],
+      pruty: [
+        { id: 0, a: 0, b: 1, prvek: "mostovka-ocelobeton" },
+        { id: 1, a: 1, b: 2, prvek: "mostovka-ocelobeton" },
+        { id: 2, a: 2, b: 3, prvek: "mostovka-ocelobeton" },
+        { id: 3, a: 3, b: 4, prvek: "mostovka-ocelobeton" },
+        { id: 4, a: 0, b: 5, prvek: "ocel-tezka" },
+        { id: 5, a: 5, b: 6, prvek: "ocel-tezka" },
+        { id: 6, a: 6, b: 7, prvek: "ocel-tezka" },
+        { id: 7, a: 7, b: 4, prvek: "ocel-tezka" },
+        { id: 8, a: 1, b: 5, prvek: "ocel-lehka" },
+        { id: 9, a: 2, b: 6, prvek: "ocel-lehka" },
+        { id: 10, a: 3, b: 7, prvek: "ocel-lehka" },
+        { id: 11, a: 5, b: 2, prvek: "ocel-lehka" },
+        { id: 12, a: 7, b: 2, prvek: "ocel-lehka" },
+      ],
+    };
+    await nactiMost(JSON.stringify(most));
+    expect(await telo("pruty")).toBe("13");
+    await spust();
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (3).");
+    // Sandbox nemá další úroveň ani výzvy.
+    expect(await akce("dalsi").isVisible()).toBe(false);
+    expect(await stranka.locator('[data-cast="vyzvy"]').isVisible()).toBe(false);
+    await akce("upravit").click();
+
+    // Jiný provoz: přidat autobus; most zůstane.
+    await akce("sandbox").click();
+    await stranka.locator("#okno-sandbox").waitFor({ state: "visible" });
+    expect(await pole("#sandbox-rozpeti").inputValue()).toBe("24");
+    expect(await pole('[data-udaj="sandbox-provoz"] li').count()).toBe(2);
+    await akce("sandbox-pridat").click();
+    const novy = pole('[data-udaj="sandbox-provoz"] li').nth(2);
+    await novy.locator('[data-pole="druh"]').selectOption("autobus");
+    expect(await novy.locator('[data-pole="cas"]').inputValue()).toBe("9");
+    await stranka.screenshot({ path: `${SLOZKA}/r6-sandbox-nastaveni.png` });
+    await Promise.all([stranka.waitForEvent("load"), akce("sandbox-pouzit").click()]);
+    await stranka.locator(PLATNO).waitFor();
+    expect(await telo("pruty")).toBe("13");
+    // Podruhé se zadání samo neotvírá; jízdní řád na liště má tři položky.
+    expect(await stranka.locator("#okno-zadani[open]").count()).toBe(0);
+    expect(await udaj("jizdni-rad")).toContain("autobus");
+  }, 240_000);
+
+  it("změna údolí se ptá, protože most smaže; pak je údolí jiné a trať má vlak a kolejiště", async () => {
+    await akce("sandbox").click();
+    await stranka.locator("#okno-sandbox").waitFor({ state: "visible" });
+    await pole("#sandbox-rozpeti").fill("36");
+    await pole("#sandbox-druh").selectOption("kolej");
+    // Silniční provoz po koleji nejezdí: z jízdního řádu zmizel.
+    expect(await pole('[data-udaj="sandbox-provoz"] li').count()).toBe(0);
+    await akce("sandbox-pridat").click();
+    expect(await pole('[data-udaj="sandbox-provoz"] li [data-pole="druh"]').inputValue()).toBe("vlak-osobni");
+    expect(await pole('[data-udaj="sandbox-provoz"] li [data-pole="pocet"]').inputValue()).toBe("4");
+    await akce("sandbox-pouzit").click();
+    // První kliknutí jen varuje, že most zmizí.
+    expect(await udaj("sandbox-hlaseni")).toContain("smaže se");
+    expect(await akce("sandbox-pouzit").innerText()).toBe("Smazat most a použít");
+    await Promise.all([stranka.waitForEvent("load"), akce("sandbox-pouzit").click()]);
+    await stranka.locator(PLATNO).waitFor();
+    expect(await telo("pruty")).toBe("0");
+    const prvky = await stranka.locator(".paleta__prvky [data-prvek]").evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-prvek")));
+    expect(prvky).toContain("kolejiste");
+    expect(prvky).not.toContain("mostovka-ocelobeton");
+    expect(await udaj("jizdni-rad")).toContain("vlak");
+    // Nastavení mimo meze okno odmítne a řekne proč.
+    await akce("sandbox").click();
+    await pole("#sandbox-rozpeti").fill("500");
+    await akce("sandbox-pouzit").click();
+    expect(await udaj("sandbox-hlaseni")).toBe("Rozpětí údolí musí být celé číslo od 6 do 72 m.");
+    await stranka.screenshot({ path: `${SLOZKA}/r7-sandbox-trat.png` });
+    await stranka.keyboard.press("Escape");
+  }, 240_000);
+
+  it("během sandboxu prohlížeč nehlásil žádnou chybu", () => {
+    expect(chyby).toEqual([]);
+  });
+});

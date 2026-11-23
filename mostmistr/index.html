@@ -16,6 +16,7 @@
         <span class="lista__nazev" data-text="hra.nazev"></span>
         <span class="lista__oddil" data-text="prehled.nadpis"></span>
         <span class="lista__mezera"></span>
+        <a class="tlacitko" href="?sandbox=1" data-akce="otevrit-sandbox" data-text="prehled.sandbox" data-popis="prehled.sandbox.popis"></a>
         <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/zkusebna.html" data-text="lista.zkusebna"></a>
       </header>
@@ -210,6 +211,9 @@
           <p class="paleta__zadani" data-udaj="zadani"></p>
           <button type="button" class="paleta__tlacitko" data-akce="zadani">
             <span data-text="paleta.zadaniOkno"></span>
+          </button>
+          <button type="button" class="paleta__tlacitko" data-akce="sandbox" data-popis="sandbox.tlacitko.popis" hidden>
+            <span data-text="sandbox.tlacitko"></span>
           </button>
           <ul class="medaile" data-udaj="podminky"></ul>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
@@ -408,6 +412,29 @@
         <div class="okno__tlacitka">
           <button type="button" class="tlacitko" data-akce="okno-kopirovat" data-text="okno.kopirovat"></button>
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="okno-nacist" data-text="okno.nacist"></button>
+          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--sandbox" id="okno-sandbox">
+      <form method="dialog">
+        <h2 data-text="sandbox.nadpis"></h2>
+        <p data-text="sandbox.popis"></p>
+        <div class="sandbox__pole">
+          <label><span data-text="sandbox.rozpeti"></span><input type="number" id="sandbox-rozpeti" inputmode="numeric" /><span>m</span></label>
+          <label><span data-text="sandbox.hloubka"></span><input type="number" id="sandbox-hloubka" inputmode="numeric" /><span>m</span></label>
+          <label><span data-text="sandbox.druh"></span><select id="sandbox-druh"></select></label>
+          <label><span data-text="sandbox.zaklady"></span><input type="number" id="sandbox-zaklady" inputmode="numeric" /></label>
+          <label class="sandbox__volba"><input type="checkbox" id="sandbox-voda" /><span data-text="sandbox.voda"></span></label>
+        </div>
+        <h3 data-text="sandbox.provoz"></h3>
+        <p class="okno__poznamka" data-text="sandbox.provoz.popis"></p>
+        <ul class="sandbox__provoz" data-udaj="sandbox-provoz"></ul>
+        <button type="button" class="tlacitko" data-akce="sandbox-pridat" data-text="sandbox.pridat"></button>
+        <p class="okno__hlaseni" data-udaj="sandbox-hlaseni" role="status"></p>
+        <div class="okno__tlacitka">
+          <button type="button" class="tlacitko tlacitko--hlavni" data-akce="sandbox-pouzit" data-text="sandbox.pouzit"></button>
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>
