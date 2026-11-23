@@ -7,7 +7,7 @@ import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import type { PopisUcastnika } from "./provoz";
 import type { Snimek, Topologie } from "./zaznam";
-import type { Slozeni } from "./slozeni";
+import type { Slozeni, VolnyPrut } from "./slozeni";
 
 /** Vše, co určuje průběh zkoušky. Stejný vstup dává stejný výsledek. */
 export interface VstupZkousky {
@@ -82,6 +82,8 @@ export interface RozborMostu {
    * a když se místo určit nedá.
    */
   slozeni: Slozeni | null;
+  /** Prut, který drží jen za jeden konec a kvůli kterému most klidovou polohu nemá; jinak null. */
+  volny: VolnyPrut | null;
 }
 
 /** Výsledek automatického dopnutí lan. */

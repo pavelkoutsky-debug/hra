@@ -11,7 +11,10 @@ import {
   pohledZaberu,
   prvniPorucha,
   rychlostVZaberu,
+  sledovaneMisto,
   smichejPohledy,
+  tempoZaberu,
+  zacatekZaberu,
   ZABER,
   zaberNaPoruchu,
   type UdalostZaberu,
@@ -21,7 +24,6 @@ import { VERZE_FYZIKY } from "../src/jadro/verze";
 import { BehZkousky } from "../src/zkouska/beh";
 import type { Udalost, ZpravaZeZkousky } from "../src/zkouska/protokol";
 import { Kreslic, urovenRegrese } from "../src/zkouska/regrese";
-import { prvniPohyb } from "../src/zkouska/slozeni";
 import { mistoPrutu, prazdnySnimek, Zaznam } from "../src/zkouska/zaznam";
 import { MERITKO_MAX } from "../src/vykres/kamera";
 
@@ -156,6 +158,46 @@ describe("průběh záběru v čase", () => {
   });
 });
 
+describe("tempo záběru", () => {
+  const okamzik = 5;
+
+  it("při pomalém přehrávání se časy záběru úměrně zkrátí, ať netrvá čtvrt minuty", () => {
+    expect(tempoZaberu(1, false)).toBe(1);
+    expect(tempoZaberu(4, false)).toBe(1);
+    expect(tempoZaberu(0.25, false)).toBe(4);
+    expect(tempoZaberu(0.1, false)).toBeCloseTo(10, 9);
+    expect(tempoZaberu(1, true)).toBe(2);
+    // Skutečná doba záběru při ⅒× (čas tam záběr nezpomaluje) je srovnatelná s dobou při 1×.
+    const doba = (rychlost: number): number => {
+      const tempo = tempoZaberu(rychlost, false);
+      let skutecny = 0;
+      const krok = 0.0005;
+      for (let cas = zacatekZaberu(okamzik, tempo); cas < konecZaberu(okamzik, tempo); cas += krok) {
+        skutecny += krok / rychlostVZaberu(rychlost, miraZpomaleni(cas, okamzik, tempo));
+      }
+      return skutecny;
+    };
+    expect(doba(0.1)).toBeLessThan(doba(1) * 1.5);
+    expect(doba(0.25)).toBeLessThan(doba(1) * 1.5);
+  });
+
+  it("zkrácený záběr má stejný průběh, jen rychleji", () => {
+    for (const tempo of [2, 4]) {
+      expect(miraZpomaleni(okamzik, okamzik, tempo)).toBe(1);
+      expect(miraZpomaleni(zacatekZaberu(okamzik, tempo) - 1e-6, okamzik, tempo)).toBe(0);
+      expect(miraPohledu(konecZaberu(okamzik, tempo), okamzik, tempo)).toBe(0);
+      expect(miraPohledu(konecZaberu(okamzik, tempo) - 0.01 / tempo, okamzik, tempo)).toBeGreaterThan(0);
+      expect(konecZaberu(okamzik, tempo) - okamzik).toBeCloseTo((konecZaberu(okamzik) - okamzik) / tempo, 12);
+      expect(miraZpomaleni(okamzik + 0.1 / tempo, okamzik, tempo)).toBeCloseTo(miraZpomaleni(okamzik + 0.1, okamzik), 12);
+    }
+  });
+
+  it("krátký záběr zpomaluje míň", () => {
+    expect(rychlostVZaberu(1, 1, ZABER.rychlostKratkeho)).toBeCloseTo(ZABER.rychlostKratkeho, 12);
+    expect(rychlostVZaberu(0.2, 1, ZABER.rychlostKratkeho)).toBe(0.2);
+  });
+});
+
 describe("rychlost přehrávání v záběru", () => {
   it("z běžné rychlosti zpomalí na desetinu, v půlce v poměru", () => {
     expect(rychlostVZaberu(1, 0)).toBe(1);
@@ -193,6 +235,21 @@ describe("pohled záběru", () => {
         expect(pohled.meritko).toBeLessThanOrEqual(Math.max(meritko, Math.min(MERITKO_MAX, 4 * meritko)) + 1e-9);
       }
     }
+  });
+
+  it("dlouhý prut (pilíř) se nepřibližuje natěsno: kolem něj zůstane vidět mostovka", () => {
+    const pilir = pohledZaberu({ ...domov, meritko: 12 }, { okamzik: 1, misto: { x: 0, y: -10 }, rozsah: 20 }, rozmer);
+    // Dvacetimetrový prut zabere nejvýš polovinu výšky plátna.
+    expect(20 * pilir.meritko).toBeLessThanOrEqual(0.5 * rozmer.vyska + 1e-9);
+    expect(pilir.meritko).toBeGreaterThanOrEqual(12);
+  });
+
+  it("pohled jde za sledovaným místem", () => {
+    const zaber = { okamzik: 1, misto: { x: 9, y: 1.5 }, rozsah: 4 };
+    const jinde = pohledZaberu(domov, zaber, rozmer, { x: 9.5, y: -1 });
+    expect(jinde.x).toBe(9.5);
+    expect(jinde.y).toBe(-1);
+    expect(jinde.meritko).toBe(pohledZaberu(domov, zaber, rozmer).meritko);
   });
 
   it("prut se do záběru vejde celý, dokud to jde bez oddálení", () => {
@@ -279,23 +336,62 @@ describe("místo záběru ve skutečné zkoušce", () => {
     expect(zaberNaPoruchu(new Zaznam(), u)).toBeNull();
   });
 
-  it("most bez klidové polohy: záběr patří styčníku, který se hnul první a není podepřený", () => {
-    const { zaznam, bezRovnovahy } = zkousej(jenMostovka());
-    expect(bezRovnovahy).toBe(true);
-    const pohyb = prvniPohyb(zaznam, ZABER.okamzikSlozeni);
-    expect(pohyb).not.toBeNull();
-    // Mechanismus se láme ve vnitřních kloubech mostovky (x = 4 a x = 8), ne na podporách.
-    expect([4, 8]).toContain(Math.round(pohyb!.misto.x));
-    expect(pohyb!.misto.y).toBeCloseTo(0, 3);
-    expect(pohyb!.posun).toBeGreaterThan(0.01);
+  it("záběr sleduje, co padá, ale do rokle za tím nejede", () => {
+    const { zaznam, udalosti } = zkousej(slabaPrihrada(), NAKLADNI);
+    const u = prvniPorucha(udalosti)!;
+    const zaber = zaberNaPoruchu(zaznam, u)!;
+    expect(zaber.cil).toEqual({ druh: "prut", prut: (u as { prut: number }).prut });
+    // Těsně před porušením je sledované místo to původní.
+    const pred = sledovaneMisto(zaznam, zaber, u.cas - 1e-3);
+    expect(pred.x).toBeCloseTo(zaber.misto.x, 3);
+    expect(pred.y).toBeCloseTo(zaber.misto.y, 3);
+    // Později most padá: místo jde s ním dolů, nejvýš o povolenou vzdálenost.
+    const pozdeji = sledovaneMisto(zaznam, zaber, Math.min(zaznam.konec, u.cas + 1.5));
+    const dalka = Math.hypot(pozdeji.x - zaber.misto.x, pozdeji.y - zaber.misto.y);
+    expect(pozdeji.y).toBeLessThanOrEqual(zaber.misto.y + 1e-6);
+    expect(dalka).toBeLessThanOrEqual(ZABER.nejdalSledovani + 1e-9);
+    // Záběr bez cíle stojí.
+    expect(sledovaneMisto(zaznam, { ...zaber, cil: { druh: "bod" } }, u.cas + 1)).toEqual(zaber.misto);
+    const { cil: _cil, ...bezCile } = zaber;
+    expect(sledovaneMisto(zaznam, bezCile, u.cas + 1)).toEqual(zaber.misto);
   });
 
-  it("prázdný a příliš krátký záznam pohyb nemá", () => {
-    expect(prvniPohyb(new Zaznam(), ZABER.okamzikSlozeni)).toBeNull();
-    const { zaznam } = zkousej(jenMostovka());
-    const kratky = new Zaznam();
-    zaznam.topologie.forEach((t) => kratky.pridejTopologii(t));
-    zaznam.snimky.filter((s) => s.cas < 0.1).forEach((s) => kratky.pridej(s));
-    expect(prvniPohyb(kratky, ZABER.okamzikSlozeni)).toBeNull();
+  it("pád z mostu bez prasklého prutu je taky první porucha a záběr míří na toho, kdo spadl", () => {
+    // Jedno pole mostovky podepřené vzpěrou z kotvy pod ním: drží, ale končí ve čtvrtém metru.
+    // Auto dojede na konec a spadne do mezery, aniž by cokoli prasklo.
+    const k = new Kreslic();
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    k.prut("drevo-tezke", [0, -3], [4, 0]);
+    const zpravy: ZpravaZeZkousky[] = [];
+    const beh = new BehZkousky((zprava) => zpravy.push(zprava));
+    const u: Uroven = {
+      ...urovenRegrese({ rozpeti: 12, sirka: 3, vybaveni: 100, kotvy: [{ x: 0, y: -3, typ: "pevna" }] }),
+      povolenePrvky: [...PRVKY],
+      jizdniRad: [AUTO],
+    };
+    beh.prijmi({ typ: "start", vstup: { uroven: u, navrh: k.navrh(), nasada: 7, verzeFyziky: VERZE_FYZIKY } });
+    const zacatek = zpravy[0]!;
+    if (zacatek.typ !== "zacatek") throw new Error(`Zkouška nezačala: ${JSON.stringify(zacatek)}`);
+    let pojistka = 0;
+    while (beh.pokracuj(0.5)) expect(pojistka++).toBeLessThan(400);
+    const zaznam = new Zaznam();
+    const udalosti: Udalost[] = [];
+    for (const zprava of zpravy) {
+      if (zprava.typ !== "zaznam") continue;
+      zprava.topologie.forEach((t) => zaznam.pridejTopologii(t));
+      zprava.snimky.forEach((s) => zaznam.pridej(s));
+      udalosti.push(...zprava.udalosti);
+    }
+    expect(zacatek.bezRovnovahy).toBe(false);
+    const prvni = prvniPorucha(udalosti)!;
+    expect(prvni).toMatchObject({ druh: "pad" });
+    const zaber = zaberNaPoruchu(zaznam, prvni, zacatek.ucastnici)!;
+    expect(zaber).not.toBeNull();
+    expect(zaber.cil?.druh).toBe("stycnik");
+    // Auto je v tu chvíli za koncem mostovky (pád se ohlásí, až když pod koly nic není).
+    expect(zaber.misto.x).toBeGreaterThan(4);
+    expect(zaber.okamzik).toBe(prvni.cas);
+    // Bez seznamu účastníků se místo určit nedá.
+    expect(zaberNaPoruchu(zaznam, prvni)).toBeNull();
   });
 });

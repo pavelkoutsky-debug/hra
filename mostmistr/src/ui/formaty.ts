@@ -77,26 +77,14 @@ export function hmotnost(kg: number): string {
 }
 
 /**
- * Nejmenší krok, který zápis `zapis` u hodnot kolem `hodnota` ještě rozliší (0,01 u procent
- * psaných na celá čísla, 1 u korun…): hledá se zkusmo mezi mocninami deseti. 0, když se najít nedá.
- */
-function krokZapisu(zapis: (hodnota: number) => string, hodnota: number): number {
-  for (const krok of [1000, 100, 10, 1, 0.1, 0.01, 0.001, 0.0001]) {
-    const zaklad = Math.round(hodnota / krok) * krok;
-    // Krok je správný, když o něj posunutá hodnota vypadá jinak a o desetinu kroku posunutá ne.
-    if (zapis(zaklad) !== zapis(zaklad + krok) && zapis(zaklad) === zapis(zaklad + krok / 10)) return krok;
-  }
-  return 0;
-}
-
-/**
  * Rozdíl dvou hodnot se znaménkem tak, jak ho hráč vidí: počítá se ze zaokrouhlených hodnot,
  * ne z přesných. Využití 42,6 % a 44,4 % se píše „43 %“ a „44 %“, takže rozdíl je „+1 %“,
- * ne „+2 %“. Null, když obě hodnoty vypadají stejně.
+ * ne „+2 %“. `nasobek` říká, kolika nejmenším zobrazeným dílkům odpovídá jednotka hodnoty
+ * (procenta ze podílu 100, koruny 1, kN z newtonů 0,001): zaokrouhluje se stejně jako v zápisu.
+ * Null, když obě hodnoty vypadají stejně.
  */
-export function zobrazenyRozdil(nove: number, stare: number, zapis: (hodnota: number) => string): string | null {
-  if (zapis(nove) === zapis(stare)) return null;
-  const krok = krokZapisu(zapis, Math.max(Math.abs(nove), Math.abs(stare)));
-  const d = krok > 0 ? Math.round(nove / krok) * krok - Math.round(stare / krok) * krok : nove - stare;
-  return `${d > 0 || (d === 0 && nove > stare) ? "+" : "−"}${zapis(Math.abs(d))}`;
+export function zobrazenyRozdil(nove: number, stare: number, zapis: (hodnota: number) => string, nasobek: number): string | null {
+  const dilku = Math.round(nove * nasobek) - Math.round(stare * nasobek);
+  if (dilku === 0 || zapis(nove) === zapis(stare)) return null;
+  return `${dilku > 0 ? "+" : "−"}${zapis(Math.abs(dilku) / nasobek)}`;
 }

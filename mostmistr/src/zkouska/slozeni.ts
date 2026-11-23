@@ -1,177 +1,178 @@
 // Kde a proč se skládá most, který nemá pod vlastní tíhou klidovou polohu.
 //
-// Takový most nic neutrhne: některý styčník prostě nic nedrží a konstrukce se v něm složí.
-// Místo se hledá krátkým kouskem skutečného děje (most se nechá chvilku padat a vezme se
-// styčník návrhu, který se hnul nejvíc), důvod se pak určí z toho, co se v tom styčníku stýká.
-// Stejný rozbor používá stavba (varování, než hráč spustí zkoušku), výsledek zkoušky
-// i zpomalený záběr, takže všechny tři ukazují na totéž místo.
+// „Nemá klidovou polohu“ ještě neznamená, že spadne: klidovou polohu nenajde ani most s jedním
+// volně visícím prutem, řetěz mostovky mezi dvěma pevnými podporami (prověsí se o pár decimetrů
+// a drží tahem) nebo most na dvou posuvných ložiskách. Za složení se proto počítá jen to, co
+// hráč jako složení uvidí: mostovka se pod vlastní tíhou propadne. Most se nechá chvíli padat
+// (kousek skutečného děje bez provozu) a měří se, o kolik klesly styčníky mostovky.
+// Stejný posudek používá stavba (značka, než hráč spustí zkoušku), výsledek zkoušky i zpomalený
+// záběr, takže všechny tři ukazují na totéž místo. Volně visící prut je jen poznámka.
 
 import type { Bod } from "../data/geometrie";
 import { KATALOG } from "../data/katalog";
 import type { NavrhMostu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
-import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { najdiRovnovahu } from "../jadro/matice";
-import { sestavSoustavu } from "../jadro/soustava";
-import { volneStupne } from "../jadro/stupne";
-import { sestavMost } from "./stavba";
-import { prazdnySnimek, STYCNIK_SKRYTY, type Topologie, Zaznam } from "./zaznam";
+import { prazdnySnimek, Zaznam } from "./zaznam";
 import { Zkouska } from "./zkouska";
 
-/** Za jak dlouho děje je skládání vidět a dá se z něj poznat místo, v sekundách. */
-export const OKAMZIK_SLOZENI = 0.35;
-/** Když se most začne trhat dřív, než uplyne tahle doba, z pohybu se místo složení poznat nedá. */
-const NEJKRATSI_POHYB = 0.1;
-/** Zlomek tíhy, kterým se zkouší, jestli je most mechanismus (viz `jeMechanismus`). */
-const NEPATRNA_TIHA = 1e-3;
+/** Jak dlouho se most nechá padat, než se posoudí, v sekundách děje. */
+export const DOBA_POSUDKU = 1;
+/** Kdy je skládání dobře vidět: na ten okamžik míří zpomalený záběr. */
+export const OKAMZIK_SLOZENI = 0.6;
+/**
+ * O kolik musí styčník mostovky klesnout, aby to bylo složení, v metrech. Řetěz mostovky mezi
+ * pevnými podporami se prověsí nejvýš o půl metru a zastaví se; co padá, je za sekundu o metry níž.
+ */
+const PROPAD_SLOZENI = 1;
+/**
+ * Když mezitím něco povolilo nebo sjelo z podpory, stačí menší propad: ten už se nezastaví.
+ * Most, který mechanismus není a jen neunese sám sebe, se do první poruchy pohne o milimetry.
+ */
+const PROPAD_S_PORUCHOU = 0.15;
+/** O kolik se musí pohnout volný konec prutu, aby stál za poznámku, v metrech. */
+const POHYB_VOLNEHO_KONCE = 0.15;
+/** Stejné poklesy (souměrný most) se od sebe liší jen zaokrouhlením: vyhrává styčník s nižším číslem. */
+const SHODA = 1e-3;
 
 /**
  * Proč se most skládá:
- * - `podpory`: drží se nejvýš jedné podpory, takže se celý převrátí nebo ujede;
- * - `volny-konec`: prut drží jen za jeden konec a kýve se;
+ * - `podpory`: drží se nejvýš jedné podpory, takže se celý převrátí;
  * - `mostovka`: ve styčníku se stýká jen mostovka a nic ho nepodpírá ani nenese;
- * - `ztuzeni`: styčník drží pruty, které se proti sobě můžou natočit (čtyřúhelník bez úhlopříčky).
+ * - `ztuzeni`: styčník nese i jiné pruty, ale konstrukce se v něm zlomí jako v kloubu.
  */
-export type DuvodSlozeni = "podpory" | "volny-konec" | "mostovka" | "ztuzeni";
+export type DuvodSlozeni = "podpory" | "mostovka" | "ztuzeni";
 
 export interface Slozeni {
-  /** Pořadí styčníku v návrhu, kde se most začíná skládat; −1, když to styčník návrhu není. */
+  /** Pořadí styčníku mostovky v návrhu, který se propadá nejvíc. */
   stycnik: number;
-  /** Poloha toho místa na výkresu, m. */
+  /** Jeho poloha na výkresu, m. */
   misto: Bod;
   duvod: DuvodSlozeni;
-  /** Prut, kterého se důvod týká (pořadí v návrhu): u volného konce ten, který se kýve. */
-  prut: number | null;
 }
 
-/**
- * Které styčníky stavby jsou styčníky návrhu: konce prutů a místa, kde se pruty stýkají.
- * Výpočet dělí dlouhé pruty na kusy; styčník uprostřed prutu spojuje právě dva kusy téhož prutu.
- */
-function stycnikyNavrhu(stavba: Topologie): Uint8Array {
-  const prvni = new Int32Array(stavba.stycniku).fill(-2);
-  const pocet = new Uint8Array(stavba.stycniku);
-  const ruzne = new Uint8Array(stavba.stycniku);
-  for (let e = 0; e < stavba.prut.length; e++) {
-    const prut = stavba.prut[e]!;
-    if (prut < 0) continue;
-    for (const i of [stavba.prvekA[e]!, stavba.prvekB[e]!]) {
-      if (pocet[i]! < 255) pocet[i]!++;
-      if (prvni[i] === -2) prvni[i] = prut;
-      else if (prvni[i] !== prut) ruzne[i] = 1;
-    }
-  }
-  const vysledek = new Uint8Array(stavba.stycniku);
-  for (let i = 0; i < stavba.stycniku; i++) vysledek[i] = pocet[i]! > 0 && (ruzne[i] === 1 || pocet[i] !== 2) ? 1 : 0;
-  return vysledek;
+/** Prut, který drží jen za jeden konec a při zkoušce se rozkýve; most kvůli němu nespadne. */
+export interface VolnyPrut {
+  /** Pořadí prutu v návrhu. */
+  prut: number;
+  /** Poloha jeho volného konce na výkresu, m. */
+  misto: Bod;
 }
 
+/** Posudek mostu bez klidové polohy: složí se (kde a proč), a když ne, jestli na něm visí volný prut. */
+export interface PosudekStability {
+  slozeni: Slozeni | null;
+  volny: VolnyPrut | null;
+}
+
+/** Most, o kterém není co říct. */
+export const BEZ_NALEZU: PosudekStability = { slozeni: null, volny: null };
+
 /**
- * Styčník návrhu, který se od začátku děje do času `doCasu` pohnul nejvíc: u mostu bez klidové
- * polohy místo, kde se začíná skládat. Vrací jeho pořadí a polohu na začátku; null, dokud
- * záznam tak daleko nesahá nebo se nic nepohnulo.
+ * Posoudí most bez klidové polohy ze začátku záznamu jeho zkoušky. Vrací null, dokud záznam
+ * nesahá dost daleko (do `DOBA_POSUDKU`, nebo do první změny stavby, tedy do chvíle, kdy něco
+ * povolilo nebo sjelo z podpory). Styčníky návrhu mají ve stavbě stejné pořadí jako v návrhu.
+ * `dopocitano` říká, že záznam už delší nebude: posoudí se z toho, co je.
  */
-export function prvniPohyb(zaznam: Zaznam, doCasu: number): { stycnik: number; misto: Bod; posun: number } | null {
-  if (zaznam.konec < doCasu) return null;
-  // Přes porušení se stavba mění a čísla styčníků by neseděla: měří se jen do prvního z nich.
+export function posudStabilitu(uroven: Uroven, navrh: NavrhMostu, zaznam: Zaznam, dopocitano = false): PosudekStability | null {
   const { snimky } = zaznam;
-  let kdy = doCasu;
-  for (let i = 1; i < snimky.length && snimky[i]!.cas <= doCasu; i++) {
+  const stavba = zaznam.topologie[0];
+  if (snimky.length === 0 || !stavba) return dopocitano ? BEZ_NALEZU : null;
+  // Přes porušení se stavba mění a čísla styčníků by neseděla: měří se jen do prvního z nich.
+  let kdy = -1;
+  let porucha = false;
+  for (let i = 1; i < snimky.length; i++) {
     if (snimky[i]!.topologie !== snimky[0]!.topologie) {
       kdy = snimky[i - 1]!.cas;
+      porucha = true;
+      break;
+    }
+    if (snimky[i]!.cas >= DOBA_POSUDKU) {
+      kdy = DOBA_POSUDKU;
       break;
     }
   }
-  if (kdy < Math.min(NEJKRATSI_POHYB, doCasu)) return null;
+  if (kdy < 0) {
+    if (!dopocitano) return null;
+    kdy = zaznam.konec;
+  }
+
   const zacatek = prazdnySnimek();
   const pozdeji = prazdnySnimek();
-  const stavba = zaznam.stavV(0, zacatek);
-  const stavbaPozdeji = zaznam.stavV(kdy, pozdeji);
-  if (!stavba || stavba !== stavbaPozdeji) return null;
-  const navrhu = stycnikyNavrhu(stavba);
-  let nejvetsi = 0;
+  zaznam.stavV(0, zacatek);
+  zaznam.stavV(kdy, pozdeji);
+  const stycniku = Math.min(navrh.stycniky.length, stavba.stycniku);
+  const poradi = new Map(navrh.stycniky.map((s, i) => [s.id, i]));
+  // Které pruty se v kterém styčníku stýkají.
+  const pruty: number[][] = navrh.stycniky.map(() => []);
+  navrh.pruty.forEach((p, i) => {
+    for (const id of [p.a, p.b]) {
+      const s = poradi.get(id);
+      if (s !== undefined) pruty[s]!.push(i);
+    }
+  });
+  const jeMostovka = (prut: number): boolean => KATALOG[navrh.pruty[prut]!.prvek].druh === "mostovka";
+  // Podpory se berou z úrovně, ne ze stavby: styčník se závažím na podpoře stavba značí jinak.
+  const naKotve = (s: number): boolean => {
+    const st = navrh.stycniky[s]!;
+    return uroven.kotvy.some((k) => k.x === st.x && k.y === st.y) || uroven.zaklady.some((z) => z.x === st.x && z.y === st.y);
+  };
+
+  // Složení: styčník mostovky, který klesl nejvíc.
+  let propad = 0;
   let ktery = -1;
-  for (let i = 0; i < stavba.stycniku; i++) {
-    if (navrhu[i] !== 1 || stavba.znacky[i] === STYCNIK_SKRYTY || (stavba.podpory[i]! & 3) === 3) continue;
-    const dx = pozdeji.polohy[2 * i]! - zacatek.polohy[2 * i]!;
-    const dy = pozdeji.polohy[2 * i + 1]! - zacatek.polohy[2 * i + 1]!;
-    const posun = dx * dx + dy * dy;
-    // Při shodě (souměrný most) vyhrává styčník s nižším číslem: výběr nesmí záviset na zaokrouhlení.
-    if (posun > nejvetsi * (1 + 1e-6)) {
-      nejvetsi = posun;
-      ktery = i;
+  for (let s = 0; s < stycniku; s++) {
+    if (naKotve(s) || !pruty[s]!.some(jeMostovka)) continue;
+    const pokles = zacatek.polohy[2 * s + 1]! - pozdeji.polohy[2 * s + 1]!;
+    if (pokles > propad * (1 + SHODA)) {
+      propad = pokles;
+      ktery = s;
     }
   }
-  if (ktery < 0) return null;
-  return { stycnik: ktery, misto: { x: zacatek.polohy[2 * ktery]!, y: zacatek.polohy[2 * ktery + 1]! }, posun: Math.sqrt(nejvetsi) };
-}
-
-/**
- * Je most mechanismus, tedy dá se pohnout, aniž by se cokoli natáhlo nebo ohnulo? Pozná se
- * to nepatrným zatížením: tuhá konstrukce se pod ním nepatrně prohne, mechanismus rovnováhu
- * nemá. Most, který klidovou polohu nemá jen proto, že se mu pod vlastní tíhou vzepře prut,
- * mechanismus není: ten nic neskládá, ten neunese sám sebe, a řekne to věta o prvním porušení.
- */
-export function jeMechanismus(uroven: Uroven, navrh: NavrhMostu): boolean {
-  if (navrh.pruty.length === 0) return false;
-  try {
-    const s = sestavSoustavu(sestavMost(uroven, navrh).popis);
-    const stupne = volneStupne(s);
-    if (stupne.length === 0) return false;
-    return najdiRovnovahu(s, stupne, new Float64Array(stupne.length), NEPATRNA_TIHA * TIHOVE_ZRYCHLENI) < 0;
-  } catch {
-    return false;
+  if (ktery >= 0 && propad >= (porucha ? PROPAD_S_PORUCHOU : PROPAD_SLOZENI)) {
+    const st = navrh.stycniky[ktery]!;
+    let ukotveno = 0;
+    for (let s = 0; s < stycniku; s++) if (naKotve(s)) ukotveno++;
+    const duvod: DuvodSlozeni = ukotveno < 2 ? "podpory" : pruty[ktery]!.every(jeMostovka) ? "mostovka" : "ztuzeni";
+    return { slozeni: { stycnik: ktery, misto: { x: st.x, y: st.y }, duvod }, volny: null };
   }
+
+  // Jinak aspoň volný prut: konec, do kterého vede jediný prut a který se rozkýval.
+  let pohyb = POHYB_VOLNEHO_KONCE * POHYB_VOLNEHO_KONCE;
+  let volny: VolnyPrut | null = null;
+  for (let s = 0; s < stycniku; s++) {
+    if (pruty[s]!.length !== 1 || naKotve(s)) continue;
+    const dx = pozdeji.polohy[2 * s]! - zacatek.polohy[2 * s]!;
+    const dy = pozdeji.polohy[2 * s + 1]! - zacatek.polohy[2 * s + 1]!;
+    const posun = dx * dx + dy * dy;
+    if (posun > pohyb * (1 + SHODA)) {
+      pohyb = posun;
+      volny = { prut: pruty[s]![0]!, misto: { x: navrh.stycniky[s]!.x, y: navrh.stycniky[s]!.y } };
+    }
+  }
+  return { slozeni: null, volny };
 }
 
 /**
- * Místo a důvod složení z kousku záznamu zkoušky mostu bez klidové polohy. Styčníky návrhu
- * mají ve stavbě stejné pořadí jako v návrhu, takže se dá říct, které pruty se v místě stýkají.
- * Null u mostu, který mechanismus není, a když se místo z pohybu poznat nedá.
+ * Posoudí most přímo z návrhu: když nemá klidovou polohu, nechá ho bez provozu chvíli padat.
+ * Most, který klidovou polohu má, a most, který se nedá sestavit, vyjde bez nálezu.
  */
-export function rozeberSlozeni(uroven: Uroven, navrh: NavrhMostu, zaznam: Zaznam, doCasu = OKAMZIK_SLOZENI): Slozeni | null {
-  if (!jeMechanismus(uroven, navrh)) return null;
-  const pohyb = prvniPohyb(zaznam, doCasu);
-  const stavba = zaznam.topologie[0];
-  if (!pohyb || !stavba) return null;
-  const stycniku = navrh.stycniky.length;
-  const stycnik = pohyb.stycnik < stycniku ? pohyb.stycnik : -1;
-
-  // Kolika podpor se most drží: s jedinou se převrátí nebo ujede celý, ať je jakkoli vyztužený.
-  let podepreno = 0;
-  for (let i = 0; i < Math.min(stycniku, stavba.stycniku); i++) if ((stavba.podpory[i]! & 3) !== 0) podepreno++;
-  if (podepreno < 2) return { stycnik, misto: pohyb.misto, duvod: "podpory", prut: null };
-  if (stycnik < 0) return { stycnik, misto: pohyb.misto, duvod: "ztuzeni", prut: null };
-
-  const id = navrh.stycniky[stycnik]!.id;
-  const pruty: number[] = [];
-  navrh.pruty.forEach((p, poradi) => {
-    if (p.a === id || p.b === id) pruty.push(poradi);
-  });
-  if (pruty.length === 1) return { stycnik, misto: pohyb.misto, duvod: "volny-konec", prut: pruty[0]! };
-  const jenMostovka = pruty.length > 0 && pruty.every((p) => KATALOG[navrh.pruty[p]!.prvek].druh === "mostovka");
-  return { stycnik, misto: pohyb.misto, duvod: jenMostovka ? "mostovka" : "ztuzeni", prut: null };
-}
-
-/**
- * Najde místo a důvod složení přímo z návrhu: nechá most chvilku padat pod vlastní tíhou.
- * Null u mostu, který klidovou polohu má, a u mostu, který se nedá sestavit.
- */
-export function najdiSlozeni(uroven: Uroven, navrh: NavrhMostu): Slozeni | null {
-  if (navrh.pruty.length === 0) return null;
+export function najdiSlozeni(uroven: Uroven, navrh: NavrhMostu): PosudekStability {
+  if (navrh.pruty.length === 0) return BEZ_NALEZU;
   let zkouska: Zkouska;
   try {
     zkouska = new Zkouska(uroven, navrh, 1);
   } catch {
-    return null;
+    return BEZ_NALEZU;
   }
-  if (!zkouska.bezRovnovahy) return null;
+  if (!zkouska.bezRovnovahy) return BEZ_NALEZU;
   const zaznam = new Zaznam();
+  let posudek: PosudekStability | null = null;
   // Po kouscích, ať se počítá jen tak dlouho, jak je potřeba.
-  for (let pojistka = 0; pojistka < 8 && zaznam.konec < OKAMZIK_SLOZENI && !zkouska.hotovo; pojistka++) {
-    const davka = zkouska.pokracuj(OKAMZIK_SLOZENI / 2);
+  for (let pojistka = 0; pojistka < 12 && posudek === null; pojistka++) {
+    const davka = zkouska.pokracuj(DOBA_POSUDKU / 4);
     davka.topologie.forEach((t) => zaznam.pridejTopologii(t));
     davka.snimky.forEach((s) => zaznam.pridej(s));
+    posudek = posudStabilitu(uroven, navrh, zaznam, zkouska.hotovo);
   }
-  return rozeberSlozeni(uroven, navrh, zaznam, Math.min(OKAMZIK_SLOZENI, zaznam.konec));
+  return posudek ?? BEZ_NALEZU;
 }

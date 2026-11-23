@@ -81,6 +81,7 @@ const BEZ_MOSTU: RozborMostu = {
   krivka: null,
   tahyLan: [],
   slozeni: null,
+  volny: null,
 };
 
 /**
@@ -108,7 +109,7 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
   const stavba = sestavMost(uroven, navrh);
   const prazdny = vKlidu(stavba.popis);
   // Most bez klidové polohy: aspoň říct, kde a proč se složí.
-  if (!prazdny) return { ...BEZ_MOSTU, slozeni: najdiSlozeni(uroven, navrh) };
+  if (!prazdny) return { ...BEZ_MOSTU, ...najdiSlozeni(uroven, navrh) };
   const n = prazdny.stupne.length;
   const vlastni = n > 0 ? vlastniTvarySoustavy(prazdny.s, prazdny.stupne, POCET_FREKVENCI) : null;
   if (n > 0 && !vlastni) return BEZ_MOSTU;
@@ -188,6 +189,7 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
     tvary,
     tahyLan: tahyLan(prazdny.s, navrh),
     slozeni: null,
+    volny: null,
     krivka: krivkaPrazdneho
       ? {
           od: KRIVKA_OD,

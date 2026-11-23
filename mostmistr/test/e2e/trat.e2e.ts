@@ -165,7 +165,7 @@ describe("první vlak: kolejiště", () => {
     await nastavCas(3.2);
     await stranka.screenshot({ path: `${SLOZKA}/t3-vlak-na-moste.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (4).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(4\)\.$/);
     expect(await ziskaneMedaile()).toBe(1);
     await stranka.screenshot({ path: `${SLOZKA}/t4-vysledek-prvni-vlak.png` });
   }, 240_000);
@@ -241,7 +241,7 @@ describe("uhelný vlak: brzdění na viaduktu", () => {
     await nastavCas(9);
     await stranka.screenshot({ path: `${SLOZKA}/t8-vlak-brzdi-na-viaduktu.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (11).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(11\)\.$/);
   }, 400_000);
 });
 
@@ -275,7 +275,7 @@ describe("dvě patra: kolej a silnice nad sebou", () => {
     await nastavCas(3.4);
     await stranka.screenshot({ path: `${SLOZKA}/t11-dve-patra-provoz.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (8).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(8\)\.$/);
     expect(await ziskaneMedaile()).toBe(2);
   }, 240_000);
 

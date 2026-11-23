@@ -200,7 +200,9 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   poleHlaseni.textContent = text;
   poleHlaseni.hidden = text === "";
 
-  udaj("prehled-verze").textContent = `${t("hra.nazev")} ${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
+  // Otisk sestavení je údaj pro hlášení chyb: v patičce je jen v bublině.
+  udaj("prehled-verze").textContent = `${t("hra.nazev")} ${__VERZE_HRY__}`;
+  udaj("prehled-verze").title = `${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
   vykresli();
 
   // Postup kampaní: kolik úrovní je projitých, kolik medailí a stupňů výzev hráč má.

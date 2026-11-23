@@ -136,7 +136,8 @@ describe("závaží a rozbor mostu", () => {
       tahyLan: [],
     });
     // Mechanismus k tomu dostane místo a důvod, kde se složí: styčník mostovky, který nic nedrží.
-    expect(rozbor.slozeni).toMatchObject({ duvod: "mostovka", prut: null });
+    expect(rozbor.slozeni).toMatchObject({ duvod: "mostovka" });
+    expect(rozbor.volny).toBeNull();
     expect(rozeberMost(prehlidka, new Kreslic("2-04").navrh()).stabilni).toBe(false);
   });
 

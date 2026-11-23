@@ -32,11 +32,11 @@ export const KLIC_CISEL = "mostmistr.cisla";
 export const KLIC_ZVUKU = "mostmistr.zvuk";
 /** Volba hráče: zpomalený záběr na první porušení při zkoušce. */
 export const KLIC_ZABERU = "mostmistr.zaber";
-/** Nastavení sandboxu: údolí, trasa a provoz. */
 /** Otisky mostů, které úrovní prošly: zkouška do zlomu se do výzvy počítá jen jim. */
 export const KLIC_PROSLYCH = "mostmistr.prosle";
 /** Kolik posledních prošlých mostů si hra na úroveň pamatuje. */
 const NEJVIC_PROSLYCH = 8;
+/** Nastavení sandboxu: údolí, trasa a provoz. */
 export const KLIC_SANDBOXU = "mostmistr.sandbox";
 export const KLIC_SANDBOX_NAVSTIVEN = "mostmistr.sandbox.navstiven";
 

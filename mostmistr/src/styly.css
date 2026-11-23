@@ -930,7 +930,8 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
 
 .vykres__hlaseni {
   position: absolute;
-  top: 10px;
+  /* Když je nahoře pruh výsledku, obrazovka úrovně posune hlášení pod něj. */
+  top: var(--vrch-hlaseni, 10px);
   left: 10px;
   max-width: min(560px, calc(100% - 20px));
   margin: 0;
@@ -1188,6 +1189,12 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 
 .verdikt[data-stav="obstal"] {
   color: var(--uspech);
+}
+
+/* Kde by razítko zakrylo konec mostu nebo podporu, zprůhlední (stejně jako popisové pole). */
+.verdikt--pruhledny {
+  opacity: 0.28;
+  animation: none;
 }
 
 .verdikt small {
@@ -2570,10 +2577,10 @@ body[data-rezim="stavba"] .uroven .legenda {
   }
 
   .analyza {
-    top: 6px;
+    top: var(--vrch-analyzy, 6px);
     left: 6px;
     right: 6px;
-    max-height: calc(100% - 12px);
+    max-height: calc(100% - 6px - var(--vrch-analyzy, 6px));
   }
 }
 

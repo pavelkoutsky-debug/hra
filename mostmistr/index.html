@@ -304,7 +304,7 @@
 
           <section class="vysledek" data-sbaleno="ano" hidden>
             <div class="vysledek__pruh">
-              <div class="vysledek__verdikt">
+              <div class="vysledek__verdikt" role="status" aria-live="polite">
                 <h2 data-udaj="vysledek-nadpis"></h2>
                 <p class="vysledek__veta" data-udaj="vysledek-veta"></p>
               </div>
@@ -314,11 +314,12 @@
                 <button type="button" class="tlacitko" data-akce="upravit" data-text="vysledek.upravit"></button>
                 <button type="button" class="tlacitko" data-akce="prehrat-poruseni" data-text="vysledek.prehratPoruseni" data-kratce-text="vysledek.prehratPoruseni.kratce" data-popis="vysledek.prehratPoruseni.popis" hidden></button>
                 <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
-                <button type="button" class="tlacitko vysledek__sbalit" data-akce="vysledek-sbalit" aria-expanded="false"></button>
+                <button type="button" class="tlacitko vysledek__sbalit" data-akce="vysledek-sbalit" aria-expanded="false" aria-controls="vysledek-podrobnosti"></button>
               </div>
             </div>
-            <div class="vysledek__podrobnosti">
+            <div class="vysledek__podrobnosti" id="vysledek-podrobnosti">
               <p class="vysledek__shrnuti" data-udaj="vysledek-shrnuti"></p>
+              <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
               <ul class="medaile" data-udaj="vysledek-medaile" data-jen-kampan></ul>
               <div class="vysledek__vyzvy" data-cast="vyzvy" hidden>
                 <h3 data-text="vyzvy.nadpis"></h3>
@@ -342,7 +343,6 @@
                 <dt data-text="vysledek.poruseni"></dt>
                 <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
               </dl>
-              <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
               <div class="vysledek__tlacitka vysledek__tlacitka--dole">
                 <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika" data-popis="vysledek.diagnostika.popis"></button>
                 <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.zVysledku"></button>
@@ -427,9 +427,7 @@
             <button type="button" class="tlacitko" data-rychlost="1">1×</button>
             <button type="button" class="tlacitko" data-rychlost="4">4×</button>
           </span>
-          <button type="button" class="tlacitko" data-akce="zaber" data-popis="zkouska.zaber.popis" data-jen="zkouska" aria-pressed="true">
-            <span data-text="zkouska.zaber"></span>
-          </button>
+          <button type="button" class="tlacitko" data-akce="zaber" data-popis="zkouska.zaber.popis" data-jen="zkouska" aria-pressed="true"></button>
           <div class="osa__drah" data-jen="zkouska">
             <span class="osa__spocitano"></span>
             <span class="osa__znacky"></span>

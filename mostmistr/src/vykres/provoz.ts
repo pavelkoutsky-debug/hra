@@ -11,10 +11,10 @@ import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
 
 type Kontext = CanvasRenderingContext2D;
 
-/** Nakreslí všechny účastníky, kteří právě jedou nebo leží spadlí. */
 /** Za jak dlouho se člověk, který spadl z mostu, převrátí naležato, v sekundách děje. */
 const DOBA_PREVRACENI = 0.7;
 
+/** Nakreslí všechny účastníky, kteří právě jedou nebo leží spadlí. */
 export function nakresliProvoz(
   ctx: Kontext,
   kamera: Kamera,

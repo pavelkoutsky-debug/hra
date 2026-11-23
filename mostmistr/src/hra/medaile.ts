@@ -102,7 +102,10 @@ export function vypisMedailePruhu(seznam: HTMLElement, uroven: Uroven, medaile: 
       const polozka = document.createElement("li");
       const uzMa = !radek.ziskana && zDrivejska[i] === true;
       polozka.dataset.ziskana = uzMa ? "drive" : String(radek.ziskana);
-      polozka.title = `${t(radek.ziskana ? "medaile.ziskana" : uzMa ? "medaile.drive" : "medaile.chybi")}: ${radek.podminka}`;
+      const stav = t(radek.ziskana ? "medaile.ziskana" : uzMa ? "medaile.drive" : "medaile.chybi");
+      polozka.title = `${stav}: ${radek.podminka}`;
+      // Stav medaile nese jen znak a barva: čtečce obrazovky se řekne slovy.
+      polozka.setAttribute("aria-label", `${t(radek.nazev)}: ${stav}`);
       const znak = document.createElement("span");
       znak.className = "medaile__znak";
       znak.textContent = radek.ziskana || uzMa ? ZNAK_ZISKANE : ZNAK_CHYBEJICI;

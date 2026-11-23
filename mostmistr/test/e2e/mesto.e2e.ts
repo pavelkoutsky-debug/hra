@@ -399,7 +399,7 @@ describe("zkouška s davem", () => {
     await stranka.screenshot({ path: `${SLOZKA}/67-beh-analyza.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
     // Výsledek počítá běžce, ne řady, ve kterých je simulace vede.
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (40).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(40\)\.$/);
     expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · /);
     await stranka.screenshot({ path: `${SLOZKA}/68-vysledek-beh.png` });
     await akce("upravit").click();
@@ -426,7 +426,7 @@ describe("zkouška s davem", () => {
     await nastavCas(40);
     await stranka.screenshot({ path: `${SLOZKA}/70-dav.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toBe("Přešli a přejeli všichni (120).");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(120\)\.$/);
   }, 180_000);
 
   it("dav na dvoumetrové příhradě: nikdo nespadne, ale promenáda se houpe víc, než zadání dovoluje", async () => {
@@ -469,17 +469,19 @@ describe("záznam porušení", () => {
     await spust();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
     // Pruh výsledku příčinu řekne krátce, podrobnosti celou větou s čísly.
-    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+: .+\.$/);
+    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+ \(označený na výkresu\): .+\.$/);
     await akce("vysledek-sbalit").click();
     const veta = await udaj("vysledek-prvni");
-    expect(veta).toMatch(/^Jako první selhal prut \d+ \(.+\): .+ kN při únosnosti \d+,\d kN.*\.$/);
+    // Věta s čísly a za ní rada, co s prutem.
+    expect(veta).toMatch(/^Jako první povolil prut \d+ \(.+\): .+ kN při únosnosti \d+,\d kN.*\. .+\.$/);
     expect(await akce("prehrat-poruseni").isVisible()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/73-prvni-poruseni.png` });
     await akce("prehrat-poruseni").click();
     const okamzik = Number(await telo("zaznam-poruseni"));
     expect(okamzik).toBeGreaterThan(0);
     expect(await stranka.locator(".vysledek").isVisible()).toBe(false);
-    expect(await udaj("hlaseni")).toBe(veta);
+    // Nad výkresem je krátká podoba bez čísel, zato s radou.
+    expect(await udaj("hlaseni")).toMatch(/^Jako první povolil prut \d+ \(.+\): [^,]+\. .+\.$/);
     // Prut, který selhal, je označený; analytický panel o něm řekne víc.
     await stranka.keyboard.press("a");
     expect(await telo("analyza")).toBe("otevrena");

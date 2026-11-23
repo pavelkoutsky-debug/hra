@@ -19,6 +19,8 @@ export interface KresbaZaberu {
   popis: string;
   /** Drobný řádek pod popiskem: jak záběr přeskočit. */
   rada: string;
+  /** Kolik pixelů od horního okraje plátna zabírá hlášení nad výkresem: popisek se mu vyhne. */
+  vrch?: number;
 }
 
 /**
@@ -29,8 +31,7 @@ export function nakresliZaber(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, z: K
   const mira = z.mira <= 0 ? 0 : z.mira >= 1 ? 1 : z.mira;
   if (mira === 0) return;
   const stred = svetNaObraz(kamera, rozmer, z.misto);
-  const mensi = Math.min(rozmer.sirka, rozmer.vyska);
-  const polomer = Math.max(34, Math.min(0.3 * mensi, 0.5 * z.rozsah * kamera.meritko + 18));
+  const polomer = polomerZaberu(kamera, rozmer, z.rozsah);
 
   ctx.save();
   // Ztmavení okolí: uprostřed nic, k okrajům plátna tma.
@@ -41,7 +42,6 @@ export function nakresliZaber(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, z: K
   ctx.fillStyle = stin;
   ctx.fillRect(0, 0, rozmer.sirka, rozmer.vyska);
 
-  // Zaměřovací značka.
   ctx.globalAlpha = mira;
   ctx.strokeStyle = BARVY.varovani;
   ctx.lineWidth = 1.5;
@@ -59,31 +59,56 @@ export function nakresliZaber(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, z: K
     ctx.lineTo(stred.x + dx * (polomer + 9), stred.y + dy * (polomer + 9));
   }
   ctx.stroke();
-
-  nakresliPopisek(ctx, rozmer, stred, polomer, z.popis, z.rada);
+  nakresliPopisek(ctx, rozmer, stred, polomer, z.popis, z.rada, z.vrch ?? 0);
   ctx.restore();
 }
 
+/** Poloměr zaměřovacího kroužku záběru v pixelech: podle velikosti toho, co ukazuje. */
+function polomerZaberu(kamera: Kamera, rozmer: Rozmer, rozsah: number): number {
+  const mensi = Math.min(rozmer.sirka, rozmer.vyska);
+  return Math.max(34, Math.min(0.3 * mensi, 0.5 * rozsah * kamera.meritko + 18));
+}
+
+/** Rozdělí text na řádky nejvýš `sirka` pixelů široké; dělí v mezerách. */
+function zalom(ctx: Kontext, text: string, sirka: number): string[] {
+  const radky: string[] = [];
+  let radek = "";
+  for (const slovo of text.split(" ")) {
+    const zkouska = radek ? `${radek} ${slovo}` : slovo;
+    if (radek && ctx.measureText(zkouska).width > sirka) {
+      radky.push(radek);
+      radek = slovo;
+    } else radek = zkouska;
+  }
+  if (radek) radky.push(radek);
+  return radky;
+}
+
 /**
- * Popisek značky: rámeček s tučným řádkem a drobným řádkem pod ním, spojený odkazovou čárou
+ * Popisek značky: rámeček s tučným textem a drobným řádkem pod ním, spojený odkazovou čárou
  * s kroužkem o poloměru `polomer` kolem `stred`. Bývá nahoře vpravo od značky; u okraje plátna
- * se překlopí na druhou stranu. Barvu čáry a průhlednost nechává, jak je nastavil volající.
+ * se překlopí na druhou stranu. Text, který by se na plátno nevešel (telefon), se zalomí.
+ * Barvu čáry a průhlednost nechává, jak je nastavil volající.
  */
-function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: number, popis: string, rada: string): void {
+function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: number, popis: string, rada: string, vrch = 0): void {
+  const nejvic = Math.max(120, rozmer.sirka - 36);
   ctx.font = `bold 13px ${PISMO}`;
-  const sirkaPopisu = ctx.measureText(popis).width;
+  const radkyPopisu = zalom(ctx, popis, nejvic);
+  const sirkaPopisu = Math.max(...radkyPopisu.map((r) => ctx.measureText(r).width));
   ctx.font = `11px ${PISMO}`;
-  const sirkaRady = rada ? ctx.measureText(rada).width : 0;
+  const radkyRady = rada ? zalom(ctx, rada, nejvic) : [];
+  const sirkaRady = Math.max(0, ...radkyRady.map((r) => ctx.measureText(r).width));
   const sirka = Math.max(sirkaPopisu, sirkaRady) + 20;
-  const vyska = rada ? 44 : 28;
+  const vyska = 10 + 18 * radkyPopisu.length + 15 * radkyRady.length;
   const vpravo = stred.x + polomer + 26 + sirka <= rozmer.sirka - 8;
-  const nahore = stred.y - polomer - 14 - vyska >= 8;
+  // Nahoře smí být jen tehdy, když se vejde pod hlášení nad výkresem (`vrch`).
+  const nahore = stred.y - polomer - 14 - vyska >= 8 + vrch;
   const kotvaX = stred.x + (vpravo ? 0.707 : -0.707) * polomer;
   const kotvaY = stred.y + (nahore ? -0.707 : 0.707) * polomer;
   const rohX = vpravo ? kotvaX + 22 : kotvaX - 22;
   const rohY = nahore ? kotvaY - 18 : kotvaY + 18;
   const x = Math.max(8, Math.min(rozmer.sirka - 8 - sirka, vpravo ? rohX : rohX - sirka));
-  const y = Math.max(8, Math.min(rozmer.vyska - 8 - vyska, nahore ? rohY - vyska : rohY));
+  const y = Math.max(8 + vrch, Math.min(rozmer.vyska - 8 - vyska, nahore ? rohY - vyska : rohY));
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(kotvaX, kotvaY);
@@ -96,12 +121,10 @@ function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: numb
   ctx.textAlign = "left";
   ctx.fillStyle = BARVY.varovani;
   ctx.font = `bold 13px ${PISMO}`;
-  ctx.fillText(popis, x + 10, y + 14);
-  if (rada) {
-    ctx.fillStyle = BARVY.popisek;
-    ctx.font = `11px ${PISMO}`;
-    ctx.fillText(rada, x + 10, y + 32);
-  }
+  radkyPopisu.forEach((r, i) => ctx.fillText(r, x + 10, y + 14 + 18 * i));
+  ctx.fillStyle = BARVY.popisek;
+  ctx.font = `11px ${PISMO}`;
+  radkyRady.forEach((r, i) => ctx.fillText(r, x + 10, y + 14 + 18 * radkyPopisu.length + 15 * i));
 }
 
 /**

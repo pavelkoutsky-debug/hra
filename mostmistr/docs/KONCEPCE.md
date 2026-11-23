@@ -377,17 +377,19 @@ Rozdíl ceny, největšího využití a největšího zrychlení proti předchoz
 
 **Záznam porušení a zpomalený záběr**
 
-Po pádu hra označí prut, který selhal první, a řekne proč: například „Prut 14: vzpěr, tlak 412 kN při únosnosti 380 kN“. Tlačítkem si hráč porušení přehraje znovu.
+Po pádu hra označí prut, který povolil první, a řekne proč i co s tím: například „Jako první povolil prut 14 (lehký trám): vzpěr. Byl stlačený a vybočil do strany… Zkrať ho dalším styčníkem, dej silnější prvek, nebo udělej příhradu vyšší.“ Čísla (síla, únosnost) jsou v podrobnostech výsledku. Tlačítkem si hráč porušení přehraje znovu.
 
-*(M10, na přání zadavatele.)* Už při prvním přehrání zkoušky se kolem prvního porušení čas sám zpomalí na desetinu a pohled najede na místo, které povolilo; po zlomu se čas i pohled plynule vrátí a zbytek pádu hráč vidí vcelku. Záběr jde vypnout tlačítkem na časové ose (volba se pamatuje), přeskočit klávesou Esc nebo kliknutím a nespustí se, když si hráč čas posouvá sám. Kdo má v systému omezené animace, tomu se zpomalí jen čas a pohled zůstane stát. K pádu patří i drobné efekty: trosky v místě zlomu, šplouchnutí toho, co dopadlo do vody, a lidé, kteří se při pádu převrátí.
+*(M10, na přání zadavatele.)* Už při prvním přehrání zkoušky se kolem první poruchy čas sám zpomalí na desetinu a pohled najede na místo, které povolilo, a sleduje ho, jak padá; po zlomu se čas i pohled plynule vrátí a zbytek pádu hráč vidí vcelku. Poruchou je porušení prutu, sjetí z podpory, náraz lodi i pád někoho z mostu, kterému nic neprasklo. Záběr jde vypnout tlačítkem na časové ose (volba se pamatuje; co povolilo, se hráč dozví větou i tak), přeskočit klávesou Esc nebo kliknutím a nespustí se, když si hráč čas posouvá sám. Stejné porušení podruhé za sebou dostane jen krátké připomenutí. Kdo má v systému omezené animace, tomu se zpomalí jen čas a pohled zůstane stát. K pádu patří i drobné efekty: trosky v místě zlomu, šplouchnutí toho, co dopadlo do vody, a lidé, kteří se při pádu převrátí.
 
 **Kontrola stability při stavbě** *(M10)*
 
-Most, který by se složil vlastní vahou dřív, než na něj kdokoli vjede, je nejčastější chyba začátečníka. Hra ho pozná už při stavbě: jakmile mostovka vede od břehu k břehu, označí na výkresu styčník, ve kterém se most složí, a připíše důvod (styčník mostovky nic nedrží; chybí trojúhelník; prut drží jen za jeden konec; most drží jen jedna podpora). Stejné místo a důvod pak řekne výsledek zkoušky i s radou, co s tím, a míří na ně zpomalený záběr.
+Most, který se složí vlastní vahou dřív, než na něj kdokoli vjede, je nejčastější chyba začátečníka. Hra ho pozná už při stavbě: jakmile mostovka vede od břehu k břehu, nechá most v pomocném výpočtu sekundu padat, a když se mostovka propadne, označí na výkresu styčník, který klesá nejvíc, a připíše důvod (styčník mostovky nic nedrží; zlomí se tu jako v kloubu, chybí trojúhelník; most není ukotvený na obou březích). Stejné místo a důvod pak řekne výsledek zkoušky i s radou, co s tím (jen to, co úroveň dovoluje: vzpěra, zavěšení, svar, lano, pilíř), a míří na ně zpomalený záběr.
+
+Ne každý most, kterému výpočet nenajde klidovou polohu, spadne: řetěz mostovky mezi dvěma pevnými podporami se jen prověsí a drží tahem a volně visící prut se rozkýve. O takovém mostě hra neříká, že se složí; volný prut jen označí poznámkou („Tenhle prut nic nedrží“).
 
 **Výsledek zkoušky** *(M10)*
 
-Výsledek je úzký pruh nahoře nad výkresem, aby most zůstal vidět: verdikt, jedna věta, tři medaile a hlavní tlačítko (po výhře Další úroveň, po prohře Upravit most). Do rohu výkresu nad popisové pole padne razítko SCHVÁLENO nebo ZAMÍTNUTO. Čísla, podmínky medailí, výzvy a hlášení chyby jsou v podrobnostech na rozkliknutí.
+Výsledek je úzký pruh nahoře nad výkresem, aby most zůstal vidět: verdikt, jedna věta s příčinou, tři medaile a hlavní tlačítko (po výhře Další úroveň, po prohře Upravit most). Do rohu výkresu nad popisové pole padne razítko SCHVÁLENO nebo ZAMÍTNUTO. Čísla, podmínky medailí, výzvy a hlášení chyby jsou v podrobnostech na rozkliknutí. Když most neprojde kvůli poruše, přijde výsledek chvíli po ní a hráč nečeká nad troskami do konce časové osy; po návratu ke stavbě zůstane na výkresu značka, kde to povolilo první, dokud most nezmění.
 
 **Pro testování**
 

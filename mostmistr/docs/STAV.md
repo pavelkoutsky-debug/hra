@@ -42,42 +42,95 @@ Poslední aktualizace: 23. 11. 2026
 
 Pád a výsledek: první milník po nezávislé recenzi hry (návrhy 1, 2, 5, 12 a 16 z `docs/RECENZE.md`) a přání zadavatele mít při pádu „bullet time“ s přiblížením. Verze hry 0.15.0; fyzika se nezměnila (verze 8, otisky regresní sady stejné).
 
-**Zpomalený záběr na první porušení** (`src/hra/rezie.ts`, `src/vykres/zaber.ts`).
+**Zpomalený záběr na první poruchu** (`src/hra/rezie.ts`, `src/vykres/zaber.ts`).
 
-- Zkouška je spočítaná dřív, než ji hráč vidí, takže přehrávání předem ví, kdy a kde most poprvé povolí. Třetinu sekundy před tím se čas plynule zpomalí na desetinu a pohled najede na to místo (nejvýš čtyřnásobné přiblížení, prut se do záběru vejde celý); po zlomu se nejdřív vrátí čas, pak pohled, takže začátek řetězu pádu je vidět zblízka a zbytek vcelku. Celý záběr trvá asi pět sekund skutečného času.
-- V záběru okolí ztmavne, místo je v zaměřovacím kroužku a popisek říká, co se stalo („První porušení · prut 5 · vzpěr · 100 %“); nad výkresem je celá věta s čísly.
-- Záběr patří první poruše: porušení prutu, sjetí z posuvné podpory, nárazu lodi do prutu, a u mostu, který se skládá vlastní vahou, místu, kde se skládá. Pokusy (brnknutí, budič) záběr nemají, zkouška do zlomu ano.
-- Hráči nic nevnucuje: tlačítko „Zpomalit pád“ na časové ose ho vypne a volba se pamatuje; Esc nebo kliknutí do výkresu ho přeskočí (další Esc se teprve vrací ke stavbě); kdo skočí po časové ose, krokuje nebo dá Na konec, záběr nedostane; kdo během záběru pohne pohledem, toho záběr dál nevede. Při omezených animacích v systému se zpomalí jen čas.
-- Zvolená rychlost přehrávání se nemění (dřív přehrání porušení přepnulo rychlost na ⅒× a po zlomu ji vracelo). Tlačítko ve výsledku přehraje porušení znovu, i když je záběr vypnutý.
+- Zkouška je spočítaná dřív, než ji hráč vidí, takže přehrávání předem ví, kdy a kde most poprvé povolí. Třetinu sekundy před tím se čas plynule zpomalí na desetinu a pohled najede na to místo (nejvýš čtyřnásobné přiblížení; dlouhý prut se nepřibližuje natěsno, ať je vidět i mostovka) a sleduje ho, jak padá; po zlomu se nejdřív vrátí čas, pak pohled. Celý záběr trvá asi pět sekund skutečného času.
+- V záběru okolí ztmavne, místo je v zaměřovacím kroužku, povolený prut je čárkovaně vidět i přes vozidla a popisek říká, co se stalo („První porušení · prut 5 · vzpěr · 100 %“). Nad výkresem je věta bez čísel, zato s radou („…Byl stlačený a vybočil do strany… Zkrať ho dalším styčníkem, dej silnější prvek, nebo udělej příhradu vyšší“).
+- Záběr patří první poruše: porušení prutu, sjetí z posuvné podpory, nárazu lodi do prutu, pádu někoho z mostu, kterému nic neprasklo, a u mostu, který se skládá vlastní vahou, místu, kde se propadá. Pokusy (brnknutí, budič) záběr nemají, zkouška do zlomu ano.
+- Hráči nic nevnucuje: tlačítko na časové ose („Zpomalení: zap/vyp“) ho vypne a volba se pamatuje, a co povolilo, řekne věta nad výkresem i tak; Esc nebo kliknutí ho přeskočí (další Esc se teprve vrací ke stavbě); kdo skočí po časové ose, krokuje nebo dá Na konec, záběr nedostane; kdo během záběru pohne pohledem, toho záběr dál nevede. Stejné porušení podruhé za sebou dostane jen krátký záběr (poloviční časy, zpomalení na čtvrtinu). Při omezených animacích v systému se zpomalí jen čas.
+- Zvolená rychlost přehrávání se nemění. Při pomalém přehrávání (¼×, ⅒×) se časy záběru úměrně zkrátí, při rychlém ho snímek nepřeskočí. Tlačítko ve výsledku přehraje porušení znovu, i když je záběr vypnutý.
 - Efekty pádu (`src/zkouska/efekty.ts`, `src/vykres/efekty.ts`): trosky v místě zlomu, šplouchnutí toho, co dopadlo do vody (i auta), a lidé se při pádu převrátí, místo aby stáli vzpřímeně na dně. Všechno se počítá z času děje a ze záznamu, takže krokování i přehrání dávají totéž.
 
 **Kontrola stability při stavbě a věta o složení** (`src/zkouska/slozeni.ts`).
 
-- Most bez klidové polohy dostal dřív vždy stejnou větu („nemá pod vlastní tíhou klidovou polohu…“). Teď hra určí místo a důvod: nechá most krátce padat (0,35 s děje), vezme styčník návrhu, který se pohnul nejvíc, a podle toho, co se v něm stýká, řekne proč. Čtyři důvody: styčník mostovky nic nedrží; ve styčníku se konstrukce láme jako v kloubu (chybí trojúhelník); prut drží jen za jeden konec; most drží jen jedna podpora.
+- Most bez klidové polohy dostal dřív vždy stejnou větu („nemá pod vlastní tíhou klidovou polohu…“). Teď hra určí, jestli se opravdu složí, kde a proč: nechá most sekundu děje padat a měří, o kolik klesly styčníky mostovky. Složení je propad o metr (nebo o 15 cm, když mezitím něco povolilo nebo sjelo z podpory); místo je styčník mostovky, který klesl nejvíc. Tři důvody: styčník mostovky nic nedrží; zlomí se tu jako v kloubu, chybí trojúhelník; most není ukotvený na obou březích.
+- „Nemá klidovou polohu“ ještě není pád: řetěz mostovky mezi dvěma pevnými podporami (7-02, 7-04) se prověsí o pár decimetrů a drží, most na dvou posuvných ložiskách (3-04) sjede až pod provozem a volně visící prut se jen rozkýve. O těch hra neříká, že se složí; volný prut označí poznámkou „Tenhle prut nic nedrží“ a ve výsledku ho zmíní i u mostu, který prošel.
 - **Při stavbě:** rozbor v pomocném vlákně teď běží v každé úrovni (dřív jen s osou frekvencí nebo lany) a jakmile mostovka vede od břehu k břehu, výkres označí místo čárkovaným kroužkem s popiskem „Tady se most složí“ a důvodem. Dokud mostovka nevede přes celé údolí, značka není: hráč teprve staví.
-- **Ve výsledku:** věta říká, co nedrží, a radí, co s tím („Podepři ho vzpěrou od břehu, nebo ho zavěs do trojúhelníku z trámů“). Věta o prvním porušení se u složeného mostu neukazuje: sjetí z podpory nebo zlom prutu je tam následek.
-- **Jen mechanismus se skládá.** Most, kterému se pod vlastní tíhou vzepře prut (3-02, „dvanáctimetrový horní pás“), klidovou polohu taky nemá, ale příčinou je prut: pozná se nepatrným zatížením (tuhá konstrukce se nepatrně prohne, mechanismus rovnováhu nemá) a příčinu pak řekne věta o prvním porušení. Ze 38 referenčních mostů kampaně, které se mají složit, dostane místo a důvod 37; ten jeden je právě 3-02.
+- **Ve výsledku:** věta říká, co nedrží, a radí, co s tím; radí jen to, co úroveň dovoluje (vzpěra a zavěšení vždy, svar, lano a pilíř jen tam, kde jsou). Věta o prvním porušení se u složeného mostu neukazuje: sjetí z podpory nebo zlom prutu je tam následek.
+- Most, kterému se pod vlastní tíhou hned vzepře nebo rozdrtí prut (3-02 „dvanáctimetrový horní pás“, 3-04 „příhrada bez pilíře“), se neskládá: do první poruchy se pohne o milimetry a příčinu řekne věta o prvním porušení. Ze 38 referenčních mostů kampaně bez klidové polohy hra hlásí složení u 34; zbylé čtyři jsou právě 3-02, 3-04, 7-02 a 7-04.
 
 **Výsledek zkoušky** (`index.html`, `src/styly.css`, `ukazVysledek` v `src/hra/uroven.ts`).
 
-- Výsledek je pruh nahoře přes šířku výkresu: verdikt, jedna věta (po prohře i příčina: „Jako první povolil prut 5: vzpěr.“ nebo „Složil se vlastní vahou: styčník mostovky nic nedrží.“), tři medaile s názvy a hlavní tlačítka. Po výhře je hlavní Další úroveň, po prohře Upravit most. Dřív okno zakrývalo pravou polovinu mostu a výhra s prohrou se lišily jen nadpisem.
-- Do rohu výkresu nad popisové pole padne razítko **SCHVÁLENO** (zelené) nebo **ZAMÍTNUTO** (červené) s číslem listu a datem. Pokusy razítko nemají.
-- Čísla (cena, využití, kmitání, porušení), podmínky medailí, výzvy, celá věta o prvním porušení a tlačítka Nahlásit chybu a Napiš nám jsou v podrobnostech na tlačítko. Kdo se vrátí v čase, tomu se podrobnosti zavřou a pruh zůstane.
-- Analytický panel, který leží taky nahoře, se pod pruh posune.
+- Výsledek je pruh nahoře přes šířku výkresu: verdikt, jedna věta (po prohře i příčina: „Jako první povolil prut 5 (označený na výkresu): vzpěr.“ nebo „Složil se vlastní vahou: styčník mostovky nic nedrží.“), tři medaile s názvy a hlavní tlačítka. Po výhře je hlavní Další úroveň, po prohře Upravit most. Dřív okno zakrývalo pravou polovinu mostu a výhra s prohrou se lišily jen nadpisem.
+- Do rohu výkresu nad popisové pole padne razítko **SCHVÁLENO** (zelené) nebo **ZAMÍTNUTO** (červené) s číslem listu a datem; nad koncem mostu zprůhlední. Pokusy razítko nemají.
+- Když most neprojde kvůli poruše, pruh přijde dvě sekundy děje po ní (po doběhnutí záběru), ne až na konci časové osy: u referenčních pádů to dřív znamenalo čekat 10 až 38 sekund nad troskami. Zkoušky bez poruchy (kmitání, loď, most, který se nezvedl) a ty, které projdou, ukazují výsledek na konci.
+- Čísla (cena, využití, kmitání, porušení), podmínky medailí, výzvy, celá věta o prvním porušení s čísly a radou a tlačítka Nahlásit chybu a Napiš nám jsou v podrobnostech na tlačítko. Na telefonu se podrobnosti při návratu v čase zavřou, v širokém okně zůstávají.
+- Po návratu ke stavbě zůstane na výkresu značka „Tady to povolilo první“ s číslem prutu a způsobem, dokud hráč most nezmění.
+- Analytický panel a hlášení nad výkresem, které leží taky nahoře, se pod pruh posunou.
 
 **Úklid vývojářských položek** (návrh 5).
 
 - Zkušebna není v liště přehledu, ale jako odkaz „Zkušebna výpočtu“ v patičce. „Diagnostika“ se jmenuje „Nahlásit chybu“ a je v podrobnostech výsledku.
-- Otisk zkoušky ve výsledku, verze fyziky v popisovém poli a otisk sestavení u verze nejsou vidět (jsou v hlášení chyby a v bublině; v popisovém poli je místo verze fyziky počet prutů). Zaškrtávátko „Odemknout všechny úrovně“ se ukáže jen s `?vyvoj=1` v adrese, nebo když už je zapnuté.
+- Otisk zkoušky ve výsledku, verze fyziky v popisovém poli a otisk sestavení u verze (v popisovém poli i v patičce přehledu) nejsou vidět: jsou v hlášení chyby a v bublině; v popisovém poli je místo verze fyziky počet prutů. Zaškrtávátko „Odemknout všechny úrovně“ se ukáže jen s `?vyvoj=1` v adrese, nebo když už je zapnuté.
 - Oznámení o záznamu hraní je v přehledu až pod řádkem s postupem a je drobnější; v paletě úrovně je pod nástroji, ne nad nimi.
 
-**Drobné chyby z recenze** (návrh 12).
+**Drobné chyby z recenze** (návrh 12) a z hraní.
 
-- Po načtení mostu z okna Import má pozornost výkres: mezerník spustí zkoušku (dřív znovu otevřel Import).
-- Zkouška do zlomu se počítá do výzvy i po návratu do úrovně: hra si pamatuje otisky několika posledních mostů, které úrovní prošly, i s verzí fyziky.
+- Po načtení mostu z okna Import má pozornost výkres: mezerník spustí zkoušku (dřív znovu otevřel Import). Chyba importu už neukazuje vnitřní „navrh:“.
+- Zkouška do zlomu se počítá do výzvy i po návratu do úrovně: hra si pamatuje otisky několika posledních mostů, které úrovní prošly, s verzí fyziky a s otiskem úrovně (po přeladění úrovně starý průchod neplatí).
 - Rozdíl proti minulému pokusu se počítá ze zobrazených hodnot: 43 % → 44 % je „+1 %“ (dřív „+2 %“ ze zaokrouhlení přesného rozdílu).
 - Dlouhý tah mostovky nebo pilíře se dělí na co nejmíň dílů: 5 m čtyřmetrové mostovky jsou díly 3 + 2 m (dřív pět metrových), 7 m jsou 4 + 3 m.
-- „Po zavření Analýzy zůstane výsledek sbalený a Další úroveň schované“ už nastat nemůže: tlačítko je v pruhu vždy.
+- Kde na trase chybí mostovka, řekne hra hned při spuštění zkoušky („Na trase od 4 m do 8 m chybí mostovka…“), ne až ve výsledku.
+- „Přešli všichni“ u samých chodců, „Přejeli všichni“ u samých vozidel. První porušení se všude jmenuje stejně („povolil“).
+
+**Ověření:** 1 140 testů jednotek a 249 testů v prohlížeči (Chromium), obojí po zapracování recenzí. Firefox, Safari a skutečný telefon se dál nezkoušely.
+
+### Nezávislé recenze M10 (23. 11. 2026)
+
+Tři čerství recenzenti bez znalosti mých závěrů: recenze kódu, hraní očima nováčka v prohlížeči (stovka zkoušek v 15 úrovních, okno, telefon, angličtina) a nezávislá kontrola posudku stability (vlastní kinematický výpočet, 107 umělých mostů a všechny referenční).
+
+**Zapracováno z kontroly výpočtu**
+
+- **Hra říkala „most se složí“ i o mostech, které stojí.** První verze brala za složení každý most, kterému zkouška nenašla klidovou polohu a který byl mechanismus při nepatrném zatížení: tedy i most s volným prutem (pak dostal SCHVÁLENO), tažený pás ze dvou kusů v přímce, řetěz mostovky mezi pevnými podporami (referenční pády 7-02 a 7-04 „jen mostovka“) a příhradu na dvou posuvných ložiskách (3-04). Pravidlo je přepsané na skutečný propad mostovky (viz výše); `jeMechanismus` zmizel i s prahem, který u lan nedával smysl, a s výpočtem v hlavním vlákně.
+- **Místo:** značka patřila styčníku, který se nejvíc hýbal, takže u napůl postavených krokví mířila na vrchol hotového trojúhelníku místo na styčník mostovky, který se propadl. Teď je to vždy styčník mostovky s největším poklesem.
+- **Důvod „drží jen jedna podpora“** vyšel i u mostu se závažím na podpoře (stavba značí takový styčník jinak): podpory se počítají z kotev úrovně.
+- **Věty:** „neunesl ani vlastní váhu“ a „ještě pod vlastní vahou“ jen při poruše v první půlsekundě; věta o chybějícím trojúhelníku už nemluví o čtyřúhelníku, který tam být nemusí; rada nezmiňuje trámy v ocelových úrovních a nabízí svar, lano a pilíř tam, kde je úroveň má.
+- Test `test/slozeni.test.ts` už nepravdu nevyžaduje (dřív chtěl u 7-02 a 7-04 složení) a nemá podmíněné kontroly.
+
+**Zapracováno z recenze kódu**
+
+- Návrat ke stavbě během záběru nechával pohled přiblížený (zkouška se zahodila dřív, než se záběr zrušil).
+- Hlášení nad výkresem leželo celé pod pruhem výsledku; na telefonu pod ním ležel i začátek analytického panelu; posun se nepřepočítal po změně šířky okna.
+- Tlačítko „Přehrát porušení“ u brnknutí nic nepřehrálo a posunulo čas na nulu: u pokusů se nenabízí a čas se mění, až když je co přehrát. Brnknutí do mostu, který se složí, to v pruhu řekne.
+- Skok v čase z podrobností výsledku je zavíral, takže seznam porušení nešel proklikat (v širokém okně teď zůstávají).
+- Změna pohledu před začátkem záběru vypínala přiblížení jen někdy; změna velikosti okna během záběru vracela starý pohled.
+- Při ⅒× trval záběr čtvrt minuty a při 4× ho mohl snímek přeskočit.
+- Po neúspěchu v už projité úrovni nebylo hlavní žádné tlačítko; razítko překrývalo konec mostu (4-03, 7-04).
+- `zobrazenyRozdil` hádal krok zaokrouhlení a na hranici se spletl (0 % → 60 % vyšlo „+59 %“): krok se předává.
+- Otisk prošlého mostu nenesl podobu úrovně; důvod složení chyběl v deníku hraní; `tsconfig.jadro.json` nehlídal nové moduly bez prohlížeče.
+- Testy, které nemohly selhat: vypnutý záběr se kontroloval dřív, než k porušení došlo; „kdo si čas posouvá sám“ zkoušel jen Na konec; brnknutí s porušením nezkoušel nikdo.
+
+**Zapracováno z hraní**
+
+- Věta o přetížení byla žargon bez rady („vzpěr, tlak 81,7 kN při únosnosti 92,2 kN; s ostatním namáháním dohromady 100 %“): nad výkresem je teď krátká věta s radou podle způsobu porušení, čísla zůstala v podrobnostech.
+- Čísla prutů na výkresu nejsou: prut, o kterém pruh mluví, je označený, a po návratu ke stavbě zůstane značka, kde to povolilo první.
+- Verdikt přicházel až na konci časové osy (10 až 38 s po pádu).
+- Záběr byl napotřetí otravný a vypínač se jmenoval jako akce („Zpomalit pád“); s vypnutým záběrem zmizela i věta o příčině; na telefonu stálo „Esc nebo kliknutí“ a popisek přetekl okraj.
+- Kroužek záběru zůstával stát a most pod ním odpadl; u dlouhého pilíře byl výřez tak těsný, že nebyla vidět mostovka; auto zakrývalo praskající prut.
+- Pády bez prasklého prutu neměly záběr ani větu (teď záběr na první pád a věta o mezeře hned při spuštění).
+- Pruh u nárazu lodi odkazoval na řádek schovaný v podrobnostech; věta o prvním porušení byla v podrobnostech až dole; po nárazu lodi chybělo tlačítko přehrání.
+
+**Nezapracováno a proč**
+
+- **Kmitání bez dramatu** (2-02, 5-02: všichni přejdou, verdikt „rozkmital se“ přijde až na konci a číslo je v podrobnostech) a **zvětšený pohyb při zkoušce**: patří do M11 (sjednocení nástrojů kmitání).
+- **Příčiny v kapitole 7** (věta „buď píst přetlačil, nebo ho nic nedrží“ místo „pravé křídlo nemá píst“ nebo „nesvařený styčník“; křídlo se složí při zvedání a záběr přijde až na náraz lodi): chce posudek pohyblivého mostu, který zatím není; do M12 s přeladěním úrovní.
+- **Co hra ví před zkouškou a neřekne** (nedopnutá lana s mostovkou 0,8 m pod výkresem; visutý most bez závěsu, kterému ustálení najde „klid“ s průvěsem 2,7 m): do M11 k nápovědě při stavbě.
+- **Kývání volného prutu se počítá do kmitání mostovky** (most s volným prutem pak neprojde pro „kmitání 7,7 m/s²“): je to pravdivý otřes mostovky od prutu, který do ní škube; měnit hodnocení by byla změna fyziky. Hra teď aspoň řekne, který prut to je.
+- **Výkon záběru bez grafické karty** (plátno 3840 × 2160 v bezhlavém prohlížeči: 30 až 50 ms na snímek kvůli přechodu přes celé plátno a spodní vrstvě kreslené při pohybu pohledu): na 1280 × 720 pokles není a s grafickou kartou je výplň levná. Zkoušel jsem ztmavení prvkem stránky, ale ztmavilo by i popisek záběru; nechávám, dokud se neukáže na skutečném zařízení.
+- **Obálka a „největší využití“ po pádu** počítají i s tím, co se dělo, když už most padal (šest červených prutů po návratu ke stavbě): značka prvního porušení říká, který byl první; zbytek do M11 (čitelnost).
+- **Vypínač záběru při stavbě:** je jen na časové ose; popisek záběru teď říká, kde se vypíná.
+- **Slovník pojmů** („vzpěr“, „plastický kloub“, „plavební profil“), **dlouhá zadání**, **„stupně výzev 0 z 252“** v přehledu, **oznámení o záznamu** jako první text hry, **Export/Import jako JSON** v paletě: M12 a M13.
+- **Oříznutý název úrovně a jízdní řád**, **„inž.“ písmem 9 px**: M11 (čitelnost).
 
 ## M8 — výsledek
 

@@ -279,7 +279,7 @@ describe("kmitání mostovky rozhoduje", () => {
   it("nízká lávka bez tlumičů se pod útvarem rozkmitá a neobstojí, i když nikdo nespadne", async () => {
     await nactiMost(navrhNaText(RESENI["2-04"]!.pady[1]!.navrh));
     expect(await vyzkousej()).toBe("MOST NEOBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toContain("Přešli a přejeli všichni");
+    expect(await udaj("vysledek-shrnuti")).toMatch(/(Přešli a přejeli|Přešli|Přejeli) všichni/);
     expect(await udaj("vysledek-shrnuti")).toContain("rozkmital víc, než se dá snést");
     expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · nepřijatelné · v čase \d+,\d s$/);
     // Odkaz skočí do okamžiku největšího kmitání; legenda ukazuje okamžitou hodnotu.
