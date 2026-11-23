@@ -186,6 +186,8 @@ export type DruhProblemu =
   | "pilir-mimo-zaklad"
   | "pilir-sikmy"
   | "zaklad-jen-pilir"
+  | "pilir-pahyl"
+  | "kotva-jen-tlumic"
   | "stycnik-v-terenu"
   | "prut-v-zakazane-zone"
   | "zavazi-nepovolene"
@@ -287,6 +289,11 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
       if (p.prvek === "kolejiste" && !poKoleji) problemy.push({ druh: "kolejiste-mimo-kolej", prut: p.id });
       else if (p.prvek !== "kolejiste" && poKoleji) problemy.push({ druh: "mostovka-na-koleji", prut: p.id });
     }
+    // Kotva vyhrazená tlumiči: nic jiného se o ni neopře.
+    if (polozka.druh !== "tlumic") {
+      const vyhrazena = (s: StycnikNavrhu): boolean => uroven.kotvy.some((k) => k.jen === "tlumic" && k.x === s.x && k.y === s.y);
+      if (vyhrazena(a) || vyhrazena(b)) problemy.push({ druh: "kotva-jen-tlumic", prut: p.id });
+    }
     if (polozka.druh === "pilir") {
       // Pilíř je sloup: smí se naklonit, ale ne ležet. Položený by sloužil jako betonový trám
       // několikrát únosnější než mostovka, a to pilíř ve hře být nemá.
@@ -299,6 +306,7 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     }
   }
   for (const id of pilireMimoZaklad(navrh, uroven)) problemy.push({ druh: "pilir-mimo-zaklad", prut: id });
+  for (const id of prutyNaPahyluPilire(navrh)) problemy.push({ druh: "pilir-pahyl", prut: id });
   for (const z of zamkyNavrhu(navrh, uroven)) {
     if (z.druh === "vetknuti") problemy.push({ druh: "zamek-na-vetknuti", stycnik: z.stycnik });
     else if (z.druh === "nedeli") problemy.push({ druh: "zamek-nedeli", stycnik: z.stycnik });
@@ -526,6 +534,34 @@ export function pilireMimoZaklad(navrh: NavrhMostu, uroven: Uroven): number[] {
     }
   }
   return pilire.filter((p) => !stoji.has(p.id)).map((p) => p.id);
+}
+
+/**
+ * Pruty, které stojí na pahýlu pilíře: na hlavě pilíře, která není styčníkem mostovky. Na takové
+ * hlavě smí být jen lano (pylon). Jinak by šlo drahý pilíř nahradit metrem betonu a levným
+ * ocelovým sloupem nad ním: do základu smí jen pilíř, ale výš už cokoli (nález kontroly
+ * obtížnosti M12; v 4-01 tak šla rozpočtová medaile za 85 % inženýrského rozpočtu). Vzpěry
+ * z dříku pilíře (ze styčníku, nad kterým pilíř pokračuje) i příhrada ve styčníku mostovky
+ * nad pilířem zůstávají.
+ */
+export function prutyNaPahyluPilire(navrh: NavrhMostu): number[] {
+  const jePilir = (p: PrutNavrhu): boolean => KATALOG[p.prvek].druh === "pilir";
+  if (!navrh.pruty.some(jePilir)) return [];
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  const vysledek: number[] = [];
+  for (const s of navrh.stycniky) {
+    const uStycniku = navrh.pruty.filter((p) => p.a === s.id || p.b === s.id);
+    const pilire = uStycniku.filter(jePilir);
+    if (pilire.length === 0) continue;
+    // Hlava pilíře: žádný pilíř z ní nevede výš.
+    const pokracuje = pilire.some((p) => (podleId.get(p.a === s.id ? p.b : p.a)?.y ?? -Infinity) > s.y);
+    if (pokracuje || uStycniku.some((p) => KATALOG[p.prvek].druh === "mostovka")) continue;
+    for (const p of uStycniku) {
+      const druh = KATALOG[p.prvek].druh;
+      if (druh !== "pilir" && druh !== "lano") vysledek.push(p.id);
+    }
+  }
+  return vysledek;
 }
 
 /**

@@ -67,6 +67,30 @@
       "yMin": 0.5,
       "xMax": 58,
       "yMax": 9
+    },
+    {
+      "xMin": 0.5,
+      "yMin": -13,
+      "xMax": 11.5,
+      "yMax": -0.5
+    },
+    {
+      "xMin": 12.5,
+      "yMin": -13,
+      "xMax": 23.5,
+      "yMax": -0.5
+    },
+    {
+      "xMin": 24.5,
+      "yMin": -13,
+      "xMax": 35.5,
+      "yMax": -0.5
+    },
+    {
+      "xMin": 36.5,
+      "yMin": -13,
+      "xMax": 47.5,
+      "yMax": -0.5
     }
   ],
   "trasy": [
@@ -90,7 +114,7 @@
   "inzenyrskyRozpocet": 1000000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.6
+    "limit": 0.65
   },
   "povolenePrvky": [
     "mostovka-ocelobeton",

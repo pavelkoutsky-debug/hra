@@ -20,6 +20,9 @@ const chyby: string[] = [];
 /** Text údaje s obyčejnými mezerami: hra v číslech a před jednotkami píše nezlomitelné. */
 const udaj = async (jmeno: string): Promise<string> =>
   (await stranka.locator(`[data-udaj="${jmeno}"]`).innerText()).replace(/[  ]/g, " ");
+/** Text prvku, i když je ve sbalené části okna (`innerText` sbaleného obsahu je prázdný). */
+const celyText = async (jmeno: string): Promise<string> =>
+  ((await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "").replace(/[\u202f\u00a0]/g, " ");
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 
@@ -137,7 +140,8 @@ describe("zvedací most", () => {
     const provoz = await udaj("zadani-provoz");
     expect(provoz).toContain("V čase 5 s se zámky odemknou a písty most zvednou; v čase 16 s ho začnou sklápět.");
     expect(provoz).toContain("Loď vysoká 8 m a široká 7 m pluje pod mostem od času 12 s po dobu 3 s.");
-    expect(await udaj("zadani-stavba")).toContain("Dělicí zámek: 25 000 Kč za kus");
+    // Seznam prvků je v zadání sbalený (ukazuje je i paleta).
+    expect(await celyText("zadani-stavba")).toContain("Dělicí zámek: 25 000 Kč za kus");
     await stranka.screenshot({ path: `${SLOZKA}/p1-zadani-zvedaci-most.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     const prvky = (await stranka.locator(".paleta__prvky button").allInnerTexts()).map((p) => p.replace(/[\u00a0\u202f]/g, " "));

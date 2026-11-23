@@ -6,7 +6,12 @@ import { ChybaDat, cislo, jenZnameKlice, logicka, neboNull, objekt } from "./kon
 import { nactiNavrh, type NavrhMostu } from "./navrh";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_ULOZENI = 3;
+export const VERZE_ULOZENI = 4;
+/**
+ * Od které verze formátu platí rekordy pro dnešní úrovně: v M12 se změnila pravidla medailí
+ * a všech 28 úrovní (provoz, rozpočty, zóny), takže starší rekordy výzev jsou z jiné hry.
+ */
+export const VERZE_ULOZENI_M12 = 4;
 /** Verze fyziky, se kterou se měřily všechny rekordy zkoušky do zlomu uložené ve formátu 2. */
 const FYZIKA_ZLOMU_VE_FORMATU_2 = 7;
 
@@ -31,9 +36,30 @@ const PREVODY_ULOZENI: readonly Prevod[] = [
     }
     return { ...stare, rekordy };
   },
+  // 3 → 4 (M12): medaile jdou po schodech a všechny úrovně jsou přeladěné. Průchod a rozpočtová
+  // hráči zůstávají; mistrovská jen tam, kde má i rozpočtovou (dřív šla získat drahým mostem
+  // a pravidla i texty teď říkají „rozpočtová a k ní…“). Rekordy výzev se měří znovu: starý
+  // most stál na jiném provozu, někdy i v jiném údolí, a jeho cena by držela zlato, na které
+  // dnes dosáhnout nejde (1-01: 23 000 Kč proti dnešním nejméně 31 095 Kč).
+  (stare) => {
+    const rekordy: Record<string, unknown> = {};
+    for (const [id, zaznam] of Object.entries(objekt(stare.rekordy ?? {}, "ulozeni.rekordy"))) {
+      const o = objekt(zaznam, `ulozeni.rekordy.${id}`);
+      const m = objekt(o.medaile ?? {}, `ulozeni.rekordy.${id}.medaile`);
+      rekordy[id] = {
+        ...o,
+        medaile: { ...m, mistrovska: m.mistrovska === true && m.rozpocet === true },
+        nejlepsiCena: null,
+        nejlepsiHmotnost: null,
+        nejlepsiZlom: null,
+        verzeZlomu: null,
+      };
+    }
+    return { ...stare, rekordy };
+  },
 ];
 
-/** Tři nezávislé medaile úrovně (koncepce, kap. 4). */
+/** Tři medaile úrovně, každá vyšší stojí na nižší: průchod, rozpočtová, mistrovská (koncepce, kap. 4). */
 export interface Medaile {
   pruchod: boolean;
   rozpocet: boolean;
@@ -114,6 +140,20 @@ export function ulozeniNaText(ulozeni: Ulozeni): string {
   return JSON.stringify(ulozeni);
 }
 
+/**
+ * Verze formátu, ve které je text uložení zapsaný; null, když ji z textu nejde přečíst.
+ * Úložiště podle ní pozná, že právě načetlo starší postup a má ho zapsat v novém tvaru.
+ */
+export function verzeZapisuUlozeni(zapis: string): number | null {
+  try {
+    const data: unknown = JSON.parse(zapis);
+    const verze = typeof data === "object" && data !== null ? (data as Record<string, unknown>).verze : undefined;
+    return typeof verze === "number" && Number.isInteger(verze) ? verze : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ulozeniZTextu(zapis: string): Ulozeni {
   let data: unknown;
   try {
@@ -134,6 +174,7 @@ export function vylepsiRekord(
   cena: number,
   verzeFyziky: number,
   hmotnost?: number,
+  celistvy = true,
 ): Rekord {
   const stare = dosavadni?.medaile ?? BEZ_MEDAILI;
   const nove: Medaile = {
@@ -142,10 +183,13 @@ export function vylepsiRekord(
     mistrovska: stare.mistrovska || ziskane.mistrovska,
   };
   const dosavadniCena = dosavadni?.nejlepsiCena ?? null;
-  const nejlepsiCena = ziskane.pruchod && (dosavadniCena === null || cena < dosavadniCena) ? cena : dosavadniCena;
+  // Do výzev o nejlevnější a nejlehčí most se počítá jen most, na kterém se při zkoušce nic
+  // neporušilo (`celistvy`): most, kterému povolil prut a lidé přesto přešli, levný není.
+  const plati = ziskane.pruchod && celistvy;
+  const nejlepsiCena = plati && (dosavadniCena === null || cena < dosavadniCena) ? cena : dosavadniCena;
   const dosavadniHmotnost = dosavadni?.nejlepsiHmotnost ?? null;
   const nejlepsiHmotnost =
-    ziskane.pruchod && hmotnost !== undefined && hmotnost > 0 && (dosavadniHmotnost === null || hmotnost < dosavadniHmotnost)
+    plati && hmotnost !== undefined && hmotnost > 0 && (dosavadniHmotnost === null || hmotnost < dosavadniHmotnost)
       ? hmotnost
       : dosavadniHmotnost;
   const zmena =

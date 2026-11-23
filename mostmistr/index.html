@@ -235,7 +235,10 @@
 
           <h2 data-text="paleta.zadani"></h2>
           <p class="paleta__zadani" data-udaj="zadani"></p>
-          <button type="button" class="paleta__odkaz" data-akce="zadani-cele" data-text="paleta.zadani.cele"></button>
+          <div class="paleta__odkazy">
+            <button type="button" class="paleta__odkaz" data-akce="zadani-cele" data-text="paleta.zadani.cele"></button>
+            <button type="button" class="paleta__odkaz" data-akce="pojmy" data-text="pojmy.odkaz"></button>
+          </div>
           <ul class="medaile" data-udaj="podminky" data-jen-kampan></ul>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
             <span data-text="vazba.tlacitko"></span>
@@ -269,6 +272,9 @@
             <output class="legenda__kmitani" data-udaj="kmitani" data-popis="legenda.kmitani.popis"></output>
             <button type="button" class="legenda__prepinac" data-akce="zvetseni" data-popis="legenda.zvetseni.popis" aria-pressed="true" hidden>
               <span data-udaj="zvetseni"></span>
+            </button>
+            <button type="button" class="legenda__prepinac" data-akce="hlucho" data-popis="legenda.hlucho.popis" aria-pressed="true" hidden>
+              <span data-udaj="hlucho"></span>
             </button>
           </div>
 
@@ -418,6 +424,8 @@
           </div>
           <div class="osa__frekvence" data-jen="stavba" data-udaj="osa-frekvenci" hidden>
             <span class="osa__nadpis" data-text="frekvence.nadpis"></span>
+            <!-- Co značky na ose znamenají: bubliny značek dotykem nejdou vyvolat. -->
+            <button type="button" class="osa__otaznik" data-akce="osa-legenda" data-popis="frekvence.legenda.popis">?</button>
             <div class="frekvence" role="img">
               <div class="frekvence__stupnice"></div>
               <div class="frekvence__znacky"></div>
@@ -583,7 +591,12 @@
               </div>
               <p class="ukazka__popis"><span data-udaj="ukazka-popis"></span> <span class="ukazka__poznamka" data-poznamka></span></p>
             </section>
-            <p class="okno__skutecnost" data-udaj="zadani-skutecnost" hidden></p>
+            <!-- Zadání jsou dvě věty a ukázka; vysvětlení a souvislosti si hráč rozbalí. -->
+            <details class="okno__vice" data-udaj="zadani-vice-obal">
+              <summary data-text="zadani.vice"></summary>
+              <p class="okno__zadani okno__zadani--vice" data-udaj="zadani-vice" hidden></p>
+              <p class="okno__skutecnost" data-udaj="zadani-skutecnost" hidden></p>
+            </details>
           </div>
           <div class="okno__vedlejsi">
             <!-- Medaile jsou cíl úrovně: stojí nahoře, ať nejsou v dlouhém zadání pod okrajem okna. -->
@@ -591,11 +604,16 @@
             <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
             <h3 data-text="zadani.provoz"></h3>
             <ul class="okno__seznam" data-udaj="zadani-provoz"></ul>
-            <h3 data-text="zadani.stavba"></h3>
-            <ul class="okno__seznam" data-udaj="zadani-stavba"></ul>
-            <h3 data-text="vyzvy.nadpis" data-cast="zadani-vyzvy"></h3>
-            <p class="okno__poznamka" data-text="vyzvy.uvod" data-cast="zadani-vyzvy"></p>
-            <ul class="okno__seznam" data-udaj="zadani-vyzvy" data-cast="zadani-vyzvy"></ul>
+            <!-- Prvky a ceny ukazuje i paleta, výzvy jsou až pro projitou úroveň: obojí sbalené. -->
+            <details class="okno__vice" data-cast="zadani-stavba">
+              <summary><span data-text="zadani.stavba"></span> <span class="okno__souhrn" data-udaj="zadani-stavba-souhrn"></span></summary>
+              <ul class="okno__seznam" data-udaj="zadani-stavba"></ul>
+            </details>
+            <details class="okno__vice" data-cast="zadani-vyzvy">
+              <summary data-text="vyzvy.nadpis"></summary>
+              <p class="okno__poznamka" data-text="vyzvy.uvod"></p>
+              <ul class="okno__seznam" data-udaj="zadani-vyzvy"></ul>
+            </details>
           </div>
         </div>
         <div class="zaznam zaznam--vOkne" data-udaj="zaznam-upozorneni" role="note" hidden>
@@ -609,6 +627,23 @@
         </div>
       </form>
     </dialog>
+
+    <dialog class="okno okno--pojmy" id="okno-pojmy">
+      <form method="dialog">
+        <h2 data-text="pojmy.nadpis"></h2>
+        <p class="okno__poznamka" data-text="pojmy.uvod"></p>
+        <dl class="pojmy" data-udaj="pojmy-seznam"></dl>
+        <div class="okno__tlacitka">
+          <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Vysvětlení pojmu, na který hráč klikl v textu; popover leží i nad otevřeným oknem. -->
+    <div class="pojem-bublina" id="pojem-bublina" popover role="note">
+      <strong data-udaj="pojem-nazev"></strong>
+      <span data-udaj="pojem-text"></span>
+    </div>
 
     <noscript>Mostmistr potřebuje zapnutý JavaScript. / Mostmistr needs JavaScript turned on.</noscript>
     <script type="module" src="/src/main.ts"></script>

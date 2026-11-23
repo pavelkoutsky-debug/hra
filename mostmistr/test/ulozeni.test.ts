@@ -7,6 +7,7 @@ import {
   ulozeniNaText,
   ulozeniZTextu,
   VERZE_ULOZENI,
+  verzeZapisuUlozeni,
   vylepsiRekord,
   platnyZlom,
   vylepsiZlom,
@@ -69,10 +70,11 @@ describe("starší formáty uložení", () => {
     };
     const nove = ulozeniZTextu(JSON.stringify(stare));
     expect(nove.verze).toBe(VERZE_ULOZENI);
+    // Medaile zůstávají; cena je z doby před M12 (jiný provoz úrovně) a měří se znovu.
     expect(nove.rekordy["1-01"]).toEqual({
       verzeFyziky: 5,
       medaile: { pruchod: true, rozpocet: true, mistrovska: false },
-      nejlepsiCena: 31095,
+      nejlepsiCena: null,
       nejlepsiHmotnost: null,
       nejlepsiZlom: null,
       verzeZlomu: null,
@@ -94,13 +96,41 @@ describe("starší formáty uložení", () => {
     };
     const nove = ulozeniZTextu(JSON.stringify(stare));
     expect(nove.verze).toBe(VERZE_ULOZENI);
-    // Formát 2 existoval jen s fyzikou 7: číslo zůstane, ale platí jen pro ni.
-    expect(nove.rekordy["1-01"]).toMatchObject({ nejlepsiZlom: 3.87, verzeZlomu: 7, nejlepsiCena: 31095, nejlepsiHmotnost: 914 });
-    expect(platnyZlom(nove.rekordy["1-01"], 7)).toBe(3.87);
-    expect(platnyZlom(nove.rekordy["1-01"], 8)).toBeNull();
-    expect(zastaralyZlom(nove.rekordy["1-01"], 8)).toBe(true);
+    // Formát 2 existoval jen s fyzikou 7 a před M12: rekordy výzev se měří znovu, takže ani
+    // zastaralé nejsou (není co nahrazovat).
+    expect(nove.rekordy["1-01"]).toMatchObject({ nejlepsiZlom: null, verzeZlomu: null, nejlepsiCena: null, nejlepsiHmotnost: null });
+    expect(platnyZlom(nove.rekordy["1-01"], 7)).toBeNull();
+    expect(zastaralyZlom(nove.rekordy["1-01"], 8)).toBe(false);
     expect(nove.rekordy["1-02"]!.verzeZlomu).toBeNull();
-    expect(zastaralyZlom(nove.rekordy["1-02"], 8)).toBe(false);
+    expect(nove.rekordy["1-01"]!.medaile).toEqual({ pruchod: true, rozpocet: false, mistrovska: false });
+  });
+
+  it("verze 3 (před M12): mistrovská zůstane jen s rozpočtovou a rekordy výzev se měří znovu", () => {
+    const stare = {
+      verze: 3,
+      navrhy: {},
+      rekordy: {
+        // Mistrovská koupená drahým mostem: podle nových pravidel na ni hráč nemá.
+        "3-01": { verzeFyziky: 8, medaile: { pruchod: true, rozpocet: false, mistrovska: true }, nejlepsiCena: 525800, nejlepsiHmotnost: 108000, nejlepsiZlom: 4.1, verzeZlomu: 8 },
+        // Všechny tři: zůstávají.
+        "1-01": { verzeFyziky: 8, medaile: { pruchod: true, rozpocet: true, mistrovska: true }, nejlepsiCena: 23000, nejlepsiHmotnost: 700, nejlepsiZlom: 3.9, verzeZlomu: 8 },
+        "1-02": { verzeFyziky: 8, medaile: { pruchod: false, rozpocet: false, mistrovska: false }, nejlepsiCena: null, nejlepsiHmotnost: null, nejlepsiZlom: null, verzeZlomu: null },
+      },
+    };
+    expect(verzeZapisuUlozeni(JSON.stringify(stare))).toBe(3);
+    const nove = ulozeniZTextu(JSON.stringify(stare));
+    expect(nove.verze).toBe(VERZE_ULOZENI);
+    expect(nove.rekordy["3-01"]!.medaile).toEqual({ pruchod: true, rozpocet: false, mistrovska: false });
+    expect(nove.rekordy["1-01"]!.medaile).toEqual({ pruchod: true, rozpocet: true, mistrovska: true });
+    // Cena 23 000 Kč je z úrovně se třemi chodci; dnes most pod 31 095 Kč neprojde.
+    for (const id of ["3-01", "1-01", "1-02"]) {
+      expect(nove.rekordy[id]).toMatchObject({ nejlepsiCena: null, nejlepsiHmotnost: null, nejlepsiZlom: null, verzeZlomu: null });
+    }
+    // Převod se dá zopakovat: zápis v novém formátu se čte beze změny.
+    expect(ulozeniZTextu(ulozeniNaText(nove))).toEqual(nove);
+    expect(verzeZapisuUlozeni(ulozeniNaText(nove))).toBe(VERZE_ULOZENI);
+    expect(verzeZapisuUlozeni("{nesmysl")).toBeNull();
+    expect(verzeZapisuUlozeni('{"verze":"3"}')).toBeNull();
   });
 });
 
@@ -127,6 +157,19 @@ describe("rekord úrovně", () => {
     rekord = vylepsiRekord(rekord, pruchod, 8500, 1);
     expect(rekord.nejlepsiCena).toBe(8000);
     expect(rekord.nejlepsiHmotnost).toBe(1100);
+  });
+
+  it("most, na kterém se při zkoušce něco porušilo, medaili za průchod dostane, ale do výzev se nepočítá", () => {
+    let rekord = vylepsiRekord(undefined, pruchod, 9000, 1, 1200);
+    rekord = vylepsiRekord(rekord, pruchod, 5000, 1, 600, false);
+    expect(rekord.medaile.pruchod).toBe(true);
+    expect(rekord.nejlepsiCena).toBe(9000);
+    expect(rekord.nejlepsiHmotnost).toBe(1200);
+    // První průchod s povoleným prutem: medaile ano, rekord ceny a hmotnosti zatím žádný.
+    const prvni = vylepsiRekord(undefined, pruchod, 5000, 1, 600, false);
+    expect(prvni.medaile.pruchod).toBe(true);
+    expect(prvni.nejlepsiCena).toBeNull();
+    expect(prvni.nejlepsiHmotnost).toBeNull();
   });
 
   it("zkouška do zlomu: únosnost na korunu se jen zvyšuje a medaile ani cenu nemění", () => {

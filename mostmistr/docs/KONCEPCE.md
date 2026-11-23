@@ -92,7 +92,7 @@ Jde o **původní hru v žánru stavění mostů**: vlastní název, úrovně, g
 
   *(M7: nejlevnější a nejlehčí most se měří při každé úspěšné zkoušce kampaně, bez zvláštního režimu; zkouška do zlomu je samostatný pokus. Zlato odpovídá nejlepšímu referenčnímu mostu úrovně.)*
 
-**Hodnocení v kampani: tři nezávislé medaile**
+**Hodnocení v kampani: tři medaile po schodech**
 
 | Medaile | Podmínka |
 |---|---|
@@ -100,7 +100,9 @@ Jde o **původní hru v žánru stavění mostů**: vlastní název, úrovně, g
 | Rozpočet | Úspěšná zkouška s cenou pod „inženýrským rozpočtem“. Ten je na ukazateli rozpočtu vyznačen ryskou. |
 | Mistrovská | Úspěšná zkouška a bonus úrovně: rezerva únosnosti (největší využití pod prahem úrovně), komfort chodců, nebo komfort cestujících v autobusu či vlaku. *(Upřesněno v M2: práh rezervy je údaj úrovně odvozený z referenčního mostu; v první kapitole 8 až 25 %, protože dřevo má proti chodcům a jednomu autu velkou rezervu.)* |
 
-Medaile za rozpočet a mistrovskou lze získat různými návrhy. Nejlevnější most nemusí být zároveň nejpohodlnější.
+*(M12: medaile jdou po schodech. Rozpočtová je průchod s mostem do inženýrského rozpočtu, na kterém se při zkoušce nic neporušilo; mistrovská je rozpočtová a k ní bonus úrovně. Do M11 byly nezávislé: mistrovská šla koupit drahým mostem a bývala ze tří nejlehčí. Tabulka výš popisuje původní podmínky.)*
+
+Nejlevnější most nemusí být zároveň nejpohodlnější: most pro rozpočtovou medaili bonus úrovně zpravidla nesplní a most pro mistrovskou se do inženýrského rozpočtu vejde jen úspornějším tvarem.
 
 ---
 

@@ -12,6 +12,7 @@ import { soupisMostu } from "../data/soupis";
 import type { Uroven } from "../data/uroven";
 import { prvek, udaj } from "../ui/dom";
 import { celeCislo, cislo, koruny } from "../ui/formaty";
+import { textSPojmy } from "../ui/pojmy";
 import { t, type KlicTextu } from "../ui/slovnik";
 import { nakresliSkicu } from "../vykres/skica";
 import { podminkaMistrovske } from "./medaile";
@@ -150,7 +151,7 @@ export function pripojNapovedu(reseni: Readonly<Record<MostNapovedy, NavrhMostu>
     udaj("napoveda-uvod").textContent = t(`napoveda.uvod.${vybrany}`);
     // Most pro medaili často nese stejně jako ten pro průchod: řekne se to, ať hráč nehledá rozdíl ve větě.
     const stejny = vybrany !== "pruchod" && principMostu(rysy).join("|") === principMostu(rysyMostu(reseni.pruchod, uroven)).join("|");
-    udaj("napoveda-princip").textContent = stejny ? `${vetaOPrincipu(rysy)} ${t("napoveda.princip.stejny")}` : vetaOPrincipu(rysy);
+    textSPojmy(udaj("napoveda-princip"), stejny ? `${vetaOPrincipu(rysy)} ${t("napoveda.princip.stejny")}` : vetaOPrincipu(rysy));
     okno.dataset.soustava = rysy.soustava;
     for (const cast of okno.querySelectorAll<HTMLElement>("[data-krok]")) cast.hidden = Number(cast.dataset.krok) > krok;
     if (krok >= 2) {

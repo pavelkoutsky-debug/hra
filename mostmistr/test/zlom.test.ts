@@ -205,7 +205,7 @@ describe("zkouška do zlomu", () => {
 
   it("pohyblivý most: píst, který pod zátěží povolí, je první porušení", () => {
     const uroven = nactiKampan().find((u) => u.id === "7-02")!;
-    const navrh = RESENI["7-02"]!.pruchod;
+    const navrh = RESENI["7-02"]!.rozpocet;
     const { vysledek } = zlom(uroven, navrh);
     const v = vysledek.zlom!;
     expect(v.cas).not.toBeNull();

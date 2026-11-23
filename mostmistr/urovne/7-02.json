@@ -77,10 +77,10 @@
   "hmotnostVybaveni": 300,
   "nerovnost": "A",
   "rozpocet": 1200000,
-  "inzenyrskyRozpocet": 780000,
+  "inzenyrskyRozpocet": 799000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.12
+    "limit": 0.15
   },
   "povolenePrvky": [
     "mostovka-ocel",

@@ -93,7 +93,12 @@ describe("výzvy o efektivitu", () => {
   it("zadání úrovně říká, oč se ve třech výzvách hraje, a paleta má zkoušku do zlomu", async () => {
     await otevri("1-01", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    // Zadání ukazuje jen zlato každé výzvy; stupně bronz a stříbro až výsledek.
+    // Zadání ukazuje jen zlato každé výzvy; stupně bronz a stříbro až výsledek. Výzvy jsou až
+    // pro projitou úroveň, proto jsou v zadání sbalené a hráč si je rozklikne.
+    const castVyzev = stranka.locator('#okno-zadani details[data-cast="zadani-vyzvy"]');
+    expect(await castVyzev.locator("summary").isVisible()).toBe(true);
+    expect(await castVyzev.evaluate((cast) => (cast as HTMLDetailsElement).open)).toBe(false);
+    await castVyzev.locator("summary").click();
     const vyzvy = (await stranka.locator('[data-udaj="zadani-vyzvy"] li').allInnerTexts()).map((v) => v.replace(/[  ]/g, " "));
     expect(vyzvy).toEqual([
       "Nejlevnější most: zlato do 31 100 Kč.",
@@ -279,8 +284,9 @@ describe("sandbox", () => {
     const provoz = await udaj("zadani-provoz");
     expect(provoz).toContain("2× osobní auto");
     expect(provoz).toContain("nákladní auto");
-    // Výzvy o efektivitu sandbox nemá: nemá referenční mosty.
-    expect(await stranka.locator('ul[data-udaj="zadani-vyzvy"]').isVisible()).toBe(false);
+    // Výzvy o efektivitu sandbox nemá: nemá referenční mosty. V zadání chybí i jejich sbalený oddíl.
+    expect(await stranka.locator('#okno-zadani [data-cast="zadani-vyzvy"]').isVisible()).toBe(false);
+    expect(await stranka.locator('#okno-zadani [data-cast="zadani-vyzvy"] summary').isVisible()).toBe(false);
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
 
     const prvky = await stranka.locator(".paleta__prvky [data-prvek]").evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-prvek")));
@@ -460,7 +466,7 @@ describe("nápověda", () => {
     await stranka.keyboard.press("Escape");
   });
 
-  it("věta o ceně říká pravdu: most z nápovědy pro 1-01 se do medaile za rozpočet vejde", async () => {
+  it("věta o ceně říká pravdu: most z nápovědy pro 1-01 je na medaili za rozpočet drahý, most pro 2-03 se do ní vejde", async () => {
     // 1-02 je otevřená z předchozího testu: věta podle skutečné ceny a meze medaile.
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
@@ -469,12 +475,22 @@ describe("nápověda", () => {
     const limit = Number(/do ([\d ]+) Kč\)/.exec(veta)![1]!.replace(/ /g, ""));
     expect(veta).toContain(cena > limit ? "na medaili za rozpočet" : "vejde i do medaile za rozpočet");
     await stranka.keyboard.press("Escape");
+    // Věšadlo z nápovědy 1-01 stojí víc než inženýrský rozpočet (32 500 Kč): věta to přizná.
     await otevri("1-01");
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
     await akce("napoveda-dalsi").click();
-    expect((await udaj("napoveda-cena")).replace(/[  ]/g, " ")).toBe(
-      "Stojí 33 133 Kč, takže se vejde i do medaile za rozpočet (do 33 500 Kč). Mistrovskou medaili ani zlato ve výzvách ti nezaručí.",
+    expect(await udaj("napoveda-cena")).toBe(
+      "Stojí 33 133 Kč. Projde, ale na medaili za rozpočet (do 32 500 Kč) je drahý; ta i mistrovská chtějí chytřejší most.",
+    );
+    await stranka.keyboard.press("Escape");
+    // Most z nápovědy 2-03 se do inženýrského rozpočtu vejde, a věta to řekne také.
+    await otevri("2-03");
+    await akce("napoveda").click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    await akce("napoveda-dalsi").click();
+    expect(await udaj("napoveda-cena")).toBe(
+      "Stojí 427 932 Kč, takže se vejde i do medaile za rozpočet (do 441 000 Kč). Mistrovskou medaili ani zlato ve výzvách ti nezaručí.",
     );
     await stranka.keyboard.press("Escape");
   });
@@ -529,8 +545,11 @@ describe("nápověda", () => {
     const bublina = stranka.locator('[data-udaj="osa-znacka"]');
     expect(await bublina.isVisible()).toBe(false);
     // Značky leží na dráze táhla podle času; první výjezd je v čase nula na jejím začátku.
+    // Most se složí už v půl sekundě a ta značka je od začátku osy jen pár pixelů: ukazatel
+    // proto míří přesně na značku výjezdu, ne „kousek od kraje“.
     const draha = (await stranka.locator("#cas").boundingBox())!;
-    await stranka.mouse.move(draha.x + 2, draha.y + draha.height / 2);
+    const vyjezd = (await stranka.locator("#obrazovka-uroven .osa__znacka--vyjezd").first().boundingBox())!;
+    await stranka.mouse.move(vyjezd.x + vyjezd.width / 2, draha.y + draha.height / 2);
     await expect.poll(() => bublina.isVisible()).toBe(true);
     expect((await bublina.innerText()).replace(/[  ]/g, " ")).toMatch(/^0,0 s · vyráží: /);
     // Co se na mostě pokazilo: první značka, která není výjezd.

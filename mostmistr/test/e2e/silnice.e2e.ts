@@ -18,6 +18,9 @@ let adresa: string;
 const chyby: string[] = [];
 
 const udaj = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).innerText();
+/** Text prvku, i když je ve sbalené části okna (`innerText` sbaleného obsahu je prázdný). */
+const celyText = async (jmeno: string): Promise<string> =>
+  ((await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "").replace(/[\u202f\u00a0]/g, " ");
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 
@@ -57,6 +60,9 @@ async function nastavCas(sekundy: number): Promise<void> {
 }
 
 const ziskaneMedaile = (): Promise<number> => stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count();
+/** Které medaile výsledek dal: průchod, rozpočet, mistrovská (true, false, nebo drive = z dřívějška). */
+const medaile = (): Promise<(string | null)[]> =>
+  stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana]').evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-ziskana")));
 
 beforeAll(async () => {
   mkdirSync(SLOZKA, { recursive: true });
@@ -83,13 +89,15 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     await otevri("3-01", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-nazev")).toBe("Okresní silnice");
-    expect(await udaj("zadani-text")).toContain("sama váží přes čtyři tuny na metr");
+    // Zadání jsou dvě věty; čísla a souvislosti jsou pod „Více o úloze“ (sbalené, stejně jako seznam prvků).
+    expect(await udaj("zadani-text")).toContain("Ocelobetonová mostovka sama váží sto tun");
+    expect(await celyText("zadani-vice")).toContain("váží přes čtyři tuny na metr");
     const provoz = await udaj("zadani-provoz");
     expect(provoz).toContain("dodávka zleva");
     expect(provoz).toContain("autobus zleva");
     expect(provoz).toContain("Vozovka je nová a hladká");
-    expect(await udaj("zadani-stavba")).toContain("Ocelobetonová mostovka: 12 000 Kč/m · do 6 m");
-    expect(await udaj("zadani-skutecnost")).toContain("Québecu");
+    expect(await celyText("zadani-stavba")).toContain("Ocelobetonová mostovka: 12 000 Kč/m · do 6 m");
+    expect(await celyText("zadani-skutecnost")).toContain("Québecu");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     const prvky = await stranka.locator(".paleta__prvky button").allInnerTexts();
     expect(prvky).toHaveLength(2);
@@ -102,7 +110,7 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     expect(await stranka.locator('[data-udaj="osa-frekvenci"]').isVisible()).toBe(false);
   });
 
-  it("metr vysoká příhrada se zlomí pod vlastní tíhou; čtyřmetrová získá mistrovskou medaili", async () => {
+  it("metr vysoká příhrada se zlomí pod vlastní tíhou; třímetrová získá všechny tři medaile", async () => {
     await nactiMost(navrhNaText(RESENI["3-01"]!.pady[1]!.navrh));
     // Most váží přes sto tun, skoro všechno je mostovka.
     expect(await udaj("hmotnost")).toMatch(/^10\d,\d\st$/);
@@ -116,7 +124,8 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     await stranka.screenshot({ path: `${SLOZKA}/80-silnice-autobus.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(4\)\.$/);
-    expect(await ziskaneMedaile()).toBe(2);
+    // Mistrovská je rozpočtová a k ní bonus: třímetrová příhrada se vejde do inženýrského rozpočtu a má všechny tři.
+    expect(await ziskaneMedaile()).toBe(3);
     // Jel autobus, takže výsledek říká i to, jak se v něm jelo.
     expect(await udaj("vysledek-autobus")).toMatch(/^0,\d\d m\/s² · výborný komfort · v čase \d+,\d s/);
     expect(await stranka.locator('[data-udaj="vysledek-kmitani"]').isVisible()).toBe(false);
@@ -141,7 +150,8 @@ describe("pod vedením: vzpěr a těžký profil", () => {
     await nastavCas(3.2);
     await stranka.screenshot({ path: `${SLOZKA}/82-nakladni-auta.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await ziskaneMedaile()).toBe(2);
+    // Most pro mistrovskou se vejde do inženýrského rozpočtu, takže má i rozpočtovou.
+    expect(await ziskaneMedaile()).toBe(3);
   }, 240_000);
 });
 
@@ -149,16 +159,16 @@ describe("linka přes rokli: příhrada pod mostovkou a pohodlí v autobusu", ()
   it("hluboká příhrada pod mostovkou dá cestujícím klidnou jízdu a mistrovskou medaili", async () => {
     await otevri("3-03", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-medaile")).toContain("zrychlení v autobusu nejvýš 0,15 m/s²");
+    expect(await udaj("zadani-medaile")).toContain("rozpočtová medaile a k ní zrychlení v autobusu nejvýš 0,20 m/s²");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     await nactiMost(navrhNaText(RESENI["3-03"]!.mistrovska));
     await spust();
     await nastavCas(3.6);
     await stranka.screenshot({ path: `${SLOZKA}/83-pod-mostovkou.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await ziskaneMedaile()).toBe(2);
+    expect(await ziskaneMedaile()).toBe(3);
     const pohodli = stranka.locator('[data-udaj="vysledek-autobus"]');
-    expect(Number(await pohodli.getAttribute("data-zrychleni"))).toBeLessThan(0.15);
+    expect(Number(await pohodli.getAttribute("data-zrychleni"))).toBeLessThan(0.2);
     await stranka.screenshot({ path: `${SLOZKA}/84-pohodli-v-autobusu.png` });
   }, 180_000);
 
@@ -167,10 +177,10 @@ describe("linka přes rokli: příhrada pod mostovkou a pohodlí v autobusu", ()
     await nactiMost(navrhNaText(RESENI["3-03"]!.rozpocet));
     await spust();
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(Number(await stranka.locator('[data-udaj="vysledek-autobus"]').getAttribute("data-zrychleni"))).toBeGreaterThan(0.15);
-    // Průchod a rozpočet ano, mistrovská ne; druhý pokus se porovná s prvním.
-    expect(await ziskaneMedaile()).toBe(2);
-    expect(await udaj("vysledek-autobus")).toContain("minule 0,14 m/s²");
+    expect(Number(await stranka.locator('[data-udaj="vysledek-autobus"]').getAttribute("data-zrychleni"))).toBeGreaterThan(0.2);
+    // Průchod a rozpočet ano, mistrovskou tenhle most nemá (hráči zůstává z prvního); druhý pokus se porovná s prvním.
+    expect(await medaile()).toEqual(["true", "true", "drive"]);
+    expect(await udaj("vysledek-autobus")).toContain("minule 0,17 m/s²");
   }, 180_000);
 });
 

@@ -357,6 +357,17 @@ export interface VysledekZkousky {
   reakce: ReakcePodpory[];
   /** Most neměl pod vlastní tíhou klidovou polohu (chybí mu ztužení) a zkouška začala z nakreslené. */
   bezRovnovahy: boolean;
+  /**
+   * Most bez klidové polohy se propadl a celý (nic na něm nepovolilo) zůstal ležet na terénu.
+   * Takový most neobstál: opírat se smí jen o kotvy a podpory.
+   */
+  opreno: boolean;
+  /**
+   * Na mostě se při zkoušce nic neporušilo: žádný prut nepovolil, žádný konec nesjel z podpory
+   * a žádný prut nebyl využitý nad 100 % (netvoří se plastický kloub). Jen takový most může
+   * dostat rozpočtovou medaili a počítá se do výzev.
+   */
+  neporuseny: boolean;
   /** Výpočet se rozpadl; výsledek neplatí. */
   rozpad: boolean;
   /** Délka děje v sekundách. */

@@ -21,6 +21,9 @@ const chyby: string[] = [];
 /** Text údaje s obyčejnými mezerami: hra v číslech a před jednotkami píše nezlomitelné. */
 const udaj = async (jmeno: string): Promise<string> =>
   (await stranka.locator(`[data-udaj="${jmeno}"]`).innerText()).replace(/[\u202f\u00a0]/g, " ");
+/** Text prvku, i když je ve sbalené části okna (`innerText` sbaleného obsahu je prázdný). */
+const celyText = async (jmeno: string): Promise<string> =>
+  ((await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "").replace(/[\u202f\u00a0]/g, " ");
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const pridavek = (jmeno: string) => stranka.locator(`.paleta__prvky button[data-pridavek="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
@@ -123,10 +126,12 @@ describe("tři pole: pilíře", () => {
     await otevri("4-01", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-nazev")).toBe("Tři pole");
-    expect(await udaj("zadani-text")).toContain("Pilíř smí stát jen na základu");
+    // Zadání jsou dvě věty; pravidla pilíře jsou pod „Více o úloze“ (sbalené, stejně jako seznam prvků).
+    expect(await udaj("zadani-text")).toContain("v řece jsou dva základy: postav na ně pilíře");
+    expect(await celyText("zadani-vice")).toContain("Pilíř smí stát jen na základu");
     expect(await udaj("zadani-provoz")).toContain("2× tahač s návěsem zleva");
-    expect(await udaj("zadani-stavba")).toContain("Pilíř: 15 000 Kč/m · do 12 m");
-    expect(await udaj("zadani-skutecnost")).toContain("Millau");
+    expect(await celyText("zadani-stavba")).toContain("Pilíř: 15 000 Kč/m · do 12 m");
+    expect(await celyText("zadani-skutecnost")).toContain("Millau");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     const prvky = await stranka.locator(".paleta__prvky button").allInnerTexts();
     expect(prvky).toHaveLength(4);
@@ -146,14 +151,15 @@ describe("tři pole: pilíře", () => {
     await stranka.screenshot({ path: `${SLOZKA}/90-pilire.png` });
   });
 
-  it("příhrady na pilířích obstojí pod dvěma tahači s návěsem; bez pilířů se složí", async () => {
+  it("most na pilířích se ztuženými vzpěrami obstojí pod dvěma tahači s návěsem; příhrady bez pilířů se složí", async () => {
     await nactiMost(navrhNaText(RESENI["4-01"]!.mistrovska));
     await spust();
     await nastavCas(7);
     await stranka.screenshot({ path: `${SLOZKA}/91-tahace-na-trech-polich.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(5\)\.$/);
-    expect(await ziskaneMedaile()).toBe(2);
+    // Most pro mistrovskou se vejde do inženýrského rozpočtu: má všechny tři medaile.
+    expect(await ziskaneMedaile()).toBe(3);
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["4-01"]!.pady[2]!.navrh));
     await spust();
@@ -165,8 +171,8 @@ describe("bez jediné vzpěry: svar a plastický kloub", () => {
   it("svar je v paletě; kliknutím na styčník ho svaří a připočte cenu, dalším kliknutím zruší", async () => {
     await otevri("4-02", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-stavba")).toContain("Svar: 1 500 Kč za každý prut");
-    expect(await udaj("zadani-skutecnost")).toContain("Maurzycích");
+    expect(await celyText("zadani-stavba")).toContain("Svar: 1 500 Kč za každý prut");
+    expect(await celyText("zadani-skutecnost")).toContain("Maurzycích");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await pridavek("svar").innerText()).toContain("Svar");
     expect((await pridavek("svar").innerText()).replace(/[\u202f\u00a0]/g, " ")).toContain("1 500 Kč za každý prut");
@@ -224,9 +230,9 @@ describe("na lanech: zavěšený most, napínák a dopnutí", () => {
   it("paleta nabízí lano, napínák, svar i dopnutí; bez lan tlačítka poradí, co chybí", async () => {
     await otevri("4-03", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-stavba")).toContain("Lano: 1 800 Kč/m · do 60 m");
-    expect(await udaj("zadani-stavba")).toContain("Napínák lana: v ceně lana");
-    expect(await udaj("zadani-skutecnost")).toContain("Strömsundu");
+    expect(await celyText("zadani-stavba")).toContain("Lano: 1 800 Kč/m · do 60 m");
+    expect(await celyText("zadani-stavba")).toContain("Napínák lana: v ceně lana");
+    expect(await celyText("zadani-skutecnost")).toContain("Strömsundu");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     const prvky = await stranka.locator(".paleta__prvky button").allInnerTexts();
     expect(prvky.map((p) => p.split("\n")[1])).toEqual([
@@ -248,27 +254,29 @@ describe("na lanech: zavěšený most, napínák a dopnutí", () => {
 
   it("nakreslené lano zůstane vybrané a napínák ho po milimetrech dotahuje", async () => {
     await stranka.locator('.paleta__prvky button[data-prvek="pilir"]').click();
-    await tahni([30, -10], [30, 0]);
-    await tahni([30, 0], [30, 12]);
+    // Základ pro pylon leží o pole vlevo od středu údolí (x = 24).
+    await tahni([24, -10], [24, 0]);
+    await tahni([24, 0], [24, 12]);
     await stranka.locator('.paleta__prvky button[data-prvek="mostovka-ocelobeton"]').click();
     await tahni([0, 0], [6, 0]);
     await stranka.locator('.paleta__prvky button[data-prvek="lano"]').click();
-    await tahni([30, 12], [6, 0]);
+    await tahni([24, 12], [6, 0]);
     expect(await telo("pruty")).toBe("4");
     const nastaveni = stranka.locator('[data-nastaveni="predpeti"]');
     expect(await nastaveni.isVisible()).toBe(true);
     // Nastavení napínáku je na dohled i v okně vysokém 720 px, kde je paleta delší než obrazovka.
     const tlacitkoPlus = (await akce("predpeti-plus").boundingBox())!;
     expect(tlacitkoPlus.y + tlacitkoPlus.height).toBeLessThanOrEqual(720);
-    // Lano dlouhé 26,8 m s výchozím předpětím 5 % je o 12,5 mm kratší než nakreslené.
-    expect(await udaj("predpeti")).toBe("dotaženo o 13 mm");
+    // Lano dlouhé 21,6 m s výchozím předpětím 5 % je o 10,1 mm kratší než nakreslené.
+    expect(await udaj("predpeti")).toBe("dotaženo o 10 mm");
     expect(await telo("predpeti")).toBe("0.050");
+    // První krok hodnotu mezi kroky zarovná na další celý milimetr, se Shiftem je krok centimetr.
     await akce("predpeti-plus").click();
-    expect(await udaj("predpeti")).toBe("dotaženo o 13 mm");
+    expect(await udaj("predpeti")).toBe("dotaženo o 11 mm");
     await akce("predpeti-plus").click({ modifiers: ["Shift"] });
-    expect(await udaj("predpeti")).toBe("dotaženo o 23 mm");
+    expect(await udaj("predpeti")).toBe("dotaženo o 21 mm");
     for (let i = 0; i < 3; i++) await akce("predpeti-min").click({ modifiers: ["Shift"] });
-    expect(await udaj("predpeti")).toBe("povoleno o 7 mm");
+    expect(await udaj("predpeti")).toBe("povoleno o 9 mm");
     expect(Number(await telo("predpeti"))).toBeLessThan(0);
     await stranka.screenshot({ path: `${SLOZKA}/95-napinak.png` });
     // Kliknutí do prázdna výběr zruší a nastavení zmizí; nástroj Napínák lano zase vybere.
@@ -276,9 +284,9 @@ describe("na lanech: zavěšený most, napínák a dopnutí", () => {
     expect(await nastaveni.isVisible()).toBe(false);
     await pridavek("napinak").click();
     expect(await pridavek("napinak").getAttribute("aria-pressed")).toBe("true");
-    await klikni([18, 6]);
+    await klikni([15, 6]);
     expect(await nastaveni.isVisible()).toBe(true);
-    expect(await udaj("predpeti")).toBe("povoleno o 7 mm");
+    expect(await udaj("predpeti")).toBe("povoleno o 9 mm");
   });
 
   it("dopnutí srovná mostovku a napínák ukáže tah v laně", async () => {
@@ -288,12 +296,14 @@ describe("na lanech: zavěšený most, napínák a dopnutí", () => {
     await nactiMost(navrhNaText(sVychozim));
     await stranka.keyboard.press("n");
     await stranka.locator('body[data-dopnuti="hotovo"]').waitFor({ timeout: 60_000 });
-    expect(await hlaseni()).toMatch(/^Lana jsou dopnutá\. Mostovka pod vlastní tíhou klesala nejvýš o 6\d mm, teď o 0,\d mm\.$/);
+    // Most je nesouměrný (24 a 36 m): s nedotaženým kotevním lanem visí delší pole 30 cm pod výkresem.
+    expect(await hlaseni()).toMatch(/^Lana jsou dopnutá\. Mostovka pod vlastní tíhou klesala nejvýš o 30\d mm, teď o 0,\d mm\.$/);
     expect(Number(await telo("dopnuti-odchylka"))).toBeLessThan(1);
     const dopnuty = await mostNaVykresu();
     const lana = dopnuty.pruty.filter((p) => p.prvek === "lano").map((p) => p.predpeti!);
     expect(lana).toHaveLength(10);
-    // Lana do pole nesou mostovku, kotevní zůstala jen napnutá; výsledek sedí s referenčním mostem.
+    // Lana do polí nesou mostovku, kotevní lano do levé opěry drží hlavu pylonu (je dotažené nejvíc)
+    // a lano do pravé opěry zůstalo povolené; výsledek sedí s referenčním mostem.
     const referencni = nedopnuty.pruty.filter((p) => p.prvek === "lano").map((p) => p.predpeti!);
     lana.forEach((predpeti, i) => expect(predpeti).toBeCloseTo(referencni[i]!, 2));
     // Dopnutí jde vzít zpět jedním krokem.
@@ -301,11 +311,12 @@ describe("na lanech: zavěšený most, napínák a dopnutí", () => {
     expect((await mostNaVykresu()).pruty.filter((p) => p.prvek === "lano").every((p) => p.predpeti === 0.05)).toBe(true);
     await akce("znovu").click();
 
-    // Krajní lano do pole: po dopnutí nese kolem 17 % pevnosti.
+    // Krajní lano do delšího pole (z hlavy pylonu do x = 54): po dopnutí nese kolem 23 % pevnosti.
+    // Kliká se kousek nad mostovkou, kde jsou lana vějíře nejdál od sebe.
     await pridavek("napinak").click();
-    await klikni([18, 8]);
-    await expect.poll(() => udaj("predpeti-tah"), { timeout: 15_000 }).toMatch(/^Tah pod vlastní tíhou mostu: 4\d\d kN, 1\d\s%/);
-    expect(await udaj("predpeti")).toMatch(/^dotaženo o 4\d mm$/);
+    await klikni([50, 1.87]);
+    await expect.poll(() => udaj("predpeti-tah"), { timeout: 15_000 }).toMatch(/^Tah pod vlastní tíhou mostu: 5\d\d kN, 2\d\s%/);
+    expect(await udaj("predpeti")).toMatch(/^dotaženo o 7\d mm$/);
     await stranka.screenshot({ path: `${SLOZKA}/96-zaveseny-dopnuty.png` });
     await stranka.keyboard.press("Escape");
   }, 120_000);
@@ -329,8 +340,8 @@ describe("náklad století: visutý most", () => {
     await otevri("4-04", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-provoz")).toContain("nadměrný náklad zleva");
-    expect(await udaj("zadani-stavba")).toContain("Nosné lano: 6 000 Kč/m · do 60 m");
-    expect(await udaj("zadani-skutecnost")).toContain("Çanakkale");
+    expect(await celyText("zadani-stavba")).toContain("Nosné lano: 6 000 Kč/m · do 60 m");
+    expect(await celyText("zadani-skutecnost")).toContain("Çanakkale");
     // Dlouhé zadání se v okně vysokém 720 px posouvá, tlačítko ale zůstává na dohled.
     const ramTlacitka = (await stranka.locator('#okno-zadani button[value="zavrit"]').boundingBox())!;
     expect(ramTlacitka.y + ramTlacitka.height).toBeLessThanOrEqual(720);

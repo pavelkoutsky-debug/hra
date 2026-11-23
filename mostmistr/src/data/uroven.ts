@@ -15,7 +15,7 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 6;
+export const VERZE_UROVNE = 7;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
@@ -34,14 +34,27 @@ const PREVODY_UROVNE: readonly Prevod[] = [
   // 5 → 6: pohyblivé mosty. Úroveň může mít fáze zkoušky (kdy se most zvedá a sklápí) a lodě;
   // starší úrovně mají mosty pevné.
   (stara) => ({ ...stara, pohyb: null, lode: [] }),
+  // 6 → 7: kotva smí být vyhrazená jednomu druhu prutu (`jen`: kotva pro tlumič, o kterou se
+  // nedá opřít vzpěra). Starší úrovně takové kotvy nemají.
+  (stara) => stara,
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
 export type TypKotvy = (typeof TYPY_KOTEV)[number];
 
+/** K čemu smí být kotva vyhrazená: zatím jen tlumiči (prvek druhu „tlumic“). */
+export const VYHRAZENI_KOTEV = ["tlumic"] as const;
+export type VyhrazeniKotvy = (typeof VYHRAZENI_KOTEV)[number];
+
 /** Podpora daná úrovní. Styčník návrhu na stejném místě je v ní uložen. */
 export interface Kotva extends Bod {
   typ: TypKotvy;
+  /**
+   * Kotva vyhrazená jednomu druhu prutu: jiný do ní vést nesmí. Kotva pro tlumič ve svahu
+   * pod lávkou je místo, kam se tlumič upne; vzpěra opřená o ni by lávku podepřela a úroveň,
+   * která učí tlumit, by šla projít bez tlumiče (nález kontroly obtížnosti M12).
+   */
+  jen?: VyhrazeniKotvy;
 }
 
 export const DRUHY_TRAS = ["lavka", "silnice", "kolej"] as const;
@@ -249,7 +262,9 @@ function obdelnik(h: unknown, cesta: string): Obdelnik {
 
 function kotva(h: unknown, cesta: string): Kotva {
   const o = objekt(h, cesta);
-  return { ...bodNaRastru(h, cesta), typ: jedenZ(o.typ, `${cesta}.typ`, TYPY_KOTEV) };
+  const k: Kotva = { ...bodNaRastru(h, cesta), typ: jedenZ(o.typ, `${cesta}.typ`, TYPY_KOTEV) };
+  if (o.jen !== undefined) k.jen = jedenZ(o.jen, `${cesta}.jen`, VYHRAZENI_KOTEV);
+  return k;
 }
 
 function trasa(h: unknown, cesta: string): Trasa {

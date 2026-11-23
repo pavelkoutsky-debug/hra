@@ -38,7 +38,7 @@ function zmerZlom(uroven: Uroven, navrh: NavrhMostu): number {
   return unosnostNaKorunu(vysledek.zlom!.celkem, vysledek.cena);
 }
 
-const ZAKLAD: ZakladVyzev = { cena: 31_095, cenaMostovky: 20_000, hmotnost: 914, hmotnostMostovky: 857.6, zlom: 3.873, rozpocet: 45_000 };
+const ZAKLAD: ZakladVyzev = { cena: 31_095, cenaMostovky: 20_000, hmotnost: 914, hmotnostMostovky: 857.6, sampion: null, zlom: 3.873, rozpocet: 45_000 };
 
 describe("prahy výzev", () => {
   const prahy = prahyVyzev(ZAKLAD);
@@ -110,6 +110,36 @@ describe("prahy výzev", () => {
     expect(prahyVyzev({ ...ZAKLAD, rozpocet: null }).cena).toEqual([35_600, 32_800, 31_100]);
   });
 
+  it("se šampionem je zlato kousek nad ním, stříbro most autora a bronz jako dřív", () => {
+    // Šampion stojí 27 000, z toho mostovka 20 000: zlato 20 000 + 1,1 · 7 000 = 27 700.
+    const sampion = { cena: 27_000, cenaMostovky: 20_000, hmotnost: 890, hmotnostMostovky: 857.6 };
+    const se = prahyVyzev({ ...ZAKLAD, sampion });
+    expect(se.cena).toEqual([35_600, 31_100, 27_700]);
+    // Hmotnost: konstrukce šampiona váží 32,4 kg a deset procent z ní je míň než 2 % mostu,
+    // takže zlato je 2 % nad šampionem (907,8 → 908); stříbro most autora, bronz jako dřív.
+    expect(se.hmotnost).toEqual([960, 914, 908]);
+    // Most autora má stříbro, šampion zlato, a únosnost na korunu šampion nemění.
+    expect(stupenVyzvy("cena", ZAKLAD.cena, se)).toBe(2);
+    expect(stupenVyzvy("cena", sampion.cena, se)).toBe(3);
+    expect(stupenVyzvy("hmotnost", ZAKLAD.hmotnost, se)).toBe(2);
+    expect(stupenVyzvy("hmotnost", sampion.hmotnost, se)).toBe(3);
+    expect(se.zlom).toEqual(prahy.zlom);
+  });
+
+  it("šampion, který most autora nepřekonal, prahy nemění; zlato nikdy není nad mostem autora", () => {
+    const stejny = { cena: ZAKLAD.cena, cenaMostovky: ZAKLAD.cenaMostovky, hmotnost: ZAKLAD.hmotnost, hmotnostMostovky: ZAKLAD.hmotnostMostovky };
+    expect(prahyVyzev({ ...ZAKLAD, sampion: stejny })).toEqual(prahy);
+    // Šampion jen o pár korun lepší: rezerva nad ním by zlato vynesla nad most autora, a tak zůstane na něm.
+    const tesny = prahyVyzev({ ...ZAKLAD, sampion: { ...stejny, cena: 30_900 } });
+    expect(tesny.cena).toEqual(prahy.cena);
+    // Šampion s levnější mostovkou, než má most autora: počítá se s tou jeho.
+    const jinaMostovka = prahyVyzev({ ...ZAKLAD, sampion: { ...stejny, cena: 24_000, cenaMostovky: 16_000 } });
+    expect(jinaMostovka.cena).toEqual([35_600, 31_100, 24_800]);
+    // Bronz zůstává pod rozpočtem úrovně a nad stříbrem, i když je rozpočet těsný.
+    const tesnyRozpocet = prahyVyzev({ ...ZAKLAD, rozpocet: 33_000, sampion: { ...stejny, cena: 27_000 } });
+    expect(tesnyRozpocet.cena).toEqual([32_400, 31_100, 27_700]);
+  });
+
   it("stupně nikdy nesplynou: ani u mostu jen z mostovky, ani s rozpočtem těsně nad zlatem", () => {
     const jenMostovka = prahyVyzev({ ...ZAKLAD, cena: 20_000, cenaMostovky: 20_000, rozpocet: null });
     expect(jenMostovka.cena).toEqual([21_000, 20_400, 20_000]);
@@ -118,7 +148,7 @@ describe("prahy výzev", () => {
     expect(naHrane.cena[1]).toBeGreaterThan(naHrane.cena[2]);
     expect(naHrane.cena[0]).toBeGreaterThan(naHrane.cena[1]);
     // Čísla, která už tři platné číslice mají, se zaokrouhlením nezmění.
-    const kulata = prahyVyzev({ cena: 948_000, cenaMostovky: 948_000, hmotnost: 12_300, hmotnostMostovky: 12_300, zlom: 2, rozpocet: null });
+    const kulata = prahyVyzev({ cena: 948_000, cenaMostovky: 948_000, hmotnost: 12_300, hmotnostMostovky: 12_300, sampion: null, zlom: 2, rozpocet: null });
     expect(kulata.cena[2]).toBe(948_000);
     expect(kulata.hmotnost[2]).toBe(12_300);
     expect(kulata.zlom).toEqual([0.9, 1.4, 1.9]);
@@ -126,7 +156,7 @@ describe("prahy výzev", () => {
 });
 
 describe("výzvy na úrovních kampaně", () => {
-  it("každá úroveň má základ výzev a referenční mosty v nich získají zlato", () => {
+  it("každá úroveň má základ výzev: šampioni v nich získají zlato a mosty autora aspoň stříbro", () => {
     for (const uroven of kampan) {
       const zaklad = zakladVyzev(uroven);
       expect(zaklad, uroven.id).not.toBeNull();
@@ -134,8 +164,14 @@ describe("výzvy na úrovních kampaně", () => {
       const mosty = mostyProVyzvy(uroven.id);
       const nejlevnejsi = Math.min(...mosty.map((m) => cenaNavrhu(m)));
       const nejlehci = Math.min(...mosty.map((m) => hmotnostNavrhu(m, uroven)));
-      expect(stupenVyzvy("cena", nejlevnejsi, prahy), uroven.id).toBe(3);
-      expect(stupenVyzvy("hmotnost", nejlehci, prahy), uroven.id).toBe(3);
+      // Zlato je dosažitelné: šampion (most, který zkouškou projde, viz test šampionů) ho má.
+      expect(zaklad!.sampion, `${uroven.id}: pusť npm run sampioni`).not.toBeNull();
+      expect(stupenVyzvy("cena", zaklad!.sampion!.cena, prahy), uroven.id).toBe(3);
+      expect(stupenVyzvy("hmotnost", zaklad!.sampion!.hmotnost, prahy), uroven.id).toBe(3);
+      expect(zaklad!.sampion!.cena, uroven.id).toBeLessThanOrEqual(nejlevnejsi);
+      expect(zaklad!.sampion!.hmotnost, uroven.id).toBeLessThanOrEqual(nejlehci);
+      expect(stupenVyzvy("cena", nejlevnejsi, prahy), uroven.id).toBeGreaterThanOrEqual(2);
+      expect(stupenVyzvy("hmotnost", nejlehci, prahy), uroven.id).toBeGreaterThanOrEqual(2);
       expect(stupenVyzvy("zlom", zaklad!.zlom, prahy), uroven.id).toBe(3);
       // Prahy jdou ostře po sobě i v číslech, která hráč vidí, a zlato je nejpřísnější.
       for (const druh of ["cena", "hmotnost"] as const) {

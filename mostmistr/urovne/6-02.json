@@ -82,10 +82,10 @@
   "hmotnostVybaveni": 0,
   "nerovnost": "B",
   "rozpocet": 1300000,
-  "inzenyrskyRozpocet": 940000,
+  "inzenyrskyRozpocet": 960000,
   "mistrovska": {
     "druh": "komfort-cestujicich",
-    "limit": 0.3
+    "limit": 0.5
   },
   "povolenePrvky": [
     "kolejiste",

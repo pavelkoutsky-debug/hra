@@ -18,6 +18,11 @@ let adresa: string;
 const chyby: string[] = [];
 
 const udaj = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).innerText();
+/** Text údaje ve sbalené části okna zadání („Více o úloze“, seznam prvků): `innerText` je tam prázdný. */
+const sbaleny = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).evaluate((uzel) => uzel.textContent ?? "");
+/** Které medaile výsledek dal: průchod, rozpočtová, mistrovská (true, false, nebo drive = získaná dřív jiným mostem). */
+const medaile = (): Promise<(string | null)[]> =>
+  stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana]').evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-ziskana")));
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 const osa = () => stranka.locator('[data-udaj="osa-frekvenci"]');
@@ -108,9 +113,9 @@ describe("zadání páté kapitoly", () => {
     expect(await udaj("zadani-nazev")).toBe("Městský běh");
     expect(await udaj("zadani-text")).toContain("laděný tlumič");
     expect(await udaj("zadani-provoz")).toContain("40");
-    expect(await udaj("zadani-stavba")).toContain("Laděný tlumič: 30 000 Kč za kus a 30 Kč za kilogram závaží, nejvýš 1000 kg");
-    expect(await udaj("zadani-stavba")).toContain("Budič: zkušební zařízení zdarma");
-    expect(await udaj("zadani-skutecnost")).toContain("Tchaj-pej 101");
+    expect(await sbaleny("zadani-stavba")).toContain("Laděný tlumič: 30 000 Kč za kus a 30 Kč za kilogram závaží, nejvýš 1000 kg");
+    expect(await sbaleny("zadani-stavba")).toContain("Budič: zkušební zařízení zdarma");
+    expect(await sbaleny("zadani-skutecnost")).toContain("Tchaj-pej 101");
 
     const ukazka = stranka.locator('[data-udaj="ukazka"]');
     await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 90_000 });
@@ -132,7 +137,7 @@ describe("zadání páté kapitoly", () => {
     await stranka.goto(`${adresa}?uroven=5-01`);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-medaile")).toContain("nerozkmitá nad 0,5 m/s²");
-    expect(await udaj("zadani-skutecnost")).toContain("Golden Gate");
+    expect(await sbaleny("zadani-skutecnost")).toContain("Golden Gate");
     await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 120_000 });
     expect(await stranka.locator('[data-udaj="ukazka"] [data-poznamka]').innerText()).toMatch(
       /^Pohyb mostu je \d+× zvětšený.* Děj je 3× zrychlený\.$/,
@@ -147,6 +152,10 @@ describe("ukázky v okně se zadáním", () => {
   // úrovně kdysi skončil hlášením „ukázku se nepodařilo spočítat“).
   for (const id of [
     "1-01",
+    "1-02",
+    "1-03",
+    "1-04",
+    "2-01",
     "2-02",
     "2-03",
     "2-04",
@@ -419,7 +428,9 @@ describe("zkouška s davem", () => {
     const rozdily = await stranka.locator(".vysledek__rozdil").allInnerTexts();
     expect(rozdily.length).toBeGreaterThanOrEqual(2);
     for (const radek of rozdily) expect(radek).toMatch(/^minule .+ · rozdíl .+$/);
-    expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count()).toBe(2);
+    // Most pro mistrovskou se vejde do inženýrského rozpočtu a tlumič drží kmitání pod 1 m/s²:
+    // průchod, rozpočtová i mistrovská (předchozí most pro průchod měl jen první).
+    expect(await medaile()).toEqual(["true", "true", "true"]);
     await stranka.screenshot({ path: `${SLOZKA}/69-porovnani-pokusu.png` });
     await akce("upravit").click();
     await stranka.keyboard.press("a");
@@ -451,7 +462,8 @@ describe("zkouška s davem", () => {
     await nastavCas(22);
     await stranka.screenshot({ path: `${SLOZKA}/71-pruvod.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
-    expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count()).toBe(2);
+    // Medaile jdou po schodech: mistrovská je rozpočtová a k ní klidná mostovka, takže most má všechny tři.
+    expect(await medaile()).toEqual(["true", "true", "true"]);
   }, 180_000);
 
   it("koncert: skákající dav uprostřed mostu a tlumiče na dvojnásobku rytmu", async () => {

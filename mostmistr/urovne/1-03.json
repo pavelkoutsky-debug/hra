@@ -56,7 +56,14 @@
     }
   ],
   "zaklady": [],
-  "zakazaneZony": [],
+  "zakazaneZony": [
+    {
+      "xMin": 0.5,
+      "yMin": -8,
+      "xMax": 15.5,
+      "yMax": -0.5
+    }
+  ],
   "trasy": [
     {
       "id": "cesta",
@@ -75,10 +82,10 @@
   "hmotnostVybaveni": 100,
   "nerovnost": "A",
   "rozpocet": 110000,
-  "inzenyrskyRozpocet": 80000,
+  "inzenyrskyRozpocet": 102000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.25
+    "limit": 0.3
   },
   "povolenePrvky": [
     "mostovka-drevo",
@@ -90,28 +97,28 @@
     {
       "cas": 0,
       "trasa": "cesta",
-      "smer": 1,
-      "druh": "auto"
-    },
-    {
-      "cas": 1,
-      "trasa": "cesta",
       "smer": -1,
       "druh": "chodec",
       "pocet": 1,
-      "kadence": 1.9
+      "kadence": 2.0
     },
     {
-      "cas": 4,
-      "trasa": "cesta",
-      "smer": -1,
-      "druh": "auto"
-    },
-    {
-      "cas": 5,
+      "cas": 2,
       "trasa": "cesta",
       "smer": 1,
       "druh": "cyklista"
+    },
+    {
+      "cas": 12.5,
+      "trasa": "cesta",
+      "smer": 1,
+      "druh": "auto"
+    },
+    {
+      "cas": 15,
+      "trasa": "cesta",
+      "smer": -1,
+      "druh": "dodavka"
     }
   ]
 }

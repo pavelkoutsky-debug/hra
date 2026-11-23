@@ -23,6 +23,11 @@ const KLIC_CESTUJICICH = {
   oboji: "medaile.mistrovska.cestujiciObojich",
 } as const;
 
+/** Jde číslo beze ztráty napsat na jedno desetinné místo? Limit 0,25 by jinak vyšel jako 0,3. */
+function naDesetiny(hodnota: number): boolean {
+  return Math.abs(hodnota * 10 - Math.round(hodnota * 10)) < 1e-9;
+}
+
 /** Podmínka mistrovské medaile slovy; null, když ji úroveň nemá. */
 export function podminkaMistrovske(uroven: Uroven): string | null {
   const bonus = uroven.mistrovska;
@@ -30,7 +35,7 @@ export function podminkaMistrovske(uroven: Uroven): string | null {
   return bonus.druh === "rezerva"
     ? t("medaile.mistrovska.rezerva", { limit: procenta(bonus.limit) })
     : bonus.druh === "komfort-chodcu"
-      ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
+      ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, naDesetiny(bonus.limit) ? 1 : 2) })
       : bonus.druh === "komfort-cestujicich"
         ? t(KLIC_CESTUJICICH[kdoCestuje(uroven) ?? "autobus"], { limit: cislo(bonus.limit, 2) })
         : bonus.druh === "dosednuti"
@@ -39,12 +44,13 @@ export function podminkaMistrovske(uroven: Uroven): string | null {
 }
 
 function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
-  // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá.
+  // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá. Platí to
+  // i v úrovních bez osy frekvencí (první kapitola): zkouška mez hlídá všude, kde lidé jdou,
+  // a podmínka nesmí mlčet o něčem, kvůli čemu most neprojde.
   const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
-  const pruchod =
-    lide && uroven.osaFrekvenci
-      ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) })
-      : t("medaile.pruchod.podminka");
+  const pruchod = lide
+    ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) })
+    : t("medaile.pruchod.podminka");
   const seznam: RadekMedaile[] = [{ nazev: "medaile.pruchod", podminka: pruchod, ziskana: medaile.pruchod }];
   if (uroven.inzenyrskyRozpocet !== null) {
     seznam.push({

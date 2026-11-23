@@ -1,6 +1,7 @@
 // Přehled kampaně: kapitoly, karty úrovní s náhledem výkresu, medailemi a zámky.
 
 import { zakladVyzev } from "../../urovne/vyzvy";
+import { kapitolaUrovne, zamkyKampane, type Zamek } from "../data/kampan";
 import { BEZ_MEDAILI } from "../data/ulozeni";
 import { prahyVyzev } from "../data/vyzvy";
 import type { Denik } from "../denik/denik";
@@ -12,18 +13,13 @@ import { celyVyrez } from "../vykres/kamera";
 import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
 import { znackyMedaili } from "./medaile";
-import type { Uloziste } from "./uloziste";
+import { OZNAMENI_M12, type Uloziste } from "./uloziste";
 import { pripojVazbu } from "./vazba";
 import { popisVyzev, stupneVyzev } from "./vyzvy";
 import { pripojZaznam } from "./zaznam";
 
 const SIRKA_NAHLEDU = 280;
 const VYSKA_NAHLEDU = 170;
-
-/** Číslo kapitoly z id úrovně, např. 1 pro „1-03“. */
-function kapitolaUrovne(uroven: Uroven): string {
-  return uroven.id.split("-")[0] ?? "";
-}
 
 /** Nakreslí na kartu zmenšený výkres úrovně s rozpracovaným mostem. */
 function nakresliNahled(canvas: HTMLCanvasElement, uroven: Uroven, uloziste: Uloziste): void {
@@ -50,17 +46,9 @@ function nakresliNahled(canvas: HTMLCanvasElement, uroven: Uroven, uloziste: Ulo
   }
 }
 
-function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Uloziste): HTMLElement {
+function kartaUrovne(uroven: Uroven, zamek: Zamek | null, uloziste: Uloziste): HTMLElement {
   const rekord = uloziste.rekord(uroven.id);
-  // Úroveň, kterou hráč už jednou prošel nebo ve které má rozestavěný most, zůstává odemčená,
-  // i když před ni později přibyla nová kapitola (kapitoly 3 a 4 se zařadily před dřív
-  // vydanou kapitolu 5).
-  const odemceno =
-    uloziste.odemcenoVse ||
-    predchozi === undefined ||
-    uloziste.rekord(predchozi.id)?.medaile.pruchod === true ||
-    rekord?.medaile.pruchod === true ||
-    (uloziste.navrh(uroven.id)?.pruty.length ?? 0) > 0;
+  const odemceno = uloziste.odemcenoVse || zamek === null;
 
   const polozka = document.createElement("li");
   polozka.className = "karta";
@@ -88,8 +76,11 @@ function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Ul
 
   const stav = document.createElement("span");
   stav.className = "karta__stav";
-  if (!odemceno && predchozi) {
-    stav.textContent = t("prehled.zamceno", { uroven: predchozi.id });
+  if (!odemceno && zamek) {
+    stav.textContent =
+      zamek.druh === "uroven"
+        ? t("prehled.zamceno", { uroven: zamek.uroven })
+        : t(zamek.zbyva === 1 ? "prehled.zamceno.kapitola.jedna" : "prehled.zamceno.kapitola", { kapitola: zamek.kapitola, zbyva: zamek.zbyva });
   } else {
     const { znaky, popis } = znackyMedaili(uroven, rekord?.medaile ?? BEZ_MEDAILI);
     const medaile = document.createElement("span");
@@ -156,7 +147,14 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   const volba = prvek("#odemknout-vse", HTMLInputElement);
 
   const vykresli = (): void => {
-    const cisla = [...new Set(kampan.map(kapitolaUrovne))];
+    const cisla = [...new Set(kampan.map((u) => kapitolaUrovne(u.id)))];
+    const zamky = zamkyKampane(
+      kampan.map((u) => u.id),
+      (id) => ({
+        projita: uloziste.rekord(id)?.medaile.pruchod === true,
+        rozestavena: (uloziste.navrh(id)?.pruty.length ?? 0) > 0,
+      }),
+    );
     kapitoly.replaceChildren(
       ...cisla.map((cislo) => {
         const oddil = document.createElement("section");
@@ -172,9 +170,9 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
         seznam.className = "kapitola__urovne";
         seznam.append(
           ...kampan
-            .map((uroven, poradi) => ({ uroven, predchozi: kampan[poradi - 1] }))
-            .filter(({ uroven }) => kapitolaUrovne(uroven) === cislo)
-            .map(({ uroven, predchozi }) => kartaUrovne(uroven, predchozi, uloziste)),
+            .map((uroven, poradi) => ({ uroven, zamek: zamky[poradi] ?? null }))
+            .filter(({ uroven }) => kapitolaUrovne(uroven.id) === cislo)
+            .map(({ uroven, zamek }) => kartaUrovne(uroven, zamek, uloziste)),
         );
         oddil.append(nadpis, tema, seznam);
         return oddil;
@@ -195,6 +193,11 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   const zpravy = [hlaseni];
   if (!uloziste.trvale) zpravy.push(t("prehled.bezPameti"));
   if (uloziste.poskozeno) zpravy.push(t("prehled.poskozeno"));
+  // Hráč se starším postupem se jednou dozví, proč má jiné medaile a prázdné rekordy výzev.
+  if (uloziste.oznameni === OZNAMENI_M12) {
+    zpravy.push(t("prehled.novaPravidla"));
+    uloziste.odlozOznameni();
+  }
   const text = zpravy.filter((z) => z !== "").join(" ");
   const poleHlaseni = udaj("prehled-hlaseni");
   poleHlaseni.textContent = text;

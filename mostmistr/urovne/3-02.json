@@ -88,10 +88,10 @@
   "hmotnostVybaveni": 600,
   "nerovnost": "B",
   "rozpocet": 1250000,
-  "inzenyrskyRozpocet": 960000,
+  "inzenyrskyRozpocet": 983000,
   "mistrovska": {
     "druh": "rezerva",
-    "limit": 0.52
+    "limit": 0.55
   },
   "povolenePrvky": [
     "mostovka-ocelobeton",

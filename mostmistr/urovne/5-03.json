@@ -88,10 +88,10 @@
   "hmotnostVybaveni": 60,
   "nerovnost": "A",
   "rozpocet": 560000,
-  "inzenyrskyRozpocet": 465000,
+  "inzenyrskyRozpocet": 486000,
   "mistrovska": {
     "druh": "komfort-chodcu",
-    "limit": 0.9
+    "limit": 1.0
   },
   "povolenePrvky": [
     "mostovka-drevo",

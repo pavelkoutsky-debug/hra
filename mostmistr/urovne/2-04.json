@@ -1,5 +1,5 @@
 {
-  "verze": 2,
+  "verze": 7,
   "id": "2-04",
   "nazev": "Přehlídka",
   "vyrez": {
@@ -57,12 +57,14 @@
     {
       "x": 8,
       "y": -4,
-      "typ": "pevna"
+      "typ": "pevna",
+      "jen": "tlumic"
     },
     {
       "x": 24,
       "y": -4,
-      "typ": "pevna"
+      "typ": "pevna",
+      "jen": "tlumic"
     }
   ],
   "zaklady": [],
@@ -83,9 +85,9 @@
   ],
   "sirkaMostovky": 2.5,
   "hmotnostVybaveni": 60,
-  "nerovnost": "A",
+  "nerovnost": "zadna",
   "rozpocet": 480000,
-  "inzenyrskyRozpocet": 390000,
+  "inzenyrskyRozpocet": 400000,
   "mistrovska": {
     "druh": "komfort-chodcu",
     "limit": 1.2
@@ -123,5 +125,11 @@
       "pocet": 24,
       "kadence": 2.3
     }
-  ]
+  ],
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "pohyb": null,
+  "lode": []
 }

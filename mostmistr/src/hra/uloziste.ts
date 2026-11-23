@@ -8,6 +8,8 @@ import {
   prazdneUlozeni,
   ulozeniNaText,
   ulozeniZTextu,
+  VERZE_ULOZENI_M12,
+  verzeZapisuUlozeni,
   vylepsiRekord,
   vylepsiZlom,
   type Medaile,
@@ -34,8 +36,14 @@ export const KLIC_ZVUKU = "mostmistr.zvuk";
 export const KLIC_ZABERU = "mostmistr.zaber";
 /** Kreslit při zkoušce pohyb mostu zvětšeně, aby bylo kmitání vidět? */
 export const KLIC_ZVETSENI = "mostmistr.zvetseni";
+/** Zrychlovat při přehrávání zkoušky úseky, kdy se nic neděje? */
+export const KLIC_CEKANI = "mostmistr.cekani";
 /** Otisky mostů, které úrovní prošly: zkouška do zlomu se do výzvy počítá jen jim. */
 export const KLIC_PROSLYCH = "mostmistr.prosle";
+/** Oznámení, které má hráč po načtení staršího postupu jednou vidět v přehledu kampaně. */
+export const KLIC_OZNAMENI = "mostmistr.oznameni";
+/** Oznámení o nových pravidlech medailí a přeladěných úrovních (M12). */
+export const OZNAMENI_M12 = "m12";
 /** Kolik posledních prošlých mostů si hra na úroveň pamatuje. */
 const NEJVIC_PROSLYCH = 8;
 /** Nastavení sandboxu: údolí, trasa a provoz. */
@@ -76,6 +84,17 @@ export class Uloziste {
     if (zapis !== null) {
       try {
         ulozeni = ulozeniZTextu(zapis);
+        const puvodni = verzeZapisuUlozeni(zapis);
+        if (puvodni !== null && puvodni < ulozeni.verze) {
+          // Starší formát se hned zapíše v novém: převod by jinak proběhl při každém načtení
+          // a s ním i úklid, který k němu patří.
+          this.#pis(KLIC_ULOZENI, ulozeniNaText(ulozeni));
+          if (puvodni < VERZE_ULOZENI_M12) {
+            // Mosty, které prošly před M12, prošly jinou úrovní: zkouška do zlomu chce nový průchod.
+            this.#pis(KLIC_PROSLYCH, "{}");
+            if (Object.keys(ulozeni.rekordy).length > 0) this.#pis(KLIC_OZNAMENI, OZNAMENI_M12);
+          }
+        }
       } catch {
         poskozeno = true;
         this.#pis(KLIC_POSKOZENEHO, zapis);
@@ -83,6 +102,19 @@ export class Uloziste {
     }
     this.#ulozeni = ulozeni;
     this.poskozeno = poskozeno;
+  }
+
+  /**
+   * Oznámení, které na hráče čeká (zatím jen `OZNAMENI_M12`), a jeho odložení: přehled ho
+   * ukáže jednou a pak už ne.
+   */
+  get oznameni(): string | null {
+    const zapis = this.#cti(KLIC_OZNAMENI);
+    return zapis === null || zapis === "" ? null : zapis;
+  }
+
+  odlozOznameni(): void {
+    if (this.oznameni !== null) this.#pis(KLIC_OZNAMENI, "");
   }
 
   /** Pamatuje si úložiště postup i po zavření stránky? */
@@ -109,8 +141,8 @@ export class Uloziste {
   }
 
   /** Započítá výsledek zkoušky do rekordu úrovně a vrátí nový rekord. */
-  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number): Rekord {
-    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost);
+  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number, celistvy = true): Rekord {
+    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost, celistvy);
     this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
     this.#zapis();
     return rekord;
@@ -161,6 +193,15 @@ export class Uloziste {
 
   set zpomaleniPadu(zapnuto: boolean) {
     this.#pis(KLIC_ZABERU, zapnuto ? "1" : "0");
+  }
+
+  /** Zrychlit při přehrávání zkoušky čekání, kdy se na mostě nic neděje? Dokud hráč nezvolí jinak, ano. */
+  get zrychleniCekani(): boolean {
+    return this.#cti(KLIC_CEKANI) !== "0";
+  }
+
+  set zrychleniCekani(zapnuto: boolean) {
+    this.#pis(KLIC_CEKANI, zapnuto ? "1" : "0");
   }
 
   /** Kreslit pohyb celého mostu při zkoušce zvětšeně? Dokud hráč nezvolí jinak, ano. */

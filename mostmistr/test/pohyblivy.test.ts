@@ -273,7 +273,9 @@ describe("zkouška jednokřídlého sklopného mostu", () => {
   });
 
   it("medaili za měkké dosednutí dostane jen most, který na opěru opravdu dosedl", () => {
-    const sBonusem = (zmeny: Partial<Uroven> = {}): Uroven => kanal({ mistrovska: { druh: "dosednuti", limit: 1e9 }, ...zmeny });
+    // Mistrovská je rozpočtová a k ní bonus: úroveň proto má i inženýrský rozpočet, do kterého se křídlo vejde.
+    const sBonusem = (zmeny: Partial<Uroven> = {}): Uroven =>
+      kanal({ rozpocet: 1e9, inzenyrskyRozpocet: 1e9, mistrovska: { druh: "dosednuti", limit: 1e9 }, ...zmeny });
     expect(probehni(sBonusem(), kridlo(1.5)).zkouska.vysledek().medaile.mistrovska).toBe(true);
     // Krátké křídlo bez zámku na opěru nedosedá: ráz je nula, ale měkké dosednutí to není.
     const kratke = kridlo(1.5, false);

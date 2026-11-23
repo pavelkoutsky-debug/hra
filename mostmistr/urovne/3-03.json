@@ -75,10 +75,10 @@
   "hmotnostVybaveni": 600,
   "nerovnost": "zadna",
   "rozpocet": 800000,
-  "inzenyrskyRozpocet": 630000,
+  "inzenyrskyRozpocet": 663000,
   "mistrovska": {
     "druh": "komfort-cestujicich",
-    "limit": 0.15
+    "limit": 0.2
   },
   "povolenePrvky": [
     "mostovka-ocelobeton",

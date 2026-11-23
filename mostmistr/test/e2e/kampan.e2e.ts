@@ -1,11 +1,13 @@
 // Průchod celou kampaní v bezhlavém prohlížeči: z čisté paměti prohlížeče od první úrovně
 // do poslední s referenčními mosty. Kritérium milníku M7: každá úroveň se odemkne průchodem
-// té předchozí, referenční most ji projde a po poslední je kampaň dokončená.
+// té předchozí (další kapitola od M12 už po dvou úrovních), referenční most ji projde a po
+// poslední je kampaň dokončená.
 import { mkdirSync } from "node:fs";
 import { chromium, type Browser, type Page } from "playwright";
 import { preview, type PreviewServer } from "vite";
 import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { zamkyKampane } from "../../src/data/kampan";
 import { navrhNaText } from "../../src/data/navrh";
 import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
@@ -95,7 +97,21 @@ describe("kampaň od první úrovně do poslední", () => {
         await stranka.goto(adresa);
         await stranka.locator('body[data-rezim="prehled"]').waitFor();
         expect(await zamceno(uroven.id), `${uroven.id} má být odemčená`).toBe("false");
-        if (dalsi) expect(await zamceno(dalsi.id), `${dalsi.id} má být ještě zamčená`).toBe("true");
+        // Uvnitř kapitoly se jde po jedné; další kapitola se otevře po dvou projitých úrovních
+        // té předchozí. Zámky všech karet odpovídají pravidlu.
+        const projite = new Set(kampan.slice(0, poradi).map((u) => u.id));
+        const zamky = zamkyKampane(
+          kampan.map((u) => u.id),
+          (id) => ({ projita: projite.has(id), rozestavena: false }),
+        );
+        const naKartach = await stranka.locator(".karta").evaluateAll((karty) => karty.map((k) => (k as HTMLElement).dataset.zamceno));
+        expect(naKartach, `zámky před úrovní ${uroven.id}`).toEqual(zamky.map((z) => String(z !== null)));
+        if (dalsi && dalsi.id[0] === uroven.id[0]) expect(await zamceno(dalsi.id), `${dalsi.id} má být ještě zamčená`).toBe("true");
+        if (uroven.id.endsWith("-03") && dalsi) {
+          // Třetí úroveň kapitoly: první úroveň další kapitoly už je otevřená a karta to říká.
+          const prvniDalsi = kampan.find((u) => u.id[0] === String(Number(uroven.id[0]) + 1));
+          if (prvniDalsi) expect(await zamceno(prvniDalsi.id), `${prvniDalsi.id} má být otevřená po dvou úrovních kapitoly`).toBe("false");
+        }
         await stranka.locator(`[data-uroven="${uroven.id}"] a`).click();
         await stranka.locator(PLATNO).waitFor();
         const zavrit = stranka.locator('#okno-zadani[open] button[value="zavrit"]');

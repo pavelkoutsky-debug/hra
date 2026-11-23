@@ -128,6 +128,16 @@ describe("jazyk hry", () => {
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await ceskeTexty(stranka)).toEqual([]);
+    // Vysvětlení, seznam prvků a výzvy jsou v zadání sbalené: rozbalené se kontrolují taky.
+    const souhrny = stranka.locator("#okno-zadani details > summary");
+    const sbalenych = await souhrny.count();
+    expect(sbalenych).toBe(3);
+    for (let i = 0; i < sbalenych; i++) {
+      const souhrn = souhrny.nth(i);
+      expect(await souhrn.evaluate((prvek) => (prvek.parentElement as HTMLDetailsElement).open)).toBe(false);
+      await souhrn.click();
+    }
+    expect(await ceskeTexty(stranka)).toEqual([]);
     const vyzvy = (await stranka.locator('[data-udaj="zadani-vyzvy"] li').allInnerTexts()).map((v) => v.replace(/[\u00a0\u202f]/g, " "));
     expect(vyzvy[0]).toContain("31,100 Kč");
     await stranka.screenshot({ path: `${SLOZKA}/jazyk-zadani-en.png` });
