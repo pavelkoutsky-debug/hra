@@ -14,7 +14,6 @@ import {
   PIST,
   vlastnostiPrutu,
   ZAMEK,
-  zdvihPistu,
   type IdPrvku,
 } from "../data/katalog";
 import { ChybaDat } from "../data/kontrola";
@@ -38,8 +37,7 @@ import { jeKlicTextu, t, type KlicTextu } from "../ui/slovnik";
 import { celyVyrez, obrazNaSvet, omezNaVyrez, posunO, svetNaObraz, zoomKolem, type Kamera } from "../vykres/kamera";
 import { nakresliKonstrukci } from "../vykres/konstrukce";
 import { nakresliNavrh, tloustkaPrutu } from "../vykres/navrh";
-import { delkaValce, nakresliZamek } from "../vykres/pohyb";
-import { BARVY } from "../vykres/barvy";
+import { nakresliZamkyZaznamu, stavPohybu, valecPrutu } from "./pohyb";
 import { pripojOvladani } from "../vykres/ovladani";
 import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
@@ -358,14 +356,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (rezim === "zkouska" && beh) {
       const cas = prehravani.cas;
       // Loď, která do mostu narazila, se od té chvíle kreslí barvou varování.
-      const narazene = new Set<number>();
-      let odemceno = false;
-      for (const u of beh.udalosti) {
-        if (u.cas > cas) continue;
-        if (u.druh === "lod" && u.stav === "narazila") narazene.add(u.lod);
-        else if (u.druh === "pohyb" && u.faze === "odemceno") odemceno = true;
-        else if (u.druh === "pohyb" && u.faze === "zamceno") odemceno = false;
-      }
+      const { odemceno, narazene } = stavPohybu(beh.udalosti, cas);
       nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, cas, narazeneLode: narazene });
       const stavba = beh.zaznam.stavV(prehravani.cas, snimek);
       if (stavba) {
@@ -386,12 +377,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           (e) => pruty[stavba.prut[e]!]?.prvek === "kolejiste",
           (e) => valecPrutu(beh!.navrh, stavba.prut[e]!),
         );
-        // Zámky: zamčený kosočtverec, po odemknutí rozevřený, v místě, kde styčník právě je.
-        beh.navrh.stycniky.forEach((st, i) => {
-          if (!st.zamek || 2 * i + 1 >= snimek.polohy.length) return;
-          const misto = svetNaObraz(kamera, rozmer, { x: snimek.polohy[2 * i]!, y: snimek.polohy[2 * i + 1]! });
-          nakresliZamek(ctx, misto, kamera.meritko, BARVY.caraSilna, odemceno);
-        });
+        nakresliZamkyZaznamu(ctx, kamera, rozmer, beh.navrh, snimek, odemceno);
         nakresliProvoz(ctx, kamera, rozmer, beh.ucastnici, snimek);
         // Čísla využití se kreslí přes vozidla: vlak je delší než most a zakrýval by je celou jízdu.
         if (cisla) nakresliCislaVyuziti(ctx, cislaZeSnimku(stavba, pruty));
@@ -415,17 +401,6 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     });
     if (cisla && obalka && !editor.tah) nakresliCislaVyuziti(ctx, cislaZObalky(obalka.map((o) => o.vyuziti)));
     if (brnk) nakresliBrnknuti(ctx, brnk);
-  }
-
-  /** Délka válce pístu v metrech pro kreslení záznamu; undefined u prutu, který píst není. */
-  function valecPrutu(navrh: NavrhMostu, poradi: number): number | undefined {
-    const prut = navrh.pruty[poradi];
-    if (!prut || KATALOG[prut.prvek].druh !== "pist") return undefined;
-    const a = navrh.stycniky.find((s) => s.id === prut.a);
-    const b = navrh.stycniky.find((s) => s.id === prut.b);
-    if (!a || !b) return undefined;
-    const delka = Math.hypot(b.x - a.x, b.y - a.y);
-    return delkaValce(delka, zdvihPistu(prut.zdvih, delka));
   }
 
   /** Síla brnknutí v newtonech podle toho, jak daleko hráč styčník stáhl. */
@@ -1932,7 +1907,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (!(delka > 0)) return;
     znackyOsy.replaceChildren(
       ...beh.ucastnici.map((u) => znacka(u.start, "vyjezd")),
-      ...beh.udalosti.filter((u) => u.druh !== "prujezd").map((u) => znacka(u.cas, u.druh)),
+      ...beh.udalosti
+        .filter((u) => u.druh !== "prujezd")
+        // Zvedání mostu a proplutí lodi jsou běžný děj; červená patří jen nárazu lodi.
+        .map((u) => znacka(u.cas, u.druh === "lod" ? (u.stav === "narazila" ? "naraz" : "lod") : u.druh)),
     );
   }
 
@@ -2913,11 +2891,19 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   udaj("zadani").textContent = jeKlicTextu(klicZadani) ? t(klicZadani) : "";
   document.title = `${uroven.id} ${uroven.nazev} – ${t("hra.nazev")}`;
 
+  // Jízdní řád na liště: provoz, zvedání mostu a lodě v pořadí, v jakém přijdou.
+  const dej: { cas: number; text: string }[] = uroven.jizdniRad.map((polozka) => ({ cas: polozka.cas, text: zapisJizdy(polozka) }));
+  if (uroven.pohyb) {
+    dej.push({ cas: uroven.pohyb.zvednout, text: t("rad.zvednout", { cas: cislo(uroven.pohyb.zvednout, 0) }) });
+    dej.push({ cas: uroven.pohyb.sklopit, text: t("rad.sklopit", { cas: cislo(uroven.pohyb.sklopit, 0) }) });
+  }
+  for (const lod of uroven.lode) dej.push({ cas: lod.cas, text: t("rad.lod", { cas: cislo(lod.cas, 0), vyska: cislo(lod.vyska, 0) }) });
+  dej.sort((a, b) => a.cas - b.cas);
   udaj("jizdni-rad").replaceChildren(
-    ...uroven.jizdniRad.map((polozka) => {
+    ...dej.map((polozka) => {
       const uzel = document.createElement("span");
       uzel.className = "osa__polozka";
-      uzel.textContent = zapisJizdy(polozka);
+      uzel.textContent = polozka.text;
       return uzel;
     }),
   );
