@@ -550,6 +550,18 @@ const CS = {
   "ukazka.6-04.a": "Jen svislice",
   "ukazka.6-04.b": "Svislice a diagonály",
   "ukazka.6-04.popis": "Dvě mostovky spojené jen svislicemi jsou žebřík: příčky se v kloubech natočí, žebřík se zkosí a složí. Diagonály rozdělí každé pole na trojúhelníky a z obou mostovek udělají pásy jedné devět metrů vysoké příhrady.",
+  "ukazka.7-01.a": "Bez zámku",
+  "ukazka.7-01.b": "Se zámkem na opěře",
+  "ukazka.7-01.popis": "Stejné křídlo, stejný píst. Bez zámku drží konec křídla ložisko na opěře: píst tlačí, až mu povolí přetlakový ventil, most se nehne a loď do něj narazí. Zámek konec křídla na povel pustí a po sklopení ho zase chytí.",
+  "ukazka.7-02.a": "Bez zámku uprostřed",
+  "ukazka.7-02.b": "Se zámkem mezi křídly",
+  "ukazka.7-02.popis": "Dvě křídla spojená napevno jsou jeden nosník: písty ho z obou stran tlačí vzhůru proti sobě a nezvednou nic. Zámek uprostřed křídla na povel rozpojí, každé se zvedne kolem svého čepu a po sklopení se zase spojí.",
+  "ukazka.7-03.a": "Zdvih 1,5 m",
+  "ukazka.7-03.b": "Zdvih 2,5 m",
+  "ukazka.7-03.popis": "Stejné křídlo a stejný píst z hluboké kotvy. Dlouhý píst má k čepu velké rameno, takže na stejné pootočení křídla potřebuje větší zdvih: s metrem a půl se křídlo zvedne málo a loď narazí, se dvěma a půl propluje.",
+  "ukazka.7-04.a": "Písty z mělkých kotev",
+  "ukazka.7-04.b": "Písty z hlubokých kotev",
+  "ukazka.7-04.popis": "Zavřený dvoukřídlý most nesou jen čepy a písty. Píst z mělké kotvy má k čepu krátké rameno a je na hraně své síly: křídla se po sklopení nesejdou, zámek nezapadne a autobus propadne. Z hluboké kotvy má píst rameno delší a křídlo udrží.",
   "skutecnost.6-01":
     "nejstarší železniční most v Praze je Negrelliho viadukt. První pravidelný vlak po něm přejel 1. června 1850. Měří přes 1 100 metrů a až do roku 1910 byl nejdelším mostem v Evropě. Je kamenný a po opravě z let 2017 až 2020 po něm vlaky jezdí dál.",
   "skutecnost.6-02":
@@ -558,6 +570,14 @@ const CS = {
     "most přes záliv Firth of Forth ve Skotsku otevřeli 4. března 1890. Měří dva a půl kilometru a jeho dvě hlavní pole mají každé přes 500 metrů. Navrhli ho po zřícení mostu přes řeku Tay v roce 1879 a úřady žádaly, aby byl tuhý a unesl nejtěžší nákladní vlaky. Proto je tak mohutný; vlaky po něm jezdí dodnes.",
   "skutecnost.6-04":
     "most přes Øresund mezi Dánskem a Švédskem má dvě patra: nahoře čtyřpruhovou dálnici, dole dvoukolejnou trať. Je dlouhý 7 845 metrů a jeho hlavní pole, zavěšené na lanech, měří 490 metrů. Otevřeli ho 1. července 2000.",
+  "skutecnost.7-01":
+    "Tower Bridge v Londýně otevřeli 30. června 1894. V prvním roce se zvedl 6 194krát, dnes asi 800krát ročně; zvednutí trvá kolem minuty.",
+  "skutecnost.7-02":
+    "Tower Bridge má dvě křídla a každé váží přes 1 100 tun. Každé vyvažuje protizávaží za čepem (pramen uvádí 420 tun), takže stroje nemusejí zvedat celou jeho tíhu.",
+  "skutecnost.7-03":
+    "Erasmův most v Rotterdamu otevřeli 6. září 1996. Jeho sklopné pole dlouhé 89 metrů je největší a nejtěžší v západní Evropě.",
+  "skutecnost.7-04":
+    "most Jacquese Chabana-Delmase v Bordeaux z roku 2013 se nesklápí, ale zdvihá: střední pole dlouhé přes sto metrů a těžké kolem 2 600 tun vyjede mezi čtyřmi věžemi do výšky asi 53 metrů nad řeku. V době otevření to byl největší zdvižný most v Evropě.",
   "paleta.vyber": "Výběr a posun",
   "paleta.smazat": "Smazat",
   "paleta.zrcadlit": "Zrcadlit",
@@ -724,6 +744,8 @@ const CS = {
   "kapitola.5.tema": "Město v pohybu. Dav, běžecký závod, průvod s kapelou, skákající dav a laděný tlumič.",
   "kapitola.6.nazev": "Trať",
   "kapitola.6.tema": "Vlak. Kolejiště, lokomotiva a vozy, styky kolejnic, pohodlí cestujících, brzdící vlak a most o dvou patrech.",
+  "kapitola.7.nazev": "Přístav",
+  "kapitola.7.tema": "Most, který se hýbe. Hydraulický píst, dělicí zámek, ocelová mostovka, lodě a dosednutí mostu na opěru.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
   "prehled.nejlepsiCena": "nejlevnější most {cena}",
   "prehled.rozpracovano": "rozpracováno",
@@ -782,6 +804,14 @@ const CS = {
     "Viadukt, dvaasedmdesát metrů, a v údolí osmnáct metrů pod kolejí dva základy. Pojede uhelný vlak: lokomotiva a deset ložených vozů, skoro tisíc tun a sto šedesát metrů. Na mostě nouzově zabrzdí, tři sekundy stojí a rozjede se. Brzdící vlak tlačí most dopředu čtvrtinou tíhy vozů, které na něm právě jsou. Oba konce mostu leží na posuvných ložiskách, takže tu sílu musí odvést pilíře, a vysoký pilíř, do kterého se nahoře tlačí vodorovně, se ohne jako prut zapíchnutý do země. Každé pole mezi pilíři potřebuje vlastní příhradu, která ho unese. Pilíři pak pomoz, aby se neohnul: svař jeho hlavu s kolejištěm, nebo veď z půlky pilíře šikmé vzpěry ke kolejišti. Vzpěry jsou dlouhé a tlačené, z lehkého profilu vybočí.",
   "zadani.6-04":
     "Osmačtyřicet metrů a dvě patra: dole trať z tunelu do tunelu, devět metrů nad ní silnice. Po kolejích pojede lokomotiva se čtyřmi loženými vozy, po silnici dvě nákladní auta a autobus. Každou mostovku polož na její niveletu: na kolej patří kolejiště, na silnici ocelobetonová mostovka. Vlak po silniční mostovce nepojede a auto po pražcích taky ne. Dvě mostovky nad sebou jsou jako pásy jedné vysoké příhrady. Stačí je spojit, ale pozor: svislice u podpor jsou tlačené a devět metrů dlouhé: z lehkého profilu vybočí.",
+  "zadani.7-01":
+    "Kanál široký dvanáct metrů a po něm lodě. Most se musí zvednout: v páté sekundě se odemkne zámek a píst začne křídlo zvedat, loď vysoká osm metrů připluje ve dvanácté. Křídlo se otáčí kolem čepu v levé opěře; píst veď z kotvy ve zdi pod čepem do některého styčníku mostovky a nastav mu zdvih. Na pravou opěru dej zámek, jinak křídlo drží ložisko. Mostovku svař, ať je křídlo z jednoho kusu. Nová je i ocelová mostovka: je skoro třikrát lehčí než ocelobetonová, a co se zvedá, má být lehké.",
+  "zadani.7-02":
+    "Čtyřiadvacet metrů: jedno křídlo by bylo dlouhé a těžké, tak budou dvě proti sobě. Každé má čep ve své opěře a píst z kotvy ve zdi; uprostřed se potkají v zámku. Zamčený zámek je spojí v jeden most, odemčený je pustí od sebe. Postav jedno křídlo a druhé dozrcadli. Pozor na to, co most nese, když je zavřený: uprostřed žádná opěra není, autobus nesou jen čepy a písty.",
+  "zadani.7-03":
+    "Šestnáct metrů jedním křídlem. Ve zdi jsou dvě kotvy: tři a šest metrů pod čepem. Píst z mělké kotvy má k čepu krátké rameno: zvedá rychle, ale je na hraně své síly a konec křídla letí k opěře rychleji. Píst z hluboké kotvy zvedá klidně a křídlo dosedne měkčeji, jen potřebuje větší zdvih, aby se křídlo zvedlo stejně vysoko. Mistrovská medaile chce měkké dosednutí.",
+  "zadani.7-04":
+    "Velký přístav: dvaatřicet metrů, dvě šestnáctimetrová křídla a těžší vozovka. Loď je vysoká jedenáct metrů. Když je most zavřený, nese ho uprostřed jen zámek mezi křídly a každé křídlo se opírá o svůj píst; píst z mělké kotvy na to nestačí. Dlouhé křídlo se taky hodně ohýbá: pomůže trojúhelník nad jeho kořenem, který konec křídla přidrží táhlem.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem. Každý rytmus rozhoupe jinak vysoký most. Buď najdeš výšku, která se vyhne všem třem, nebo postavíš most, kterému rezonance nevadí: mezi mostovku a kotvy ve svazích dej viskózní tlumiče. Tlumič nenese žádnou váhu, jen brzdí pohyb; jeho sílu nastavíš po výběru v paletě.",
 } as const;

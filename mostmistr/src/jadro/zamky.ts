@@ -32,6 +32,11 @@ export const RYCHLOST_ZAMKNUTI = 0.2;
 const RYCHLOST_DOTAZENI = 0.1;
 /** Do jaké vzdálenosti od opěry ve vodorovném směru konec na dosedací plochu dosedne, m. */
 const SIRKA_DOSEDNUTI = 0.5;
+/**
+ * Jak hluboko pod úrovní opěry dosedací plocha ještě působí, m. Konec, který se ocitl hlouběji
+ * (křídlo se zlomilo nebo opěru minulo), už na ní neleží: je pod ní a plocha ho nevytlačí.
+ */
+const HLOUBKA_DOSEDNUTI = 0.3;
 
 export interface PopisZamku {
   /** Styčník se zámkem. */
@@ -204,7 +209,7 @@ export function pridejSilyZamku(s: Soustava, z: Zamky): void {
       const stranou = s.x[i]! - z.x0[k]!;
       if (stranou > SIRKA_DOSEDNUTI || stranou < -SIRKA_DOSEDNUTI) continue;
       const stlaceni = z.y0[k]! - s.y[i]!;
-      if (!(stlaceni > 0)) continue;
+      if (!(stlaceni > 0) || stlaceni > HLOUBKA_DOSEDNUTI) continue;
       let sila = tuhost * stlaceni - tlumeni * s.vy[i]!;
       if (sila < 0) sila = 0;
       s.fy[i] = s.fy[i]! + sila;

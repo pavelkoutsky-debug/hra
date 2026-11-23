@@ -20,34 +20,57 @@ Poslední aktualizace: 22. 11. 2026
 | M6 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
-## M6 — rozpracováno (plán)
+## M6 — výsledek
 
-Pracuje se v místním pracovním stromu `/home/user/hra-m6` (větev `m6-priprava`, zatím neodeslaná), aby se práce nemíchala s opravami z recenzí M5. Po sloučení M5 se větev sloučí do `claude/nice-galileo-lnfnk2`.
+Pohyblivé mosty: píst, dělicí zámek, ocelová mostovka, fáze zkoušky, lodě a kapitola 7 „Přístav“. Verze hry 0.12.0, verze fyziky 7 (výsledky dosavadních mostů se nemění), formát úrovně 6, formát návrhu 4.
 
-Zadání z koncepce: písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 „Přístav“ (dynamické téma: ráz při dosednutí mostu). Kritérium: most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou testem vyhratelnosti.
+**Píst** (`src/jadro/pisty.ts`, `PIST` v katalogu). Hydraulický válec je osový prvek (pružina s tlumičem), jehož klidovou délku řídí zkouška. Hráč ho kreslí v poloze při sklopeném mostě a nastaví zdvih (kladný se vysouvá, záporný zasouvá, nejvýš polovina délky).
 
-**Hotovo**
+- Tuhost je tuhost sloupce oleje: objemový modul 1,5 GPa × plocha pístu 0,0616 m² (vrtání 280 mm) / délka, tedy 92 MN / délka.
+- Největší síla 1 500 kN (tlak 25 MPa): přetlakový ventil nedovolí řízené rychlosti, aby součet síly oleje a škrcení mez přesáhl; píst pak jede pomaleji, stojí nebo ustupuje.
+- Jede 0,4 m/s, rozjíždí se a dojíždí se zrychlením 0,4 m/s². Tlumič válce (1,5 MN·s/m, škrcení průtoku) brzdí jen odchylku od řízené rychlosti (`Soustava.rychlostKlidove`); bez toho by se křídlo na sloupci oleje houpalo jako na pružině.
+- Ověřeno na křídle s čepem (`test/jadro-pisty.test.ts`): klidová síla podle rovnováhy momentů, úhel podle délky pístu, slabý píst se zastaví tam, kde mu síla přestane stačit, píst na hraně síly zvedá pomaleji.
 
-- **Píst v jádře** (`src/jadro/pisty.ts`, `test/jadro-pisty.test.ts`): osový prvek (pružina s tlumičem), jehož klidovou délku řídí zkouška; vysouvá a zasouvá se stálou rychlostí a tlačí nejvýš svou největší silou (přetlakový ventil: klidová délka se drží nejvýš o `síla/tuhost` od skutečné délky). Ověřeno na křídle s čepem: drží silou podle rovnováhy momentů, zvedne do úhlu daného délkou, slabý píst nezvedne a slabší než tíha neudrží.
+**Dělicí zámek** (`src/jadro/zamky.ts`, přídavek styčníku, 25 000 Kč). Na začátku je zamčený přesně (podpora nebo společný styčník), takže klidová poloha i rozbor mostu jsou stejné jako bez zámku.
 
-**Rozhodnutí (ještě neprovedeno)**
+- *Na opěře* (styčník v pevné nebo posuvné kotvě): odemknutí vezme podporu a nechá dosedací plochu, která umí jen tlačit vzhůru (200 MN/m, útlum 30 %); po sklopení se podpora vrátí tam, kde konec dosedl.
+- *Mezi dvěma částmi mostu*: odemknutí rozdělí styčník na dva (`rozdelStycnik`); po sklopení je spojí čep, který zapadne bez rázu a konce k sobě stáhne rychlostí 0,1 m/s.
+- Zapadne, jen když jsou konce do 5 cm od sebe a nehýbou se vůči sobě rychleji než 0,2 m/s.
+- Které pruty patří ke které části, pozná `zamkyNavrhu` z návrhu: části jsou to, co zbyde souvislé po vyjmutí zámků. Zámek, který nespojuje právě dvě části, zkouška odmítne s vysvětlením.
 
-- **Zámek** (`src/jadro/zamky.ts`). Dva druhy, oba začínají zamčené přesně (bez pokutových pružin, aby výchozí rovnováha seděla): *na opěře* je to obyčejná podpora styčníku; odemknutí jí vezme zadržené posuny (jako sjetí z ložiska v `loziska.ts`) a nechá jednostranné dosednutí shora (pružina s tlumičem jen na tlak v místě opěry), zamknutí po dosednutí podporu vrátí. *Mezi křídly* je to společný styčník; odemknutí ho rozdělí na dva (nová funkce vedle `odpojKonec` v `topologie.ts`: pruty vedoucí vpravo od styčníku přejdou na nový styčník), zamknutí po sklopení oba styčníky sváže tuhou pružinou s tlumičem v obou směrech. Když se křídla nesejdou na pár centimetrů, zámek nezapadne.
-- **Fáze zkoušky** jsou v úrovni: seznam povelů v čase (odemknout a zvednout, sklopit a zamknout). Platí pro všechny písty a zámky najednou. Časová osa je ukazuje značkami. Po začátku zvedání se tlumení vlastních tvarů (spočítané pro zavřený most) nahradí tlumením úměrným hmotě, jako po porušení.
-- **Loď** je průjezdný profil (obdélník nad hladinou v plavební dráze), který platí po dobu průjezdu; v bokorysu loď pluje kolmo k výkresu, takže se objeví, chvíli v dráze je a zmizí. Narazí, když do profilu zasahuje některý prut nebo styčník mostu. Nic neváží.
-- **Ve hře**: píst je prvek palety (kus, 60 000 Kč, do 8 m) s nastavením zdvihu podobným napínáku; zámek je přídavek na styčník jako svar. Pravidla: píst kreslí hráč zasunutý; zámek smí být na styčníku v posuvné kotvě úrovně nebo na styčníku mostovky.
-- **Kapitola 7 „Přístav“**, čtyři úrovně: jednokřídlý sklopný most (píst zvedne křídlo, zámek na opěře), protizávaží (píst má omezenou sílu: bez závaží za čepem křídlo neuzvedne), dvoukřídlý most se zámkem uprostřed, dosednutí (rychlé sklápění udeří do opěry; tlumič dosednutí nebo pomalejší píst). Fakta do odstavců „Ve skutečnosti“ ověřit vyhledáním (Tower Bridge, Erasmusbrug nebo jiný sklopný most, zdvižný most).
-- Výsledek zkoušky: průchod = všichni přejeli (před zvednutím i po sklopení), loď proplula bez nárazu, most je na konci zamčený.
+**Fáze zkoušky a lodě** (formát úrovně 6: `pohyb: { zvednout, sklopit }`, `lode`). V čase `zvednout` se zámky odemknou a písty vysouvají, v čase `sklopit` se vracejí a po dojetí se zámky zkoušejí zamknout. Loď pluje kolmo k výkresu: po dobu průjezdu nesmí do jejího plavebního profilu (obdélník nad hladinou) zasahovat žádný prut; náraz most nepoškodí, ale zkouška neprojde. Průchod = všichni přejeli, všechny lodě propluly a most je na konci zamčený. Výsledek ukazuje průběh zvedání, největší sílu v pístu a ráz při dosednutí na opěru proti klidové síle. Nový bonus mistrovské medaile `dosednuti` (největší síla dosednutí v N).
 
-**Hotovo v jádře (pokračování)**
+**Ocelová mostovka** (`mostovka-ocel`): ortotropní plech 14 mm s lichoběžníkovými žebry, 196 kg na metr šířky (ocelobetonová 520), 33 600 cm⁴, 26 000 Kč/m, do 6 m. Hodnoty jsou spočítané z typického průřezu, ne převzaté z tabulek.
 
-- **Zámky** (`src/jadro/zamky.ts`, `test/jadro-zamky.test.ts`, `rozdelStycnik` v `src/jadro/topologie.ts`): zámek na opěře (podpora → odemčeno s dosednutím jen na tlak → po dosednutí podpora zpět) a zámek mezi křídly (společný styčník → rozdělení → čep z pružiny s tlumičem). Tlumení se počítá z hmoty spojovaných konců (pevný tlumič na lehkém styčníku rozkmital výpočet). Ověřeno: rychlé sklápění udeří do opěry několikanásobně víc než pomalé; znovu zamčená křídla nesou břemeno společně. Po odemknutí a zamknutí se volá `Simulace.poZmeneStavby` (krok, tlumení úměrné hmotě).
+**Ve hře:** píst a ocelová mostovka v paletě, zámek jako přídavek (klik na položku, pak na styčník), nastavení zdvihu se stavem a dobou zdvihu, plavební profil lodi na výkresu při stavbě, loď a rozevřený zámek při přehrávání, zvedání a lodě na liště jízdního řádu i na časové ose, věty ve výsledku (loď narazila, píst nestačil, most se nezamkl). Zvuky jsou pracovní (klapnutí zámku, náraz lodi).
 
-**Ověřená fakta pro odstavce „Ve skutečnosti“ kapitoly 7** (vyhledáno 23. 11. 2026)
+**Kapitola 7 „Přístav“** (`urovne/7-0*.json`, řešení v `urovne/reseni.ts`, ukázky v `urovne/ukazky.ts`)
 
-- Tower Bridge: otevřen 30. června 1894; každé křídlo váží přes 1 100 tun a vyvažuje ho protizávaží (zdroj uvádí 420 t); dnes se zvedá asi 800krát ročně, v prvním roce 6 194krát; zvednutí trvá asi minutu.
-- Pont Jacques Chaban-Delmas v Bordeaux: otevřen 16. března 2013; zdvižné pole dlouhé 110 až 117 m (zdroje se liší) a těžké kolem 2 500 až 2 700 t se zvedá mezi čtyřmi věžemi do výšky asi 53 m nad hladinu; v roce 2013 největší zdvižný most v Evropě.
-- Erasmusbrug v Rotterdamu: otevřen 6. září 1996; sklopné pole dlouhé 89 m je největší a nejtěžší v západní Evropě.
+| Úroveň | Co učí | Referenční řešení |
+|---|---|---|
+| 7-01 Zvedací most, 12 m | Píst, zdvih, zámek na opěře, svařené křídlo | píst z kotvy pod čepem; z hlubší kotvy dosedne měkčeji (301 kN proti 393 až 462 kN) |
+| 7-02 Dvě křídla, 24 m | Zámek mezi křídly, zrcadlení; zavřený most nesou jen čepy a písty | dvě křídla po 12 m; trojúhelník nad kořenem křídla pro mistrovskou |
+| 7-03 Dlouhé křídlo, 16 m | Rameno pístu: z mělké kotvy rychle a na hraně síly, z hluboké klidně, ale s větším zdvihem | hluboká kotva a zdvih 2,5 m dosedne silou 686 kN, mělká 842 až 1 020 kN |
+| 7-04 Velký přístav, 32 m | Těžší křídla po 16 m: písty z mělkých kotev most po sklopení nezamknou | písty z hlubokých kotev; trojúhelník nad kořenem křídla bere mostovce ohyb (18 % proti 42 %) |
+
+Fakta v odstavcích „Ve skutečnosti“ jsou ověřená vyhledáním (23. 11. 2026): Tower Bridge (otevřen 30. 6. 1894, v prvním roce 6 194 zvednutí, dnes asi 800 ročně, křídlo přes 1 100 t, protizávaží 420 t), Erasmův most (otevřen 6. 9. 1996, sklopné pole 89 m), most Jacquese Chabana-Delmase (2013, zdvižné pole přes 100 m a asi 2 600 t, výška asi 53 m).
+
+**Jak je to ověřeno**
+
+- `test/jadro-pisty.test.ts`, `test/jadro-zamky.test.ts`: píst a zámky v jádře.
+- `test/pohyblivy.test.ts`: stavba mostu s pístem a zámkem, pravidla návrhu, celý cyklus jednokřídlého i dvoukřídlého mostu, lodě, formát úrovně.
+- `test/vyhratelnost.test.ts`, `test/ukazky.test.ts`: všechna řešení, pády a ukázky kapitoly 7.
+- `test/e2e/pristav.e2e.ts`: kapitola v prohlížeči (stavba křídla myší, zdvih, zámek, zvednutí, loď, výsledek, dvě křídla); `mesto.e2e.ts` pouští ukázky.
+- Regresní sada má scénář se sklopným mostem (`sklopny-most`).
+
+**Co ověřeno není / modelové volby**
+
+- **Protizávaží ve hře není.** Pokusy s rámem a závažím za čepem nedaly čisté chování (písty na hraně síly, převážené křídlo se nevracelo) a bez dalšího ladění by úroveň mátla. Koncepce ho nežádá; kandidát pro doladění.
+- **Píst na hraně síly zkouškou často projde:** ventil ho zpomalí, ale křídlo se zvedne. Výsledek to hlásí („přetlakový ventil povolil“), průchod to nebere.
+- Víc pístů z různých kotev do jednoho křídla se pere (jejich délky se s úhlem mění různě); dva písty vedle sebe do stejných styčníků návrh neumí.
+- Loď je jen plavební profil: nemá hmotnost, nedělá vlny a do mostu „narazí“ bez síly.
+- Ráz při dosednutí závisí na tuhosti dosedací plochy (200 MN/m) a na tom, jak píst dojíždí; čísla jsou řádově věrohodná, ne změřená.
+- Zavřený dvoukřídlý most nesou jen čepy a písty (skutečné mosty mají zadní závory); pod autobusem se uprostřed prohne o centimetry až decimetr.
 
 ## M5 — výsledek
 

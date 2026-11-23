@@ -1,0 +1,131 @@
+{
+  "verze": 6,
+  "id": "7-01",
+  "nazev": "Zvedací most",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 20,
+    "yMax": 16
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 0.5,
+      "y": -8
+    },
+    {
+      "x": 11.5,
+      "y": -8
+    },
+    {
+      "x": 12,
+      "y": 0
+    },
+    {
+      "x": 20,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 0,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -5,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 12,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 300,
+  "nerovnost": "A",
+  "rozpocet": 480000,
+  "inzenyrskyRozpocet": 403000,
+  "mistrovska": {
+    "druh": "dosednuti",
+    "limit": 350000
+  },
+  "povolenePrvky": [
+    "mostovka-ocel",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pist"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "auto"
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "dodavka"
+    },
+    {
+      "cas": 27,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    }
+  ],
+  "pohyb": {
+    "zvednout": 5,
+    "sklopit": 16
+  },
+  "lode": [
+    {
+      "cas": 12,
+      "trvani": 3,
+      "xMin": 4,
+      "xMax": 11,
+      "vyska": 8
+    }
+  ]
+}

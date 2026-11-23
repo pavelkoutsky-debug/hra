@@ -118,9 +118,9 @@ describe("přehled kampaně", () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
-    expect(kapitoly).toHaveLength(6);
-    expect(kapitoly.at(-1)).toContain("Trať");
-    expect(kapitoly.at(-1)).toContain("Kolejiště, lokomotiva a vozy");
+    expect(kapitoly.length).toBeGreaterThanOrEqual(6);
+    expect(kapitoly[5]).toContain("Trať");
+    expect(kapitoly[5]).toContain("Kolejiště, lokomotiva a vozy");
     await stranka.locator("#odemknout-vse").check();
     const karty = await stranka.locator(".karta").allInnerTexts();
     for (const nazev of ["První vlak", "Rychlík", "Uhelný vlak", "Dvě patra"]) {

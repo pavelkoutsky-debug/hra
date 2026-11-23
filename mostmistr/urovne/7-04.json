@@ -1,0 +1,148 @@
+{
+  "verze": 6,
+  "id": "7-04",
+  "nazev": "Velký přístav",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 40,
+    "yMax": 20
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 0.5,
+      "y": -8
+    },
+    {
+      "x": 31.5,
+      "y": -8
+    },
+    {
+      "x": 32,
+      "y": 0
+    },
+    {
+      "x": 40,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 32,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -6,
+      "typ": "pevna"
+    },
+    {
+      "x": 32,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 32,
+      "y": -6,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 32,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 1500000,
+  "inzenyrskyRozpocet": 1050000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.25
+  },
+  "povolenePrvky": [
+    "mostovka-ocel",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pist"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "dodavka"
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto",
+      "pocet": 2
+    },
+    {
+      "cas": 34,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 35,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "dodavka"
+    }
+  ],
+  "pohyb": {
+    "zvednout": 6,
+    "sklopit": 20
+  },
+  "lode": [
+    {
+      "cas": 15,
+      "trvani": 4,
+      "xMin": 8,
+      "xMax": 24,
+      "vyska": 11
+    }
+  ]
+}

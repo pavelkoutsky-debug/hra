@@ -1,0 +1,138 @@
+{
+  "verze": 6,
+  "id": "7-02",
+  "nazev": "Dvě křídla",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 32,
+    "yMax": 16
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 0.5,
+      "y": -8
+    },
+    {
+      "x": 23.5,
+      "y": -8
+    },
+    {
+      "x": 24,
+      "y": 0
+    },
+    {
+      "x": 32,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 24,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -5,
+      "typ": "pevna"
+    },
+    {
+      "x": 24,
+      "y": -5,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 24,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 300,
+  "nerovnost": "A",
+  "rozpocet": 1200000,
+  "inzenyrskyRozpocet": 780000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.12
+  },
+  "povolenePrvky": [
+    "mostovka-ocel",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pist"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "dodavka"
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto",
+      "pocet": 2
+    },
+    {
+      "cas": 30,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    },
+    {
+      "cas": 31,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto"
+    }
+  ],
+  "pohyb": {
+    "zvednout": 6,
+    "sklopit": 18
+  },
+  "lode": [
+    {
+      "cas": 14,
+      "trvani": 3,
+      "xMin": 7,
+      "xMax": 17,
+      "vyska": 9
+    }
+  ]
+}

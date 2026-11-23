@@ -1,0 +1,132 @@
+{
+  "verze": 6,
+  "id": "7-03",
+  "nazev": "Dlouhé křídlo",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 24,
+    "yMax": 16
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 0.5,
+      "y": -8
+    },
+    {
+      "x": 15.5,
+      "y": -8
+    },
+    {
+      "x": 16,
+      "y": 0
+    },
+    {
+      "x": 24,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 16,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 0,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -6,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 16,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 300,
+  "nerovnost": "A",
+  "rozpocet": 620000,
+  "inzenyrskyRozpocet": 510000,
+  "mistrovska": {
+    "druh": "dosednuti",
+    "limit": 800000
+  },
+  "povolenePrvky": [
+    "mostovka-ocel",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pist"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "dodavka"
+    },
+    {
+      "cas": 1.5,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto",
+      "pocet": 2
+    },
+    {
+      "cas": 30,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    }
+  ],
+  "pohyb": {
+    "zvednout": 5,
+    "sklopit": 17
+  },
+  "lode": [
+    {
+      "cas": 13,
+      "trvani": 3,
+      "xMin": 6,
+      "xMax": 15,
+      "vyska": 9
+    }
+  ]
+}
