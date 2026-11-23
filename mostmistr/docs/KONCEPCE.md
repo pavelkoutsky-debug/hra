@@ -519,7 +519,7 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M6 Pohyblivé mosty** | Písty, dělicí zámky, fáze na časové ose, lodě, kapitola 7 | Most se zvedne, loď propluje, most se sklopí, provoz pokračuje; úrovně projdou |
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |
 | **M8 Doladění** | Výkon, dotykové ovládání, angličtina | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
-| **M9 Zvuk načisto** | Zvuky z M3z jsou pracovní. Po dokončení všech ostatních milníků se předělají pomocí ElevenLabs, včetně zvuků pro prvky a provoz z pozdějších kapitol (vlak, těžká vozidla, písty). *(Rozhodnutí zadavatele z 22. 11. 2026.)* | Zadavatel zvuky poslechl a schválil; testy z M3z (správný okamžik, sílení s využitím, ztlumení, ticho bez gesta) dál procházejí |
+| **M9 Zvuk načisto** | Zvuky z M3z jsou pracovní. Po dokončení všech ostatních milníků se předělají pomocí ElevenLabs, včetně zvuků pro prvky a provoz z pozdějších kapitol (vlak, těžká vozidla, písty). *(Rozhodnutí zadavatele z 22. 11. 2026.)* **Nedělá se:** 23. 11. 2026 zadavatel rozhodl nechat zvuky, jak jsou. | Zadavatel zvuky poslechl a schválil; testy z M3z (správný okamžik, sílení s využitím, ztlumení, ticho bez gesta) dál procházejí |
 
 Tuhé spoje a plasticitu umí jádro od M1b, hráči se zpřístupní v M4b.
 

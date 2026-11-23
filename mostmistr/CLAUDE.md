@@ -77,7 +77,7 @@ Od 22. 11. 2026 zadavatel nechce u každého milníku čekat na své schválení
 3. Nálezy ověř a **zapracuj**; co nezapracuješ, zapiš do `docs/STAV.md` s důvodem.
 4. Po zeleném sestavení pull request **slouč sám** a pokračuj dalším milníkem. Zadavateli pošli stručné shrnutí s odkazy.
 
-Výjimka je M9 (zvuky načisto): ty musí zadavatel poslechnout a schválit.
+M9 (zvuky načisto přes ElevenLabs) zadavatel 23. 11. 2026 zrušil: zvuky ze syntezátoru zůstávají. Kdyby se k nahrávkám vrátil, generování stojí jeho kredity a výsledek musí poslechnout a schválit on.
 
 ## Prostředí
 
