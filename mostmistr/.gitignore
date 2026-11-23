@@ -1,1 +1,3 @@
 test/e2e/vystup/
+# I odkaz na složku (pracovní stromy si ji půjčují): vzor „node_modules/“ z kořene platí jen pro složku.
+node_modules
