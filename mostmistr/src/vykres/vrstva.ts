@@ -21,7 +21,9 @@ export class UlozenaVrstva {
     const hustota = window.devicePixelRatio || 1;
     const sirka = Math.round(rozmer.sirka * hustota);
     const vyska = Math.round(rozmer.vyska * hustota);
-    const plny = `${klic}|${sirka}|${vyska}`;
+    // Hustota patří do klíče zvlášť: okno 800 × 600 při hustotě 2 má stejně pixelů jako
+    // 1600 × 1200 při hustotě 1, ale obraz je jiný.
+    const plny = `${klic}|${sirka}|${vyska}|${hustota}`;
     if (plny !== this.#ulozeny) {
       const stabilni = plny === this.#posledni;
       this.#posledni = plny;
@@ -41,10 +43,19 @@ export class UlozenaVrstva {
     ctx.restore();
   }
 
-  /** Zahodí uložený obraz (změnil se obsah, který klíč nepopisuje). */
+  /**
+   * Zahodí uložený obraz i pomocné plátno. Volá se, když se vrstva přestane kreslit (konec
+   * přehrávání zkoušky): plátno velké jako okno by jinak drželo paměť po celou dobu stavění.
+   */
   zahod(): void {
     this.#ulozeny = "";
     this.#posledni = "";
+    if (this.#platno) {
+      // Nulová velikost uvolní paměť hned, ne až s úklidem prohlížeče.
+      this.#platno.width = 0;
+      this.#platno.height = 0;
+      this.#platno = null;
+    }
   }
 
   #priprav(sirka: number, vyska: number): CanvasRenderingContext2D | null {

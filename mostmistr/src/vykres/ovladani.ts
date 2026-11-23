@@ -20,6 +20,12 @@ export interface PosluchacLevehoTlacitka {
   pusteni(bod: Bod): void;
   /** Tah přerušil systém (ztráta ukazatele); nic se nemá dokončit. */
   zruseni(): void;
+  /**
+   * Provede stisk něco hned a nevratně (pověsí závaží, přepne svar, spustí pokus)? Takový stisk
+   * se u dotyku ohlásí až při zvednutí prstu, který se nepohnul: jinak by ho udělal i první
+   * prst pomalého gesta dvěma prsty a zrušení by ho už nevrátilo.
+   */
+  okamzity?(): boolean;
 }
 
 const KROK_KLAVESNICE = 60; // pixelů na stisk šipky
@@ -60,8 +66,11 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
   let gesto: { a: number; b: number; stred: Bod; roztec: number } | null = null;
   /** Po gestu zbylý prst nic nekreslí; čeká se, až se zvednou všechny. */
   let poGestu = false;
-  /** První dotyk, který se ještě neohlásil jako stisk. */
-  let cekajici: { ukazatel: number; x: number; y: number; misto: Bod; casovac: number } | null = null;
+  /**
+   * První dotyk, který se ještě neohlásil jako stisk. `jenTuknuti`: stisk by provedl akci hned,
+   * proto čeká na zvednutí prstu; `pohnul`: prst se mezitím rozjel, akce se neprovede.
+   */
+  let cekajici: { ukazatel: number; x: number; y: number; misto: Bod; casovac: number; jenTuknuti: boolean; pohnul: boolean } | null = null;
 
   const mistoNaPlatne = (udalost: { clientX: number; clientY: number }): Bod => {
     const obrys = canvas.getBoundingClientRect();
@@ -77,6 +86,8 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
     window.clearTimeout(cekajici.casovac);
     const { ukazatel, misto } = cekajici;
     cekajici = null;
+    // Levé tlačítko mezitím zabrala myš nebo se výkres táhne: dotyk se neohlásí.
+    if (leve !== null || tazeni) return;
     leve = ukazatel;
     posluchac.leve?.stisk(misto, { shift: false, alt: false });
   };
@@ -121,12 +132,15 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
       tazeni = { ukazatel: udalost.pointerId, x: udalost.clientX, y: udalost.clientY };
       return;
     }
+    const jenTuknuti = posluchac.leve.okamzity?.() ?? false;
     cekajici = {
       ukazatel: udalost.pointerId,
       x: udalost.clientX,
       y: udalost.clientY,
       misto: mistoNaPlatne(udalost),
-      casovac: window.setTimeout(ohlasStisk, PRODLEVA_DOTYKU),
+      casovac: jenTuknuti ? 0 : window.setTimeout(ohlasStisk, PRODLEVA_DOTYKU),
+      jenTuknuti,
+      pohnul: false,
     };
   };
 
@@ -151,6 +165,11 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
       const dx = udalost.clientX - cekajici.x;
       const dy = udalost.clientY - cekajici.y;
       if (dx * dx + dy * dy < VULE_DOTYKU * VULE_DOTYKU) return true;
+      if (cekajici.jenTuknuti) {
+        // Prst se rozjel: nebylo to ťuknutí, akce se neprovede.
+        cekajici.pohnul = true;
+        return true;
+      }
       ohlasStisk();
     }
     return false;
@@ -169,9 +188,13 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
       return true;
     }
     if (cekajici && udalost.pointerId === cekajici.ukazatel) {
-      // Krátké ťuknutí: stisk a hned puštění. Ztracený dotyk se neohlásí vůbec.
-      if (zruseno) zahodCekajici();
-      else ohlasStisk();
+      // Krátké ťuknutí: stisk a hned puštění. Ztracený dotyk a prst, který se s nástrojem
+      // jednající hned rozjel, se neohlásí vůbec.
+      if (zruseno || cekajici.pohnul) {
+        zahodCekajici();
+        return true;
+      }
+      ohlasStisk();
     }
     return false;
   };

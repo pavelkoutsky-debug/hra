@@ -130,10 +130,13 @@ function jeNosnik(prvek: IdPrvku): boolean {
 
 /**
  * Vzpěrná délka každého prutu návrhu v metrech. Prut, který ve styčníku tuze pokračuje dalším
- * prutem ve stejné přímce a do toho styčníku nevede nic jiného (ani podpora), je s ním jeden
- * průběžný prut: vybočí celý, a proto se počítá celá délka řetězu. Bez toho by svar uprostřed
- * tlačeného prutu jeho vzpěrnou délku rozpůlil a únosnost zčtyřnásobil, ačkoli na mostě nic
- * nepřibylo. Souřadnice styčníků jsou celá čísla, takže test přímky je přesný.
+ * prutem ve stejné přímce a nic dalšího ho tam nedrží, je s ním jeden průběžný prut: vybočí
+ * celý, a proto se počítá celá délka řetězu. Bez toho by svar uprostřed tlačeného prutu jeho
+ * vzpěrnou délku rozpůlil a únosnost zčtyřnásobil, ačkoli na mostě nic nepřibylo.
+ *
+ * Styčník drží podpora, která brání pohybu napříč prutem, nebo další prut, který někam vede.
+ * Nedrží ho pahýl s volným koncem, tlumič ani pružina (nemají tuhost, o kterou by se prut
+ * opřel). Souřadnice styčníků jsou celá čísla, takže test přímky je přesný.
  */
 function vzperneDelky(
   navrh: NavrhMostu,
@@ -153,29 +156,48 @@ function vzperneDelky(
     veStycniku[a]?.push(cislo);
     veStycniku[b]?.push(cislo);
   });
+  /** Vede prut `cislo` ze styčníku `odkud` někam, kde je o co se opřít (další prut nebo podpora)? */
+  const nekamVede = (cislo: number, odkud: number): boolean => {
+    const druh = KATALOG[navrh.pruty[cislo]!.prvek].druh;
+    if (druh === "tlumic" || druh === "pruzina") return false;
+    const [a, b] = konce[cislo]!;
+    const druhy = a === odkud ? b : a;
+    const st = stycniky[druhy];
+    if (!st) return false;
+    return (veStycniku[druhy]?.length ?? 0) >= 2 || st.pevneX === true || st.pevneY === true;
+  };
   /** Prut, kterým prut `cislo` za svým koncem `konec` tuze a v přímce pokračuje; −1, když žádný. */
   const pokracovani = (cislo: number, konec: number): number => {
     const st = stycniky[konec];
-    const spolu = veStycniku[konec];
-    if (!st || !spolu || spolu.length !== 2 || st.pevneX || st.pevneY) return -1;
-    const dalsi = spolu[0] === cislo ? spolu[1]! : spolu[0]!;
-    const prvni = navrh.pruty[cislo]!;
-    const druhy = navrh.pruty[dalsi]!;
-    if (!jeNosnik(druhy.prvek)) return -1;
-    // Tuhý spoj je svar; betonové pilíře nad sebou jsou monolit i bez něj.
-    const monolit = KATALOG[prvni.prvek].druh === "pilir" && KATALOG[druhy.prvek].druh === "pilir";
-    if (!tuhy[konec] && !monolit) return -1;
     const [a1, b1] = konce[cislo]!;
-    const [a2, b2] = konce[dalsi]!;
     const odkud = stycniky[a1 === konec ? b1 : a1];
-    const kam = stycniky[a2 === konec ? b2 : a2];
-    if (!odkud || !kam) return -1;
+    if (!st || !odkud) return -1;
     const ux = st.x - odkud.x;
     const uy = st.y - odkud.y;
-    const vx = kam.x - st.x;
-    const vy = kam.y - st.y;
-    // Stejná přímka (nulový vektorový součin) a stejný směr (kladný skalární).
-    return ux * vy - uy * vx === 0 && ux * vx + uy * vy > 0 ? dalsi : -1;
+    // Podpora prut drží, když brání pohybu napříč: svislý prut posuvné ložisko do strany nedrží.
+    if ((st.pevneX === true && uy !== 0) || (st.pevneY === true && ux !== 0)) return -1;
+    const prvni = navrh.pruty[cislo]!;
+    let dalsi = -1;
+    for (const q of veStycniku[konec] ?? []) {
+      if (q === cislo) continue;
+      const druhy = navrh.pruty[q]!;
+      const [a2, b2] = konce[q]!;
+      const kam = stycniky[a2 === konec ? b2 : a2];
+      // Tuhý spoj je svar; betonové pilíře nad sebou jsou monolit i bez něj.
+      const monolit = KATALOG[prvni.prvek].druh === "pilir" && KATALOG[druhy.prvek].druh === "pilir";
+      if (kam && jeNosnik(druhy.prvek) && (tuhy[konec] || monolit)) {
+        const vx = kam.x - st.x;
+        const vy = kam.y - st.y;
+        // Stejná přímka (nulový vektorový součin) a stejný směr (kladný skalární): pokračování.
+        if (ux * vy - uy * vx === 0 && ux * vx + uy * vy > 0) {
+          dalsi = q;
+          continue;
+        }
+      }
+      // Cokoli jiného, co někam vede, styčník drží a řetěz tu končí.
+      if (nekamVede(q, konec)) return -1;
+    }
+    return dalsi;
   };
   return navrh.pruty.map((prut, cislo) => {
     let delka = delky[cislo]!;

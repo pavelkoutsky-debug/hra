@@ -470,14 +470,16 @@ body[data-sandbox] .pole__bunka:nth-child(3) {
   position: absolute;
   bottom: calc(100% + 10px);
   z-index: 3;
-  transform: translateX(-50%);
-  max-width: min(320px, 80vw);
+  /* Vodorovnou polohu nastavuje skript: u krajů osy bublinu drží v okně. */
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 16px));
   padding: 3px 8px;
   background: var(--lista);
   border: 1px solid var(--cara);
   color: var(--cara-silna);
   font-size: 11px;
-  white-space: pre;
+  white-space: pre-line;
   pointer-events: none;
 }
 
@@ -2196,6 +2198,32 @@ body[data-rezim="stavba"] .uroven .legenda {
   .uroven .osa__drah {
     flex: 1 1 60%;
     min-width: 180px;
+  }
+
+  /*
+   * Jízdní řád a osa frekvencí se na telefon vedle sebe nevejdou: každý dostane vlastní řádek
+   * a dlouhý popis se zalomí. Bez toho by obrazovka byla širší než okno.
+   */
+  .uroven .osa__rad,
+  .uroven .osa__frekvence {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .uroven .frekvence {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .uroven .frekvence__popis,
+  .uroven .osa__polozka {
+    white-space: normal;
+  }
+
+  .uroven .osa__polozky {
+    flex-wrap: wrap;
   }
 
   .uroven .paleta {

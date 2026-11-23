@@ -327,8 +327,10 @@ export function spustUroven(
   /** Poslech právě přehrávané zkoušky: říká, co má v kterém okamžiku záznamu zaznít. */
   let poslech: Poslech | null = null;
   /** Je analytický panel rozbalený? V úrovni s rezonanční křivkou začíná otevřený. */
-  // V pískovišti je analýza zavřená: zakrývala by kótu rozpětí na prázdném výkresu.
-  let analyzaOtevrena = uroven.rezonancniKrivka && sandbox === null;
+  // V pískovišti je analýza zavřená: zakrývala by kótu rozpětí na prázdném výkresu. Na telefonu
+  // také: panel tam zabere celou šířku okna a z výkresu by nezbylo nic.
+  const uzkeOkno = window.matchMedia?.("(max-width: 700px)").matches ?? false;
+  let analyzaOtevrena = uroven.rezonancniKrivka && sandbox === null && !uzkeOkno;
   /** Horní okraj svislé osy rezonanční křivky; drží se, aby bylo vidět, že úprava špičku snížila. */
   let stropKrivky = 0;
   /** Který tvar kmitání se právě na výkresu předvádí (pořadí v rozboru); null žádný. */
@@ -787,7 +789,8 @@ export function spustUroven(
    * Položka jízdního řádu slovy: krátce pro lištu („0 s → 2× chodec“), nebo celou větou
    * pro okno se zadáním („2× chodec zleva, vyráží v čase 0 s“).
    */
-  function zapisJizdy(polozka: Uroven["jizdniRad"][number], vetou = false): string {
+  /** Kdo jede nebo jde: druh provozu s počtem, u vlaku se složením („dav, 120 lidí“). */
+  function kdoJede(polozka: Uroven["jizdniRad"][number]): string {
     const klic = `provoz.${polozka.druh}`;
     const nazev = jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
     const pocet = polozka.pocet ?? 1;
@@ -809,6 +812,11 @@ export function spustUroven(
       }
       kdo = t("provoz.vlak", { slozeni: casti.join(", ") });
     }
+    return kdo;
+  }
+
+  function zapisJizdy(polozka: Uroven["jizdniRad"][number], vetou = false): string {
+    let kdo = kdoJede(polozka);
     // Kde se hraje o rezonanci, patří ke každému člověku i frekvence jeho kroku.
     const rytmus = jeClovek(polozka.druh) ? rytmusLidi(polozka.druh, polozka.kadence) : null;
     if (uroven.osaFrekvenci && rytmus) {
@@ -1974,6 +1982,7 @@ export function spustUroven(
     poslech = null;
     ozvuceni.ztis();
     rezim = "stavba";
+    spodekVykresu.zahod();
     prehravani = { ...prehravani, bezi: false, rychlost: zpomaleni?.rychlost ?? prehravani.rychlost };
     zpomaleni = null;
     panelVysledku.hidden = true;
@@ -2143,8 +2152,8 @@ export function spustUroven(
   /** Značky na časové ose: výjezdy účastníků, porušení prutů a pády. */
   function obnovZnacky(): void {
     popisyZnacek = [];
-    bublinaOsy.hidden = true;
     if (!beh) {
+      bublinaOsy.hidden = true;
       znackyOsy.replaceChildren();
       return;
     }
@@ -2158,14 +2167,17 @@ export function spustUroven(
       return uzel;
     };
     if (!(delka > 0)) return;
-    // Skupina, která vyjíždí naráz (řady útvaru), má jednu značku s počtem.
-    const vyjezdy = new Map<string, { cas: number; druh: string; pocet: number }>();
+    // Výjezdy podle položek jízdního řádu: řady davu nebo útvaru, které vyrážejí ve stejný
+    // okamžik, mají jednu značku a popis celé položky („dav, 120 lidí“), ne počet řad.
+    const vyjezdy = new Map<string, { cas: number; polozka: number; druh: string }>();
     for (const u of b.ucastnici) {
-      const klic = `${u.start}|${u.druh}`;
-      const zaznam = vyjezdy.get(klic);
-      if (zaznam) zaznam.pocet += u.lidi ?? 1;
-      else vyjezdy.set(klic, { cas: u.start, druh: u.druh, pocet: u.lidi ?? 1 });
+      const klic = `${u.start}|${u.polozka}`;
+      if (!vyjezdy.has(klic)) vyjezdy.set(klic, { cas: u.start, polozka: u.polozka, druh: u.druh });
     }
+    const kdoVyrazi = (v: { polozka: number; druh: string }): string => {
+      const polozka = uroven.jizdniRad[v.polozka];
+      return polozka ? kdoJede(polozka) : nazevProvozu(v.druh);
+    };
     const popisUdalosti = (u: Udalost): string => {
       switch (u.druh) {
         case "poruseni":
@@ -2173,8 +2185,10 @@ export function spustUroven(
         case "sjeti":
           return t("osa.znacka.sjeti");
         case "pad": {
+          // Řada davu nebo útvaru je víc lidí: píše se počet, ne název celé skupiny.
           const kdo = b.ucastnici.find((ucastnik) => ucastnik.polozka === u.polozka && ucastnik.clen === u.clen);
-          return t("osa.znacka.pad", { kdo: nazevProvozu(kdo?.druh ?? "") });
+          const lidi = kdo?.lidi ?? 1;
+          return lidi > 1 ? t("osa.znacka.padLidi", { pocet: lidi }) : t("osa.znacka.pad", { kdo: nazevProvozu(kdo?.druh ?? "") });
         }
         case "pohyb":
           return t(`osa.znacka.pohyb.${u.faze}`);
@@ -2185,13 +2199,7 @@ export function spustUroven(
       }
     };
     znackyOsy.replaceChildren(
-      ...[...vyjezdy.values()].map((v) =>
-        znacka(
-          v.cas,
-          "vyjezd",
-          t("osa.znacka.vyjezd", { kdo: v.pocet > 1 ? t("rad.vice", { pocet: v.pocet, kdo: nazevProvozu(v.druh) }) : nazevProvozu(v.druh) }),
-        ),
-      ),
+      ...[...vyjezdy.values()].map((v) => znacka(v.cas, "vyjezd", t("osa.znacka.vyjezd", { kdo: kdoVyrazi(v) }))),
       ...b.udalosti
         .filter((u) => u.druh !== "prujezd")
         // Zvedání mostu a proplutí lodi jsou běžný děj; červená patří jen nárazu lodi.
@@ -2223,13 +2231,21 @@ export function spustUroven(
       bublinaOsy.hidden = true;
       return;
     }
-    // Víc značek ve stejném okamžiku (řetěz porušení) se vypíše pod sebe, nejvýš čtyři.
-    const stejne = popisyZnacek.filter((z) => Math.abs(z.cas - nejblizsi!.cas) < 0.05);
-    const radky = stejne.slice(0, 4).map((z) => `${zapisCasu(z.cas)} · ${z.popis}`);
+    // Víc značek ve stejném okamžiku (řetěz porušení) se vypíše pod sebe, nejvýš čtyři;
+    // stejné řádky (řady davu, které vyrážejí naráz) jen jednou.
+    const cil = nejblizsi;
+    const stejne = [...new Set(popisyZnacek.filter((z) => Math.abs(z.cas - cil.cas) < 0.05).map((z) => `${zapisCasu(z.cas)} · ${z.popis}`))];
+    const radky = stejne.slice(0, 4);
     if (stejne.length > 4) radky.push(t("vysledek.poruseni.dalsi", { pocet: stejne.length - 4 }));
     bublinaOsy.textContent = radky.join("\n");
-    bublinaOsy.style.left = `${(100 * Math.min(1, Math.max(0, nejblizsi.cas / delka))).toFixed(2)}%`;
     bublinaOsy.hidden = false;
+    // Bublina stojí nad značkou, ale nikdy nevyčnívá z okna: u krajů osy se k němu přimkne.
+    const rodic = (bublinaOsy.offsetParent ?? bublinaOsy.parentElement)?.getBoundingClientRect();
+    const sirka = bublinaOsy.offsetWidth;
+    const stred = draha.left + draha.width * Math.min(1, Math.max(0, cil.cas / delka));
+    const okraj = 6;
+    const vlevo = Math.max(okraj, Math.min(window.innerWidth - okraj - sirka, stred - sirka / 2));
+    bublinaOsy.style.left = `${(vlevo - (rodic?.left ?? 0)).toFixed(1)}px`;
   }
 
   function prepniPrehravani(): void {
@@ -2520,6 +2536,7 @@ export function spustUroven(
       const tun = `${cislo(zlom.celkem / TIHOVE_ZRYCHLENI / 1000, 1)}\u00a0t`;
       const naMetr = `${cislo(zlom.zatizeni / 1000, 1)}\u00a0kN`;
       if (vysledek.bezRovnovahy) vety.push(t("vysledek.zlom.nic"));
+      else if (zlom.nedolozeno) vety.push(t("vysledek.zlom.nedolozeno", { tun, naMetr }));
       else if (zlom.cas === null) vety.push(t("vysledek.zlom.vydrzel", { tun, naMetr }));
       else {
         vety.push(t("vysledek.zlom.unesl", { tun, sila: `${cislo(zlom.celkem / 1000, 0)}\u00a0kN`, naMetr }));
@@ -3055,6 +3072,8 @@ export function spustUroven(
         brnk = null;
         editor.zrusTah();
       },
+      // Přídavky, budič a výběr prutu při zkoušce jednají hned stiskem: u dotyku až ťuknutím.
+      okamzity: () => rezim === "zkouska" || nastroj === "budic" || jePridavek(nastroj),
     },
   });
 

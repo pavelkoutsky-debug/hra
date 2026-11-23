@@ -46,7 +46,7 @@ import type {
   ZlomZkousky,
 } from "./protokol";
 import { sestavMost } from "./stavba";
-import { DOBEH_ZLOMU, NEJDELSI_ZLOM, ROZTEC_ZATEZE, zatizeniZlomu } from "./zlom";
+import { DOBEH_ZLOMU, NEJDELSI_DEJ_ZLOMU, NEJDELSI_ZLOM, ROZTEC_ZATEZE, zatizeniZlomu } from "./zlom";
 import { plastickeKlouby, topologieSoustavy, type PopisKresleni, type Snimek, type Topologie } from "./zaznam";
 
 /** Počet snímků záznamu na sekundu děje. */
@@ -385,6 +385,8 @@ export class Zkouska {
     for (const lod of uroven.lode) trvani = Math.max(trvani, lod.cas + lod.trvani + DOBEH);
     this.trvani = trvani;
     if (plan.ucastnici.length === 0 && !uroven.pohyb && uroven.lode.length === 0) this.#konec = bezProvozu;
+    // Zkoušku do zlomu ukončují hodiny zátěže (viz pokracuj), ne čas děje: ten má jen pojistku.
+    if (this.#zlom) this.#konec = NEJDELSI_DEJ_ZLOMU;
     // Most bez klidové polohy neunesl nic; trosky stačí nechat dopadnout, zatěžovat je nemá smysl.
     if (this.#zlom && this.bezRovnovahy) this.#konec = DOBEH_ZLOMU;
     // Až nakonec: přetržení mění stavbu a ohlašuje to všemu, co se výše připravilo.
@@ -706,6 +708,8 @@ export class Zkouska {
         // Zátěž přibývá, jen když se most v tomhle kroku trvale nepřetvořil.
         if (!(s.plastickaPrace > this.#zlomPrace)) this.#zlomHodiny += sim.dt;
         this.#zlomPrace = s.plastickaPrace;
+        // Zátěž dorostla na největší, kterou zkouška umí naložit: most vydržel.
+        if (this.#zlomHodiny >= NEJDELSI_ZLOM) this.#konec = sim.cas;
       }
       let novaStavba = this.#ridPohyb(davka.udalosti);
       if (sim.kroku % INTERVAL_OBALKY === 0) {
@@ -956,6 +960,7 @@ export class Zkouska {
         delka: this.#delkaZateze,
         cas: this.bezRovnovahy ? 0 : this.#zlomCas,
         prut: this.#zlomPrut,
+        nedolozeno: !this.bezRovnovahy && this.#zlomCas === null && this.#zlomHodiny < NEJDELSI_ZLOM,
       };
     }
     const medaile: Medaile = {

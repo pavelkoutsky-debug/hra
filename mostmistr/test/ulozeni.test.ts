@@ -8,7 +8,9 @@ import {
   ulozeniZTextu,
   VERZE_ULOZENI,
   vylepsiRekord,
+  platnyZlom,
   vylepsiZlom,
+  zastaralyZlom,
   type Ulozeni,
 } from "../src/data/ulozeni";
 import { Kreslic } from "../src/zkouska/regrese";
@@ -18,7 +20,7 @@ function sNavrhem(): Ulozeni {
   k.prut("mostovka-drevo", [0, 0], [4, 0]);
   const ulozeni = prazdneUlozeni();
   ulozeni.navrhy["9-99"] = k.navrh();
-  ulozeni.rekordy["9-99"] = { verzeFyziky: 1, medaile: { pruchod: true, rozpocet: false, mistrovska: false }, nejlepsiCena: 10000, nejlepsiHmotnost: 950, nejlepsiZlom: 3.5 };
+  ulozeni.rekordy["9-99"] = { verzeFyziky: 1, medaile: { pruchod: true, rozpocet: false, mistrovska: false }, nejlepsiCena: 10000, nejlepsiHmotnost: 950, nejlepsiZlom: 3.5, verzeZlomu: 1 };
   return ulozeni;
 }
 
@@ -73,11 +75,32 @@ describe("starší formáty uložení", () => {
       nejlepsiCena: 31095,
       nejlepsiHmotnost: null,
       nejlepsiZlom: null,
+      verzeZlomu: null,
     });
     expect(nove.rekordy["1-02"]!.nejlepsiZlom).toBeNull();
     // Údaj, který verze 1 neznala, převod nepřevezme: tehdy ho nikdo nezměřil.
     const spatne = { ...stare, rekordy: { "1-01": { ...stare.rekordy["1-01"], nejlepsiZlom: 3 } } };
     expect(ulozeniZTextu(JSON.stringify(spatne)).rekordy["1-01"]!.nejlepsiZlom).toBeNull();
+  });
+
+  it("verze 2: rekord zkoušky do zlomu dostane verzi fyziky, se kterou se tehdy měřilo", () => {
+    const stare = {
+      verze: 2,
+      navrhy: {},
+      rekordy: {
+        "1-01": { verzeFyziky: 7, medaile: { pruchod: true, rozpocet: false, mistrovska: false }, nejlepsiCena: 31095, nejlepsiHmotnost: 914, nejlepsiZlom: 3.87 },
+        "1-02": { verzeFyziky: 7, medaile: { pruchod: true, rozpocet: false, mistrovska: false }, nejlepsiCena: 40000, nejlepsiHmotnost: 1200, nejlepsiZlom: null },
+      },
+    };
+    const nove = ulozeniZTextu(JSON.stringify(stare));
+    expect(nove.verze).toBe(VERZE_ULOZENI);
+    // Formát 2 existoval jen s fyzikou 7: číslo zůstane, ale platí jen pro ni.
+    expect(nove.rekordy["1-01"]).toMatchObject({ nejlepsiZlom: 3.87, verzeZlomu: 7, nejlepsiCena: 31095, nejlepsiHmotnost: 914 });
+    expect(platnyZlom(nove.rekordy["1-01"], 7)).toBe(3.87);
+    expect(platnyZlom(nove.rekordy["1-01"], 8)).toBeNull();
+    expect(zastaralyZlom(nove.rekordy["1-01"], 8)).toBe(true);
+    expect(nove.rekordy["1-02"]!.verzeZlomu).toBeNull();
+    expect(zastaralyZlom(nove.rekordy["1-02"], 8)).toBe(false);
   });
 });
 
@@ -91,6 +114,7 @@ describe("rekord úrovně", () => {
       nejlepsiCena: null,
       nejlepsiHmotnost: null,
       nejlepsiZlom: null,
+      verzeZlomu: null,
     });
   });
 
@@ -108,15 +132,31 @@ describe("rekord úrovně", () => {
   it("zkouška do zlomu: únosnost na korunu se jen zvyšuje a medaile ani cenu nemění", () => {
     // Zkoušet do zlomu jde i most, který zkouškou s provozem ještě neprošel.
     const prvni = vylepsiZlom(undefined, 2.5, 3);
-    expect(prvni).toEqual({ verzeFyziky: 3, medaile: BEZ_MEDAILI, nejlepsiCena: null, nejlepsiHmotnost: null, nejlepsiZlom: 2.5 });
+    expect(prvni).toEqual({ verzeFyziky: 3, medaile: BEZ_MEDAILI, nejlepsiCena: null, nejlepsiHmotnost: null, nejlepsiZlom: 2.5, verzeZlomu: 3 });
     let rekord = vylepsiRekord(prvni, pruchod, 9000, 3, 1200);
-    rekord = vylepsiZlom(rekord, 1.9, 4);
+    rekord = vylepsiZlom(rekord, 1.9, 3);
     expect(rekord.nejlepsiZlom).toBe(2.5);
-    expect(rekord.verzeFyziky).toBe(3);
-    rekord = vylepsiZlom(rekord, 4.2, 4);
-    expect(rekord).toEqual({ verzeFyziky: 4, medaile: pruchod, nejlepsiCena: 9000, nejlepsiHmotnost: 1200, nejlepsiZlom: 4.2 });
+    rekord = vylepsiZlom(rekord, 4.2, 3);
+    expect(rekord).toEqual({ verzeFyziky: 3, medaile: pruchod, nejlepsiCena: 9000, nejlepsiHmotnost: 1200, nejlepsiZlom: 4.2, verzeZlomu: 3 });
     // Most, který neunesl nic, rekord nezakládá.
     expect(vylepsiZlom(undefined, 0, 4).nejlepsiZlom).toBeNull();
+  });
+
+  it("zkouška do zlomu: rekord změřený jinou verzí fyziky neplatí a první nové měření ho nahradí", () => {
+    let rekord = vylepsiRekord(undefined, pruchod, 9000, 3, 1200);
+    rekord = vylepsiZlom(rekord, 4.2, 3);
+    expect(platnyZlom(rekord, 3)).toBe(4.2);
+    // Po změně fyziky: číslo v uložení zůstává, ale do výzvy se nepočítá.
+    expect(platnyZlom(rekord, 4)).toBeNull();
+    expect(zastaralyZlom(rekord, 4)).toBe(true);
+    // Zkouška, která neunesla nic, starý rekord nesmaže.
+    expect(vylepsiZlom(rekord, 0, 4)).toBe(rekord);
+    // Nové měření je menší než starý rekord, a přesto platí: staré číslo by už nešlo zopakovat.
+    const novy = vylepsiZlom(rekord, 3.1, 4);
+    expect(novy).toMatchObject({ nejlepsiZlom: 3.1, verzeZlomu: 4, nejlepsiCena: 9000, medaile: pruchod });
+    expect(zastaralyZlom(novy, 4)).toBe(false);
+    // Medaile ani cena změnou fyziky nezastarávají; rekord zlomu běžná zkouška nemění.
+    expect(vylepsiRekord(rekord, pruchod, 8000, 4, 1100)).toMatchObject({ nejlepsiZlom: 4.2, verzeZlomu: 3, nejlepsiCena: 8000 });
   });
 
   it("medaile se sčítají přes pokusy a nikdy se neodebírají", () => {
