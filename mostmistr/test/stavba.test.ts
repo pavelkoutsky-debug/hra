@@ -282,7 +282,7 @@ describe("vzpěrná délka", () => {
     expect(delky[3]).toBeCloseTo(PUL, 12);
   });
 
-  it("pahýl s volným koncem ani tlumič styčník nedrží: vzpěrná délka zůstává celá", () => {
+  it("pahýl s volným koncem (ani dvojitý) ani tlumič styčník nedrží: vzpěrná délka zůstává celá", () => {
     // Svar uprostřed krokve a z něj metrový pahýl do vzduchu.
     const pahyl = vesadlo();
     pahyl.bod(2, 2, { svar: true });
@@ -294,11 +294,64 @@ describe("vzpěrná délka", () => {
     tlumic.bod(2, 2, { svar: true });
     tlumic.prut("tlumic", [2, 2], [2, 0]);
     expect(vzperne(tlumic)[2]).toBeCloseTo(2 * PUL, 12);
-    // Skutečná vzpěra do styčníku mostovky ji drží (viz test výše); lano taky, když někam vede.
-    const lano = vesadlo();
-    lano.bod(2, 2, { svar: true });
-    lano.prut("lano", [2, 2], [4, 0]);
-    expect(vzperne(lano)[2]).toBeCloseTo(PUL, 12);
+    // Pahýl ze dvou kusů (do vzduchu a ještě kousek dál) taky nikam nevede.
+    const dvojity = vesadlo();
+    dvojity.bod(2, 2, { svar: true });
+    dvojity.prut("drevo-lehke", [2, 2], [2, 3]);
+    dvojity.prut("drevo-lehke", [2, 3], [1, 4]);
+    expect(vzperne(dvojity)[2]).toBeCloseTo(2 * PUL, 12);
+  });
+
+  it("lano drží styčník jen s druhým lanem na opačné straně: samo umí jen táhnout", () => {
+    // Jedno lano z poloviny krokve dolů do mostovky: vybočení směrem k lanu nezabrání.
+    const jedno = vesadlo();
+    jedno.bod(2, 2, { svar: true });
+    jedno.prut("lano", [2, 2], [4, 0]);
+    expect(vzperne(jedno)[2]).toBeCloseTo(2 * PUL, 12);
+    // Dvě lana na stejné straně krokve taky ne.
+    const stejnaStrana = vesadlo();
+    stejnaStrana.bod(2, 2, { svar: true });
+    stejnaStrana.prut("lano", [2, 2], [4, 0]);
+    stejnaStrana.prut("lano", [2, 2], [8, 0]);
+    expect(vzperne(stejnaStrana)[2]).toBeCloseTo(2 * PUL, 12);
+    // Lano dolů do mostovky a druhé nahoru přes krokev do sloupku: táhnou proti sobě, styčník drží.
+    const obeStrany = vesadlo();
+    obeStrany.bod(2, 2, { svar: true });
+    obeStrany.prut("lano", [2, 2], [4, 0]);
+    obeStrany.prut("drevo-lehke", [4, 4], [4, 6]);
+    obeStrany.prut("drevo-lehke", [4, 6], [8, 0]);
+    obeStrany.prut("lano", [2, 2], [4, 6]);
+    const delky = vzperne(obeStrany);
+    expect(delky[2]).toBeCloseTo(PUL, 12);
+    expect(delky[3]).toBeCloseTo(PUL, 12);
+  });
+
+  it("trojúhelník přistavěný jen k řetězu ho neopře; sloupek vzpínadla ano", () => {
+    // Vzpěra z poloviny krokve do bodu, který drží jen pata téže krokve: trojúhelník se hýbe s ní.
+    const falesny = vesadlo();
+    falesny.bod(2, 2, { svar: true });
+    falesny.prut("drevo-lehke", [2, 2], [1, 3]);
+    falesny.prut("drevo-lehke", [1, 3], [0, 0]);
+    expect(vzperne(falesny)[2]).toBeCloseTo(2 * PUL, 12);
+    // Vzpínadlo: svařená mostovka 2×4 m, pod středem sloupek a z jeho paty táhla na oba konce
+    // mostovky. Sloupek střed mostovky drží, i když táhla končí na koncích téhož řetězu.
+    const vzpinadlo = new Kreslic();
+    vzpinadlo.prut("mostovka-drevo", [0, 0], [4, 0]);
+    vzpinadlo.prut("mostovka-drevo", [4, 0], [8, 0]);
+    vzpinadlo.bod(4, 0, { svar: true });
+    expect(vzperne(vzpinadlo)).toEqual([8, 8]);
+    vzpinadlo.prut("drevo-lehke", [4, 0], [4, -2]);
+    vzpinadlo.prut("drevo-lehke", [0, 0], [4, -2]);
+    vzpinadlo.prut("drevo-lehke", [4, -2], [8, 0]);
+    expect(vzperne(vzpinadlo).slice(0, 2)).toEqual([4, 4]);
+    // S jediným táhlem je pata sloupku držená jen z jedné strany: střed mostovky neopře.
+    const jednostranne = new Kreslic();
+    jednostranne.prut("mostovka-drevo", [0, 0], [4, 0]);
+    jednostranne.prut("mostovka-drevo", [4, 0], [8, 0]);
+    jednostranne.bod(4, 0, { svar: true });
+    jednostranne.prut("drevo-lehke", [4, 0], [4, -2]);
+    jednostranne.prut("drevo-lehke", [0, 0], [4, -2]);
+    expect(vzperne(jednostranne).slice(0, 2)).toEqual([8, 8]);
   });
 
   it("posuvné ložisko drží prut jen napříč svému posunu: svislý sloup do strany ne", () => {

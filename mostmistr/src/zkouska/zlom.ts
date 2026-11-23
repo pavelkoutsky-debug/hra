@@ -14,7 +14,7 @@ export const NEJDELSI_ZLOM = 60;
  * takže děj trvá déle než doba, po kterou zátěž roste. Tahle mez ho ukončí, i kdyby se most
  * přetvářel bez konce.
  */
-export const NEJDELSI_DEJ_ZLOMU = 2 * NEJDELSI_ZLOM;
+export const NEJDELSI_DEJ_ZLOMU = 3 * NEJDELSI_ZLOM;
 /** Jak dlouho po prvním porušení děj ještě běží, aby bylo vidět, co se s mostem stalo, s. */
 export const DOBEH_ZLOMU = 3;
 /** Rozteč sil, kterými se rovnoměrné zatížení na mostovku přikládá, m. */

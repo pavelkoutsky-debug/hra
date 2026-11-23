@@ -12,6 +12,13 @@ describe("čísla po česku", () => {
     expect(cislo(-6, 2)).toBe("−6,00");
   });
 
+  it("tisíce se oddělují úzkou mezerou od pěti číslic; čtyřmístné číslo zůstává vcelku", () => {
+    expect(cislo(2000, 0)).toBe("2000");
+    expect(cislo(9189.5, 1)).toBe("9189,5");
+    expect(cislo(27018, 0)).toBe("27\u202f018");
+    expect(cislo(-1234567.25, 2)).toBe("−1\u202f234\u202f567,25");
+  });
+
   it("záporná nula se píše jako nula", () => {
     expect(cislo(-0.001, 2)).toBe("0,00");
     expect(cislo(-0, 0)).toBe("0");
@@ -79,6 +86,10 @@ describe("čísla anglicky", () => {
     nastavJazyk("en");
     expect(cislo(24, 2)).toBe("24.00");
     expect(cislo(-6.5, 1)).toBe("−6.5");
+    // Tisíce odděluje čárka i u čísla s desetinnými místy a už od čtyř číslic.
+    expect(cislo(2000, 0)).toBe("2,000");
+    expect(cislo(9189.5, 1)).toBe("9,189.5");
+    expect(cislo(27018, 0)).toBe("27,018");
     expect(delka(32)).toBe("32.00 m");
     expect(vyskovaKota(2)).toBe("+2.00");
     expect(vyskovaKota(0)).toBe("0.00");

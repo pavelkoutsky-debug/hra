@@ -71,9 +71,12 @@
         <button type="button" class="tlacitko" data-akce="zvuk" data-popis="zvuk.popis" aria-pressed="true"></button>
         <button type="button" class="tlacitko lista__vazba" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/" data-text="lista.kampan"></a>
+        <!-- Telefon: Zpět a Smazat jsou v paletě pod okrajem okna, proto jsou i tady. -->
+        <button type="button" class="tlacitko tlacitko--znak lista__telefon" data-akce="zpet-rychle" data-popis="paleta.zpet.popis" data-jen="stavba">↩</button>
+        <button type="button" class="tlacitko tlacitko--znak lista__telefon" data-akce="smazat-rychle" data-popis="paleta.smazat.popis" data-jen="stavba">Del</button>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
-        <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres"></button>
+        <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres" data-kratce-text="lista.celyVykres.kratce"></button>
       </header>
 
       <div class="uroven">
@@ -142,6 +145,7 @@
             </button>
           </div>
 
+          <div class="paleta__nastaveni-obal">
           <div class="paleta__nastaveni" data-nastaveni="zavazi" hidden>
             <h2 data-text="paleta.zavazi"></h2>
             <div class="paleta__krokovac">
@@ -215,6 +219,7 @@
               <button type="button" class="paleta__tlacitko" data-akce="tlumeni-plus" data-popis="paleta.tlumeni.plus">+</button>
             </div>
           </div>
+          </div>
 
           <h2 data-text="paleta.most"></h2>
           <div class="paleta__dvojice">
@@ -240,9 +245,9 @@
 
           <div class="legenda">
             <span data-text="zkusebna.legenda.vyuziti"></span>
-            <span>0 %</span>
+            <span data-procenta="0">0 %</span>
             <span class="legenda__skala"></span>
-            <span>100 %</span>
+            <span data-procenta="1">100 %</span>
             <span><span class="legenda__cara"></span> <span data-text="zkusebna.legenda.tlak"></span></span>
             <span><span class="legenda__cara legenda__cara--tah"></span> <span data-text="zkusebna.legenda.tah"></span></span>
             <button type="button" class="legenda__prepinac" data-akce="cisla" data-popis="legenda.cisla.popis" aria-pressed="true">
@@ -295,6 +300,7 @@
 
           <section class="vysledek" hidden>
             <div class="vysledek__hlavicka">
+              <button type="button" class="tlacitko tlacitko--znak vysledek__sbalit" data-akce="vysledek-sbalit" aria-expanded="true"></button>
               <span class="vysledek__otisk" data-udaj="otisk"></span>
               <h2 data-udaj="vysledek-nadpis"></h2>
               <p data-udaj="vysledek-shrnuti"></p>
@@ -557,7 +563,7 @@
       </form>
     </dialog>
 
-    <noscript>Mostmistr potřebuje zapnutý JavaScript.</noscript>
+    <noscript>Mostmistr potřebuje zapnutý JavaScript. / Mostmistr needs JavaScript turned on.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

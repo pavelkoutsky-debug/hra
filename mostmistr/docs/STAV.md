@@ -19,18 +19,19 @@ Poslední aktualizace: 23. 11. 2026
 | M5 Železnice | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M6 Pohyblivé mosty | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M7 Režimy | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
-| M8 Doladění | Rozpracováno |
+| M8 Doladění | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
 ## Kde práce stojí (23. 11. 2026)
 
 - **M5** a **M6** jsou sloučené do `main` (pull requesty 13 a 14).
 - **M7 Režimy** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M7 — výsledek“ a „Nezávislé recenze M7“).
-- Rozpracovaný je **M8** (výkon, dotyk, angličtina; k tomu odložené věci z recenzí: úzké okno, značky kotev, nápovědy na časové ose a fyzika vzpěru a plasticity z kontroly výpočtů M7). Pak **M9** (zvuky načisto, se schválením zadavatele).
+- **M8 Doladění** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M8 — výsledek“ a „Nezávislé recenze M8“).
+- Zbývá **M9** (zvuky načisto pomocí ElevenLabs). Ten jediný čeká na zadavatele: zvuky si má poslechnout a schválit.
 
-## M8 — výsledek (rozpracováno)
+## M8 — výsledek
 
-Doladění: angličtina, dotykové ovládání a telefon, plynulost přehrávání, drobnosti odložené z recenzí M5 až M7 a oprava fyziky z kontroly výpočtů M7. Verze hry 0.14.0, verze fyziky 8.
+Doladění: angličtina, dotykové ovládání a telefon, plynulost přehrávání, drobnosti odložené z recenzí M5 až M7 a oprava fyziky z kontroly výpočtů M7. Verze hry 0.14.0, verze fyziky 8, formát uloženého postupu 3.
 
 **Angličtina** (`src/ui/slovnik-en.ts`, `src/ui/jazyk.ts`, `src/ui/formaty.ts`).
 
@@ -56,17 +57,46 @@ Doladění: angličtina, dotykové ovládání a telefon, plynulost přehráván
 - Pohyblivé mosty: pevné kotvy mají popisek podle úlohy („čep křídla“, „kotva pro píst“).
 - Časová osa: ukazatel u značky ukáže bublinu s časem a popisem (výjezd, porušení prutu, pád, zvedání mostu, loď).
 - Zadání: medaile jsou nahoře v pravém sloupci (byly pod okrajem okna).
-- Chyba importu mostu ukazuje v angličtině místo v zápisu (věty kontroly dat jsou jen česky).
+- Chyba importu mostu v angličtině říká jen, že text není most (věty kontroly dat jsou jen česky); most z novější verze hry má vlastní větu v obou jazycích.
 - Stránka správce nakreslí i most z pískoviště: údolí odhadne z mostu (rozpětí podle mostovky, hloubka podle nejnižšího styčníku), protože nastavení hráče deník nenese; odkaz vede do pískoviště.
 
 **Fyzika (verze 8)**, podle nezávislé kontroly výpočtů M7:
 
 - Plastický moment tlačeného průřezu se krátí únosností v tlaku (dřív v tahu, takže tlačená ocelobetonová mostovka byla v ohybu slabší než tažená, opak toho, co hra učí).
-- Vzpěrná délka se bere přes řetěz prutů v přímce spojených svarem bez jiné opory (dřív stačil svar uprostřed tlačeného prutu a jeho únosnost byla až dvojnásobná).
-- Zkouška do zlomu čeká se zátěží, dokud se otevírá plastický kloub: ocelobetonové pole 6 m dává 451,6 až 451,7 kN/m při zatěžování 4× až 64× rychlejším i pomalejším (ručně 451,8).
+- Vzpěrná délka se bere přes řetěz prutů v přímce spojených svarem, mezi místy, kde ho něco opravdu drží proti vybočení (dřív stačil svar uprostřed tlačeného prutu a jeho únosnost byla až dvojnásobná). Co řetěz drží a co ne, je v „Nezávislé recenze M8“.
+- Zkouška do zlomu čeká se zátěží, dokud se otevírá plastický kloub: ocelobetonové pole 6 m dává 451,6 až 451,7 kN/m při zatěžování 4× až 64× rychlejším i pomalejším (ručně 451,8). Zkoušku ukončují hodiny zátěže, ne čas děje.
 - Referenční mosty, mosty, které mají spadnout, i ukázky dopadají v běžných zkouškách stejně (vyhratelnost beze změny); změnily se únosnosti při zkoušce do zlomu (`npm run vyzvy`).
 
-**Co hotové není:** nezávislé recenze M8 a jejich zapracování, pull request.
+**Ověření:** 1 081 testů jednotek a 221 testů v prohlížeči (Chromium), obojí po zapracování recenzí. Firefox a Safari se dál nezkoušely; skutečný telefon taky ne (jen emulace mobilního zobrazení v Chromiu).
+
+### Nezávislé recenze M8 (23. 11. 2026)
+
+Tři čerství agenti bez znalosti mých závěrů: recenze kódu, hraní v angličtině a na emulovaném telefonu a tabletu (372 snímků) a nezávislá kontrola fyziky (vlastní rovinný řešič v Pythonu s velkými posuny a plastickými klouby). Kontrola fyziky potvrdila opravu plastického momentu: 20 případů (prosté, vetknuté a spojité nosníky, rámy, věšadla, vzpínadla) sedí na její výpočet do 2 %, většina do 0,3 %; všech 84 referenčních mostů má v běžné zkoušce otisk bitově stejný jako před M8 a všech 28 hodnot v `zlomy.json` přeměřila se shodou.
+
+**Zapracováno**
+
+- *Vzpěrná délka šla obejít* (fyzika, vysoká závažnost; recenze kódu totéž). Řetěz prutů ukončil jakýkoli třetí prut ve styčníku: metrový pahýl do vzduchu, tlumič nebo jedno lano zvedly únosnost sloupu o 45 až 123 %. Teď styčník řetězu drží jen podpora, která brání pohybu napříč, nosník, od jehož druhého konce se po nosnících dojde k podpoře mimo řetěz nebo k oběma koncům řetězu (vzpěra, diagonála, sloupek vzpínadla), a lana jen tehdy, když táhnou na obě strany. Pahýl (i dvojitý), tlumič, pružina, píst, jediné lano a trojúhelník přistavěný jen k řetězu ho nedrží. Referenční mosty se nezměnily (vyhratelnost i `zlomy.json` stejné), změnil se jeden otisk mostu, který má spadnout.
+- *Zkouška do zlomu končila podle času děje* (fyzika, střední; recenze kódu totéž). Hodiny zátěže po zplastizování většinu času stojí, a tak silný tvárný most skončil v 60. sekundě děje jako „vydržel“ s menší zátěží, než unese. Teď zkoušku ukončují hodiny zátěže; čas děje má jen pojistku 180 s a výsledek pak poctivě říká, že most nepovolil, ale zkouška na něj nenaložila všechno. Test: ocelobetonové pole, kterému zátěž doroste k mezi těsně před koncem, se zlomí v 61. sekundě děje při statické mezi.
+- *Rezerva mistrovského mostu 4-04* klesla prodloužením vzpěrné délky pylonu na 0,8 %: limit medaile je 57 % místo 56 % (mistrovský most 55,6 %, most pro průchod 57,9 %).
+- *Telefon na výšku* (hraní, tři chyby, které hráče zastavily). Popis osy frekvencí roztáhl stránku na 535 až 615 px: okno zadání ujelo mimo obrazovku a stránka šla odtáhnout prstem. Teď se jízdní řád a osa frekvencí vejdou (do 1100 px na vlastních řádcích), `.hra` má pojistku proti přetečení a stažení prstů mimo výkres nezvětší stránku. Výkresu zbývalo 191 px výšky, teď 345 px: lišta má dva řádky, nadpisy osy na telefonu nejsou, analýza začíná zavřená. Zpět a Smazat jsou i v liště, cíle pro prst mají 44 px, návod na první úrovni mluví o prstech.
+- *Výsledek zakrýval most i analýzu*: jde sbalit do řádku s verdiktem. Na telefonu se sbalí sám, když se hráč vrátí v čase nebo ťukne na odkaz ve výsledku, a všude tam, kde by ležel přes právě otevřený analytický panel; na konci děje se rozbalí. V širokém okně při posunu v čase zůstává (jeho tlačítka mají být po ruce).
+- *Panel zámku zakrýval panel svaru* (oba se lepily na stejné místo): nastavení drží u spodku palety jeden společný obal.
+- *Bublina časové osy*: stejné řádky se slučují, pády řad davu se sčítají („z mostu padá 12 lidí“), výjezdy se píšou jako v jízdním řádu („vyráží: útvar 24 lidí“), most bez pístu nehlásí zvedání, text se zalamuje a drží v okně, pojem je stejný jako ve výsledku (posuvná podpora). Ukáže se i nad čárkami výjezdů a po ťuknutí prstem (zůstane 3 s).
+- *Dotyk*: nástroj, který stiskem hned jedná (svar, zámek, závaží, budič, výběr prutu při zkoušce), čeká na zvednutí prstu; druhý prst položený po prodlevě už nic nepřepne (test s 320 ms).
+- *Angličtina*: chyba importu bez české cesty, titulek zkušebny, odkazy na české stránky označené „(Czech only)“, procenta bez mezery i v legendě, tisíce oddělené i v číslech s desetinnými místy, `<noscript>` v obou jazycích, 30 formulací podle tabulky testera (například „Edit bridge“ všude stejně, „cylinder“ místo „piston“, „gold at 31,100 Kč or less“). Česky „Na druhý břeh se dostalo 0 z 3“ místo „Přejelo 0 z 3“ u chodců.
+- *Jazyk bez paměti prohlížeče* nešel přepnout: volbu teď nese adresa a odkazy ji předávají dál. Deník hraní zapisuje jazyk hry („en/de-DE“) a přepnutí jazyka.
+- *Rekord únosnosti na korunu přežil změnu fyziky* (prahy se přeměřily, rekord ne): formát uložení 3 si u rekordu pamatuje verzi fyziky a rekord změřený jinou verzí neplatí; hráč se to dozví u výzvy.
+- *Drobnosti*: popisky „mělká/hluboká kotva pro píst“, jednotky v nadpisech grafů malými písmeny, plný text položky jízdního řádu v bublině a posun řádu kolečkem, tlačítko Přehrát/Pauza drží šířku, dvojice tlačítek v úzké paletě nepřetékají, uložená vrstva výkresu má v klíči hustotu pixelů a po zkoušce se uvolní.
+
+**Nezapracováno, a proč**
+
+- *Posudek ukazuje u tlačeného tvárného prutu přes 100 % dřív, než vznikne kloub* (fyzika, nízká): posudek násobí moment, který už druhý řád obsahuje. Je to na bezpečné straně a únosnost je správně (rozhoduje kloub); změna posudku by pohnula využitím všech ocelových mostů a limity mistrovských medailí by se musely ladit znovu. Zapsáno jako známá nepřesnost zobrazení.
+- *Imperfekce tlačených prutů a kritická síla z vlastního čísla celé konstrukce* (fyzika, doporučení): pravidlo vzpěrné délky zůstává pravidlem podle grafu. Trojúhelník přistavěný k půlce sloupu se nepočítá vůbec, ačkoli sloup ve skutečnosti asi o dvě třetiny zpevní; je to opatrná strana.
+- *Rezervy 6-03* (průchod 98,5 %, rozpočet 98,7 % využití): mosty procházejí a výpočet je bitově opakovatelný; přestavba referenčních mostů kvůli rezervě se nedělala.
+- *Zkouška do zlomu trvá u tvárných mostů až dvakrát déle* (6-04: 18 → 34 s): zrychlené přehrávání úseku se stojícími hodinami se nedělalo.
+- *Číslo se v zadání může odtrhnout od jednotky* („nejvýš 1,6 / m/s²“): v paletě opraveno, v textech zadání ne; nezlomitelné mezery ve všech větách by změnily asi 200 očekávání v testech.
+- *Tři různé „rozpočty“ v zadání, pořadí oddílů zadání, drobné popisky při velkém oddálení na telefonu* (hraní): ponecháno.
+- *Skutečný telefon a tablet, Firefox, Safari*: nezkoušeno, jen emulace v Chromiu.
 
 ## M7 — výsledek
 
@@ -920,7 +950,7 @@ Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadav
 
 ## Další krok
 
-M8 Doladění (výkon, dotykové ovládání, angličtina a odložené drobnosti z recenzí M5 až M7), s interními testy a nezávislou recenzí. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs a schvaluje je zadavatel.
+M9: zvuky načisto pomocí ElevenLabs. Připravím ukázky zvuků k poslechu a zadavatel vybere; do té doby zůstávají pracovní zvuky ze syntezátoru.
 
 ## Zpětná vazba zadavatele
 
@@ -964,4 +994,4 @@ M8 Doladění (výkon, dotykové ovládání, angličtina a odložené drobnosti
 | 5 | Ztráta kroku (M3b): budicí síla člověka slábne, když se mostovka pod ním houpe víc než 2,5 m/s²; nad 6 m/s² z ní zbývá čtvrtina. Mění se kmitání mostů, které se rozhoupaly přes mez (nízká příhrada úrovně 2-03 bez závaží: 5,51 → 4,16 m/s², dál neprojde). Ve výsledku se lidé počítají po jednom, ne po řadách. Otisky referenčních mostů ani to, která referenční řešení projdou, se nezměnily. |
 | 6 | Vlastní tíha po délce prutu (M5): tíha prvku působí jako spojité zatížení, ne jen ve styčnících; podporové momenty spojitých nosníků jsou správně. Mění se otisky všech referenčních mostů; pořadí medailí zůstalo. |
 | 7 | Opravy po kontrole fyziky M5: mostovka silnice a koleje se dělí vždy aspoň na dva díly, brzdná a tažná síla nabíhá plynule, přenos tíhy mezi nápravami při brzdění splňuje rovnováhu momentů. Mění se výsledky úrovní s vlakem a s brzděním. |
-| 8 | Vzpěr a plasticita podle nezávislé kontroly výpočtů M7 (M8). Plastický moment se v tlaku krátí únosností průřezu v tlaku, ne v tahu: tlačená ocelobetonová mostovka je v ohybu únosnější (při zkoušce do zlomu 3-03 +26 %, 4-01 +30 %, 6-04 +15 %). Vzpěrná délka se bere přes celý řetěz prutů, které ve svaru pokračují v přímce a nejsou tam ničím podepřené (pilíře nad sebou i bez svaru): svar uprostřed tlačeného prutu už jeho únosnost nezvedne (visutý most 4-04 při zkoušce do zlomu −11 %, pylon je jeden sloup). Zkouška do zlomu nezvyšuje zátěž, dokud přibývá plastická práce: tvárné porušení dává statickou mez nezávisle na rychlosti. Výsledky běžných zkoušek referenčních mostů, mostů, které mají spadnout, ani ukázek se nezměnily (vyhratelnost i otisky kromě scénáře zkoušky do zlomu jsou stejné). |
+| 8 | Vzpěr a plasticita podle nezávislé kontroly výpočtů M7 (M8). Plastický moment se v tlaku krátí únosností průřezu v tlaku, ne v tahu: tlačená ocelobetonová mostovka je v ohybu únosnější (při zkoušce do zlomu 3-03 +26 %, 4-01 +30 %, 6-04 +15 %). Vzpěrná délka se bere přes celý řetěz prutů, které ve svaru pokračují v přímce a nejsou tam ničím podepřené (pilíře nad sebou i bez svaru): svar uprostřed tlačeného prutu už jeho únosnost nezvedne (visutý most 4-04 při zkoušce do zlomu −11 %, pylon je jeden sloup). Zkouška do zlomu nezvyšuje zátěž, dokud přibývá plastická práce: tvárné porušení dává statickou mez nezávisle na rychlosti. Výsledky běžných zkoušek referenčních mostů, mostů, které mají spadnout, ani ukázek se nezměnily (vyhratelnost i otisky kromě scénáře zkoušky do zlomu jsou stejné). Po nezávislé kontrole M8 (ještě před vydáním verze 8): řetěz drží jen skutečná opora (ne pahýl, tlumič ani jediné lano) a zkoušku do zlomu ukončují hodiny zátěže, ne čas děje. |

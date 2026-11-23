@@ -1,6 +1,7 @@
 // Deník hraní napojený na prohlížeč: paměť, síť, pravidelné odesílání, odeslání při zavření
 // stránky a zápis chyb, které prohlížeč ohlásí. Jedna stránka má jeden deník.
 
+import { aktualniJazyk } from "../ui/slovnik";
 import { Denik, KLIC_ZAZNAMU, type PametDeniku, type VysledekOdeslani } from "./denik";
 
 function pamet(ktera: "localStorage" | "sessionStorage"): PametDeniku | null {
@@ -141,7 +142,8 @@ export function denikHry(): Denik {
     },
     hra: __VERZE_HRY__,
     sestaveni: __OTISK_SESTAVENI__,
-    jazyk: (navigator.language || "").slice(0, 20),
+    // Jazyk hry a za lomítkem jazyk prohlížeče („en/de-DE“): hráč si jazyk může přepnout.
+    jazyk: `${aktualniJazyk()}/${navigator.language || ""}`.slice(0, 20),
     okno: [window.innerWidth, window.innerHeight],
     dotyk: window.matchMedia?.("(pointer: coarse)").matches ?? false,
   });

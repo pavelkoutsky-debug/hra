@@ -130,13 +130,20 @@ function jeNosnik(prvek: IdPrvku): boolean {
 
 /**
  * Vzpěrná délka každého prutu návrhu v metrech. Prut, který ve styčníku tuze pokračuje dalším
- * prutem ve stejné přímce a nic dalšího ho tam nedrží, je s ním jeden průběžný prut: vybočí
- * celý, a proto se počítá celá délka řetězu. Bez toho by svar uprostřed tlačeného prutu jeho
- * vzpěrnou délku rozpůlil a únosnost zčtyřnásobil, ačkoli na mostě nic nepřibylo.
+ * prutem ve stejné přímce, je s ním jeden průběžný prut (řetěz): vybočí celý, a proto se
+ * počítá délka mezi místy, kde ho něco drží proti vybočení. Bez toho by svar uprostřed
+ * tlačeného prutu jeho vzpěrnou délku rozpůlil a únosnost zčtyřnásobil, ačkoli na mostě nic
+ * nepřibylo.
  *
- * Styčník drží podpora, která brání pohybu napříč prutem, nebo další prut, který někam vede.
- * Nedrží ho pahýl s volným koncem, tlumič ani pružina (nemají tuhost, o kterou by se prut
- * opřel). Souřadnice styčníků jsou celá čísla, takže test přímky je přesný.
+ * Styčník řetězu drží:
+ * - podpora, která brání pohybu napříč prutem;
+ * - prut (nosník), od jehož druhého konce se po nosnících dojde k podpoře mimo řetěz nebo
+ *   k oběma koncům řetězu (vzpěra, diagonála příhrady, sloupek vzpínadla), aniž se projde
+ *   vnitřním styčníkem řetězu;
+ * - lana, když takhle zakotvená táhnou na obě strany od řetězu (lano umí jen táhnout).
+ * Nedrží ho pahýl s volným koncem (jakkoli dlouhý), tlumič, pružina, píst, jediné lano ani
+ * trojúhelník přistavěný jen k řetězu samotnému. Souřadnice styčníků jsou celá čísla, takže
+ * test přímky je přesný.
  */
 function vzperneDelky(
   navrh: NavrhMostu,
@@ -156,63 +163,129 @@ function vzperneDelky(
     veStycniku[a]?.push(cislo);
     veStycniku[b]?.push(cislo);
   });
-  /** Vede prut `cislo` ze styčníku `odkud` někam, kde je o co se opřít (další prut nebo podpora)? */
-  const nekamVede = (cislo: number, odkud: number): boolean => {
-    const druh = KATALOG[navrh.pruty[cislo]!.prvek].druh;
-    if (druh === "tlumic" || druh === "pruzina") return false;
+  const druhyKonec = (cislo: number, odkud: number): number => {
     const [a, b] = konce[cislo]!;
-    const druhy = a === odkud ? b : a;
-    const st = stycniky[druhy];
-    if (!st) return false;
-    return (veStycniku[druhy]?.length ?? 0) >= 2 || st.pevneX === true || st.pevneY === true;
+    return a === odkud ? b : a;
   };
+  const podepreny = (stycnik: number): boolean => stycniky[stycnik]?.pevneX === true || stycniky[stycnik]?.pevneY === true;
+
   /** Prut, kterým prut `cislo` za svým koncem `konec` tuze a v přímce pokračuje; −1, když žádný. */
   const pokracovani = (cislo: number, konec: number): number => {
     const st = stycniky[konec];
-    const [a1, b1] = konce[cislo]!;
-    const odkud = stycniky[a1 === konec ? b1 : a1];
+    const odkud = stycniky[druhyKonec(cislo, konec)];
     if (!st || !odkud) return -1;
     const ux = st.x - odkud.x;
     const uy = st.y - odkud.y;
-    // Podpora prut drží, když brání pohybu napříč: svislý prut posuvné ložisko do strany nedrží.
-    if ((st.pevneX === true && uy !== 0) || (st.pevneY === true && ux !== 0)) return -1;
     const prvni = navrh.pruty[cislo]!;
-    let dalsi = -1;
     for (const q of veStycniku[konec] ?? []) {
       if (q === cislo) continue;
       const druhy = navrh.pruty[q]!;
-      const [a2, b2] = konce[q]!;
-      const kam = stycniky[a2 === konec ? b2 : a2];
+      const kam = stycniky[druhyKonec(q, konec)];
       // Tuhý spoj je svar; betonové pilíře nad sebou jsou monolit i bez něj.
       const monolit = KATALOG[prvni.prvek].druh === "pilir" && KATALOG[druhy.prvek].druh === "pilir";
-      if (kam && jeNosnik(druhy.prvek) && (tuhy[konec] || monolit)) {
-        const vx = kam.x - st.x;
-        const vy = kam.y - st.y;
-        // Stejná přímka (nulový vektorový součin) a stejný směr (kladný skalární): pokračování.
-        if (ux * vy - uy * vx === 0 && ux * vx + uy * vy > 0) {
-          dalsi = q;
-          continue;
-        }
-      }
-      // Cokoli jiného, co někam vede, styčník drží a řetěz tu končí.
-      if (nekamVede(q, konec)) return -1;
+      if (!kam || !jeNosnik(druhy.prvek) || !(tuhy[konec] || monolit)) continue;
+      const vx = kam.x - st.x;
+      const vy = kam.y - st.y;
+      // Stejná přímka (nulový vektorový součin) a stejný směr (kladný skalární): pokračování.
+      if (ux * vy - uy * vx === 0 && ux * vx + uy * vy > 0) return q;
     }
-    return dalsi;
+    return -1;
   };
+
+  /**
+   * Je styčník `start` zakotvený nezávisle na řetězu? Jde se po nosnících (s `sLany` i po
+   * lanech); vnitřními styčníky řetězu se neprochází a jeho konce jsou konečná: stačí dojít
+   * k podpoře mimo řetěz, nebo k oběma koncům řetězu.
+   */
+  const zakotveny = (start: number, vnitrni: ReadonlySet<number>, konecA: number, konecB: number, sLany: boolean): boolean => {
+    if (vnitrni.has(start)) return false;
+    const videne = new Set<number>([start]);
+    const fronta = [start];
+    let uA = false;
+    let uB = false;
+    while (fronta.length > 0) {
+      const j = fronta.pop()!;
+      if (j === konecA || j === konecB) {
+        if (j === konecA) uA = true;
+        if (j === konecB) uB = true;
+        if (uA && uB) return true;
+        continue;
+      }
+      if (podepreny(j)) return true;
+      for (const q of veStycniku[j] ?? []) {
+        const prvek = navrh.pruty[q]!.prvek;
+        if (!jeNosnik(prvek) && !(sLany && KATALOG[prvek].druh === "lano")) continue;
+        const dalsi = druhyKonec(q, j);
+        if (dalsi < 0 || vnitrni.has(dalsi) || videne.has(dalsi)) continue;
+        videne.add(dalsi);
+        fronta.push(dalsi);
+      }
+    }
+    return false;
+  };
+
   return navrh.pruty.map((prut, cislo) => {
-    let delka = delky[cislo]!;
-    if (!jeNosnik(prut.prvek)) return delka;
-    for (const start of konce[cislo]!) {
+    const vlastni = delky[cislo]!;
+    if (!jeNosnik(prut.prvek)) return vlastni;
+    // Celý řetěz, do kterého prut patří: na každou stranu, dokud tuze a v přímce pokračuje.
+    const [a, b] = konce[cislo]!;
+    const strana = (start: number): { stycnik: number; prut: number }[] => {
+      const cesta: { stycnik: number; prut: number }[] = [];
       let soucasny = cislo;
       let konec = start;
       // Řetěz v přímce nemá kam zatočit; pojistka jen proti poškozeným datům.
       for (let krok = 0; krok < navrh.pruty.length; krok++) {
         const dalsi = pokracovani(soucasny, konec);
         if (dalsi < 0) break;
-        delka += delky[dalsi]!;
-        const [a, b] = konce[dalsi]!;
-        konec = a === konec ? b : a;
+        cesta.push({ stycnik: konec, prut: dalsi });
+        konec = druhyKonec(dalsi, konec);
         soucasny = dalsi;
+      }
+      return cesta;
+    };
+    const kA = strana(a);
+    const kB = strana(b);
+    if (kA.length === 0 && kB.length === 0) return vlastni;
+    const prutyRetezu = new Set<number>([cislo]);
+    const vnitrni = new Set<number>();
+    for (const krok of [...kA, ...kB]) {
+      prutyRetezu.add(krok.prut);
+      vnitrni.add(krok.stycnik);
+    }
+    const konecA = kA.length > 0 ? druhyKonec(kA.at(-1)!.prut, kA.at(-1)!.stycnik) : a;
+    const konecB = kB.length > 0 ? druhyKonec(kB.at(-1)!.prut, kB.at(-1)!.stycnik) : b;
+    const sa = stycniky[a]!;
+    const sb = stycniky[b]!;
+    const ux = sb.x - sa.x;
+    const uy = sb.y - sa.y;
+    /** Drží vnitřní styčník řetězu něco proti vybočení napříč prutem? */
+    const drzi = (j: number): boolean => {
+      const st = stycniky[j]!;
+      // Podpora drží, když brání pohybu napříč: svislý prut posuvné ložisko do strany nedrží.
+      if ((st.pevneX === true && uy !== 0) || (st.pevneY === true && ux !== 0)) return true;
+      let vlevo = false;
+      let vpravo = false;
+      for (const q of veStycniku[j] ?? []) {
+        if (prutyRetezu.has(q)) continue;
+        const prvek = navrh.pruty[q]!.prvek;
+        const kam = druhyKonec(q, j);
+        if (kam < 0) continue;
+        if (jeNosnik(prvek)) {
+          if (zakotveny(kam, vnitrni, konecA, konecB, false)) return true;
+        } else if (KATALOG[prvek].druh === "lano" && zakotveny(kam, vnitrni, konecA, konecB, true)) {
+          const k = stycniky[kam]!;
+          const strana = ux * (k.y - st.y) - uy * (k.x - st.x);
+          if (strana > 0) vlevo = true;
+          else if (strana < 0) vpravo = true;
+        }
+      }
+      return vlevo && vpravo;
+    };
+    let delka = vlastni;
+    for (const cesta of [kA, kB]) {
+      for (const krok of cesta) {
+        if (drzi(krok.stycnik)) break;
+        delka += delky[krok.prut]!;
       }
     }
     return delka;

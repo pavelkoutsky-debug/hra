@@ -7,11 +7,21 @@ const MINUS = "−";
 
 const anglicky = (): boolean => aktualniJazyk() === "en";
 
+/**
+ * Oddělí tisíce v celé části čísla. Anglicky čárkou vždy (1,000), česky úzkou nedělitelnou
+ * mezerou od pěti číslic (27 018; čtyřmístné číslo se česky smí psát dohromady).
+ */
+function seskupTisice(cela: string): string {
+  if (anglicky()) return cela.replace(/\B(?=(\d{3})+$)/g, ",");
+  return cela.length < 5 ? cela : cela.replace(/\B(?=(\d{3})+$)/g, "\u202f");
+}
+
 export function cislo(hodnota: number, mist: number): string {
   // −0,00 nechceme; zaokrouhlená nula je prostě nula.
   const zaokrouhlene = Number(hodnota.toFixed(mist));
-  const zapis = Math.abs(zaokrouhlene).toFixed(mist);
-  return (zaokrouhlene < 0 ? MINUS : "") + (anglicky() ? zapis : zapis.replace(".", ","));
+  const [cela = "0", desetinna] = Math.abs(zaokrouhlene).toFixed(mist).split(".");
+  const zapis = desetinna === undefined ? seskupTisice(cela) : `${seskupTisice(cela)}${anglicky() ? "." : ","}${desetinna}`;
+  return (zaokrouhlene < 0 ? MINUS : "") + zapis;
 }
 
 export function delka(metry: number): string {

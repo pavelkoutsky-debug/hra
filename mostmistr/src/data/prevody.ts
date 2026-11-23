@@ -20,6 +20,7 @@ export function prevedNaAktualni(
     throw new ChybaDat(
       `${cesta}.verze`,
       `formát verze ${verze} je novější, než tato verze hry umí (${aktualni})`,
+      "novejsi-verze",
     );
   }
   while (verze < aktualni) {

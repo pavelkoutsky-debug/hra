@@ -162,7 +162,7 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(prvky).toHaveLength(4);
     expect(await stranka.locator('[data-prvek="tlumic"]').innerText()).toContain("Tlumič");
     expect(prvky[3]).toContain("Závaží");
-    expect(prvky[3]).toContain("10\u00a0Kč/kg · do 2000 kg");
+    expect(prvky[3]).toContain("10\u00a0Kč/kg · do\u00a02000\u00a0kg");
     expect(await udaj("zadani-stavba")).toContain("Závaží do styčníku: 10\u00a0Kč za kilogram, nejvýš 2000 kg");
     // Brnknutí je vidět i bez mostu a poradí, co mu chybí.
     expect(await akce("brnknout").isDisabled()).toBe(false);

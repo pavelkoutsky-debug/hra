@@ -90,7 +90,8 @@ export function nakresliVrsekVykresu(ctx: Kontext, s: StavVykresu): void {
 function nakresliPopiskyKotev(ctx: Kontext, s: StavVykresu): void {
   const m = s.kamera.meritko;
   const hlavni = s.uroven.trasy[0];
-  if (m < 8 || !hlavni) return;
+  // Při malém měřítku (telefon naležato) by se popisky kotev tři metry pod sebou překrývaly.
+  if (m < 12 || !hlavni) return;
   const stred = (hlavni.zacatek.x + hlavni.konec.x) / 2;
   const naKonciTrasy = (kotva: Kotva): boolean =>
     s.uroven.trasy.some(
@@ -99,10 +100,19 @@ function nakresliPopiskyKotev(ctx: Kontext, s: StavVykresu): void {
     );
   ctx.font = `10px ${PISMO}`;
   ctx.textBaseline = "middle";
+  // Dvě kotvy pro píst na stejném břehu rozlišuje zadání jako mělkou a hlubokou; popisek taky.
+  const proPist = s.uroven.kotvy.filter((kotva) => kotva.typ === "pevna" && !naKonciTrasy(kotva));
+  const nazevKotvyPistu = (kotva: Kotva): string => {
+    const naBrehu = proPist.filter((jina) => jina.x <= stred === kotva.x <= stred);
+    if (naBrehu.length < 2) return t("vykres.kotvaPist");
+    if (naBrehu.every((jina) => jina.y <= kotva.y)) return t("vykres.kotvaPist.melka");
+    if (naBrehu.every((jina) => jina.y >= kotva.y)) return t("vykres.kotvaPist.hluboka");
+    return t("vykres.kotvaPist");
+  };
   for (const kotva of s.uroven.kotvy) {
     if (kotva.typ !== "pevna") continue;
     const cep = naKonciTrasy(kotva);
-    const text = t(cep ? "vykres.kotvaCep" : "vykres.kotvaPist");
+    const text = cep ? t("vykres.kotvaCep") : nazevKotvyPistu(kotva);
     const p = svetNaObraz(s.kamera, s.rozmer, kotva);
     const vlevo = kotva.x <= stred;
     const odstup = mezi(0.55 * m, 9, 22) + 8;

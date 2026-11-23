@@ -223,6 +223,35 @@ describe("jazyk hry", () => {
     await kontext.close();
   });
 
+  it("bez paměti prohlížeče drží zvolený jazyk adresa a odkazy ho nesou dál", async () => {
+    const { kontext, stranka } = await novyHrac("cs-CZ");
+    // Prohlížeč, který stránce paměť nedovolí (přísné soukromí): každý přístup vyhodí chybu.
+    await kontext.addInitScript(() => {
+      for (const jmeno of ["localStorage", "sessionStorage"] as const) {
+        Object.defineProperty(window, jmeno, {
+          get() {
+            throw new DOMException("zakázáno", "SecurityError");
+          },
+        });
+      }
+    });
+    await stranka.goto(adresa);
+    await stranka.locator(".karta").first().waitFor();
+    expect(await stranka.locator("html").getAttribute("lang")).toBe("cs");
+    await stranka.locator('#obrazovka-prehled [data-akce="jazyk"]').click();
+    await stranka.waitForURL(/jazyk=en/);
+    await stranka.locator(".karta").first().waitFor();
+    expect(await stranka.locator("html").getAttribute("lang")).toBe("en");
+    // Odkaz na úroveň jazyk ponese; bez toho by se hra na další stránce vrátila k češtině.
+    await stranka.locator('.karta[data-uroven="1-01"] a.karta__obal').click();
+    await stranka.waitForURL(/uroven=1-01/);
+    expect(new URL(stranka.url()).searchParams.get("jazyk")).toBe("en");
+    await stranka.locator(PLATNO).waitFor();
+    expect(await stranka.locator("html").getAttribute("lang")).toBe("en");
+    expect(await stranka.locator('#okno-zadani[open] button[value="zavrit"]').innerText()).toBe(EN["zadani.zacit"]);
+    await kontext.close();
+  });
+
   it("prohlížeč při přepínání jazyka nehlásil žádnou chybu", () => {
     expect(chyby).toEqual([]);
   });

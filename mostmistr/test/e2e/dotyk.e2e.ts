@@ -6,6 +6,7 @@ import { chromium, type Browser, type BrowserContext, type CDPSession, type Page
 import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
+import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
 
@@ -192,6 +193,53 @@ describe("dotykové ovládání výkresu", () => {
     expect(await pocetPrutu()).toBe(2);
   });
 
+  it("nástroj, který stiskem hned jedná (svar), počká na zvednutí prstu: druhý prst po prodlevě nic nepřepne", async () => {
+    await stranka.goto(`${adresa}?uroven=4-02&zaznam=vypnout`);
+    await stranka.locator(PLATNO).waitFor();
+    await stranka.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+    const reseni = RESENI["4-02"]!.pruchod;
+    await stranka.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
+    await stranka.locator("#okno-obsah").fill(navrhNaText(reseni));
+    await stranka.locator('[data-akce="okno-nacist"]').tap();
+    await stranka.locator('[data-akce="cely-vykres"]').tap();
+    await snimek();
+    await stranka.locator('#obrazovka-uroven .paleta [data-pridavek="svar"]').tap();
+    const cena = (): Promise<string> => stranka.locator('[data-udaj="rozpocet"]').innerText();
+    const pred = await cena();
+    // Styčník, do kterého vedou aspoň dva pruty: tam jde svar přepnout.
+    const pocty = new Map<number, number>();
+    for (const prut of reseni.pruty) for (const id of [prut.a, prut.b]) pocty.set(id, (pocty.get(id) ?? 0) + 1);
+    const stycnik = reseni.stycniky.find((st) => (pocty.get(st.id) ?? 0) >= 2)!;
+    let misto = await bodSveta(stycnik.x, stycnik.y);
+
+    // Prst na styčníku, po chvíli (déle než prodleva dotyku) druhý prst a posun: gesto, ne svar.
+    const kameraPred = await kamera();
+    const prvni = { ...misto, id: 1 };
+    const druhy = { x: misto.x + 120, y: misto.y + 40, id: 2 };
+    await dotyk("touchStart", [prvni]);
+    await stranka.waitForTimeout(320);
+    await dotyk("touchStart", [prvni, druhy]);
+    await dotyk("touchMove", [
+      { ...prvni, x: prvni.x + 30 },
+      { ...druhy, x: druhy.x + 30 },
+    ]);
+    await dotyk("touchMove", [
+      { ...prvni, x: prvni.x + 60 },
+      { ...druhy, x: druhy.x + 60 },
+    ]);
+    await dotyk("touchEnd", []);
+    await snimek();
+    expect(await cena()).toBe(pred);
+    expect((await kamera()).x).not.toBe(kameraPred.x);
+
+    // Obyčejné ťuknutí svar přepne (cena mostu se změní).
+    misto = await bodSveta(stycnik.x, stycnik.y);
+    await dotyk("touchStart", [{ ...misto, id: 1 }]);
+    await dotyk("touchEnd", []);
+    await snimek();
+    expect(await cena()).not.toBe(pred);
+  }, 60_000);
+
   it("ve zkušebně jeden prst výkres posouvá", async () => {
     await stranka.goto(`${adresa}zkusebna.html`);
     const platno = stranka.locator("canvas.vykres__platno");
@@ -263,6 +311,88 @@ describe("dotykové ovládání výkresu", () => {
     await telefon.close();
   }, 200_000);
 
+  it("na telefonu a tabletu se žádná úroveň ani pískoviště nerozlije do šířky, česky ani anglicky", async () => {
+    const urovne = [...nactiKampan().map((u) => `?uroven=${u.id}`), "?sandbox"];
+    const preteklo: string[] = [];
+    for (const okno of [
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+    ]) {
+      const k = await prohlizec.newContext({ locale: "cs-CZ", viewport: okno, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+      const s = await k.newPage();
+      s.on("pageerror", (chyba) => chyby.push(chyba.message));
+      for (const jazyk of ["cs", "en"]) {
+        for (const uroven of urovne) {
+          await s.goto(`${adresa}${uroven}&jazyk=${jazyk}&zaznam=vypnout`);
+          await s.locator(PLATNO).waitFor();
+          const sirka = (): Promise<number> => s.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+          // Se zadáním i bez něj; tlačítko zadání musí být v okně, jinak ho hráč nezavře.
+          const zavrit = s.locator('#okno-zadani[open] button[value="zavrit"]');
+          if ((await zavrit.count()) > 0) {
+            const o = (await zavrit.boundingBox())!;
+            if ((await sirka()) > 0 || o.x < 0 || o.x + o.width > okno.width + 0.5 || o.y + o.height > okno.height + 0.5) {
+              preteklo.push(`${okno.width} ${jazyk} ${uroven} (zadání)`);
+            }
+            await zavrit.tap();
+          }
+          if ((await sirka()) > 0) preteklo.push(`${okno.width} ${jazyk} ${uroven}`);
+          const platno = (await s.locator(PLATNO).boundingBox())!;
+          // Na telefonu musí výkresu zbýt aspoň třetina výšky obrazovky.
+          if (platno.height < okno.height / 3) preteklo.push(`${okno.width} ${jazyk} ${uroven}: výkres jen ${Math.round(platno.height)} px`);
+        }
+      }
+      await k.close();
+    }
+    expect(preteklo).toEqual([]);
+  }, 300_000);
+
+  it("telefon: výsledek jde sbalit, odkaz na porušení ho sbalí sám a Zpět i Smazat jsou v liště", async () => {
+    const telefon = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+    const s = await telefon.newPage();
+    s.on("pageerror", (chyba) => chyby.push(chyba.message));
+    await s.goto(`${adresa}?uroven=1-01&zaznam=vypnout`);
+    await s.locator(PLATNO).waitFor();
+    // Návod k ovládání mluví o prstech, ne o myši a mezerníku.
+    expect(await s.locator('[data-udaj="zadani-ovladani"]').innerText()).toContain("tažením prstu");
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+    const zpet = s.locator('#obrazovka-uroven .lista [data-akce="zpet-rychle"]');
+    const smazat = s.locator('#obrazovka-uroven .lista [data-akce="smazat-rychle"]');
+    expect(await zpet.isVisible()).toBe(true);
+    expect(await smazat.isVisible()).toBe(true);
+    expect(await zpet.isEnabled()).toBe(false);
+    // Referenční most: zkouškou projde a výsledek se ukáže na konci přehrávání.
+    await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
+    await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
+    await s.locator('[data-akce="okno-nacist"]').tap();
+    expect(await zpet.isEnabled()).toBe(true);
+    await s.locator('#obrazovka-uroven [data-akce="zkouska"]').tap();
+    await s.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
+    await s.locator('[data-akce="na-konec"]').tap();
+    const vysledek = s.locator(".vysledek");
+    await vysledek.waitFor({ state: "visible" });
+    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ne");
+    const cely = (await vysledek.boundingBox())!;
+    // Krok zpět v čase výsledek sbalí do řádku: je vidět most.
+    await s.locator('[data-akce="krok-zpet"]').tap();
+    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ano");
+    const sbaleny = (await vysledek.boundingBox())!;
+    // Řádek s verdiktem a tlačítkem pro prst (44 px) s okrajem.
+    expect(sbaleny.height).toBeLessThan(72);
+    expect(sbaleny.height).toBeLessThan(cely.height / 3);
+    expect(await s.locator('[data-udaj="vysledek-nadpis"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-akce="upravit"]').isVisible()).toBe(false);
+    await s.screenshot({ path: `${SLOZKA}/telefon-vysledek-sbaleny.png` });
+    // Tlačítko v řádku ho zase rozbalí; skok na konec taky.
+    await s.locator('[data-akce="vysledek-sbalit"]').tap();
+    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ne");
+    await s.locator('[data-akce="vysledek-sbalit"]').tap();
+    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ano");
+    await s.locator('[data-akce="na-konec"]').tap();
+    expect(await vysledek.getAttribute("data-sbaleno")).toBe("ne");
+    expect(await s.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    await telefon.close();
+  }, 200_000);
+
   it("v okně širokém 1000 px se do lišty vejdou všechna tlačítka a táhlo času neuteče", async () => {
     const uzke = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1000, height: 700 }, deviceScaleFactor: 1 });
     const s = await uzke.newPage();
@@ -288,6 +418,54 @@ describe("dotykové ovládání výkresu", () => {
     expect(await s.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
     await uzke.close();
   }, 200_000);
+
+  it("v nízkém okně jsou nastavení svaru a zámku vybraného styčníku pod sebou, ne přes sebe", async () => {
+    const nizke = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1100, height: 700 }, deviceScaleFactor: 1 });
+    const s = await nizke.newPage();
+    s.on("pageerror", (chyba) => chyby.push(chyba.message));
+    await s.goto(`${adresa}?uroven=7-01&zaznam=vypnout`);
+    await s.locator(PLATNO).waitFor();
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    const reseni = RESENI["7-01"]!.pruchod;
+    await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').click();
+    await s.locator("#okno-obsah").fill(navrhNaText(reseni));
+    await s.locator('[data-akce="okno-nacist"]').click();
+    await s.locator('[data-akce="cely-vykres"]').click();
+    await s.locator('#obrazovka-uroven .paleta [data-akce="vyber"]').click();
+    const svar = s.locator('#obrazovka-uroven [data-nastaveni="svar"]');
+    const zamek = s.locator('#obrazovka-uroven [data-nastaveni="zamek"]');
+    // Svařený styčník, který smí dostat i zámek: ukáže obě nastavení najednou.
+    let oba = false;
+    for (const st of reseni.stycniky.filter((k) => k.svar)) {
+      const misto = await s.evaluate(
+        ([sx, sy]) => {
+          const platno = document.querySelector<HTMLCanvasElement>("#obrazovka-uroven canvas.vykres__platno")!;
+          const [kx, ky, m] = platno.dataset.kamera!.split(";").map(Number) as [number, number, number];
+          const o = platno.getBoundingClientRect();
+          return { x: o.left + o.width / 2 + (sx! - kx) * m, y: o.top + o.height / 2 - (sy! - ky) * m };
+        },
+        [st.x, st.y],
+      );
+      await s.mouse.click(misto.x, misto.y);
+      if ((await svar.isVisible()) && (await zamek.isVisible())) {
+        oba = true;
+        break;
+      }
+    }
+    expect(oba).toBe(true);
+    const a = (await svar.boundingBox())!;
+    const b = (await zamek.boundingBox())!;
+    // Leží pod sebou a oba celé v okně: jedno nezakrývá druhé.
+    expect(Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)).toBeLessThanOrEqual(0.5);
+    for (const o of [a, b]) {
+      expect(o.y).toBeGreaterThanOrEqual(0);
+      expect(o.y + o.height).toBeLessThanOrEqual(700.5);
+    }
+    expect(await s.locator('[data-akce="svar-prepnout"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-akce="zamek-prepnout"]').isVisible()).toBe(true);
+    await s.screenshot({ path: `${SLOZKA}/nizke-okno-svar-a-zamek.png` });
+    await nizke.close();
+  }, 60_000);
 
   it("prohlížeč při dotykovém ovládání nehlásil žádnou chybu", () => {
     expect(chyby).toEqual([]);
