@@ -28,6 +28,23 @@ describe("soupis mostu", () => {
     expect(soupisMostu(RESENI["2-03"]!.pruchod).zavazi).toBe(3);
   });
 
+  it("říká i to, co se z obrysu vyčíst nedá: hmotnost závaží, ladění tlumičů a zdvih pístu", () => {
+    const sZavazim = soupisMostu(RESENI["2-03"]!.pruchod);
+    expect(sZavazim.zavaziPodleHmoty.reduce((soucet, r) => soucet + r.pocet, 0)).toBe(3);
+    for (const r of sZavazim.zavaziPodleHmoty) expect(r.kg).toBeGreaterThan(0);
+    const sTlumici = soupisMostu(RESENI["5-04"]!.mistrovska);
+    expect(sTlumici.tlumicePodleNastaveni.reduce((soucet, r) => soucet + r.pocet, 0)).toBe(2);
+    for (const r of sTlumici.tlumicePodleNastaveni) {
+      expect(r.kg).toBeGreaterThan(0);
+      expect(r.hz).toBeGreaterThan(0);
+    }
+    const sklopny = soupisMostu(RESENI["7-01"]!.pruchod);
+    expect(sklopny.zdvihy.length).toBeGreaterThan(0);
+    for (const zdvih of sklopny.zdvihy) expect(zdvih).not.toBe(0);
+    // Most bez přídavků má ty seznamy prázdné.
+    expect(soupisMostu(RESENI["1-01"]!.pruchod)).toMatchObject({ zavaziPodleHmoty: [], tlumicePodleNastaveni: [], zdvihy: [] });
+  });
+
   it("každá úroveň kampaně má most pro nápovědu a soupis mu sedí s počtem prutů", () => {
     for (const uroven of nactiKampan()) {
       const most = RESENI[uroven.id]!.pruchod;

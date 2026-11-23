@@ -52,5 +52,6 @@ export function zakladVyzev(uroven: Uroven): ZakladVyzev | null {
     hmotnost: hmotnostNavrhu(nejlehci, uroven),
     hmotnostMostovky: hmotnostMostovky(nejlehci, uroven),
     zlom: zlom.naKorunu,
+    rozpocet: uroven.rozpocet,
   };
 }

@@ -71,8 +71,9 @@ function rekord(h: unknown, cesta: string): Rekord {
     verzeFyziky: cislo(o.verzeFyziky, `${cesta}.verzeFyziky`, { min: 0, cele: true }),
     medaile: medaile(o.medaile, `${cesta}.medaile`),
     nejlepsiCena: neboNull(o.nejlepsiCena, (v) => cislo(v, `${cesta}.nejlepsiCena`, { min: 0 })),
-    nejlepsiHmotnost: neboNull(o.nejlepsiHmotnost, (v) => cislo(v, `${cesta}.nejlepsiHmotnost`, { min: 0 })),
-    nejlepsiZlom: neboNull(o.nejlepsiZlom, (v) => cislo(v, `${cesta}.nejlepsiZlom`, { min: 0 })),
+    // Rekordy výzev smějí v zápisu chybět (ruční úprava, starší sestavení): čtou se jako nezměřené.
+    nejlepsiHmotnost: neboNull(o.nejlepsiHmotnost ?? null, (v) => cislo(v, `${cesta}.nejlepsiHmotnost`, { min: 0 })),
+    nejlepsiZlom: neboNull(o.nejlepsiZlom ?? null, (v) => cislo(v, `${cesta}.nejlepsiZlom`, { min: 0 })),
   };
 }
 

@@ -3,7 +3,7 @@
 // Sklad se předává zvenčí, takže stejný kód běží v prohlížeči i v testech.
 
 import type { NavrhMostu } from "../data/navrh";
-import { sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
+import { ID_SANDBOXU, sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
 import {
   prazdneUlozeni,
   ulozeniNaText,
@@ -153,6 +153,10 @@ export class Uloziste {
     try {
       return sandboxZTextu(zapis);
     } catch {
+      // Nečitelné nastavení: hra začne s výchozím údolím a rozestavěný most, který patřil do
+      // toho ztraceného, zahodí (jinak by v cizím údolí jen svítil chybami).
+      this.smazNavrh(ID_SANDBOXU);
+      this.#pis(KLIC_SANDBOXU, sandboxNaText(vychoziSandbox()));
       return vychoziSandbox();
     }
   }

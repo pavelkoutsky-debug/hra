@@ -91,6 +91,16 @@ export function vychoziPocet(druh: DruhProvozuSandboxu): number {
   }
 }
 
+/** Jízdní řád, se kterým trasa daného druhu začíná: aby po přepnutí trasy hned něco jelo. */
+export function vychoziProvoz(druh: DruhTrasy): PolozkaSandboxu[] {
+  if (druh === "lavka") return [{ druh: "chodec", pocet: 4, smer: 1, cas: 0 }];
+  if (druh === "kolej") return [{ druh: "vlak-osobni", pocet: 4, smer: 1, cas: 0 }];
+  return [
+    { druh: "auto", pocet: 2, smer: 1, cas: 0 },
+    { druh: "nakladni", pocet: 1, smer: -1, cas: 4 },
+  ];
+}
+
 /** Sandbox, se kterým hra začíná: údolí 24 m se silnicí a dvěma vozidly. */
 export function vychoziSandbox(): NastaveniSandboxu {
   return {
@@ -100,10 +110,7 @@ export function vychoziSandbox(): NastaveniSandboxu {
     druh: "silnice",
     voda: true,
     zaklady: 1,
-    provoz: [
-      { druh: "auto", pocet: 2, smer: 1, cas: 0 },
-      { druh: "nakladni", pocet: 1, smer: -1, cas: 4 },
-    ],
+    provoz: vychoziProvoz("silnice"),
   };
 }
 
@@ -130,13 +137,20 @@ export function nactiSandbox(data: unknown): NastaveniSandboxu {
     };
   });
   if (provoz.length > MEZE_SANDBOXU.polozek) throw new ChybaDat(`${c}.provoz`, `nejvýš ${MEZE_SANDBOXU.polozek} položek`);
+  // Trať má jednu kolej: vlaky proti sobě by projely skrz sebe a zkouška by to nepoznala.
+  if (druh === "kolej") {
+    const jinam = provoz.findIndex((p) => p.smer !== provoz[0]!.smer);
+    if (jinam > 0) throw new ChybaDat(`${c}.provoz[${jinam}].smer`, "po jedné koleji jezdí vlaky jedním směrem");
+  }
+  const rozpeti = cislo(o.rozpeti, `${c}.rozpeti`, { ...MEZE_SANDBOXU.rozpeti, cele: true });
   return {
     verze: VERZE_SANDBOXU,
-    rozpeti: cislo(o.rozpeti, `${c}.rozpeti`, { ...MEZE_SANDBOXU.rozpeti, cele: true }),
+    rozpeti,
     hloubka: cislo(o.hloubka, `${c}.hloubka`, { ...MEZE_SANDBOXU.hloubka, cele: true }),
     druh,
     voda: logicka(o.voda, `${c}.voda`),
-    zaklady: cislo(o.zaklady, `${c}.zaklady`, { ...MEZE_SANDBOXU.zaklady, cele: true }),
+    // Do úzkého údolí se tři základy nevejdou; hráč se má dozvědět, kolik jich smí chtít.
+    zaklady: cislo(o.zaklady, `${c}.zaklady`, { min: MEZE_SANDBOXU.zaklady.min, max: nejvicZakladu(rozpeti), cele: true }),
     provoz,
   };
 }
@@ -155,14 +169,17 @@ export function sandboxNaText(nastaveni: NastaveniSandboxu): string {
   return JSON.stringify(nastaveni);
 }
 
-/** Mají dvě nastavení stejné údolí a trasu? Když ano, most postavený v jednom platí i v druhém. */
+/**
+ * Mají dvě nastavení stejné údolí a trasu? Když ano, most postavený v jednom platí i v druhém.
+ * Voda se nepočítá: opěry, kotvy ani pravidla stavby se s ní nemění.
+ */
 export function stejneUdoli(a: NastaveniSandboxu, b: NastaveniSandboxu): boolean {
-  return a.rozpeti === b.rozpeti && a.hloubka === b.hloubka && a.druh === b.druh && a.voda === b.voda && a.zaklady === b.zaklady;
+  return a.rozpeti === b.rozpeti && a.hloubka === b.hloubka && a.druh === b.druh && a.zaklady === b.zaklady;
 }
 
 /** Šířka mostovky a hmotnost jejího vybavení podle druhu trasy, jako v úrovních kampaně. */
 const MOSTOVKA: Record<DruhTrasy, { sirka: number; vybaveni: number }> = {
-  lavka: { sirka: 3, vybaveni: 80 },
+  lavka: { sirka: 3, vybaveni: 60 },
   silnice: { sirka: 7, vybaveni: 600 },
   kolej: { sirka: 5, vybaveni: 0 },
 };
@@ -172,17 +189,45 @@ function sirkaSvahu(rozpeti: number): number {
   return Math.max(1, Math.min(3, Math.floor(rozpeti / 4)));
 }
 
-/** Místa základů pro pilíře na dně údolí: rovnoměrně mezi patami svahů, na rastru. */
+/** Nejmenší rozestup základů mezi sebou, m; blíž by se jejich patky i popisky překrývaly. */
+const ROZESTUP_ZAKLADU = 3;
+
+/** Kde na dně údolí smí stát základ: aspoň metr od kotev v patách svahů. */
+function pasmoZakladu(rozpeti: number): { od: number; po: number } {
+  const svah = sirkaSvahu(rozpeti);
+  return { od: svah + 1, po: rozpeti - svah - 1 };
+}
+
+/** Kolik základů pro pilíře se do údolí daného rozpětí vejde (nejvýš kolik dovolují meze). */
+export function nejvicZakladu(rozpeti: number): number {
+  const { od, po } = pasmoZakladu(rozpeti);
+  if (!(po >= od)) return 0;
+  return Math.min(MEZE_SANDBOXU.zaklady.max, Math.floor((po - od) / ROZESTUP_ZAKLADU) + 1);
+}
+
+/** Místa základů pro pilíře na dně údolí: rovnoměrně po rozpětí, na rastru. */
 function zakladySandboxu(n: NastaveniSandboxu): { x: number; y: number }[] {
-  const svah = sirkaSvahu(n.rozpeti);
-  const mista: { x: number; y: number }[] = [];
-  for (let k = 1; k <= n.zaklady; k++) {
-    const x = Math.round((n.rozpeti * k) / (n.zaklady + 1));
-    // Základ nesmí splynout s kotvou v patě svahu ani s jiným základem.
-    if (x <= svah || x >= n.rozpeti - svah || mista.some((m) => m.x === x)) continue;
-    mista.push({ x, y: -n.hloubka });
+  const { od, po } = pasmoZakladu(n.rozpeti);
+  const pocet = Math.min(n.zaklady, nejvicZakladu(n.rozpeti));
+  if (pocet <= 0) return [];
+  // Nejdřív dělení rozpětí na stejná pole; kde to u úzkého údolí nevyjde (základ by stál
+  // u paty svahu nebo moc blízko souseda), rozloží se základy po dně od kraje ke kraji.
+  // Zleva se zaokrouhluje dolů a zprava nahoru, aby základy stály souměrně kolem středu.
+  let mista = Array.from({ length: pocet }, (_, k) => {
+    const presne = (n.rozpeti * (k + 1)) / (pocet + 1);
+    return 2 * (k + 1) <= pocet ? Math.floor(presne + 0.5) : n.rozpeti - Math.floor(n.rozpeti - presne + 0.5);
+  });
+  const vejdouSe = mista.every((x, k) => x >= od && x <= po && (k === 0 || x - mista[k - 1]! >= ROZESTUP_ZAKLADU));
+  if (!vejdouSe) {
+    mista =
+      pocet === 1
+        ? [Math.round((od + po) / 2)]
+        : Array.from({ length: pocet }, (_, k) => {
+            const presne = od + ((po - od) * k) / (pocet - 1);
+            return 2 * (k + 1) <= pocet ? Math.floor(presne + 0.5) : od + po - Math.floor(od + po - presne + 0.5);
+          });
   }
-  return mista;
+  return mista.map((x) => ({ x, y: -n.hloubka }));
 }
 
 /** Položka jízdního řádu úrovně z položky sandboxu. */
@@ -206,7 +251,8 @@ export function urovenSandboxu(nastaveni: NastaveniSandboxu): Uroven {
   const okraj = Math.max(6, Math.ceil(L / 5));
   const prvky: IdPrvku[] = ID_PRVKU.filter((id) => {
     const polozka = KATALOG[id];
-    if (!polozka.hotovo || polozka.druh === "pist") return false;
+    // Píst tu není (most se nezvedá) a pružina taky ne: hra nemá kde nastavit její tuhost.
+    if (!polozka.hotovo || polozka.druh === "pist" || polozka.druh === "pruzina") return false;
     // Na kolej patří kolejiště a nic jiného; jinde kolejiště není k ničemu.
     if (polozka.druh === "mostovka") return (id === "kolejiste") === (n.druh === "kolej");
     return true;

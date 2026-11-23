@@ -1,6 +1,6 @@
 // Sandbox: nastavení údolí a provozu, úroveň, která z něj vznikne, a zkouška na ní.
 import { describe, expect, it } from "vitest";
-import { KATALOG } from "../src/data/katalog";
+import { ID_PROVOZU, KATALOG } from "../src/data/katalog";
 import { ChybaDat } from "../src/data/kontrola";
 import { Kreslic } from "../src/data/kreslic";
 import { zkontrolujNavrh } from "../src/data/navrh";
@@ -9,12 +9,14 @@ import {
   MEZE_SANDBOXU,
   nactiSandbox,
   nejvicVeSkupine,
+  nejvicZakladu,
   PROVOZ_SANDBOXU,
   sandboxNaText,
   sandboxZTextu,
   stejneUdoli,
   urovenSandboxu,
   vychoziPocet,
+  vychoziProvoz,
   vychoziSandbox,
   type NastaveniSandboxu,
 } from "../src/data/sandbox";
@@ -54,6 +56,54 @@ describe("nastavení sandboxu", () => {
     expect(cesta({ provoz: [{ druh: "nadmerny", pocet: 5, smer: 1, cas: 0 }] })).toBe("sandbox.provoz[0].pocet");
     expect(cesta({ provoz: Array.from({ length: 11 }, (_, i) => ({ druh: "auto", pocet: 1, smer: 1, cas: i })) })).toBe("sandbox.provoz");
     expect(() => sandboxZTextu("{nesmysl")).toThrow(ChybaDat);
+    // Do úzkého údolí se tři základy nevejdou; hráč dostane chybu, ne potichu míň základů.
+    expect(cesta({ rozpeti: 8, zaklady: 2 })).toBe("sandbox.zaklady");
+    expect(nactiSandbox({ ...vychoziSandbox(), rozpeti: 8, zaklady: 1 }).zaklady).toBe(1);
+  });
+
+  it("po jedné koleji jedou vlaky jedním směrem; po silnici a lávce smějí proti sobě", () => {
+    const vlaky = (smery: (1 | -1)[]): unknown => ({
+      ...vychoziSandbox(),
+      druh: "kolej",
+      provoz: smery.map((smer, i) => ({ druh: "vlak-osobni", pocet: 2, smer, cas: 10 * i })),
+    });
+    expect(nactiSandbox(vlaky([1, 1, 1])).provoz).toHaveLength(3);
+    expect(nactiSandbox(vlaky([-1, -1])).provoz).toHaveLength(2);
+    let cesta = "";
+    try {
+      nactiSandbox(vlaky([1, 1, -1]));
+    } catch (chyba) {
+      cesta = (chyba as ChybaDat).cesta;
+    }
+    expect(cesta).toBe("sandbox.provoz[2].smer");
+    // Výchozí silnice má auta zleva a náklaďák zprava.
+    expect(new Set(vychoziSandbox().provoz.map((p) => p.smer)).size).toBe(2);
+  });
+
+  it("každý druh provozu ze hry je v nabídce sandboxu, nebo je vědomě vynechaný", () => {
+    // Seznam `PROVOZ_SANDBOXU` je ruční: nový provoz ve hře tenhle test připomene.
+    const nabidka = new Set<string>(Object.values(PROVOZ_SANDBOXU).flat());
+    const vynechane = new Set<string>([
+      // Vozy jezdí jen za lokomotivou: nabídka má hotové soupravy.
+      "vuz-nakladni",
+      "vuz-prazdny",
+      "vuz-osobni",
+      // Loď není účastník trasy a sandbox nemá pohyblivý most.
+      "lod",
+      // Hra je zatím neumí (zkouška je odmítne).
+      "motocykl",
+      "traktor",
+    ]);
+    for (const druh of ID_PROVOZU) expect(nabidka.has(druh) !== vynechane.has(druh), druh).toBe(true);
+    expect(nabidka.has("vlak-osobni") && nabidka.has("vlak-nakladni")).toBe(true);
+  });
+
+  it("každý druh trasy má výchozí provoz, který po ní smí jet", () => {
+    for (const druh of DRUHY_TRAS) {
+      const provoz = vychoziProvoz(druh);
+      expect(provoz.length, druh).toBeGreaterThan(0);
+      expect(nactiSandbox({ ...vychoziSandbox(), druh, provoz }).provoz).toEqual(provoz);
+    }
   });
 
   it("výchozí počty se vejdou do mezí každého druhu provozu", () => {
@@ -71,6 +121,8 @@ describe("nastavení sandboxu", () => {
     expect(stejneUdoli(a, { ...a, rozpeti: 30 })).toBe(false);
     expect(stejneUdoli(a, { ...a, zaklady: 2 })).toBe(false);
     expect(stejneUdoli(a, { ...a, druh: "lavka", provoz: [] })).toBe(false);
+    // Voda opěry ani kotvy nemění: most zůstává.
+    expect(stejneUdoli(a, { ...a, voda: !a.voda })).toBe(true);
   });
 });
 
@@ -79,19 +131,45 @@ describe("úroveň sandboxu", () => {
     for (const druh of DRUHY_TRAS) {
       for (let rozpeti = MEZE_SANDBOXU.rozpeti.min; rozpeti <= MEZE_SANDBOXU.rozpeti.max; rozpeti += 1) {
         for (const hloubka of [MEZE_SANDBOXU.hloubka.min, 8, MEZE_SANDBOXU.hloubka.max]) {
-          for (let zaklady = 0; zaklady <= MEZE_SANDBOXU.zaklady.max; zaklady++) {
+          for (let zaklady = 0; zaklady <= nejvicZakladu(rozpeti); zaklady++) {
             const nastaveni: NastaveniSandboxu = { verze: 1, rozpeti, hloubka, druh, voda: zaklady % 2 === 0, zaklady, provoz: [] };
             const u = urovenSandboxu(nastaveni);
             expect(u.id).toBe(ID_SANDBOXU);
             expect(u.rozpocet).toBeNull();
             expect(u.trasy[0]).toMatchObject({ druh, zacatek: { x: 0, y: 0 }, konec: { x: rozpeti, y: 0 } });
-            // Základů je nejvýš tolik, kolik hráč chtěl; v úzkém údolí se nemusí vejít všechny.
-            expect(u.zaklady.length).toBeLessThanOrEqual(zaklady);
-            if (rozpeti >= 16) expect(u.zaklady).toHaveLength(zaklady);
-            for (const z of u.zaklady) expect(z.y).toBe(-hloubka);
+            // Základů je přesně tolik, kolik hráč chtěl, a stojí aspoň tři metry od sebe
+            // a metr od kotev v patách svahů (jinak by se patky i popisky překrývaly).
+            expect(u.zaklady, `${rozpeti} m, ${zaklady} základů`).toHaveLength(zaklady);
+            const paty = u.kotvy.filter((k) => k.y === -hloubka).map((k) => k.x);
+            u.zaklady.forEach((z, k) => {
+              expect(z.y).toBe(-hloubka);
+              expect(Number.isInteger(z.x)).toBe(true);
+              for (const pata of paty) expect(Math.abs(z.x - pata), `${rozpeti} m`).toBeGreaterThanOrEqual(1);
+              if (k > 0) expect(z.x - u.zaklady[k - 1]!.x, `${rozpeti} m`).toBeGreaterThanOrEqual(3);
+            });
             expect(u.hladina === null).toBe(zaklady % 2 !== 0);
           }
+          // Víc základů, než se vejde, nastavení odmítne.
+          if (nejvicZakladu(rozpeti) < MEZE_SANDBOXU.zaklady.max) {
+            expect(() => urovenSandboxu({ verze: 1, rozpeti, hloubka, druh, voda: true, zaklady: nejvicZakladu(rozpeti) + 1, provoz: [] })).toThrow();
+          }
         }
+      }
+    }
+  });
+
+  it("od šestnácti metrů se vejdou tři základy; v nejužším údolí jeden", () => {
+    expect(nejvicZakladu(6)).toBe(1);
+    expect(nejvicZakladu(9)).toBe(2);
+    expect(nejvicZakladu(16)).toBe(3);
+    expect(nejvicZakladu(72)).toBe(3);
+    // Široké údolí dělí základy na stejná pole.
+    expect(urovenSandboxu({ ...vychoziSandbox(), rozpeti: 24, zaklady: 3 }).zaklady.map((z) => z.x)).toEqual([6, 12, 18]);
+    // Základy stojí souměrně kolem středu i tam, kde dělení nevychází na celé metry.
+    for (let rozpeti = MEZE_SANDBOXU.rozpeti.min; rozpeti <= MEZE_SANDBOXU.rozpeti.max; rozpeti++) {
+      for (let zaklady = 2; zaklady <= nejvicZakladu(rozpeti); zaklady++) {
+        const mista = urovenSandboxu({ ...vychoziSandbox(), rozpeti, zaklady }).zaklady.map((z) => z.x);
+        expect(mista[0]! + mista.at(-1)!, `${rozpeti} m, ${zaklady} základů`).toBe(rozpeti);
       }
     }
   });
@@ -99,7 +177,7 @@ describe("úroveň sandboxu", () => {
   it("dovoluje všechny hotové prvky kromě pístu; na koleji jen kolejiště, jinde ostatní mostovky", () => {
     const silnice = urovenSandboxu(vychoziSandbox());
     const hotove = (Object.keys(KATALOG) as (keyof typeof KATALOG)[]).filter((id) => KATALOG[id].hotovo);
-    expect(silnice.povolenePrvky).toEqual(hotove.filter((id) => id !== "pist" && id !== "kolejiste"));
+    expect(silnice.povolenePrvky).toEqual(hotove.filter((id) => id !== "pist" && id !== "pruzina" && id !== "kolejiste"));
     expect(silnice.povoleneSvary).toBe(true);
     expect(silnice.budic && silnice.osaFrekvenci && silnice.rezonancniKrivka).toBe(true);
     const kolej = urovenSandboxu({ ...vychoziSandbox(), druh: "kolej", provoz: [] });
@@ -113,13 +191,13 @@ describe("úroveň sandboxu", () => {
       druh: "kolej",
       provoz: [
         { druh: "vlak-osobni", pocet: 4, smer: 1, cas: 0 },
-        { druh: "vlak-nakladni", pocet: 6, smer: -1, cas: 30 },
+        { druh: "vlak-nakladni", pocet: 6, smer: 1, cas: 30 },
         { druh: "lokomotiva", pocet: 2, smer: 1, cas: 60 },
       ],
     });
     expect(u.jizdniRad).toEqual([
       { cas: 0, trasa: "trasa", smer: 1, druh: "lokomotiva", vozy: [{ druh: "vuz-osobni", pocet: 4 }] },
-      { cas: 30, trasa: "trasa", smer: -1, druh: "lokomotiva", vozy: [{ druh: "vuz-nakladni", pocet: 6 }] },
+      { cas: 30, trasa: "trasa", smer: 1, druh: "lokomotiva", vozy: [{ druh: "vuz-nakladni", pocet: 6 }] },
       { cas: 60, trasa: "trasa", smer: 1, druh: "lokomotiva", pocet: 2 },
     ]);
     const lavka = urovenSandboxu({ ...vychoziSandbox(), druh: "lavka", provoz: [{ druh: "dav", pocet: 30, smer: 1, cas: 2 }] });
