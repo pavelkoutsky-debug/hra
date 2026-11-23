@@ -20,6 +20,25 @@ Poslední aktualizace: 22. 11. 2026
 | M6 až M8 | Nezačato |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
+## Kde práce stojí (23. 11. 2026)
+
+- **M5** je sloučený do `main` (pull request 13).
+- **M6** je hotový a odeslaný jako pull request 14; běží na něm tři nezávislé recenze (kód, hraní kapitoly 7, kontrola výpočtů). Po zapracování nálezů a zeleném sestavení se slučuje.
+- **M7 Režimy** je další na řadě; plán níže. Pak M8 (výkon, dotyk, angličtina) a M9 (zvuky načisto, se schválením zadavatele).
+
+## M7 — plán
+
+Zadání z koncepce (kap. 4 a 12): odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda. Kritérium: test projde kampaň od první do poslední úrovně s referenčními řešeními.
+
+Co už je: odemykání úrovní v přehledu (včetně „odemknout vše“), tři medaile, rekordy a nejlepší cena v úložišti.
+
+Co zbývá:
+
+1. **Průchod kampaní v prohlížeči** (`test/e2e/kampan.e2e.ts`): z čisté paměti prohlížeče postupně otevřít všech 28 úrovní, načíst referenční most pro průchod, spustit zkoušku a ověřit, že se odemkla další úroveň.
+2. **Sandbox**: volná stavba bez rozpočtu se všemi prvky, nastavitelná šířka údolí, provoz si hráč skládá sám (seznam položek jízdního řádu), budič s táhlem frekvence už je. Vstup z přehledu.
+3. **Výzvy o efektivitu** na úrovních kampaně: nejlevnější most, nejlehčí most a zkouška do zlomu (zatížení roste, dokud most nespadne; boduje se únosnost na korunu) s prahy bronz, stříbro, zlato odvozenými z referenčních mostů.
+4. **Nápověda**: postupné rady k úrovni (texty ve slovníku), nabídnuté po opakovaném neúspěchu.
+
 ## M6 — výsledek
 
 Pohyblivé mosty: píst, dělicí zámek, ocelová mostovka, fáze zkoušky, lodě a kapitola 7 „Přístav“. Verze hry 0.12.0, verze fyziky 7 (výsledky dosavadních mostů se nemění), formát úrovně 6, formát návrhu 4.
