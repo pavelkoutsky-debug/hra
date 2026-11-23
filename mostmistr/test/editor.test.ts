@@ -8,8 +8,11 @@ import { Editor } from "../src/editor/editor";
 import { duvodProtiPrutu, lzeZacit } from "../src/editor/pravidla";
 import {
   bezOsamelychStycniku,
+  nastavSvar,
   nastavTlumeni,
+  nastavZamek,
   nastavZavazi,
+  nastavZdvih,
   posunStycnik,
   prazdnyNavrh,
   pridejPrut,
@@ -18,6 +21,8 @@ import {
   zrcadli,
 } from "../src/editor/upravy";
 import potok from "../urovne/1-01.json";
+import kanal from "../urovne/7-01.json";
+import dveKridla from "../urovne/7-02.json";
 import auto from "../urovne/1-03.json";
 
 const uroven = nactiUroven(potok);
@@ -426,5 +431,112 @@ describe("závaží a tlumiče", () => {
     expect(pravy).toMatchObject({ tlumeni: 75_000 });
     expect(navrh.stycniky.find((s) => s.x === 20 && s.y === 0)).toMatchObject({ zavazi: 100 });
     expect(zkontrolujNavrh(navrh, lavka)).toEqual([]);
+  });
+});
+
+describe("pohyblivý most v editoru", () => {
+  const jednoKridlo = nactiUroven(kanal);
+  const dvoukridly = nactiUroven(dveKridla);
+
+  /** Editor se svařeným křídlem z dílů po `dil` metrech od čepu (0, 0) do `konec`. */
+  function sKridlem(urovenMostu: typeof jednoKridlo, konec: number, dil: number): Editor {
+    const e = new Editor(urovenMostu, prazdnyNavrh(urovenMostu.id), () => {});
+    e.zvolPrvek("mostovka-ocel");
+    for (let x = 0; x < konec; x += dil) {
+      e.stiskni(B(x, 0));
+      e.tahni(B(x + dil, 0));
+      e.pust();
+    }
+    return e;
+  }
+
+  const stycnik = (e: Editor, x: number, y: number) => e.navrh.stycniky.find((s) => s.x === x && s.y === y);
+
+  it("úpravy: zámek a svar se v jednom styčníku vylučují; zdvih se zapíše k pístu", () => {
+    let navrh = pridejPrut(prazdnyNavrh("7-01"), B(0, 0), B(6, 0), "mostovka-ocel");
+    navrh = pridejPrut(navrh, B(6, 0), B(12, 0), "mostovka-ocel");
+    navrh = pridejPrut(navrh, B(0, -3), B(6, 0), "pist");
+    const stred = navrh.stycniky.find((s) => s.x === 6)!.id;
+    const svareny = nastavSvar(navrh, new Set([stred]), true);
+    expect(svareny.stycniky.find((s) => s.id === stred)).toMatchObject({ svar: true });
+    // Zámek je čep: svar ze styčníku zmizí a zpátky do zamčeného styčníku nejde.
+    const zamceny = nastavZamek(svareny, new Set([stred]), true);
+    expect(zamceny.stycniky.find((s) => s.id === stred)).toEqual({ id: stred, x: 6, y: 0, zamek: true });
+    expect(nastavSvar(zamceny, new Set([stred]), true)).toBe(zamceny);
+    // Odebrání zámku nic dalšího nemění a původní návrh zůstává.
+    expect(nastavZamek(zamceny, new Set([stred]), false).stycniky.find((s) => s.id === stred)).toEqual({ id: stred, x: 6, y: 0 });
+    expect(navrh.stycniky.find((s) => s.id === stred)).toEqual({ id: stred, x: 6, y: 0 });
+    const pist = navrh.pruty.find((p) => p.prvek === "pist")!;
+    expect(nastavZdvih(navrh, new Set([pist.id]), () => 2).pruty.find((p) => p.id === pist.id)).toMatchObject({ zdvih: 2 });
+  });
+
+  it("nově nakreslený píst je vybraný a jeho zdvih jde krokovat; panel zná úhel, o který křídlo zvedne", () => {
+    const e = sKridlem(jednoKridlo, 12, 6);
+    const zamek = stycnik(e, 12, 0)!;
+    e.vyberJenStycnik(zamek.id);
+    expect(e.prepniZamek()).toBe(true);
+    e.zvolPrvek("pist");
+    e.stiskni(B(0, -3));
+    e.tahni(B(6, 0));
+    expect(e.pust()).toBe(true);
+    // Píst z (0, −3) do (6, 0): výchozí zdvih 1 m, největší polovina délky zaokrouhlená na krok.
+    expect(e.zdvihVyberu).toMatchObject({ zdvih: 1, nejvetsi: 3.25, ruzne: false });
+    expect(e.zmenZdvih(4)).toBe(true);
+    const zdvih = e.zdvihVyberu!;
+    expect(zdvih.zdvih).toBe(2);
+    // Zdvih 2 m zvedne křídlo o 59° (pata 3 m pod čepem, úchyt 6 m od něj).
+    expect((Math.acos(zdvih.otoceni!) * 180) / Math.PI).toBeCloseTo(58.9, 0);
+    expect(zkontrolujNavrh(e.navrh, jednoKridlo)).toEqual([]);
+    // O krok dál už by to bylo přes 70°: panel to ví a kontrola návrhu to odmítne.
+    e.zmenZdvih(1);
+    expect(e.zdvihVyberu!.otoceni!).toBeLessThan(Math.cos((70 * Math.PI) / 180));
+    expect(zkontrolujNavrh(e.navrh, jednoKridlo).map((p) => p.druh)).toEqual(["zdvih-za-uvrati"]);
+    // Bez zámku křídlo drží ložisko na opěře a neotočí se: úhel není.
+    e.zmenZdvih(-1);
+    e.vyberJenStycnik(zamek.id);
+    e.prepniZamek();
+    const pist = e.navrh.pruty.find((p) => p.prvek === "pist")!;
+    e.vyberJenPrut(pist.id);
+    expect(e.zdvihVyberu!.otoceni).toBeNull();
+  });
+
+  it("zrcadlení křídla nechá v ose styčník pro zámek, ať je křídlo z jakkoli dlouhých dílů", () => {
+    for (const dil of [2, 3, 4, 6]) {
+      const e = sKridlem(dvoukridly, 12, dil);
+      expect(e.zrcadli(), `díly ${dil} m`).toBe(true);
+      // Křídla se potkávají ve styčníku (12, 0); mostovka přes osu spojená není.
+      expect(stycnik(e, 12, 0), `díly ${dil} m`).toBeDefined();
+      expect(e.navrh.pruty).toHaveLength(2 * (12 / dil));
+      const stred = stycnik(e, 12, 0)!;
+      e.vyberJenStycnik(stred.id);
+      expect(e.prepniZamek()).toBe(true);
+      expect(zkontrolujNavrh(e.navrh, dvoukridly), `díly ${dil} m`).toEqual([]);
+    }
+  });
+
+  it("zrcadlení přenese píst se zdvihem a zámek jen tam, kde zámek být smí", () => {
+    // Dvoukřídlý most: zámek na konci levého křídla leží v ose a píst dostane obraz se stejným zdvihem.
+    const e = sKridlem(dvoukridly, 12, 6);
+    e.vyberJenStycnik(stycnik(e, 12, 0)!.id);
+    e.prepniZamek();
+    e.zvolPrvek("pist");
+    e.stiskni(B(0, -5));
+    e.tahni(B(6, 0));
+    e.pust();
+    e.zmenZdvih(6);
+    e.zrusVyber();
+    expect(e.zrcadli()).toBe(true);
+    const pisty = e.navrh.pruty.filter((p) => p.prvek === "pist");
+    expect(pisty.map((p) => p.zdvih)).toEqual([2.5, 2.5]);
+    expect(e.navrh.stycniky.filter((s) => s.zamek)).toHaveLength(1);
+    expect(zkontrolujNavrh(e.navrh, dvoukridly)).toEqual([]);
+
+    // Jednokřídlý most: obraz zámku z opěry (12, 0) by padl na čep (0, 0); tam zámek nepatří.
+    const jedno = sKridlem(jednoKridlo, 12, 6);
+    jedno.vyberJenStycnik(stycnik(jedno, 12, 0)!.id);
+    jedno.prepniZamek();
+    jedno.zrusVyber();
+    jedno.zrcadli();
+    expect(jedno.navrh.stycniky.filter((s) => s.zamek).map((s) => s.x)).toEqual([12]);
   });
 });

@@ -230,6 +230,15 @@ a.tlacitko {
   pointer-events: none;
 }
 
+/* Razítko nad kotvou, základem nebo styčníkem mostu zprůhlední, aby bylo vidět, co je pod ním. */
+.pole {
+  transition: opacity 0.15s;
+}
+
+.pole--pruhledne {
+  opacity: 0.25;
+}
+
 .pole__bunka {
   grid-column: span 2;
   min-width: 0;
@@ -750,6 +759,12 @@ a.tlacitko {
 .medaile [data-ziskana="true"] .medaile__znak,
 .medaile [data-ziskana="true"] .medaile__nazev {
   color: var(--cara-silna);
+}
+
+/* Medaile, kterou hráč má z dřívějšího pokusu, ale tenhle most ji nesplnil. */
+.medaile [data-ziskana="drive"] .medaile__znak,
+.medaile [data-ziskana="drive"] .medaile__nazev {
+  opacity: 0.55;
 }
 
 .medaile__podminka {

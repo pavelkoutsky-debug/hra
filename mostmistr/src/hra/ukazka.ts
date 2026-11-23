@@ -192,7 +192,7 @@ export class Ukazka {
     this.#delka = Math.max(...this.#strany.map((s) => s.vysledek!.trvani));
     const poznamky: string[] = [];
     if (this.#zvetseni > 1) poznamky.push(t("ukazka.zvetseni", { nasobek: this.#zvetseni }));
-    if (this.#rychlost !== 1) poznamky.push(t("ukazka.zrychleni", { nasobek: this.#rychlost }));
+    if (this.#rychlost !== 1) poznamky.push(t("ukazka.zrychleni", { nasobek: cislo(this.#rychlost, 1) }));
     this.#poznamka.textContent = poznamky.join(" ");
     for (const strana of this.#strany) {
       const v = strana.vysledek!;

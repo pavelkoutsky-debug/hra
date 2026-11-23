@@ -17,8 +17,7 @@
 import { prepoctiHmoty, type Soustava } from "./soustava";
 import { rozdelStycnik } from "./topologie";
 
-/** Zámek je zamčený tak, jak byl postaven: podpora nebo společný styčník. */
-export const ZAMEK_ZAMCENY = 0;
+// Stav zámku: 0 znamená zamčený tak, jak byl postaven (podpora nebo společný styčník).
 /** Odemčeno: konce se smějí rozejít. */
 export const ZAMEK_ODEMCENY = 1;
 /** Znovu zamčeno po sklopení mostu. */
@@ -42,26 +41,37 @@ export interface PopisZamku {
   /** Styčník se zámkem. */
   stycnik: number;
   /**
-   * Prvky druhého křídla: při odemknutí přejdou na nový styčník. Prázdný seznam znamená
-   * zámek na opěře (styčník je podepřený a odemknutí mu podporu vezme).
+   * Pruty druhého křídla (čísla `Soustava.prut`): jejich prvky, které do styčníku vedou,
+   * přejdou při odemknutí na nový styčník. Prázdný seznam znamená zámek na opěře (styčník
+   * je podepřený a odemknutí mu podporu vezme). Pamatují se pruty, ne prvky: porušení může
+   * prvek u zámku rozdělit a konec u zámku pak nese prvek s jiným číslem.
    */
-  prvky: readonly number[];
+  pruty: readonly number[];
 }
 
 export interface Zamky {
   pocet: number;
   stycnik: Int32Array;
-  /** Druhý konec zámku mezi křídly po rozdělení; −1 u zámku na opěře a před rozdělením. */
+  /**
+   * Druhý konec zámku mezi křídly po rozdělení; −1 u zámku na opěře, před rozdělením a
+   * u zámku, jehož druhé křídlo se před odemknutím utrhlo (ten už nic nespojí).
+   */
   druhy: Int32Array;
-  prvky: (readonly number[])[];
+  pruty: (readonly number[])[];
   /** Podpora styčníku před odemknutím (bity jako `Soustava.podpora`); 0 u zámku mezi křídly. */
   podpora: Uint8Array;
   /** Místo opěry: kde konec křídla ležel, než se odemkl. */
   x0: Float64Array;
   y0: Float64Array;
   stav: Uint8Array;
-  /** Tuhost dosedací plochy a čepu zámku, N/m. */
+  /** Tuhost dosedací plochy zámku na opěře, N/m. */
   tuhost: number;
+  /**
+   * Tuhost čepu znovu zamčeného zámku mezi křídly, N/m. Má být srovnatelná s tuhostí
+   * mostovky v tahu: měkký čep by ze zamčeného mostu udělal jiný (měkčí) most, než jaký
+   * byl před odemknutím, kdy konce spojoval společný styčník.
+   */
+  tuhostCepu: number;
   /**
    * Poměrný útlum dosednutí a čepu. Součinitel tlumení (N·s/m) každého zámku se z něj a
    * z hmoty spojovaných konců spočítá při odemknutí a zamknutí: pevně daný tlumič by na
@@ -79,18 +89,25 @@ export interface Zamky {
   nejvetsiSila: Float64Array;
 }
 
-export function vytvorZamky(s: Soustava, popisy: readonly PopisZamku[], tuhost: number, utlum: number): Zamky {
+export function vytvorZamky(
+  s: Soustava,
+  popisy: readonly PopisZamku[],
+  tuhost: number,
+  utlum: number,
+  tuhostCepu: number = tuhost,
+): Zamky {
   const n = popisy.length;
   return {
     pocet: n,
     stycnik: Int32Array.from(popisy, (p) => p.stycnik),
     druhy: new Int32Array(n).fill(-1),
-    prvky: popisy.map((p) => p.prvky),
-    podpora: Uint8Array.from(popisy, (p) => (p.prvky.length === 0 ? s.podpora[p.stycnik]! : 0)),
+    pruty: popisy.map((p) => p.pruty),
+    podpora: Uint8Array.from(popisy, (p) => (p.pruty.length === 0 ? s.podpora[p.stycnik]! : 0)),
     x0: Float64Array.from(popisy, (p) => s.x[p.stycnik]!),
     y0: Float64Array.from(popisy, (p) => s.y[p.stycnik]!),
     stav: new Uint8Array(n),
     tuhost,
+    tuhostCepu,
     utlum,
     tlumeni: new Float64Array(n),
     odsazeniX: new Float64Array(n),
@@ -108,11 +125,18 @@ export function odemkniZamky(s: Soustava, z: Zamky): number {
   for (let k = 0; k < z.pocet; k++) {
     if (z.stav[k] === ZAMEK_ODEMCENY) continue;
     const i = z.stycnik[k]!;
-    if (z.prvky[k]!.length === 0) {
+    const pruty = z.pruty[k]!;
+    if (pruty.length === 0) {
       // Zámek na opěře: konec ztratí podporu, zůstane jen dosedací plocha.
       s.podpora[i] = s.podpora[i]! & ~z.podpora[k]!;
     } else if (z.druhy[k] === -1) {
-      z.druhy[k] = rozdelStycnik(s, i, z.prvky[k]!);
+      // Prvky druhého křídla, které do styčníku vedou právě teď. Když žádný nezbyl (křídlo
+      // se utrhlo), není co rozpojovat: zámek zůstane odemčený a nic nespojí ani nepodepře.
+      const prvky: number[] = [];
+      for (let e = 0; e < s.pocetPrvku; e++) {
+        if ((s.prvekA[e] === i || s.prvekB[e] === i) && pruty.includes(s.prut[e]!)) prvky.push(e);
+      }
+      if (prvky.length > 0) z.druhy[k] = rozdelStycnik(s, i, prvky);
     }
     z.stav[k] = ZAMEK_ODEMCENY;
     odemceno += 1;
@@ -121,10 +145,15 @@ export function odemkniZamky(s: Soustava, z: Zamky): number {
     prepoctiHmoty(s);
     // Dosedací plocha tlumí podle hmoty konce, který na ni dosedne.
     for (let k = 0; k < z.pocet; k++) {
-      if (z.druhy[k] === -1) z.tlumeni[k] = tlumeniPodleHmoty(z, s.invHmotaY[z.stycnik[k]!]!);
+      if (naOpere(z, k)) z.tlumeni[k] = tlumeniPodleHmoty(z, z.tuhost, s.invHmotaY[z.stycnik[k]!]!);
     }
   }
   return odemceno;
+}
+
+/** Je zámek `k` na opěře (má dosedací plochu), ne mezi křídly? */
+function naOpere(z: Zamky, k: number): boolean {
+  return z.pruty[k]!.length === 0;
 }
 
 /**
@@ -139,6 +168,8 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
     if (z.stav[k] !== ZAMEK_ODEMCENY) continue;
     const i = z.stycnik[k]!;
     const j = z.druhy[k]!;
+    // Zámek mezi křídly bez druhého konce (křídlo se utrhlo) už nezapadne.
+    if (j < 0 && !naOpere(z, k)) continue;
     const dx = j >= 0 ? s.x[j]! - s.x[i]! : z.x0[k]! - s.x[i]!;
     const dy = j >= 0 ? s.y[j]! - s.y[i]! : z.y0[k]! - s.y[i]!;
     if (dx * dx + dy * dy > VULE_ZAMKU * VULE_ZAMKU) continue;
@@ -152,7 +183,7 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
       if ((z.podpora[k]! & 2) !== 0) s.vy[i] = 0;
     } else {
       // Čep tlumí podle hmoty obou konců, které drží u sebe; zapadne bez rázu tam, kde konce jsou.
-      z.tlumeni[k] = tlumeniPodleHmoty(z, s.invHmotaY[i]! + s.invHmotaY[j]!);
+      z.tlumeni[k] = tlumeniPodleHmoty(z, z.tuhostCepu, s.invHmotaY[i]! + s.invHmotaY[j]!);
       z.odsazeniX[k] = dx;
       z.odsazeniY[k] = dy;
     }
@@ -164,8 +195,8 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
 }
 
 /** Součinitel tlumení pro daný poměrný útlum: 2·ζ·√(k·m), kde 1/m je `invHmota`. */
-function tlumeniPodleHmoty(z: Zamky, invHmota: number): number {
-  return invHmota > 0 ? 2 * z.utlum * Math.sqrt(z.tuhost / invHmota) : 0;
+function tlumeniPodleHmoty(z: Zamky, tuhost: number, invHmota: number): number {
+  return invHmota > 0 ? 2 * z.utlum * Math.sqrt(tuhost / invHmota) : 0;
 }
 
 /**
@@ -199,13 +230,13 @@ export function zamkyZamcene(z: Zamky): boolean {
  * největší přenesené síly nemění.
  */
 export function pridejSilyZamku(s: Soustava, z: Zamky): void {
-  const { tuhost } = z;
+  const { tuhost, tuhostCepu } = z;
   for (let k = 0; k < z.pocet; k++) {
     const i = z.stycnik[k]!;
     const j = z.druhy[k]!;
     const tlumeni = z.tlumeni[k]!;
     if (j < 0) {
-      if (z.stav[k] !== ZAMEK_ODEMCENY) continue;
+      if (z.stav[k] !== ZAMEK_ODEMCENY || !naOpere(z, k)) continue;
       const stranou = s.x[i]! - z.x0[k]!;
       if (stranou > SIRKA_DOSEDNUTI || stranou < -SIRKA_DOSEDNUTI) continue;
       const stlaceni = z.y0[k]! - s.y[i]!;
@@ -215,8 +246,8 @@ export function pridejSilyZamku(s: Soustava, z: Zamky): void {
       s.fy[i] = s.fy[i]! + sila;
       if (sila > z.nejvetsiSila[k]!) z.nejvetsiSila[k] = sila;
     } else if (z.stav[k] === ZAMEK_ZAPADLY) {
-      const fx = tuhost * (s.x[j]! - s.x[i]! - z.odsazeniX[k]!) + tlumeni * (s.vx[j]! - s.vx[i]!);
-      const fy = tuhost * (s.y[j]! - s.y[i]! - z.odsazeniY[k]!) + tlumeni * (s.vy[j]! - s.vy[i]!);
+      const fx = tuhostCepu * (s.x[j]! - s.x[i]! - z.odsazeniX[k]!) + tlumeni * (s.vx[j]! - s.vx[i]!);
+      const fy = tuhostCepu * (s.y[j]! - s.y[i]! - z.odsazeniY[k]!) + tlumeni * (s.vy[j]! - s.vy[i]!);
       s.fx[i] = s.fx[i]! + fx;
       s.fy[i] = s.fy[i]! + fy;
       s.fx[j] = s.fx[j]! - fx;
@@ -236,13 +267,12 @@ export function pridavnaFrekvenceZamku(s: Soustava, z: Zamky): number {
   for (let k = 0; k < z.pocet; k++) {
     const i = z.stycnik[k]!;
     const j = z.druhy[k]!;
-    let invHmota = 0;
+    let omega2 = 0;
     if (j < 0) {
-      if (z.stav[k] === ZAMEK_ODEMCENY) invHmota = s.invHmotaY[i]!;
+      if (z.stav[k] === ZAMEK_ODEMCENY && naOpere(z, k)) omega2 = z.tuhost * s.invHmotaY[i]!;
     } else if (z.stav[k] === ZAMEK_ZAPADLY) {
-      invHmota = s.invHmotaY[i]! + s.invHmotaY[j]!;
+      omega2 = z.tuhostCepu * (s.invHmotaY[i]! + s.invHmotaY[j]!);
     }
-    const omega2 = z.tuhost * invHmota;
     if (omega2 > nejvic) nejvic = omega2;
   }
   // Tlumič zámku se počítá explicitně a krok zkracuje také: s útlumem do 0,3 stačí dvojnásobek.

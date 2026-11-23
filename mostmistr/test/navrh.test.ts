@@ -99,6 +99,57 @@ describe("čtení návrhu", () => {
     expect(nactiNavrh(JSON.parse(JSON.stringify(navrh))).pruty[0]!.predpeti).toBe(-2.5);
   });
 
+  it("starší verze formátu se převedou: návrh verze 1 až 3 se čte dál", () => {
+    // Návrh, jak ho hra ukládala ve verzi 1 (před laděným tlumičem), 2 a 3.
+    for (const verze of [1, 2, 3]) {
+      const stary = { ...trojuhelnik(), verze };
+      expect(nactiNavrh(JSON.parse(JSON.stringify(stary)))).toEqual(trojuhelnik());
+    }
+    // Verze 3 s předpětím lana a laděným tlumičem: převod na verzi 4 je nemění.
+    const sLanem = {
+      verze: 3,
+      uroven: "0-00",
+      stycniky: [
+        { id: 0, x: 0, y: 0 },
+        { id: 1, x: 4, y: 0, tlumic: { hmota: 200, frekvence: 2.1 } },
+        { id: 2, x: 2, y: 3 },
+      ],
+      pruty: [
+        { id: 0, a: 0, b: 1, prvek: "mostovka-drevo" },
+        { id: 1, a: 0, b: 2, prvek: "lano", predpeti: -0.25 },
+      ],
+    };
+    const nacteny = nactiNavrh(sLanem);
+    expect(nacteny.verze).toBe(VERZE_NAVRHU);
+    expect(nacteny.pruty[1]).toEqual({ id: 1, a: 0, b: 2, prvek: "lano", predpeti: -0.25 });
+    expect(nacteny.stycniky[1]).toEqual({ id: 1, x: 4, y: 0, tlumic: { hmota: 200, frekvence: 2.1 } });
+  });
+
+  it("verze 3 → 4: píst nese zdvih; délka po vysunutí ze starého zápisu se zahodí", () => {
+    // Rozpracovaná verze 3 zapisovala k pístu délku po vysunutí. Hra písty tehdy neuměla,
+    // takže takový návrh mohl vzniknout jen ručně; údaj se zahodí a píst dostane výchozí zdvih.
+    const stary = {
+      verze: 3,
+      uroven: "0-00",
+      stycniky: [
+        { id: 0, x: 0, y: 0 },
+        { id: 1, x: 4, y: 0 },
+        { id: 2, x: 0, y: -3 },
+      ],
+      pruty: [
+        { id: 0, a: 0, b: 1, prvek: "mostovka-drevo" },
+        { id: 1, a: 2, b: 1, prvek: "pist", vysunuti: 6.5 },
+      ],
+    };
+    const nacteny = nactiNavrh(stary);
+    expect(nacteny.pruty[1]).toEqual({ id: 1, a: 2, b: 1, prvek: "pist" });
+    // Ve verzi 4 je `vysunuti` neznámý klíč a zdvih smí být i záporný.
+    ocekavejChybu({ ...stary, verze: 4 }, "navrh.pruty[1].vysunuti");
+    const novy = { ...stary, verze: 4, pruty: [stary.pruty[0], { id: 1, a: 2, b: 1, prvek: "pist", zdvih: -1.5 }] };
+    expect(nactiNavrh(novy).pruty[1]).toEqual({ id: 1, a: 2, b: 1, prvek: "pist", zdvih: -1.5 });
+    expect(navrhZTextu(navrhNaText(nactiNavrh(novy)))).toEqual(nactiNavrh(novy));
+  });
+
   it("odmítne novější verzi formátu, než umí", () => {
     ocekavejChybu({ ...trojuhelnik(), verze: VERZE_NAVRHU + 1 }, "navrh.verze");
   });

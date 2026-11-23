@@ -1,7 +1,14 @@
 // Pohyblivý most ve zkoušce: fáze zvedání a sklápění, zámky, písty a lodě.
 import { describe, expect, it } from "vitest";
 import { PIST } from "../src/data/katalog";
-import { VERZE_NAVRHU, zamkyNavrhu, zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
+import {
+  COS_NEJVETSIHO_OTOCENI,
+  otoceniKridla,
+  VERZE_NAVRHU,
+  zamkyNavrhu,
+  zkontrolujNavrh,
+  type NavrhMostu,
+} from "../src/data/navrh";
 import { nactiUroven, type Uroven } from "../src/data/uroven";
 import type { Udalost } from "../src/zkouska/protokol";
 import { urovenRegrese } from "../src/zkouska/regrese";
@@ -70,7 +77,7 @@ describe("stavba pohyblivého mostu", () => {
     // Píst z (0, −3) do (3, 0) měří 4,24 m: 92 MN / 4,24 m = 21,7 MN/m.
     expect(pist.tuhost!).toBeCloseTo(PIST.tuhostKratDelka / Math.sqrt(18), 3);
     expect(stavba.pisty[0]).toMatchObject({ prut: 4, zdvih: 1.5 });
-    expect(stavba.zamky).toEqual([{ stycnik: 4, prvky: [] }]);
+    expect(stavba.zamky).toEqual([{ stycnik: 4, pruty: [] }]);
   });
 
   it("zámek mezi křídly pozná, které pruty patří druhému křídlu", () => {
@@ -108,21 +115,34 @@ describe("stavba pohyblivého mostu", () => {
     const stavba = sestavMost(uroven, navrh);
     expect(stavba.zamky).toHaveLength(1);
     expect(stavba.zamky[0]!.stycnik).toBe(2);
-    // Druhé křídlo vede do zámku prutem 2; jeho díl u styčníku 2 je jediný prvek druhé strany.
-    expect(stavba.zamky[0]!.prvky).toHaveLength(1);
-    const prvek = stavba.popis.prvky[stavba.zamky[0]!.prvky[0]!]!;
-    expect(prvek.prut).toBe(2);
-    expect(prvek.a === 2 || prvek.b === 2).toBe(true);
+    // Druhé křídlo vede do zámku prutem 2; který jeho díl to je, se dohledá až při odemknutí.
+    expect(stavba.zamky[0]!.pruty).toEqual([2]);
   });
 
   it("pravidla: zámek jen na pohyblivém mostě, ne ve vetknutí, a musí něco rozpojovat; zdvih do poloviny délky", () => {
     const pevny = kanal({ pohyb: null, lode: [] });
     expect(zkontrolujNavrh(kridlo(1.5), pevny).map((p) => p.druh)).toEqual(["zamek-nepovoleny"]);
     expect(zkontrolujNavrh(kridlo(1.5, false), pevny)).toEqual([]);
-    // Píst měří 4,24 m: zdvih 2 m ještě ano, 2,25 m už ne (ani záporný).
-    expect(zkontrolujNavrh(kridlo(2), kanal())).toEqual([]);
+    // Píst měří 4,24 m: víc než polovinu své délky (2,12 m) se neprodlouží ani nezkrátí.
     expect(zkontrolujNavrh(kridlo(2.25), kanal()).map((p) => p.druh)).toEqual(["zdvih-mimo-rozsah"]);
     expect(zkontrolujNavrh(kridlo(-2.25), kanal()).map((p) => p.druh)).toEqual(["zdvih-mimo-rozsah"]);
+    // Pata pístu 3 m pod čepem, úchyt 3 m od čepu: v úvrati (křídlo svisle) by píst měřil 6 m.
+    // Zdvih 1,5 m křídlo zvedne o 56°; 1,75 m o víc než 70° a 2 m by vedly až za úvrať.
+    expect(zkontrolujNavrh(kridlo(1.5), kanal())).toEqual([]);
+    expect(zkontrolujNavrh(kridlo(1.75), kanal()).map((p) => p.druh)).toEqual(["zdvih-za-uvrati"]);
+    expect(zkontrolujNavrh(kridlo(2), kanal()).map((p) => p.druh)).toEqual(["zdvih-za-uvrati"]);
+    expect(otoceniKridla(kridlo(2), kanal(), kridlo(2).pruty[4]!)).toEqual({ cos: -1 });
+    // Úhel otočení: L² = D² + r² − 2·D·r·cos γ s D = r = 3 m; na začátku γ = 90°.
+    const otoceni = otoceniKridla(kridlo(1.5), kanal(), kridlo(1.5).pruty[4]!)!;
+    const delka = Math.hypot(3, 3) + 1.5;
+    const gama = Math.acos((18 - delka * delka) / 18);
+    expect(otoceni.cos).toBeCloseTo(Math.cos(gama - Math.PI / 2), 12);
+    expect((Math.acos(otoceni.cos) * 180) / Math.PI).toBeCloseTo(56.3, 1);
+    // Píst, který křídlo stahuje dolů (záporný zdvih), se hlídá stejně.
+    expect(otoceniKridla(kridlo(-1.5), kanal(), kridlo(-1.5).pruty[4]!)!.cos).toBeGreaterThan(COS_NEJVETSIHO_OTOCENI);
+    // Bez zámku křídlo drží druhá kotva a neotočí se: není co hlídat.
+    expect(otoceniKridla(kridlo(2, false), kanal(), kridlo(2, false).pruty[4]!)).toBeNull();
+    expect(zkontrolujNavrh(kridlo(2, false), kanal())).toEqual([]);
     // Zámek uprostřed svařeného křídla nic nerozpojí: obě strany drží pohromadě... ne, právě on je spojuje.
     const uprostred = kridlo(1.5);
     uprostred.stycniky[2] = { id: 2, x: 6, y: 0, zamek: true };
@@ -136,6 +156,17 @@ describe("stavba pohyblivého mostu", () => {
     const vetknuty = kridlo(1.5);
     const sVetknutim = kanal({ kotvy: [{ x: 0, y: 0, typ: "pevna" }, { x: 12, y: 0, typ: "vetknuti" }, { x: 0, y: -3, typ: "pevna" }] });
     expect(zkontrolujNavrh(vetknuty, sVetknutim).map((p) => p.druh)).toContain("zamek-na-vetknuti");
+    // Zámek na čepu nebo v patě pístu by křídlo pustil celé: patří jen na opěru s ložiskem.
+    const naCepu = kridlo(1.5, false);
+    naCepu.stycniky[0] = { id: 0, x: 0, y: 0, zamek: true };
+    expect(zkontrolujNavrh(naCepu, kanal()).map((p) => p.druh)).toEqual(["zamek-na-vetknuti"]);
+    const vPate = kridlo(1.5);
+    vPate.stycniky[5] = { id: 5, x: 0, y: -3, zamek: true };
+    expect(zkontrolujNavrh(vPate, kanal()).map((p) => p.druh)).toEqual(["zamek-na-vetknuti"]);
+    // Zámek ve styčníku, kam vede i píst, by spojoval tři části.
+    const sPistem = kridlo(1.5);
+    sPistem.stycniky[1] = { id: 1, x: 3, y: 0, zamek: true };
+    expect(zkontrolujNavrh(sPistem, kanal()).map((p) => p.druh)).toContain("zamek-vic-casti");
   });
 });
 
@@ -198,6 +229,114 @@ describe("zkouška jednokřídlého sklopného mostu", () => {
     const vysoky = probehni(mala, pevny).zkouska.vysledek();
     expect(vysoky.lode).toEqual({ celkem: 1, proplulo: 1, narazilo: 0 });
     expect(vysoky.pruchod).toBe(true);
+  });
+
+  it("zdvih za mrtvý bod křídlo překlopí přes svislici a zkouška to neuzná", () => {
+    // Pata pístu 3 m pod čepem, úchyt 3 m od čepu: píst dlouhý 4,24 m se smí natáhnout nejvýš
+    // na 6 m, pak leží v přímce s čepem. Zdvih 2 m je víc, než kam křídlo dosáhne. Kontrola
+    // návrhu takový zdvih odmítne; zkouška si musí poradit i tam, kde kontrola čep nepozná.
+    const zkouska = new Zkouska(kanal(), kridlo(2), 1);
+    const udalosti: Udalost[] = [];
+    while (!zkouska.hotovo) udalosti.push(...zkouska.pokracuj(0.5).udalosti);
+    const v = zkouska.vysledek();
+    expect(v.pohyb!.preklopeno).toBe(true);
+    expect(udalosti.filter((u) => u.druh === "pohyb" && u.faze === "preklopeno")).toHaveLength(1);
+    expect(v.pruchod).toBe(false);
+    expect(v.medaile.pruchod).toBe(false);
+    // Stejné křídlo se zdvihem, který před mrtvým bodem končí, se nepřeklopí.
+    expect(probehni(kanal(), kridlo(1.5)).zkouska.vysledek().pohyb!.preklopeno).toBe(false);
+  });
+
+  it("křídlo, které nedosáhne na protější opěru, neprojde, ani když auta mezeru přejedou", () => {
+    const kratke = kridlo(1.5, false);
+    kratke.stycniky[4] = { id: 4, x: 11, y: 0 };
+    const { zkouska } = probehni(kanal(), kratke);
+    const v = zkouska.vysledek();
+    expect(v.mezera).toBe(true);
+    expect(v.pruchod).toBe(false);
+    expect(v.medaile).toEqual({ pruchod: false, rozpocet: false, mistrovska: false });
+    expect(probehni(kanal(), kridlo(1.5)).zkouska.vysledek().mezera).toBe(false);
+  });
+
+  it("klidová síla dosednutí je reakce opěry před odemknutím, ne špička při odlehnutí", () => {
+    const { zkouska } = probehni(kanal(), kridlo(1.5));
+    const pohyb = zkouska.vysledek().pohyb!;
+    // Stejný most na úrovni, kde se nezvedá: konec křídla leží na opěře a auto je dávno pryč.
+    const pevny = new Zkouska(kanal({ pohyb: null, lode: [] }), kridlo(1.5, false), 1);
+    while (pevny.simulace.cas < 3.9) pevny.simulace.krok();
+    const reakce = -pevny.simulace.soustava.fy[4]!;
+    expect(reakce).toBeGreaterThan(10_000);
+    expect(Math.abs(pohyb.klidoveDosednuti / reakce - 1)).toBeLessThan(0.02);
+    // Ráz při dosednutí je větší než klidová síla, ale je to síla téhož řádu.
+    expect(pohyb.razDosednuti).toBeGreaterThan(pohyb.klidoveDosednuti);
+    expect(pohyb.razDosednuti).toBeLessThan(30 * pohyb.klidoveDosednuti);
+  });
+
+  it("medaili za měkké dosednutí dostane jen most, který na opěru opravdu dosedl", () => {
+    const sBonusem = (zmeny: Partial<Uroven> = {}): Uroven => kanal({ mistrovska: { druh: "dosednuti", limit: 1e9 }, ...zmeny });
+    expect(probehni(sBonusem(), kridlo(1.5)).zkouska.vysledek().medaile.mistrovska).toBe(true);
+    // Krátké křídlo bez zámku na opěru nedosedá: ráz je nula, ale měkké dosednutí to není.
+    const kratke = kridlo(1.5, false);
+    kratke.stycniky[4] = { id: 4, x: 11, y: 0 };
+    const v = probehni(sBonusem(), kratke).zkouska.vysledek();
+    expect(v.pohyb!.razDosednuti).toBe(0);
+    expect(v.medaile.mistrovska).toBe(false);
+  });
+
+  it("víc lodí: každá se hlídá zvlášť a stačí jeden náraz, aby most neprošel", () => {
+    // První loď propluje pod zvednutým křídlem, druhá připluje, když už je most zase dole.
+    const dveLode = kanal({
+      lode: [
+        { cas: 8, trvani: 2, xMin: 4, xMax: 11, vyska: 9 },
+        { cas: 19, trvani: 2, xMin: 4, xMax: 11, vyska: 9 },
+      ],
+      jizdniRad: [{ cas: 0, trasa: "silnice", smer: 1, druh: "auto" }, { cas: 30, trasa: "silnice", smer: -1, druh: "auto" }],
+    });
+    const { zkouska, udalosti } = probehni(dveLode, kridlo(1.5));
+    const v = zkouska.vysledek();
+    expect(v.lode).toEqual({ celkem: 2, proplulo: 1, narazilo: 1 });
+    expect(udalosti.filter((u) => u.druh === "lod").map((u) => (u.druh === "lod" ? `${u.lod}:${u.stav}` : ""))).toEqual([
+      "0:proplula",
+      "1:narazila",
+    ]);
+    // Náraz hlásí prut, do kterého loď narazila: mostovku sklopeného křídla.
+    const naraz = udalosti.find((u) => u.druh === "lod" && u.stav === "narazila");
+    expect(naraz?.druh === "lod" && naraz.prut !== undefined && naraz.prut <= 3).toBe(true);
+    expect(v.pruchod).toBe(false);
+  });
+
+  it("záporný zdvih: píst shora křídlo při zvedání přitahuje", () => {
+    // Kotva 5 m nad čepem, píst z ní do středu křídla (7,81 m): zkrácením o 3 m křídlo zvedne o 39°.
+    // Tři metry zdvihu trvají osm a půl sekundy, proto se most zvedá dřív a sklápí později.
+    const sHorniKotvou = kanal({
+      kotvy: [
+        { x: 0, y: 0, typ: "pevna" },
+        { x: 12, y: 0, typ: "posuvna" },
+        { x: 0, y: 5, typ: "pevna" },
+      ],
+      pohyb: { zvednout: 1, sklopit: 15 },
+      lode: [{ cas: 11, trvani: 3, xMin: 4, xMax: 11, vyska: 9 }],
+      jizdniRad: [{ cas: 32, trasa: "silnice", smer: -1, druh: "auto" }],
+    });
+    const most = kridlo(-3);
+    most.stycniky[5] = { id: 5, x: 0, y: 5 };
+    most.pruty[4] = { id: 4, a: 5, b: 2, prvek: "pist", zdvih: -3 };
+    const { zkouska, udalosti } = probehni(sHorniKotvou, most);
+    const v = zkouska.vysledek();
+    expect(udalosti.filter((u) => u.druh === "pohyb").map((u) => (u.druh === "pohyb" ? u.faze : ""))).toEqual([
+      "odemceno",
+      "zvednuto",
+      "sklapeni",
+      "zamceno",
+    ]);
+    expect(v.pohyb).toMatchObject({ zvednuto: true, zamceno: true, preklopeno: false });
+    expect(v.lode).toEqual({ celkem: 1, proplulo: 1, narazilo: 0 });
+    expect(v.pruchod).toBe(true);
+    // Píst křídlo táhne: v obálce je u něj kladná síla (tah) a mez pístu.
+    const obalka = v.obalka[4]!;
+    expect(obalka.velicina).toBeGreaterThan(100_000);
+    expect(obalka.unosnost).toBe(PIST.nejvetsiSila);
+    expect(obalka.vyuziti).toBe(0);
   });
 
   it("stejný most dá dvakrát stejný otisk", () => {
@@ -299,6 +438,11 @@ describe("formát úrovně s pohyblivým mostem", () => {
     expect(u.lode).toEqual([{ cas: 8, trvani: 3, xMin: 4, xMax: 11, vyska: 9 }]);
     const spatne = (zmeny: Partial<Uroven>): (() => Uroven) => () => nactiUroven(JSON.parse(JSON.stringify(kanal(zmeny))));
     expect(spatne({ pohyb: { zvednout: 12, sklopit: 4 } })).toThrow(/sklopit/);
+    // Překlep v klíči se neztratí potichu.
+    expect(spatne({ pohyb: { zvednout: 4, sklopit: 12, zvedni: 3 } as unknown as Uroven["pohyb"] })).toThrow(/zvedni/);
+    expect(
+      spatne({ lode: [{ cas: 8, trvani: 3, xMin: 4, xMax: 11, vyska: 9, vyskaa: 2 }] as unknown as Uroven["lode"] }),
+    ).toThrow(/vyskaa/);
     expect(spatne({ hladina: null })).toThrow(/hladinu/);
     expect(spatne({ lode: [{ cas: 8, trvani: 3, xMin: 11, xMax: 4, vyska: 9 }] })).toThrow(/profil/);
   });

@@ -1,6 +1,6 @@
 import type { Bod } from "../data/geometrie";
 import { vyskaTerenu, type Kotva, type Trasa, type TypKotvy, type Uroven } from "../data/uroven";
-import { delka, vyskovaKota } from "../ui/formaty";
+import { cislo, delka, vyskovaKota } from "../ui/formaty";
 import { t } from "../ui/slovnik";
 import { BARVY, PISMO, cara } from "./barvy";
 import { nakresliPrazcePredmosti } from "./kolej";
@@ -74,7 +74,7 @@ function nakresliLode(ctx: Kontext, s: StavVykresu): void {
   if (hladina === null) return;
   s.uroven.lode.forEach((lod, k) => {
     if (s.cas === undefined) {
-      const popisek = s.nahled ? null : t("vykres.plavebniProfil", { vyska: delka(lod.vyska), cas: lod.cas });
+      const popisek = s.nahled ? null : t("vykres.plavebniProfil", { vyska: delka(lod.vyska), cas: cislo(lod.cas, Number.isInteger(lod.cas) ? 0 : 1) });
       nakresliPlavebniProfil(ctx, s.kamera, s.rozmer, hladina, lod, popisek, 0.9);
       return;
     }

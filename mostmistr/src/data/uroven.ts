@@ -369,6 +369,7 @@ export function nactiUroven(data: unknown): Uroven {
     jizdniRad: polozky(o.jizdniRad, `${c}.jizdniRad`, polozkaJizdnihoRadu),
     pohyb: neboNull(o.pohyb, (v) => {
       const p = objekt(v, `${c}.pohyb`);
+      jenZnameKlice(p, `${c}.pohyb`, ["zvednout", "sklopit"]);
       return {
         zvednout: cislo(p.zvednout, `${c}.pohyb.zvednout`, { min: 0, max: 300 }),
         sklopit: cislo(p.sklopit, `${c}.pohyb.sklopit`, { min: 0, max: 300 }),
@@ -376,6 +377,7 @@ export function nactiUroven(data: unknown): Uroven {
     }),
     lode: polozky(o.lode, `${c}.lode`, (v, cesta): Lod => {
       const l = objekt(v, cesta);
+      jenZnameKlice(l, cesta, ["cas", "trvani", "xMin", "xMax", "vyska"]);
       return {
         cas: cislo(l.cas, `${cesta}.cas`, { min: 0, max: 300 }),
         trvani: cislo(l.trvani, `${cesta}.trvani`, { min: 1, max: 60 }),

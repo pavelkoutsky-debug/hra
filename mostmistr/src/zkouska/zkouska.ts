@@ -4,7 +4,7 @@
 
 import { cenaNavrhu } from "../data/cena";
 import { PIST, ZAMEK } from "../data/katalog";
-import type { NavrhMostu } from "../data/navrh";
+import { mezeryTras, type NavrhMostu } from "../data/navrh";
 import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
@@ -12,7 +12,7 @@ import { tridaKomfortu, vytvorMereniKomfortu, zmerKomfort, type MereniKomfortu }
 import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
-import { rozhodujiciVelicina, vnitrniSily, ZPUSOB_TAH, ZPUSOB_ZADNY } from "../jadro/namahani";
+import { rozhodujiciVelicina, vnitrniSily, ZPUSOB_TAH, ZPUSOB_TLAK, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { pistyVCili, posunPisty, vytvorPisty, type Pisty } from "../jadro/pisty";
 import { NASLEDEK_ROZLOMENI } from "../jadro/poruseni";
 import { Simulace, type Zatizeni } from "../jadro/simulace";
@@ -160,9 +160,14 @@ export class Zkouska {
   readonly #zamky: Zamky;
   #fazePohybu = POHYB_PRED;
   #zvednuto = false;
+  #preklopeno = false;
+  /** Pruty návrhu, které jsou mostovkou některé trasy. */
+  #prutyMostovky: Set<number> = new Set();
   #casZamceni: number | null = null;
   #klidoveDosednuti = 0;
   readonly #pretizenePisty: Uint8Array;
+  /** Pruty návrhu, které jsou písty, v pořadí pístů. */
+  #prutyPistu: number[] = [];
   #nejvetsiSilaPistu = 0;
   /** Stav každé lodi úrovně. */
   readonly #lode: Uint8Array;
@@ -261,7 +266,7 @@ export class Zkouska {
       PIST.nejvetsiSila,
     );
     this.#pretizenePisty = new Uint8Array(stavba.pisty.length);
-    this.#zamky = vytvorZamky(s, stavba.zamky, ZAMEK.tuhost, ZAMEK.utlum);
+    this.#zamky = vytvorZamky(s, stavba.zamky, ZAMEK.tuhost, ZAMEK.utlum, ZAMEK.tuhostCepu);
     this.#lode = new Uint8Array(uroven.lode.length);
 
     const utlumPrvku = new Float64Array(s.pocetPrvku);
@@ -281,6 +286,7 @@ export class Zkouska {
     });
 
     this.trasyMostovky = stavba.trasy.flatMap((t) => t.pruty);
+    this.#prutyMostovky = new Set(this.trasyMostovky);
     // Komfort se měří ve všech styčnících mostovky včetně skrytých dělicích. Budič používá
     // totéž měření: zajímá ho, jak moc se mostovka rozkmitá.
     if (this.#budic || uroven.jizdniRad.some((p) => jeClovek(p.druh))) {
@@ -312,7 +318,8 @@ export class Zkouska {
     // Závaží laděných tlumičů se kreslí stejně; vodorovně je drží vedení, dokud most stojí.
     this.#zavaziTlumicu = stavba.tlumice.map((t) => t.zavazi);
     zavazi.push(...this.#zavaziTlumicu);
-    this.#kresleni = { mostovka: this.trasyMostovky, skryte, zavazi, pisty: stavba.pisty.map((p) => p.prut) };
+    this.#prutyPistu = stavba.pisty.map((p) => p.prut);
+    this.#kresleni = { mostovka: this.trasyMostovky, skryte, zavazi, pisty: this.#prutyPistu };
     this.#obalka = navrh.pruty.map(() => ({ vyuziti: 0, zpusob: ZPUSOB_ZADNY, cas: 0, osova: 0, moment: 0, velicina: 0, unosnost: 0 }));
     this.#reakce = [];
     for (let i = 0; i < stavba.stycnikuNavrhu; i++) {
@@ -453,7 +460,16 @@ export class Zkouska {
     let zmena = false;
     if (this.#fazePohybu === POHYB_PRED && cas >= pohyb.zvednout) {
       this.#fazePohybu = POHYB_ZVEDANI;
+      // Klidová síla dosednutí: co konec mostu tlačil na opěru se zámkem těsně před odemknutím.
+      // (Síla, která na zadržený posun styčníku zbývá, je reakce podpory.)
+      for (let k = 0; k < zamky.pocet; k++) {
+        const i = zamky.stycnik[k]!;
+        if (zamky.pruty[k]!.length > 0 || (s.podpora[i]! & 2) === 0) continue;
+        const reakce = -s.fy[i]!;
+        if (reakce > this.#klidoveDosednuti) this.#klidoveDosednuti = reakce;
+      }
       zmena = odemkniZamky(s, zamky) > 0;
+      zamky.nejvetsiSila.fill(0);
       pisty.vysunout = true;
       udalosti.push({ cas, druh: "pohyb", faze: "odemceno" });
     }
@@ -465,8 +481,7 @@ export class Zkouska {
       if (cas >= pohyb.sklopit) {
         this.#fazePohybu = POHYB_SKLAPENI;
         pisty.vysunout = false;
-        // Co konec mostu na dosedací plochu tlačil před zvednutím, je klidová síla; od teď se měří ráz.
-        this.#klidoveDosednuti = this.#silaDosednuti();
+        // Od teď se měří ráz při dosednutí; co plocha přenesla při odlehnutí, se nepočítá.
         zamky.nejvetsiSila.fill(0);
         udalosti.push({ cas, druh: "pohyb", faze: "sklapeni" });
       }
@@ -483,12 +498,32 @@ export class Zkouska {
     return zmena;
   }
 
+  /**
+   * Hlídá, jestli píst mostovku nepřetlačil přes svislici: prvek mostovky otočený proti
+   * výkresu o víc než čtvrt kruhu znamená překlopené křídlo. Trosky po porušení se nepočítají.
+   */
+  #sledujPreklopeni(udalosti: Udalost[]): void {
+    if (this.#preklopeno || this.#fazePohybu === POHYB_PRED || this.simulace.porusena) return;
+    const s = this.simulace.soustava;
+    const mostovka = this.#prutyMostovky;
+    for (let e = 0; e < s.pocetPrvku; e++) {
+      const prut = s.prut[e]!;
+      if (prut < 0 || !mostovka.has(prut)) continue;
+      const a = s.prvekA[e]!;
+      const b = s.prvekB[e]!;
+      if ((s.x[b]! - s.x[a]!) * s.osaX0[e]! + (s.y[b]! - s.y[a]!) * s.osaY0[e]! >= 0) continue;
+      this.#preklopeno = true;
+      udalosti.push({ cas: this.simulace.cas, druh: "pohyb", faze: "preklopeno" });
+      return;
+    }
+  }
+
   /** Největší síla, kterou dosedací plochy zámků na opěrách od posledního vynulování přenesly, N. */
   #silaDosednuti(): number {
     const zamky = this.#zamky;
     let nejvic = 0;
     for (let k = 0; k < zamky.pocet; k++) {
-      if (zamky.prvky[k]!.length === 0 && zamky.nejvetsiSila[k]! > nejvic) nejvic = zamky.nejvetsiSila[k]!;
+      if (zamky.pruty[k]!.length === 0 && zamky.nejvetsiSila[k]! > nejvic) nejvic = zamky.nejvetsiSila[k]!;
     }
     return nejvic;
   }
@@ -610,6 +645,7 @@ export class Zkouska {
       if (sim.kroku % INTERVAL_OBALKY === 0) {
         this.#aktualizujObalku();
         this.#sledujLode(davka.udalosti);
+        if (this.#uroven.pohyb) this.#sledujPreklopeni(davka.udalosti);
       }
       if (this.#brnknuty >= 0) {
         // Obraty svislého pohybu brnknutého styčníku: mezi dvěma sousedními je půl periody.
@@ -718,6 +754,16 @@ export class Zkouska {
       const sila = s.osovaSila[pisty.prvek[i]!]!;
       const velikost = sila < 0 ? -sila : sila;
       if (velikost > this.#nejvetsiSilaPistu) this.#nejvetsiSilaPistu = velikost;
+      // Píst nemá využití jako prut (neporuší se, jen povolí ventil), ale největší sílu si
+      // obálka pamatuje, aby šla u pístu ukázat stejně jako u prutů.
+      const obalka = this.#obalka[this.#prutyPistu[i]!];
+      if (obalka && velikost > (obalka.velicina < 0 ? -obalka.velicina : obalka.velicina)) {
+        obalka.zpusob = sila < 0 ? ZPUSOB_TLAK : ZPUSOB_TAH;
+        obalka.cas = cas;
+        obalka.osova = sila;
+        obalka.velicina = sila;
+        obalka.unosnost = pisty.nejvetsiSila;
+      }
     }
     // Reakce v podporách: síla, která na zadržený posun styčníku zbývá, je to, co musí
     // podpora přenést. Po porušení už most na podporách neleží tak, jak byl navržen.
@@ -785,6 +831,7 @@ export class Zkouska {
     const pohyb: PohybZkousky | null = uroven.pohyb
       ? {
           zvednuto: this.#zvednuto,
+          preklopeno: this.#preklopeno,
           zamceno: this.#fazePohybu === POHYB_HOTOV,
           casZamceni: this.#casZamceni,
           razDosednuti: this.#fazePohybu >= POHYB_SKLAPENI ? this.#silaDosednuti() : 0,
@@ -798,9 +845,17 @@ export class Zkouska {
       if (stav === LOD_PROPLULA) lode.proplulo += 1;
       else if (stav === LOD_NARAZILA) lode.narazilo += 1;
     }
-    const pohybVPoradku = (pohyb === null || pohyb.zamceno) && lode.proplulo === lode.celkem;
+    const pohybVPoradku = (pohyb === null || (pohyb.zamceno && !pohyb.preklopeno)) && lode.proplulo === lode.celkem;
+    // Most, který nevede až na předmostí, není hotový, i kdyby kola mezeru přeskočila.
+    const mezera = ucastniku > 0 && mezeryTras(this.#navrh, uroven).length > 0;
     const pruchod =
-      !rozpad && spadlo === 0 && prejelo === ucastniku && (ucastniku > 0 || cely) && snesitelny && pohybVPoradku;
+      !rozpad &&
+      spadlo === 0 &&
+      prejelo === ucastniku &&
+      (ucastniku > 0 || cely) &&
+      snesitelny &&
+      pohybVPoradku &&
+      !mezera;
     const bonus = uroven.mistrovska;
     // Brnknutí je pokus, ne zkouška: frekvence se určí z obratů pohybu a medaile se neudělují.
     let frekvenceKmitani: number | null = null;
@@ -821,7 +876,8 @@ export class Zkouska {
           (bonus.druh === "komfort-cestujicich" &&
             komfortCestujicich !== null &&
             komfortCestujicich.zrychleni <= bonus.limit) ||
-          (bonus.druh === "dosednuti" && pohyb !== null && pohyb.razDosednuti <= bonus.limit)),
+          // Měkké dosednutí jde ocenit jen u mostu, který na opěru opravdu dosedl.
+          (bonus.druh === "dosednuti" && pohyb !== null && pohyb.razDosednuti > 0 && pohyb.razDosednuti <= bonus.limit)),
     };
     return {
       pruchod,
@@ -830,6 +886,7 @@ export class Zkouska {
       spadlo,
       poruseni,
       pohyb,
+      mezera,
       lode,
       cena,
       nejvetsiVyuziti,

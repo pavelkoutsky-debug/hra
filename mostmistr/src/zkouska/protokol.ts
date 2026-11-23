@@ -104,8 +104,9 @@ export type Udalost = { cas: number } & (
   /**
    * Pohyblivý most: zámky se odemkly a písty začaly zvedat (`odemceno`), písty dojely
    * (`zvednuto`), most se začal sklápět (`sklapeni`) a zámky zase zapadly (`zamceno`).
+   * `preklopeno`: mostovka se při zvedání překlopila přes svislici.
    */
-  | { druh: "pohyb"; faze: "odemceno" | "zvednuto" | "sklapeni" | "zamceno" }
+  | { druh: "pohyb"; faze: "odemceno" | "zvednuto" | "sklapeni" | "zamceno" | "preklopeno" }
   /** Loď (pořadí v úrovni) proplula, nebo narazila do prutu návrhu `prut`. */
   | { druh: "lod"; lod: number; stav: "proplula" | "narazila"; prut?: number }
 );
@@ -117,9 +118,14 @@ export interface PohybZkousky {
   /** Po sklopení všechny zámky zase zapadly; `casZamceni` říká kdy (s), null když ne. */
   zamceno: boolean;
   casZamceni: number | null;
+  /**
+   * Mostovka se při zvedání otočila o víc než čtvrt kruhu: píst ji přetlačil přes svislici
+   * (jeho zdvih je větší, než kam křídlo dosáhne). Takový most zkouškou neprojde.
+   */
+  preklopeno: boolean;
   /** Největší síla, kterou konec mostu při sklápění udeřil do dosedací plochy opěry, N; 0 bez zámku na opěře. */
   razDosednuti: number;
-  /** Síla, kterou konec mostu na dosedací plochu tlačil v klidu po odemknutí, N. */
+  /** Síla, kterou konec mostu těsně před odemknutím tlačil v klidu na opěru se zámkem, N. */
   klidoveDosednuti: number;
   /** Kolik pístů za zkoušku zastavil přetlakový ventil (nestačily silou). */
   pretizenychPistu: number;
@@ -178,6 +184,11 @@ export interface VysledekZkousky {
   poruseni: number;
   /** Zvedání a sklápění mostu; null v úrovni, kde se most nezvedá. */
   pohyb: PohybZkousky | null;
+  /**
+   * Na trase chybí kus mostovky (návrh ji nedovedl až na předmostí). Takový most zkouškou
+   * neprojde, i kdyby kola mezeru přeskočila.
+   */
+  mezera: boolean;
   /** Lodě: kolik jich mělo proplout, kolik proplulo a kolik narazilo do mostu. */
   lode: { celkem: number; proplulo: number; narazilo: number };
   /**

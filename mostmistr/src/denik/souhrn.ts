@@ -271,6 +271,15 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
         if (prvni !== null && typeof prvni === "object" && !Array.isArray(prvni)) {
           const zpusob = textZ(prvni.zpusob);
           duvod = `${znamyPrvek(prvni.prvek) ?? "?"}/${zpusob !== null && ZNAME_ZPUSOBY.has(zpusob) ? zpusob : "?"}`;
+        } else if (anoZ(data.preklopeno)) {
+          // Pohyblivý most bez zlomeného prutu: co se nepovedlo při zvedání a sklápění.
+          duvod = "křídlo se překlopilo";
+        } else if (vMezich(data.narazyLodi, 100) >= 1) {
+          duvod = "loď narazila";
+        } else if (data.zamceno === false) {
+          duvod = "zámek nezapadl";
+        } else if (anoZ(data.mezera)) {
+          duvod = "mostovka nedosáhla na předmostí";
         }
         pricti((v.selhani[u.uroven] ??= slovnik()), duvod, 1);
       }
