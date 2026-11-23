@@ -3375,10 +3375,13 @@ export function spustUroven(
           zrychleni: cislo(snimek.kmitani, 2),
         });
       } else if (b.zlom) {
-        // Zkouška do zlomu: kolik zátěže na mostě právě leží. Po prvním porušení už neroste.
-        const zlomeno =
-          b.vysledek?.zlom?.cas ?? b.udalosti.find((u) => u.druh === "poruseni" || u.druh === "sjeti")?.cas ?? Infinity;
-        const naMetr = zatizeniZlomu(ZKOUSKA_DO_ZLOMU, Math.min(prehravani.cas, zlomeno));
+        // Zkouška do zlomu: kolik zátěže na mostě právě leží. Čte se ze šipek záznamu (každá
+        // nese zatížení na metr): zátěž neroste přesně s časem, při otevírání plastického
+        // kloubu čeká a po prvním porušení zůstává ležet.
+        let naMetr = 0;
+        if (b.zaznam.stavV(prehravani.cas, snimek) !== null) {
+          for (let i = 3; i < snimek.sily.length; i += 4) naMetr = Math.max(naMetr, Math.abs(snimek.sily[i]!));
+        }
         let delka = 0;
         for (const trasa of uroven.trasy) delka += Math.abs(trasa.konec.x - trasa.zacatek.x);
         text = t("legenda.zlom", {

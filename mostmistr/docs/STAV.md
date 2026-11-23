@@ -28,6 +28,45 @@ Poslední aktualizace: 23. 11. 2026
 - **M7 Režimy** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M7 — výsledek“ a „Nezávislé recenze M7“).
 - Rozpracovaný je **M8** (výkon, dotyk, angličtina; k tomu odložené věci z recenzí: úzké okno, značky kotev, nápovědy na časové ose a fyzika vzpěru a plasticity z kontroly výpočtů M7). Pak **M9** (zvuky načisto, se schválením zadavatele).
 
+## M8 — výsledek (rozpracováno)
+
+Doladění: angličtina, dotykové ovládání a telefon, plynulost přehrávání, drobnosti odložené z recenzí M5 až M7 a oprava fyziky z kontroly výpočtů M7. Verze hry 0.14.0, verze fyziky 8.
+
+**Angličtina** (`src/ui/slovnik-en.ts`, `src/ui/jazyk.ts`, `src/ui/formaty.ts`).
+
+- Druhý slovník se stejnými klíči (866 textů) a anglické názvy všech úrovní; test hlídá, že žádný klíč nechybí, že texty doplňují stejné hodnoty a že v angličtině nezůstala česká věta.
+- Jazyk se bere z adresy (`?jazyk=en`), z uložené volby, jinak z jazyka prohlížeče (čeština a slovenština česky, ostatní anglicky). Přepínač je v liště přehledu; přepnutí stránku načte znovu.
+- Čísla, částky, procenta a data se píšou podle jazyka (anglicky desetinná tečka, čárka mezi tisíci, „23 Nov 2026“). Měna zůstává Kč.
+- `test/e2e/jazyk.e2e.ts` projde v angličtině přehled, zadání, stavbu, nápovědu, výsledek úspěšné i neúspěšné zkoušky, analýzu, pohyblivý most se zkouškou do zlomu, zkušebnu a pískoviště a hledá viditelný text s českým písmenem.
+
+**Dotyk a úzké okno** (`src/vykres/ovladani.ts`, konec `src/styly.css`).
+
+- Jeden prst kreslí a vybírá jako levé tlačítko, dva prsty výkres posouvají a zvětšují; druhý prst rozdělaný tah zruší a zbylý prst po gestu nic nekreslí. Stisk prstu se ohlásí až po 140 ms nebo po pohybu o 8 px, aby první prst gesta nic nenakreslil ani nespustil.
+- Do 1100 px šířky lišta úrovně nemá název hry a ovládání přehrávání se láme (dřív táhlo času uteklo za okraj), do 900 px mizí pruh rozpočtu a tlačítka zoomu, do 700 px (telefon na výšku) se obrazovka skládá pod sebe: výkres, časová osa a paleta dole ve dvou sloupcích; při zkoušce paleta ustoupí. Na dotykových zařízeních mají tlačítka větší plochu.
+- `test/e2e/dotyk.e2e.ts` posílá prohlížeči skutečné dotyky (ladicí protokol): kreslení prstem, zvětšení a posun dvěma prsty, zrušení tahu, ťuknutí, telefon 390 × 844 a okno 1000 × 700 (nic nepřetéká, tlačítka a táhlo času jsou v okně).
+
+**Plynulost** (kritérium milníku: největší úroveň drží 60 snímků za sekundu).
+
+- Skript hry potřebuje na snímek při přehrávání 1 až 2 ms (95. percentil pod 4 ms) i na největším mostě kampaně (5-01, 93 prutů) a v největším davu (5-04).
+- Spodní vrstva výkresu (rastr, voda, terén se šrafami, zóny) se při přehrávání kreslí jednou a pak jen přenáší (`UlozenaVrstva`). V kontejneru bez grafické karty to na plátně 3840 × 2160 zvedlo přehrávání z 15 na 60 snímků za sekundu; na 1280 × 720 zmizely občasné dlouhé snímky.
+- `test/e2e/snimky.e2e.ts` to měří (čísla ukládá do `snimky.json`) a hlídá, že uložená vrstva vypadá na pixel stejně jako kreslená přímo.
+
+**Odložené drobnosti z recenzí**
+
+- Pohyblivé mosty: pevné kotvy mají popisek podle úlohy („čep křídla“, „kotva pro píst“).
+- Časová osa: ukazatel u značky ukáže bublinu s časem a popisem (výjezd, porušení prutu, pád, zvedání mostu, loď).
+- Zadání: medaile jsou nahoře v pravém sloupci (byly pod okrajem okna).
+- Chyba importu mostu ukazuje v angličtině místo v zápisu (věty kontroly dat jsou jen česky).
+
+**Fyzika (verze 8)**, podle nezávislé kontroly výpočtů M7:
+
+- Plastický moment tlačeného průřezu se krátí únosností v tlaku (dřív v tahu, takže tlačená ocelobetonová mostovka byla v ohybu slabší než tažená, opak toho, co hra učí).
+- Vzpěrná délka se bere přes řetěz prutů v přímce spojených svarem bez jiné opory (dřív stačil svar uprostřed tlačeného prutu a jeho únosnost byla až dvojnásobná).
+- Zkouška do zlomu čeká se zátěží, dokud se otevírá plastický kloub: ocelobetonové pole 6 m dává 451,6 až 451,7 kN/m při zatěžování 4× až 64× rychlejším i pomalejším (ručně 451,8).
+- Referenční mosty, mosty, které mají spadnout, i ukázky dopadají v běžných zkouškách stejně (vyhratelnost beze změny); změnily se únosnosti při zkoušce do zlomu (`npm run vyzvy`).
+
+**Co hotové není:** nezávislé recenze M8 a jejich zapracování, pull request.
+
 ## M7 — výsledek
 
 Herní režimy: výzvy o efektivitu se zkouškou do zlomu, sandbox, nápověda a dokončení kampaně. Verze hry 0.13.0, verze fyziky 7 (výsledky dosavadních zkoušek se nemění), formát uloženého postupu 2.
@@ -922,3 +961,6 @@ M8 Doladění (výkon, dotykové ovládání, angličtina a odložené drobnosti
 | 3 | Hodnocení kmitání (M3a): měří se zrychlení mostovky pod lidmi a nepřijatelné kmitání je neúspěch. Otisky referenčních mostů se nezměnily; změnilo se, které mosty zkouškou projdou. Referenční mosty první kapitoly vycházejí 0,2 až 1,9 m/s², tedy pod hranicí. |
 | 4 | Konec děje (M3z): zkouška nekončí, dokud ti, kdo spadli, nedopadnou na zem nebo do vody (nejdéle 5 s po posledním pádu). Mění se délka záznamu a konečný stav mostů, ze kterých někdo spadl. Otisky referenčních mostů ani výsledky referenčních řešení se nezměnily. |
 | 5 | Ztráta kroku (M3b): budicí síla člověka slábne, když se mostovka pod ním houpe víc než 2,5 m/s²; nad 6 m/s² z ní zbývá čtvrtina. Mění se kmitání mostů, které se rozhoupaly přes mez (nízká příhrada úrovně 2-03 bez závaží: 5,51 → 4,16 m/s², dál neprojde). Ve výsledku se lidé počítají po jednom, ne po řadách. Otisky referenčních mostů ani to, která referenční řešení projdou, se nezměnily. |
+| 6 | Vlastní tíha po délce prutu (M5): tíha prvku působí jako spojité zatížení, ne jen ve styčnících; podporové momenty spojitých nosníků jsou správně. Mění se otisky všech referenčních mostů; pořadí medailí zůstalo. |
+| 7 | Opravy po kontrole fyziky M5: mostovka silnice a koleje se dělí vždy aspoň na dva díly, brzdná a tažná síla nabíhá plynule, přenos tíhy mezi nápravami při brzdění splňuje rovnováhu momentů. Mění se výsledky úrovní s vlakem a s brzděním. |
+| 8 | Vzpěr a plasticita podle nezávislé kontroly výpočtů M7 (M8). Plastický moment se v tlaku krátí únosností průřezu v tlaku, ne v tahu: tlačená ocelobetonová mostovka je v ohybu únosnější (při zkoušce do zlomu 3-03 +26 %, 4-01 +30 %, 6-04 +15 %). Vzpěrná délka se bere přes celý řetěz prutů, které ve svaru pokračují v přímce a nejsou tam ničím podepřené (pilíře nad sebou i bez svaru): svar uprostřed tlačeného prutu už jeho únosnost nezvedne (visutý most 4-04 při zkoušce do zlomu −11 %, pylon je jeden sloup). Zkouška do zlomu nezvyšuje zátěž, dokud přibývá plastická práce: tvárné porušení dává statickou mez nezávisle na rychlosti. Výsledky běžných zkoušek referenčních mostů, mostů, které mají spadnout, ani ukázek se nezměnily (vyhratelnost i otisky kromě scénáře zkoušky do zlomu jsou stejné). |

@@ -27,5 +27,11 @@
  *      skokem; přenos tíhy mezi nápravami při brzdění splňuje rovnováhu momentů i u vozidel
  *      s více než dvěma nápravami. Mění se výsledky úrovní s vlakem a s brzděním; otisky
  *      dosavadní regresní sady se nezměnily (takový most v ní nebyl), přibyl scénář s vlakem.
+ * - 8: vzpěr a plasticita po nezávislé kontrole výpočtů M7 (milník M8). Plastický moment se
+ *      v tlaku krátí únosností průřezu v tlaku, ne v tahu (tlačená ocelobetonová mostovka byla
+ *      v ohybu slabší než tažená). Vzpěrná délka se bere přes řetěz prutů, které ve svaru
+ *      pokračují v přímce a nic dalšího je tam nedrží (pilíře nad sebou i bez svaru). Zkouška
+ *      do zlomu nezvyšuje zátěž, dokud přibývá plastická práce. Výsledky běžných zkoušek
+ *      referenčních mostů se nezměnily; z otisků jen scénář zkoušky do zlomu.
  */
-export const VERZE_FYZIKY = 7;
+export const VERZE_FYZIKY = 8;

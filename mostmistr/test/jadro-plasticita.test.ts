@@ -142,6 +142,22 @@ describe("plastický kloub", () => {
     expect(Math.abs(momentNaKonciA(s, 0)) / Mp).toBeCloseTo(0.5, 6);
   });
 
+  it("tlak ubírá z plastické únosnosti podle únosnosti průřezu v tlaku, ne v tahu", () => {
+    // Průřez jako ocelobeton: v tlaku unese čtyřikrát víc než v tahu (tlak nese beton).
+    const sprazeny: Prut = { ...OCEL, unosnost: { ...OCEL.unosnost!, tlak: 4 * Ny } };
+    const stlaceny = drzenyPrut(sprazeny, L);
+    stlaceny.x[1] = L - (0.5 * Ny) / (OCEL.EA / L); // tlak velký jako polovina meze v tahu
+    zdeformuj(stlaceny, 0, 0.3);
+    expect(stlaceny.osovaSila[0]! / Ny).toBeCloseTo(-0.5, 6);
+    // Spotřebována je osmina únosnosti v tlaku: kloub unese 7/8 plastického momentu.
+    expect(Math.abs(stlaceny.momentB[0]!) / Mp).toBeCloseTo(0.875, 6);
+    // Stejně velký tah spotřebuje polovinu únosnosti v tahu.
+    const tazeny = drzenyPrut(sprazeny, L);
+    tazeny.x[1] = L + (0.5 * Ny) / (OCEL.EA / L);
+    zdeformuj(tazeny, 0, 0.3);
+    expect(Math.abs(tazeny.momentB[0]!) / Mp).toBeCloseTo(0.5, 6);
+  });
+
   it("dřevěný prut zůstává pružný", () => {
     const s = drzenyPrut(DREVO, L);
     zdeformuj(s, 0.2, 0);

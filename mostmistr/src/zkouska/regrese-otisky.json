@@ -1,5 +1,5 @@
 {
-  "verzeFyziky": 7,
+  "verzeFyziky": 8,
   "otisky": {
     "tram-kloubovy": "c839819f7f635d87",
     "tram-svareny": "2beec9f4193c6f04",
@@ -23,6 +23,6 @@
     "dlouhy-most": "d7003dfa086abc6c",
     "vlak-brzdi-na-stycich": "1aa95a4cd54fb2f2",
     "sklopny-most": "6eb4922b12e5440d",
-    "zkouska-do-zlomu": "adf7d42757c1e26d"
+    "zkouska-do-zlomu": "43cb3f7d21c45bf9"
   }
 }
