@@ -100,7 +100,7 @@ beforeAll(async () => {
   if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
   adresa = mistni;
   prohlizec = await chromium.launch();
-  kontext = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  kontext = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   await kontext.grantPermissions(["clipboard-read", "clipboard-write"]);
   stranka = await kontext.newPage();
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));

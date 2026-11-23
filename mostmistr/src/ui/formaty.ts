@@ -1,12 +1,17 @@
-// Zápis čísel a údajů po česku: desetinná čárka, typografické minus.
+// Zápis čísel a údajů v jazyce hry. Česky desetinná čárka a úzká mezera mezi tisíci, anglicky
+// desetinná tečka a čárka mezi tisíci; v obou typografické minus.
+
+import { aktualniJazyk } from "./slovnik";
 
 const MINUS = "−";
+
+const anglicky = (): boolean => aktualniJazyk() === "en";
 
 export function cislo(hodnota: number, mist: number): string {
   // −0,00 nechceme; zaokrouhlená nula je prostě nula.
   const zaokrouhlene = Number(hodnota.toFixed(mist));
-  const zapis = Math.abs(zaokrouhlene).toFixed(mist).replace(".", ",");
-  return zaokrouhlene < 0 ? MINUS + zapis : zapis;
+  const zapis = Math.abs(zaokrouhlene).toFixed(mist);
+  return (zaokrouhlene < 0 ? MINUS : "") + (anglicky() ? zapis : zapis.replace(".", ","));
 }
 
 export function delka(metry: number): string {
@@ -16,7 +21,7 @@ export function delka(metry: number): string {
 /** Výšková kóta se znaménkem, jak se píše na výkresech: +2,00 nebo −6,00. */
 export function vyskovaKota(metry: number): string {
   const zapis = cislo(metry, 2);
-  return metry > 0 && zapis !== "0,00" ? `+${zapis}` : zapis;
+  return metry > 0 && zapis !== cislo(0, 2) ? `+${zapis}` : zapis;
 }
 
 /** Jeden CSS pixel má podle definice 1/96 palce. */
@@ -32,14 +37,17 @@ export function meritkoVykresu(pixeluNaMetr: number): string {
   return `1 : ${Math.max(1, Math.round(pomer / krok) * krok)}`;
 }
 
+const MESICE_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
 export function datum(den: Date): string {
+  if (anglicky()) return `${den.getDate()} ${MESICE_EN[den.getMonth()]} ${den.getFullYear()}`;
   return `${den.getDate()}. ${den.getMonth() + 1}. ${den.getFullYear()}`;
 }
 
-/** Celé číslo s úzkými nedělitelnými mezerami mezi tisíci: 33 500. */
+/** Celé číslo s oddělenými tisíci: česky úzkou nedělitelnou mezerou (33 500), anglicky čárkou (33,500). */
 export function celeCislo(hodnota: number): string {
   const zaokrouhlene = Math.round(hodnota);
-  const zapis = String(Math.abs(zaokrouhlene)).replace(/\B(?=(\d{3})+$)/g, "\u202f");
+  const zapis = String(Math.abs(zaokrouhlene)).replace(/\B(?=(\d{3})+$)/g, anglicky() ? "," : "\u202f");
   return zaokrouhlene < 0 ? MINUS + zapis : zapis;
 }
 

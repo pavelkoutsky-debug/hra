@@ -1,6 +1,8 @@
 // Hodiny přehrávání záznamu: čas děje, který běží zvolenou rychlostí a nikdy
 // nepředběhne to, co simulace už spočítala.
 
+import { cislo } from "./formaty";
+
 export interface StavPrehravani {
   /** Čas děje v sekundách. */
   cas: number;
@@ -29,5 +31,5 @@ export function posunPrehravani(
 
 /** Zápis času děje jako sekundy s desetinami, např. „12,3 s“. */
 export function zapisCasu(cas: number): string {
-  return `${cas.toFixed(1).replace(".", ",")} s`;
+  return `${cislo(cas, 1)} s`;
 }

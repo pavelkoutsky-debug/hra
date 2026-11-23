@@ -1,7 +1,11 @@
-// Všechny texty hry na jednom místě, aby šla později doplnit angličtina.
+// Všechny texty hry na jednom místě. Čeština je tady, angličtina ve `slovnik-en.ts` se stejnými
+// klíči; který jazyk platí, říká `nastavJazyk` (v prohlížeči podle volby hráče, viz `jazyk.ts`).
+
+import { EN, NAZVY_UROVNI_EN } from "./slovnik-en";
 
 const CS = {
   "hra.nazev": "Mostmistr",
+  "jazyk.prepnout": "Přepnout hru do angličtiny (Switch to English)",
   "lista.oddalit": "Oddálit",
   "lista.priblizit": "Přiblížit",
   "lista.celyVykres": "Celý výkres",
@@ -938,9 +942,33 @@ const CS = {
 
 export type KlicTextu = keyof typeof CS;
 
-/** Vrátí text podle klíče a doplní hodnoty na místa označená {jmenem}. */
+export const JAZYKY = ["cs", "en"] as const;
+export type Jazyk = (typeof JAZYKY)[number];
+
+/** Jazyk, ve kterém `t` vrací texty a `formaty.ts` píše čísla. Mimo prohlížeč čeština. */
+let jazyk: Jazyk = "cs";
+
+export function nastavJazyk(novy: Jazyk): void {
+  jazyk = novy;
+}
+
+export function aktualniJazyk(): Jazyk {
+  return jazyk;
+}
+
+/** Texty obou jazyků pro testy úplnosti překladu. */
+export const TEXTY: { readonly cs: Readonly<Record<KlicTextu, string>>; readonly en: Readonly<Partial<Record<KlicTextu, string>>> } = {
+  cs: CS,
+  en: EN,
+};
+
+/**
+ * Vrátí text podle klíče a doplní hodnoty na místa označená {jmenem}. Kdyby anglický text
+ * chyběl, vrátí český: lepší cizí věta než prázdné tlačítko (test hlídá, že nechybí žádný).
+ */
 export function t(klic: KlicTextu, hodnoty: Readonly<Record<string, string | number>> = {}): string {
-  return CS[klic].replace(/\{(\w+)\}/g, (cele: string, jmeno: string) => {
+  const text = (jazyk === "en" ? EN[klic] : undefined) ?? CS[klic];
+  return text.replace(/\{(\w+)\}/g, (cele: string, jmeno: string) => {
     const hodnota = hodnoty[jmeno];
     return hodnota === undefined ? cele : String(hodnota);
   });
@@ -948,4 +976,9 @@ export function t(klic: KlicTextu, hodnoty: Readonly<Record<string, string | num
 
 export function jeKlicTextu(klic: string): klic is KlicTextu {
   return klic in CS;
+}
+
+/** Název úrovně v jazyce hry: český je v souboru úrovně, anglický ve slovníku. */
+export function nazevUrovne(uroven: { id: string; nazev: string }): string {
+  return jazyk === "en" ? (NAZVY_UROVNI_EN[uroven.id] ?? uroven.nazev) : uroven.nazev;
 }

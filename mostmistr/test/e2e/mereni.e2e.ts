@@ -27,7 +27,7 @@ afterAll(async () => {
 it("měření výkonu doběhne v prohlížeči pro všech šest variant mostů", async () => {
   const adresa = server.resolvedUrls?.local[0];
   if (!adresa) throw new Error("Náhledový server neoznámil adresu.");
-  const stranka = await prohlizec.newPage({ viewport: { width: 1400, height: 700 } });
+  const stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1400, height: 700 } });
   const chyby: string[] = [];
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
 

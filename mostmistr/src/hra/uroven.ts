@@ -40,7 +40,7 @@ import { VERZE_FYZIKY } from "../jadro/verze";
 import { prvek, udaj } from "../ui/dom";
 import { cislo, datum, hmotnost, koruny, meritkoVykresu, procenta } from "../ui/formaty";
 import { posunPrehravani, zapisCasu, type StavPrehravani } from "../ui/prehravani";
-import { jeKlicTextu, t, type KlicTextu } from "../ui/slovnik";
+import { jeKlicTextu, nazevUrovne, t, type KlicTextu } from "../ui/slovnik";
 import { celyVyrez, obrazNaSvet, omezNaVyrez, posunO, svetNaObraz, zoomKolem, type Kamera } from "../vykres/kamera";
 import { nakresliKonstrukci } from "../vykres/konstrukce";
 import { nakresliNavrh, tloustkaPrutu } from "../vykres/navrh";
@@ -2625,7 +2625,7 @@ export function spustUroven(
 
   function naplnZadani(): void {
     udaj("zadani-list").textContent = t("zadani.uroven", { id: uroven.id });
-    udaj("zadani-nazev").textContent = uroven.nazev;
+    udaj("zadani-nazev").textContent = nazevUrovne(uroven);
     const klic = `zadani.${uroven.id}`;
     udaj("zadani-text").textContent = jeKlicTextu(klic) ? t(klic) : "";
 
@@ -3203,14 +3203,14 @@ export function spustUroven(
   // ---- Úvodní naplnění stránky ----
 
   vytvorPaletu();
-  udaj("uroven").textContent = `${uroven.id}  ${uroven.nazev}`;
-  udaj("nazev").textContent = uroven.nazev;
+  udaj("uroven").textContent = `${uroven.id}  ${nazevUrovne(uroven)}`;
+  udaj("nazev").textContent = nazevUrovne(uroven);
   udaj("list").textContent = uroven.id;
   udaj("verze").textContent = `${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
   udaj("datum").textContent = datum(new Date());
   const klicZadani = `zadani.${uroven.id}`;
   udaj("zadani").textContent = jeKlicTextu(klicZadani) ? t(klicZadani) : "";
-  document.title = `${uroven.id} ${uroven.nazev} – ${t("hra.nazev")}`;
+  document.title = `${uroven.id} ${nazevUrovne(uroven)} – ${t("hra.nazev")}`;
 
   // Jízdní řád na liště: provoz, zvedání mostu a lodě v pořadí, v jakém přijdou.
   const dej: { cas: number; text: string }[] = uroven.jizdniRad.map((polozka) => ({ cas: polozka.cas, text: zapisJizdy(polozka) }));

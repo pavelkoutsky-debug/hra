@@ -7,7 +7,7 @@ import type { Denik } from "../denik/denik";
 import type { Uroven } from "../data/uroven";
 import { prvek, udaj } from "../ui/dom";
 import { koruny } from "../ui/formaty";
-import { jeKlicTextu, t } from "../ui/slovnik";
+import { jeKlicTextu, nazevUrovne, t } from "../ui/slovnik";
 import { celyVyrez } from "../vykres/kamera";
 import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
@@ -83,7 +83,7 @@ function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Ul
   id.textContent = uroven.id;
   const nazev = document.createElement("span");
   nazev.className = "karta__nazev";
-  nazev.textContent = uroven.nazev;
+  nazev.textContent = nazevUrovne(uroven);
   hlavicka.append(id, nazev);
 
   const stav = document.createElement("span");

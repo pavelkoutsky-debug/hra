@@ -25,6 +25,16 @@ export interface PosluchacLevehoTlacitka {
 const KROK_KLAVESNICE = 60; // pixelů na stisk šipky
 const ZOOM_KLAVESNICE = 1.25;
 
+/**
+ * Dotyk se jako stisk ohlásí až po téhle době, nebo jakmile se prst pohne o `VULE_DOTYKU`.
+ * Kdo chce výkres dvěma prsty posunout, nepoloží je ve stejný okamžik; bez prodlevy by první
+ * prst stihl něco nakreslit, pověsit závaží nebo spustit budič.
+ */
+const PRODLEVA_DOTYKU = 140; // ms
+const VULE_DOTYKU = 8; // pixelů
+/** Pod touhle roztečí prstů se zoom nepočítá: poměr dvou malých čísel by skákal. */
+const NEJMENSI_ROZTEC = 12; // pixelů
+
 /** Kolečko myši hlásí posun v pixelech, řádcích nebo stránkách; sjednotíme na pixely. */
 function pixelyKolecka(udalost: WheelEvent): number {
   if (udalost.deltaMode === WheelEvent.DOM_DELTA_LINE) return udalost.deltaY * 16;
@@ -36,13 +46,24 @@ function pixelyKolecka(udalost: WheelEvent): number {
  * Připojí ovládání výkresu: zoom kolečkem, posun pravým nebo prostředním tlačítkem,
  * klávesy šipek, plus, minus a Home. Levé tlačítko patří kreslení a hlásí se posluchači
  * `leve`. Mezerník je vyhrazený pro spuštění zkoušky, proto výkres neposouvá.
+ *
+ * Na dotykové obrazovce jeden prst dělá totéž co levé tlačítko (kde výkres nic nekreslí,
+ * posouvá ho) a dva prsty výkres posouvají a zvětšují. Druhý prst rozdělaný tah zruší.
  */
 export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOvladani): void {
   let tazeni: { ukazatel: number; x: number; y: number } | null = null;
   /** Ukazatel, který právě drží levé tlačítko. */
   let leve: number | null = null;
+  /** Prsty položené na plátně a kde právě jsou (souřadnice okna). */
+  const dotyky = new Map<number, Bod>();
+  /** Gesto dvěma prsty: který pár ho drží, kde měl střed a jakou rozteč. */
+  let gesto: { a: number; b: number; stred: Bod; roztec: number } | null = null;
+  /** Po gestu zbylý prst nic nekreslí; čeká se, až se zvednou všechny. */
+  let poGestu = false;
+  /** První dotyk, který se ještě neohlásil jako stisk. */
+  let cekajici: { ukazatel: number; x: number; y: number; misto: Bod; casovac: number } | null = null;
 
-  const mistoNaPlatne = (udalost: MouseEvent): Bod => {
+  const mistoNaPlatne = (udalost: { clientX: number; clientY: number }): Bod => {
     const obrys = canvas.getBoundingClientRect();
     return { x: udalost.clientX - obrys.left, y: udalost.clientY - obrys.top };
   };
@@ -50,10 +71,119 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
     canvas.style.cursor = tazeni ? "grabbing" : "crosshair";
   };
 
+  /** Čekající dotyk se stane stiskem levého tlačítka. */
+  const ohlasStisk = (): void => {
+    if (!cekajici) return;
+    window.clearTimeout(cekajici.casovac);
+    const { ukazatel, misto } = cekajici;
+    cekajici = null;
+    leve = ukazatel;
+    posluchac.leve?.stisk(misto, { shift: false, alt: false });
+  };
+  const zahodCekajici = (): void => {
+    if (!cekajici) return;
+    window.clearTimeout(cekajici.casovac);
+    cekajici = null;
+  };
+
+  /** Střed a rozteč páru prstů, který drží gesto. */
+  const parPrstu = (a: number, b: number): { stred: Bod; roztec: number } | null => {
+    const prvni = dotyky.get(a);
+    const druhy = dotyky.get(b);
+    if (!prvni || !druhy) return null;
+    return {
+      stred: { x: (prvni.x + druhy.x) / 2, y: (prvni.y + druhy.y) / 2 },
+      roztec: Math.hypot(druhy.x - prvni.x, druhy.y - prvni.y),
+    };
+  };
+
+  const dotykDolu = (udalost: PointerEvent): void => {
+    dotyky.set(udalost.pointerId, { x: udalost.clientX, y: udalost.clientY });
+    canvas.setPointerCapture(udalost.pointerId);
+    udalost.preventDefault();
+    if (dotyky.size === 2) {
+      // Druhý prst: co první rozdělal, neplatí, a pár začíná gesto.
+      zahodCekajici();
+      if (leve !== null) {
+        leve = null;
+        posluchac.leve?.zruseni();
+      }
+      tazeni = null;
+      const [a, b] = [...dotyky.keys()] as [number, number];
+      const par = parPrstu(a, b);
+      if (par) gesto = { a, b, ...par };
+      posluchac.kurzor(null);
+      return;
+    }
+    if (dotyky.size !== 1 || poGestu || leve !== null || tazeni) return;
+    if (!posluchac.leve) {
+      // Výkres, na kterém se nekreslí (zkušebna), jeden prst posouvá.
+      tazeni = { ukazatel: udalost.pointerId, x: udalost.clientX, y: udalost.clientY };
+      return;
+    }
+    cekajici = {
+      ukazatel: udalost.pointerId,
+      x: udalost.clientX,
+      y: udalost.clientY,
+      misto: mistoNaPlatne(udalost),
+      casovac: window.setTimeout(ohlasStisk, PRODLEVA_DOTYKU),
+    };
+  };
+
+  /** Pohyb prstu; vrátí true, když ho spotřebovalo gesto nebo čekání a dál se nemá hlásit. */
+  const dotykPohyb = (udalost: PointerEvent): boolean => {
+    if (!dotyky.has(udalost.pointerId)) return false;
+    dotyky.set(udalost.pointerId, { x: udalost.clientX, y: udalost.clientY });
+    if (gesto) {
+      if (udalost.pointerId !== gesto.a && udalost.pointerId !== gesto.b) return true;
+      const par = parPrstu(gesto.a, gesto.b);
+      if (!par) return true;
+      posluchac.posun(par.stred.x - gesto.stred.x, par.stred.y - gesto.stred.y);
+      if (par.roztec >= NEJMENSI_ROZTEC && gesto.roztec >= NEJMENSI_ROZTEC) {
+        posluchac.zoom(mistoNaPlatne({ clientX: par.stred.x, clientY: par.stred.y }), par.roztec / gesto.roztec);
+      }
+      gesto.stred = par.stred;
+      gesto.roztec = par.roztec;
+      return true;
+    }
+    if (poGestu) return true;
+    if (cekajici && udalost.pointerId === cekajici.ukazatel) {
+      const dx = udalost.clientX - cekajici.x;
+      const dy = udalost.clientY - cekajici.y;
+      if (dx * dx + dy * dy < VULE_DOTYKU * VULE_DOTYKU) return true;
+      ohlasStisk();
+    }
+    return false;
+  };
+
+  /** Zvednutý nebo ztracený prst; vrátí true, když patřil gestu a dál se nemá hlásit. */
+  const dotykNahoru = (udalost: PointerEvent, zruseno: boolean): boolean => {
+    if (!dotyky.delete(udalost.pointerId)) return false;
+    if (gesto && (udalost.pointerId === gesto.a || udalost.pointerId === gesto.b)) {
+      gesto = null;
+      poGestu = dotyky.size > 0;
+      return true;
+    }
+    if (dotyky.size === 0 && poGestu) {
+      poGestu = false;
+      return true;
+    }
+    if (cekajici && udalost.pointerId === cekajici.ukazatel) {
+      // Krátké ťuknutí: stisk a hned puštění. Ztracený dotyk se neohlásí vůbec.
+      if (zruseno) zahodCekajici();
+      else ohlasStisk();
+    }
+    return false;
+  };
+
   canvas.addEventListener("contextmenu", (udalost) => udalost.preventDefault());
 
   canvas.addEventListener("pointerdown", (udalost) => {
     canvas.focus({ preventScroll: true });
+    if (udalost.pointerType === "touch") {
+      dotykDolu(udalost);
+      return;
+    }
     if (udalost.button === 0) {
       if (!posluchac.leve || tazeni || leve !== null) return;
       udalost.preventDefault();
@@ -71,6 +201,7 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
   });
 
   canvas.addEventListener("pointermove", (udalost) => {
+    if (udalost.pointerType === "touch" && dotykPohyb(udalost)) return;
     if (tazeni && udalost.pointerId === tazeni.ukazatel) {
       posluchac.posun(udalost.clientX - tazeni.x, udalost.clientY - tazeni.y);
       tazeni.x = udalost.clientX;
@@ -85,19 +216,30 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
     if (canvas.hasPointerCapture(udalost.pointerId)) canvas.releasePointerCapture(udalost.pointerId);
   };
   canvas.addEventListener("pointerup", (udalost) => {
+    const dotyk = udalost.pointerType === "touch";
+    if (dotyk && dotykNahoru(udalost, false)) {
+      uvolni(udalost);
+      return;
+    }
     if (leve === udalost.pointerId && udalost.button === 0) {
       leve = null;
       uvolni(udalost);
       posluchac.leve?.pusteni(mistoNaPlatne(udalost));
+      // Prst nad výkresem nezůstává jako kurzor myši: zvýraznění pod ním zhasne.
+      if (dotyk) posluchac.kurzor(null);
       return;
     }
-    if (tazeni && udalost.pointerId === tazeni.ukazatel && udalost.button !== 0) {
+    if (tazeni && udalost.pointerId === tazeni.ukazatel && (dotyk || udalost.button !== 0)) {
       tazeni = null;
       uvolni(udalost);
       nastavKurzor();
     }
   });
   canvas.addEventListener("pointercancel", (udalost) => {
+    if (udalost.pointerType === "touch" && dotykNahoru(udalost, true)) {
+      uvolni(udalost);
+      return;
+    }
     if (leve === udalost.pointerId) {
       leve = null;
       posluchac.leve?.zruseni();

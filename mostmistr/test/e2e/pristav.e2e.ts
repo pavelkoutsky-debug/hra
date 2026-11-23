@@ -101,7 +101,7 @@ beforeAll(async () => {
   if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
   adresa = mistni;
   prohlizec = await chromium.launch();
-  stranka = await prohlizec.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {
     if (zprava.type() === "error") chyby.push(zprava.text());

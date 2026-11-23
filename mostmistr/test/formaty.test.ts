@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { celeCislo, cislo, datum, delka, hmotnost, koruny, meritkoVykresu, procenta, vyskovaKota } from "../src/ui/formaty";
+import { nastavJazyk } from "../src/ui/slovnik";
 
 describe("čísla po česku", () => {
   it("desetinná čárka", () => {
@@ -68,5 +69,28 @@ describe("částky, procenta a hmotnosti", () => {
   it("hmotnost do tuny v kilogramech, výš v tunách", () => {
     expect(hmotnost(924.4)).toBe("924\u00a0kg");
     expect(hmotnost(3400)).toBe("3,4\u00a0t");
+  });
+});
+
+describe("čísla anglicky", () => {
+  afterEach(() => nastavJazyk("cs"));
+
+  it("desetinná tečka, čárka mezi tisíci, minus zůstává typografické", () => {
+    nastavJazyk("en");
+    expect(cislo(24, 2)).toBe("24.00");
+    expect(cislo(-6.5, 1)).toBe("−6.5");
+    expect(delka(32)).toBe("32.00 m");
+    expect(vyskovaKota(2)).toBe("+2.00");
+    expect(vyskovaKota(0)).toBe("0.00");
+    expect(celeCislo(1234567.4)).toBe("1,234,567");
+    expect(celeCislo(-2500)).toBe("−2,500");
+    expect(koruny(33133)).toBe("33,133\u00a0Kč");
+    expect(hmotnost(1250)).toBe("1.3\u00a0t");
+    expect(procenta(0.756)).toBe("76\u00a0%");
+  });
+
+  it("datum má měsíc slovem, aby se nespletl den s měsícem", () => {
+    nastavJazyk("en");
+    expect(datum(new Date(2026, 10, 3))).toBe("3 Nov 2026");
   });
 });
