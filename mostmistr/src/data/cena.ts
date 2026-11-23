@@ -54,3 +54,27 @@ export function hmotnostNavrhu(navrh: NavrhMostu, uroven: Uroven): number {
   for (const s of navrh.stycniky) hmotnost += (s.zavazi ?? 0) + (s.tlumic?.hmota ?? 0);
   return hmotnost;
 }
+
+/** Cena samotné mostovky návrhu v korunách: část ceny, kterou hráč úsporným mostem neovlivní. */
+export function cenaMostovky(navrh: NavrhMostu): number {
+  const delky = delkyPrutu(navrh);
+  let cena = 0;
+  navrh.pruty.forEach((p, i) => {
+    if (KATALOG[p.prvek].druh === "mostovka") cena += cenaPrutu(p.prvek, delky[i]!);
+  });
+  return Math.round(cena);
+}
+
+/** Hmotnost samotné mostovky návrhu včetně vybavení, kg. */
+export function hmotnostMostovky(navrh: NavrhMostu, uroven: Uroven): number {
+  const delky = delkyPrutu(navrh);
+  let hmotnost = 0;
+  navrh.pruty.forEach((p, i) => {
+    if (KATALOG[p.prvek].druh !== "mostovka") return;
+    const vlastnosti = vlastnostiPrutu(p.prvek, uroven.sirkaMostovky);
+    if (!vlastnosti) return;
+    const vybaveni = neseVybaveni(p.prvek) ? uroven.hmotnostVybaveni : 0;
+    hmotnost += delky[i]! * (vlastnosti.hmotnostNaMetr + vybaveni);
+  });
+  return hmotnost;
+}

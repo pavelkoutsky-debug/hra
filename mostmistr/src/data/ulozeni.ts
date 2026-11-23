@@ -6,10 +6,20 @@ import { ChybaDat, cislo, jenZnameKlice, logicka, neboNull, objekt } from "./kon
 import { nactiNavrh, type NavrhMostu } from "./navrh";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_ULOZENI = 1;
+export const VERZE_ULOZENI = 2;
 
 /** Převody ze starších verzí formátu uložení; viz `prevedNaAktualni`. */
-const PREVODY_ULOZENI: readonly Prevod[] = [];
+const PREVODY_ULOZENI: readonly Prevod[] = [
+  // 1 → 2: výzvy o efektivitu. Rekord si nově pamatuje i nejlehčí most a největší únosnost
+  // na korunu; starší rekordy je nemají.
+  (stare) => {
+    const rekordy: Record<string, unknown> = {};
+    for (const [id, zaznam] of Object.entries(objekt(stare.rekordy ?? {}, "ulozeni.rekordy"))) {
+      rekordy[id] = { ...objekt(zaznam, `ulozeni.rekordy.${id}`), nejlepsiHmotnost: null, nejlepsiZlom: null };
+    }
+    return { ...stare, rekordy };
+  },
+];
 
 /** Tři nezávislé medaile úrovně (koncepce, kap. 4). */
 export interface Medaile {
@@ -27,6 +37,10 @@ export interface Rekord {
   medaile: Medaile;
   /** Nejnižší cena mostu, který zkouškou prošel, v korunách; null, dokud žádný neprošel. */
   nejlepsiCena: number | null;
+  /** Nejmenší hmotnost mostu, který zkouškou prošel, v kg; null, dokud žádný neprošel. */
+  nejlepsiHmotnost: number | null;
+  /** Největší únosnost na korunu ze zkoušky do zlomu, N/Kč; null, dokud ji hráč nezkusil. */
+  nejlepsiZlom: number | null;
 }
 
 export interface Ulozeni {
@@ -52,11 +66,13 @@ function medaile(h: unknown, cesta: string): Medaile {
 
 function rekord(h: unknown, cesta: string): Rekord {
   const o = objekt(h, cesta);
-  jenZnameKlice(o, cesta, ["verzeFyziky", "medaile", "nejlepsiCena"]);
+  jenZnameKlice(o, cesta, ["verzeFyziky", "medaile", "nejlepsiCena", "nejlepsiHmotnost", "nejlepsiZlom"]);
   return {
     verzeFyziky: cislo(o.verzeFyziky, `${cesta}.verzeFyziky`, { min: 0, cele: true }),
     medaile: medaile(o.medaile, `${cesta}.medaile`),
     nejlepsiCena: neboNull(o.nejlepsiCena, (v) => cislo(v, `${cesta}.nejlepsiCena`, { min: 0 })),
+    nejlepsiHmotnost: neboNull(o.nejlepsiHmotnost, (v) => cislo(v, `${cesta}.nejlepsiHmotnost`, { min: 0 })),
+    nejlepsiZlom: neboNull(o.nejlepsiZlom, (v) => cislo(v, `${cesta}.nejlepsiZlom`, { min: 0 })),
   };
 }
 
@@ -93,13 +109,14 @@ export function ulozeniZTextu(zapis: string): Ulozeni {
 
 /**
  * Započítá výsledek zkoušky do rekordu úrovně a vrátí nový rekord. Medaile se nikdy
- * neodebírají a cena se jen snižuje.
+ * neodebírají a cena i hmotnost se jen snižují. Hmotnost se počítá jen, když ji volající zná.
  */
 export function vylepsiRekord(
   dosavadni: Rekord | undefined,
   ziskane: Medaile,
   cena: number,
   verzeFyziky: number,
+  hmotnost?: number,
 ): Rekord {
   const stare = dosavadni?.medaile ?? BEZ_MEDAILI;
   const nove: Medaile = {
@@ -109,14 +126,38 @@ export function vylepsiRekord(
   };
   const dosavadniCena = dosavadni?.nejlepsiCena ?? null;
   const nejlepsiCena = ziskane.pruchod && (dosavadniCena === null || cena < dosavadniCena) ? cena : dosavadniCena;
+  const dosavadniHmotnost = dosavadni?.nejlepsiHmotnost ?? null;
+  const nejlepsiHmotnost =
+    ziskane.pruchod && hmotnost !== undefined && hmotnost > 0 && (dosavadniHmotnost === null || hmotnost < dosavadniHmotnost)
+      ? hmotnost
+      : dosavadniHmotnost;
   const zmena =
     nove.pruchod !== stare.pruchod ||
     nove.rozpocet !== stare.rozpocet ||
     nove.mistrovska !== stare.mistrovska ||
-    nejlepsiCena !== dosavadniCena;
+    nejlepsiCena !== dosavadniCena ||
+    nejlepsiHmotnost !== dosavadniHmotnost;
   return {
     verzeFyziky: zmena || !dosavadni ? verzeFyziky : dosavadni.verzeFyziky,
     medaile: nove,
     nejlepsiCena,
+    nejlepsiHmotnost,
+    nejlepsiZlom: dosavadni?.nejlepsiZlom ?? null,
   };
+}
+
+/**
+ * Započítá výsledek zkoušky do zlomu: únosnost na korunu (N/Kč) se jen zvyšuje. Medaile
+ * ani cenu zkouška do zlomu nemění.
+ */
+export function vylepsiZlom(dosavadni: Rekord | undefined, unosnostNaKorunu: number, verzeFyziky: number): Rekord {
+  const zaklad: Rekord = dosavadni ?? {
+    verzeFyziky,
+    medaile: { ...BEZ_MEDAILI },
+    nejlepsiCena: null,
+    nejlepsiHmotnost: null,
+    nejlepsiZlom: null,
+  };
+  if (!(unosnostNaKorunu > 0) || (zaklad.nejlepsiZlom !== null && unosnostNaKorunu <= zaklad.nejlepsiZlom)) return zaklad;
+  return { ...zaklad, verzeFyziky, nejlepsiZlom: unosnostNaKorunu };
 }
