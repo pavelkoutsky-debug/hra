@@ -309,8 +309,8 @@ export class Editor {
         return dily ? this.#zmen(dily.navrh, "prut") : false;
       }
       const zmeneno = this.#zmen(pridejPrut(this.#navrh, tah.od, tah.k, this.prvek), "prut");
-      // Nové lano zůstane vybrané, aby se mu dal hned nastavit napínák.
-      if (zmeneno && KATALOG[this.prvek].druh === "lano") {
+      // Nové lano zůstane vybrané, aby se mu dal hned nastavit napínák; nový píst kvůli zdvihu.
+      if (zmeneno && (KATALOG[this.prvek].druh === "lano" || KATALOG[this.prvek].druh === "pist")) {
         const a = stycnikV(this.#navrh, tah.od);
         const b = stycnikV(this.#navrh, tah.k);
         const lano = a && b ? prutMezi(this.#navrh, a.id, b.id) : undefined;
