@@ -36,13 +36,13 @@ function prehraj(strana: StranaUkazky): VysledekZkousky {
 describe("ukázky k úrovním", () => {
   it("mají je úrovně, které učí něco nového, a ke každé jsou texty", () => {
     const sUkazkou = kampan.filter((u) => ukazkaUrovne(u) !== null).map((u) => u.id);
-    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "4-01", "4-02", "4-03", "4-04", "5-01", "5-02", "5-03", "5-04", "6-01", "6-02", "6-03", "6-04"]);
+    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "4-01", "4-02", "4-03", "4-04", "5-01", "5-02", "5-03", "5-04", "6-01", "6-02", "6-03", "6-04", "7-01", "7-02", "7-03", "7-04"]);
     for (const id of sUkazkou) {
       for (const cast of ["a", "b", "popis"]) expect(jeKlicTextu(`ukazka.${id}.${cast}`), `${id}.${cast}`).toBe(true);
     }
   });
 
-  it("souvislost se skutečností má první úroveň a celá druhá až šestá kapitola", () => {
+  it("souvislost se skutečností má první úroveň a celá druhá až sedmá kapitola", () => {
     const sTextem = kampan.filter((u) => jeKlicTextu(`skutecnost.${u.id}`)).map((u) => u.id);
     expect(sTextem).toEqual([
       "1-01",
@@ -66,6 +66,10 @@ describe("ukázky k úrovním", () => {
       "6-02",
       "6-03",
       "6-04",
+      "7-01",
+      "7-02",
+      "7-03",
+      "7-04",
     ]);
   });
 
@@ -115,6 +119,21 @@ describe("ukázky k úrovním", () => {
         expect(b.pruchod).toBe(true);
         expect(a.rozpad || b.rozpad).toBe(false);
       });
+
+      // Ukázky sedmé kapitoly jsou o pohyblivém mostě: vlevo loď narazí nebo se most po sklopení
+      // nezamkne (a provoz propadne), vpravo se zvedne, pustí loď, sklopí a zamkne.
+      if (uroven.id.startsWith("7-")) {
+        it("rozdíl dělá zvedání: vlevo loď narazí nebo se most nezamkne, vpravo propluje a provoz pokračuje", () => {
+          expect(a.lode.narazilo > 0 || a.pohyb?.zamceno === false).toBe(true);
+          expect(b).toMatchObject({ spadlo: 0, poruseni: 0, lode: { celkem: 1, proplulo: 1, narazilo: 0 } });
+          // (Písty na hraně síly nemusejí dojet na konec zdvihu; stačí, že loď proplula a most se zamkl.)
+          expect(b.pohyb).toMatchObject({ zamceno: true });
+        });
+        it("ukázka netrvá déle než půl minuty (dlouhé děje se přehrávají zrychleně)", () => {
+          expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(40);
+        });
+        return;
+      }
 
       // Ukázky první, třetí, čtvrté a šesté kapitoly jsou o pevnosti: vlevo se most zlomí, vpravo zůstane celý.
       const oPevnosti = ["1-", "3-", "4-", "6-"].some((kapitola) => uroven.id.startsWith(kapitola));

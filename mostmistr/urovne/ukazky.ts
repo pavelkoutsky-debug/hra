@@ -200,6 +200,22 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
     case "6-04":
       return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
 
+    // Stejné křídlo se stejným pístem: bez zámku ho na opěře drží ložisko a píst ho nezvedne.
+    case "7-01":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+
+    // Stejná dvě křídla: bez zámku uprostřed jsou jeden kus a písty tlačí proti sobě.
+    case "7-02":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
+
+    // Stejné křídlo a stejná hluboká kotva: s malým zdvihem se nezvedne dost vysoko.
+    case "7-03":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+
+    // Stejná dvě křídla: písty z mělkých kotev zavřený most pod autobusem neudrží.
+    case "7-04":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod }, rychlost: 1.5 };
+
     default:
       return null;
   }

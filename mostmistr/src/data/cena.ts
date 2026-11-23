@@ -1,7 +1,7 @@
 // Cena a hmotnost návrhu mostu. Ceny žijí jen v katalogu; uložené mosty je neobsahují,
 // takže přecenění prvku změní cenu všech mostů najednou.
 
-import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu } from "./katalog";
+import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu, ZAMEK } from "./katalog";
 import type { NavrhMostu } from "./navrh";
 import type { Uroven } from "./uroven";
 
@@ -25,7 +25,7 @@ export function cenaLadenehoTlumice(hmota: number): number {
   return LADENY_TLUMIC.cenaZaKus + LADENY_TLUMIC.cenaZaKg * hmota;
 }
 
-/** Cena celého návrhu v korunách, zaokrouhlená na celé koruny: pruty, svary, závaží a laděné tlumiče. */
+/** Cena celého návrhu v korunách, zaokrouhlená na celé koruny: pruty, svary, zámky, závaží a laděné tlumiče. */
 export function cenaNavrhu(navrh: NavrhMostu): number {
   const delky = delkyPrutu(navrh);
   let cena = 0;
@@ -34,6 +34,7 @@ export function cenaNavrhu(navrh: NavrhMostu): number {
   });
   for (const s of navrh.stycniky) {
     if (s.svar) cena += CENA_SVARU * navrh.pruty.filter((p) => p.a === s.id || p.b === s.id).length;
+    if (s.zamek) cena += ZAMEK.cena;
     if (s.zavazi) cena += CENA_ZAVAZI * s.zavazi;
     if (s.tlumic) cena += cenaLadenehoTlumice(s.tlumic.hmota);
   }

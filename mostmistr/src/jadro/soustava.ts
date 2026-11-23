@@ -158,6 +158,11 @@ export interface Soustava {
   beta: Float64Array;
   /** Viskózní tlumič podél osy prvku, N·s/m. */
   tlumic: Float64Array;
+  /**
+   * Rychlost, jakou se řízeně mění klidová délka prvku, m/s (píst, který se vysouvá). Tlumič
+   * prvku brzdí jen rozdíl mezi skutečnou rychlostí prodlužování a touto; jinde je nulová.
+   */
+  rychlostKlidove: Float64Array;
   /** Indexy prvků s tlumičem a jejich počet; síly tlumičů se počítají zvlášť (viz tlumice.ts). */
   tlumice: Int32Array;
   pocetTlumicu: number;
@@ -281,6 +286,7 @@ export function sestavSoustavu(popis: PopisSoustavy): Soustava {
     kBB: new Float64Array(m),
     beta: new Float64Array(m),
     tlumic: new Float64Array(m),
+    rychlostKlidove: new Float64Array(m),
     tlumice: new Int32Array(0),
     pocetTlumicu: 0,
     EA: new Float64Array(m),

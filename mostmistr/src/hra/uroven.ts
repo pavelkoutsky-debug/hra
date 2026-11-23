@@ -4,9 +4,27 @@
 import { cenaNavrhu, hmotnostNavrhu } from "../data/cena";
 import type { Bod } from "../data/geometrie";
 import { jeUvnitr } from "../data/geometrie";
-import { CENA_SVARU, CENA_ZAVAZI, jeKolejove, KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku, NEJVETSI_KLIDOVY_TAH } from "../data/katalog";
+import {
+  CENA_SVARU,
+  CENA_ZAVAZI,
+  jeKolejove,
+  KATALOG,
+  LADENY_TLUMIC,
+  NEJVETSI_KLIDOVY_TAH,
+  PIST,
+  vlastnostiPrutu,
+  ZAMEK,
+  type IdPrvku,
+} from "../data/katalog";
 import { ChybaDat } from "../data/kontrola";
-import { mezeryTras, navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
+import {
+  COS_NEJVETSIHO_OTOCENI,
+  mezeryTras,
+  navrhNaText,
+  navrhZTextu,
+  type DruhProblemu,
+  type NavrhMostu,
+} from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
 import { kdoCestuje, type Uroven } from "../data/uroven";
 import type { Denik } from "../denik/denik";
@@ -26,6 +44,7 @@ import { jeKlicTextu, t, type KlicTextu } from "../ui/slovnik";
 import { celyVyrez, obrazNaSvet, omezNaVyrez, posunO, svetNaObraz, zoomKolem, type Kamera } from "../vykres/kamera";
 import { nakresliKonstrukci } from "../vykres/konstrukce";
 import { nakresliNavrh, tloustkaPrutu } from "../vykres/navrh";
+import { nakresliZamkyZaznamu, stavPohybu, valecPrutu } from "./pohyb";
 import { pripojOvladani } from "../vykres/ovladani";
 import { Platno } from "../vykres/platno";
 import { nakresliProvoz } from "../vykres/provoz";
@@ -89,10 +108,10 @@ const SIRKA_ZVUKU = 0.85;
 /** Jedna zkouška mostu: záznam, který plní pracovní vlákno, a nakonec výsledek. */
 /**
  * Přídavek, který se nekreslí tahem, ale kliknutím přidává k tomu, co už stojí: napínák
- * k lanu, svar, závaží a laděný tlumič ke styčníku.
+ * k lanu, svar, dělicí zámek, závaží a laděný tlumič ke styčníku.
  */
-type Pridavek = "napinak" | "svar" | "zavazi" | "ladeny";
-const PRIDAVKY: readonly Pridavek[] = ["napinak", "svar", "zavazi", "ladeny"];
+type Pridavek = "napinak" | "svar" | "zamek" | "zavazi" | "ladeny";
+const PRIDAVKY: readonly Pridavek[] = ["napinak", "svar", "zamek", "zavazi", "ladeny"];
 
 function jePridavek(nastroj: string): nastroj is Pridavek {
   return (PRIDAVKY as readonly string[]).includes(nastroj);
@@ -229,6 +248,8 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   const smiLana = uroven.povolenePrvky.some((id) => KATALOG[id].druh === "lano");
   if (smiLana) pridavky.push("napinak");
   if (uroven.povoleneSvary) pridavky.push("svar");
+  // Zámek patří k mostu, který se zvedá.
+  if (uroven.pohyb) pridavky.push("zamek");
   if (uroven.nejvetsiZavazi > 0) pridavky.push("zavazi");
   if (uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota) pridavky.push("ladeny");
   /** Rytmus, ve kterém budič bije, v Hz; null znamená přeladit celý rozsah. */
@@ -340,7 +361,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function kresli(ctx: CanvasRenderingContext2D, rozmer: { sirka: number; vyska: number }): void {
     if (rezim === "zkouska" && beh) {
-      nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null });
+      const cas = prehravani.cas;
+      // Loď, která do mostu narazila, se od té chvíle kreslí barvou varování.
+      const { odemceno, narazene } = stavPohybu(beh.udalosti, cas);
+      nakresliVykres(ctx, { uroven, kamera, rozmer, kurzor: null, cas, narazeneLode: narazene });
       const stavba = beh.zaznam.stavV(prehravani.cas, snimek);
       if (stavba) {
         if (beh.oznaceny !== null) zvyrazniPrut(ctx, stavba, beh.oznaceny);
@@ -358,7 +382,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
             return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
           },
           (e) => pruty[stavba.prut[e]!]?.prvek === "kolejiste",
+          (e) => valecPrutu(beh!.navrh, stavba.prut[e]!),
         );
+        nakresliZamkyZaznamu(ctx, kamera, rozmer, beh.navrh, snimek, odemceno);
         nakresliProvoz(ctx, kamera, rozmer, beh.ucastnici, snimek);
         // Čísla využití se kreslí přes vozidla: vlak je delší než most a zakrýval by je celou jízdu.
         if (cisla) nakresliCislaVyuziti(ctx, cislaZeSnimku(stavba, pruty));
@@ -515,7 +541,30 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       : "";
     // Pro testy v prohlížeči: kde na plátně leží který bod světa.
     canvas.dataset.kamera = `${kamera.x};${kamera.y};${kamera.meritko}`;
+    obnovRazitko();
     platno.prekresli();
+  }
+
+  /**
+   * Popisové pole (razítko) v rohu výkresu zprůhlední, když v právě zvoleném pohledu zakrývá
+   * kotvu, základ, konec trasy, plavební profil nebo styčník mostu: hráč má vidět, kam staví.
+   */
+  function obnovRazitko(): void {
+    const razitko = prvek("#obrazovka-uroven .pole", HTMLElement);
+    const r = razitko.getBoundingClientRect();
+    const o = canvas.getBoundingClientRect();
+    const okraj = 8;
+    const podRazitkem = (b: Bod): boolean => {
+      const x = o.left + o.width / 2 + (b.x - kamera.x) * kamera.meritko;
+      const y = o.top + o.height / 2 - (b.y - kamera.y) * kamera.meritko;
+      return x > r.left - okraj && x < r.right + okraj && y > r.top - okraj && y < r.bottom + okraj;
+    };
+    const body: Bod[] = [...uroven.kotvy, ...uroven.zaklady, ...editor.navrh.stycniky];
+    for (const trasa of uroven.trasy) body.push(trasa.zacatek, trasa.konec);
+    if (uroven.hladina !== null) {
+      for (const lod of uroven.lode) body.push({ x: lod.xMax, y: uroven.hladina }, { x: lod.xMax, y: uroven.hladina + lod.vyska });
+    }
+    razitko.classList.toggle("pole--pruhledne", r.width > 0 && body.some(podRazitkem));
   }
 
   function zmenPohled(nova: Kamera): void {
@@ -576,6 +625,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function zapisObalky(vysledek: VysledekZkousky, prut: number): string {
     const obalka = vysledek.obalka[prut];
+    // Píst nemá využití, ale sílu: říká se u něj, kolik nejvíc tlačil nebo táhl.
+    const jePist = KATALOG[(beh?.navrh ?? editor.navrh).pruty[prut]?.prvek ?? "pruzina"].druh === "pist";
+    if (obalka && jePist && obalka.zpusob !== ZPUSOB_ZADNY) {
+      return t("obalka.pist", {
+        prut: prut + 1,
+        sila: `${cislo(Math.abs(obalka.velicina) / 1000, 0)} kN`,
+        nejvic: `${cislo(PIST.nejvetsiSila / 1000, 0)} kN`,
+        smer: t(obalka.velicina < 0 ? "obalka.pist.tlak" : "obalka.pist.tah"),
+        cas: zapisCasu(obalka.cas),
+      });
+    }
     if (!obalka || obalka.zpusob === ZPUSOB_ZADNY || !(obalka.vyuziti > 0)) {
       return t("obalka.bezNamahani", { prut: prut + 1 });
     }
@@ -695,7 +755,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
               ? t("paleta.zavazi.cena", { zaKg: koruny(CENA_ZAVAZI), kg: cislo(uroven.nejvetsiZavazi, 0) })
               : ktery === "svar"
                 ? t("paleta.svar.cena", { zaPrut: koruny(CENA_SVARU) })
-                : t("paleta.napinak.cena");
+                : ktery === "zamek"
+                  ? t("paleta.zamek.cena", { zaKus: koruny(ZAMEK.cena) })
+                  : t("paleta.napinak.cena");
         tlacitko.append(klavesa, nazev, cena);
         tlacitko.addEventListener("click", () => prepniPridavek(ktery));
         return tlacitko;
@@ -704,13 +766,20 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   }
 
   /**
-   * Zapne nebo vypne přidávání přídavku kliknutím. Svar se s vybranými styčníky rovnou
-   * provede na nich (tak se dá svařit celý most najednou) a nástroj se nemění.
+   * Zapne nebo vypne přidávání přídavku kliknutím. Svar a zámek se se styčníky, které hráč
+   * vybral nástrojem Výběr, rovnou provedou na nich (tak se dá svařit celý most najednou) a
+   * nástroj se nemění. Výběr, který po sobě nechal jiný přídavek (naposledy svařený styčník),
+   * se k tomu nepoužije: zámek by jinak skončil tam, kam hráč před chvílí klikl svarem.
    */
   function prepniPridavek(ktery: Pridavek): void {
     if (rezim !== "stavba" || !pridavky.includes(ktery)) return;
-    if (ktery === "svar" && nastroj !== "svar" && editor.vybraneStycniky.size > 0) {
+    const vlastniVyber = !jePridavek(nastroj) && editor.vybraneStycniky.size > 0;
+    if (ktery === "svar" && vlastniVyber) {
       prepniSvar();
+      return;
+    }
+    if (ktery === "zamek" && vlastniVyber) {
+      prepniZamek();
       return;
     }
     if (ktery === "napinak" && nastroj !== "napinak" && editor.pocetLan === 0) {
@@ -745,12 +814,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     const id = editor.stycnikU(bod);
     if (id === null) {
       editor.zrusVyber();
+      // Svar a zámek patří do styčníku mostu; na prázdném místě (i na prázdné opěře) není kam.
+      if (ktery === "svar" || ktery === "zamek") ukazHlaseni(t("paleta.pridavek.bezStycniku"), "info", true);
       obnovStavbu();
       return;
     }
     skryjHlaseni();
     editor.vyberJenStycnik(id);
     if (ktery === "svar") editor.prepniSvar();
+    else if (ktery === "zamek") editor.prepniZamek();
     else if (ktery === "ladeny") {
       if (editor.ladenyTlumicVyberu === undefined) zavesLadenyTlumic();
     } else if (editor.zavaziVyberu === 0) editor.zmenZavazi(1);
@@ -762,6 +834,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (rezim !== "stavba" || !uroven.povoleneSvary) return;
     if (editor.svarVyberu === null) prepniPridavek("svar");
     else if (editor.prepniSvar()) skryjHlaseni();
+  }
+
+  /** Tlačítko v nastavení: dá vybraným styčníkům dělicí zámek, nebo jim ho odebere. */
+  function prepniZamek(): void {
+    if (rezim !== "stavba" || !uroven.pohyb) return;
+    if (editor.zamekVyberu === null) prepniPridavek("zamek");
+    else if (editor.prepniZamek()) skryjHlaseni();
   }
 
   /**
@@ -883,8 +962,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   function zvolPrvek(id: IdPrvku): void {
     if (rezim !== "stavba" || !KATALOG[id].hotovo) return;
-    // Z nástroje přídavku (napínák, svar…) se jde kreslit; jeho výběr se na nový prvek nemění.
-    if (jePridavek(nastroj)) editor.zrusVyber();
+    // Z nástroje přídavku (napínák, svar…) se jde kreslit; jeho výběr se na nový prvek nemění
+    // a jeho návod už neplatí.
+    if (jePridavek(nastroj)) {
+      editor.zrusVyber();
+      skryjHlaseni();
+    }
     nastroj = "kresleni";
     editor.zvolPrvek(id);
     if (editor.posledniDuvod) ukazHlaseni(textDuvodu(editor.posledniDuvod, id), "varovani", true);
@@ -893,6 +976,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
 
   /** Volá editor po každé změně návrhu, výběru nebo rozdělaného tahu. */
   function poZmeneNavrhu(): void {
+    obnovRazitko();
     if (editor.navrh !== naposledUlozeny) {
       naposledUlozeny = editor.navrh;
       uloziste.ulozNavrh(editor.navrh);
@@ -1136,6 +1220,49 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (svar !== null) {
       prvek('[data-akce="svar-prepnout"]', HTMLButtonElement).setAttribute("aria-pressed", String(svar));
       udaj("svar-prepnout").textContent = t(svar ? "paleta.svar.zrusit" : "paleta.svar.svarit");
+    }
+    const zamek = stavi ? editor.zamekVyberu : null;
+    prvek('[data-nastaveni="zamek"]', HTMLElement).hidden = zamek === null;
+    if (zamek !== null) {
+      prvek('[data-akce="zamek-prepnout"]', HTMLButtonElement).setAttribute("aria-pressed", String(zamek));
+      udaj("zamek-prepnout").textContent = t(zamek ? "paleta.zamek.odebrat" : "paleta.zamek.pridat");
+    }
+    const zdvih = stavi ? editor.zdvihVyberu : null;
+    prvek('[data-nastaveni="zdvih"]', HTMLElement).hidden = zdvih === null;
+    if (zdvih === null) delete document.body.dataset.zdvih;
+    else {
+      const zapisZdvihu = (metry: number): string =>
+        metry > 0
+          ? t("paleta.zdvih.vysune", { m: cislo(metry, 2) })
+          : metry < 0
+            ? t("paleta.zdvih.zasune", { m: cislo(-metry, 2) })
+            : t("paleta.zdvih.nula");
+      udaj("zdvih").textContent = zdvih.ruzne ? t("paleta.zdvih.ruzne") : zapisZdvihu(zdvih.zdvih);
+      // Poznámka: rozsah a doba zdvihu, o kolik se křídlo zvedne a kolik píst unese.
+      const poznamky = [
+        zdvih.zdvih === 0
+          ? t("paleta.zdvih.poznamkaNula", { nejvic: cislo(zdvih.nejvetsi, 2) })
+          : t("paleta.zdvih.poznamka", {
+              nejvic: cislo(zdvih.nejvetsi, 2),
+              sekund: cislo(Math.abs(zdvih.zdvih) / PIST.rychlost + PIST.rychlost / PIST.zrychleni, 1),
+            }),
+      ];
+      if (zdvih.otoceni !== null && zdvih.zdvih !== 0) {
+        poznamky.push(
+          zdvih.otoceni < COS_NEJVETSIHO_OTOCENI
+            ? t("paleta.zdvih.uhelMoc")
+            : t("paleta.zdvih.uhel", { uhel: cislo((Math.acos(Math.min(1, zdvih.otoceni)) * 180) / Math.PI, 0) }),
+        );
+      }
+      poznamky.push(t("paleta.zdvih.sila", { sila: `${cislo(PIST.nejvetsiSila / 1000, 0)} kN` }));
+      const poleZdvihu = udaj("zdvih-poznamka");
+      poleZdvihu.textContent = poznamky.join(" ");
+      poleZdvihu.dataset.varovani = String(zdvih.otoceni !== null && zdvih.otoceni < COS_NEJVETSIHO_OTOCENI);
+      if (zdvih.otoceni === null || zdvih.zdvih === 0) delete document.body.dataset.otoceni;
+      else document.body.dataset.otoceni = ((Math.acos(Math.max(-1, Math.min(1, zdvih.otoceni))) * 180) / Math.PI).toFixed(0);
+      prvek('[data-akce="zdvih-min"]', HTMLButtonElement).disabled = zdvih.zdvih <= -zdvih.nejvetsi + 1e-9;
+      prvek('[data-akce="zdvih-plus"]', HTMLButtonElement).disabled = zdvih.zdvih >= zdvih.nejvetsi - 1e-9;
+      document.body.dataset.zdvih = zdvih.zdvih.toFixed(2);
     }
     // Dopnutí lan je vidět, kdykoli úroveň lana dovoluje; bez lan po kliknutí poradí.
     const tlacitkoDopnuti = prvek('[data-akce="dopnout"]', HTMLButtonElement);
@@ -1793,6 +1920,12 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       autobus: vysledek.komfortCestujicich ? Math.round(vysledek.komfortCestujicich.zrychleni * 100) / 100 : null,
       bezRovnovahy: vysledek.bezRovnovahy,
       rozpad: vysledek.rozpad,
+      zvednuto: vysledek.pohyb ? vysledek.pohyb.zvednuto : null,
+      zamceno: vysledek.pohyb ? vysledek.pohyb.zamceno : null,
+      preklopeno: vysledek.pohyb ? vysledek.pohyb.preklopeno : null,
+      mezera: vysledek.mezera,
+      dosednuti: vysledek.pohyb ? Math.round(vysledek.pohyb.razDosednuti / 1000) : null,
+      narazyLodi: vysledek.lode.narazilo,
       trvani: Math.round(vysledek.trvani * 10) / 10,
       vypocetMs: Date.now() - vypocetOd,
       prvni:
@@ -1845,7 +1978,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (!(delka > 0)) return;
     znackyOsy.replaceChildren(
       ...beh.ucastnici.map((u) => znacka(u.start, "vyjezd")),
-      ...beh.udalosti.filter((u) => u.druh !== "prujezd").map((u) => znacka(u.cas, u.druh)),
+      ...beh.udalosti
+        .filter((u) => u.druh !== "prujezd")
+        // Zvedání mostu a proplutí lodi jsou běžný děj; červená patří jen nárazu lodi.
+        .map((u) => znacka(u.cas, u.druh === "lod" ? (u.stav === "narazila" ? "naraz" : "lod") : u.druh)),
     );
   }
 
@@ -1982,6 +2118,109 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     obnovAnalyzu();
   }
 
+  /** Řádky výsledku pohyblivého mostu: průběh zvedání a lodě, síla pístu a ráz při dosednutí. */
+  function vypisPohyb(b: Beh, vysledek: VysledekZkousky, minule: VysledekZkousky | null): void {
+    const pohyb = vysledek.pohyb;
+    const maPisty = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "pist");
+    const radek = (jmeno: string, videt: boolean): void => {
+      for (const uzel of panelVysledku.querySelectorAll<HTMLElement>(`[data-radek="${jmeno}"]`)) uzel.hidden = !videt;
+    };
+    const skokNa = (text: string, cas: number): HTMLButtonElement => {
+      const skok = document.createElement("button");
+      skok.type = "button";
+      skok.className = "vysledek__skok";
+      skok.textContent = text;
+      skok.addEventListener("click", () => skocNa(cas));
+      return skok;
+    };
+    const kN = (newtony: number): string => `${cislo(newtony / 1000, 0)} kN`;
+
+    const casti: (HTMLElement | Text)[] = [];
+    const pridej = (uzel: HTMLElement | Text): void => {
+      if (casti.length > 0) casti.push(document.createTextNode(" · "));
+      casti.push(uzel);
+    };
+    const casFaze = (faze: string): number | null =>
+      b.udalosti.find((u) => u.druh === "pohyb" && u.faze === faze)?.cas ?? null;
+    // Píst s nulovým zdvihem nic nezvedá a most bez zámku se nezamyká: o tom se nepíše.
+    const zveda = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "pist" && (p.zdvih ?? PIST.vychoziZdvih) !== 0);
+    const maZamky = b.navrh.stycniky.some((s) => s.zamek);
+    if (pohyb) {
+      const zvednuto = casFaze("zvednuto");
+      if (zveda) {
+        pridej(
+          pohyb.zvednuto && zvednuto !== null
+            ? skokNa(t("vysledek.pohyb.zvednuto", { cas: zapisCasu(zvednuto) }), zvednuto)
+            : document.createTextNode(t("vysledek.pohyb.nezvednuto")),
+        );
+      }
+      const preklopeno = casFaze("preklopeno");
+      if (preklopeno !== null) pridej(skokNa(t("vysledek.pohyb.preklopeno", { cas: zapisCasu(preklopeno) }), preklopeno));
+    }
+    for (const u of b.udalosti) {
+      if (u.druh !== "lod") continue;
+      if (u.stav === "proplula") {
+        pridej(skokNa(t("vysledek.pohyb.lodProplula", { cas: zapisCasu(u.cas) }), u.cas));
+        continue;
+      }
+      // Náraz: řádek skočí do toho okamžiku a označí prut, do kterého loď narazila.
+      const prut = u.prut ?? -1;
+      const skok = skokNa(t("vysledek.pohyb.lodNarazila", { cas: zapisCasu(u.cas), prut: prut + 1 }), u.cas);
+      skok.addEventListener("click", () => {
+        b.oznaceny = prut >= 0 ? prut : null;
+        skocNa(u.cas);
+      });
+      pridej(skok);
+    }
+    if (pohyb && maZamky) {
+      pridej(
+        pohyb.zamceno && pohyb.casZamceni !== null
+          ? skokNa(t("vysledek.pohyb.zamceno", { cas: zapisCasu(pohyb.casZamceni) }), pohyb.casZamceni)
+          : document.createTextNode(t("vysledek.pohyb.nezamceno")),
+      );
+    }
+    radek("pohyb", casti.length > 0);
+    const polePohybu = udaj("vysledek-pohyb");
+    polePohybu.replaceChildren(...casti);
+    polePohybu.dataset.zamceno = String(pohyb?.zamceno ?? "");
+    polePohybu.dataset.narazilo = String(vysledek.lode.narazilo);
+
+    radek("pist", pohyb !== null && maPisty);
+    if (pohyb && maPisty) {
+      const text = t(pohyb.pretizenychPistu > 0 ? "vysledek.pist.pretizen" : "vysledek.pist.hodnota", {
+        sila: kN(pohyb.nejvetsiSilaPistu),
+        nejvic: kN(PIST.nejvetsiSila),
+      });
+      udaj("vysledek-pist").replaceChildren(
+        ...bezNull([document.createTextNode(text), rozdil(pohyb.nejvetsiSilaPistu, minule?.pohyb?.nejvetsiSilaPistu, kN)]),
+      );
+      udaj("vysledek-pist").dataset.sila = (pohyb.nejvetsiSilaPistu / 1000).toFixed(0);
+    }
+
+    // Ráz trosek do opěry po zřícení o dosednutí mostu nic neříká.
+    const dosedl = pohyb !== null && pohyb.razDosednuti > 0 && vysledek.poruseni === 0;
+    radek("dosednuti", dosedl);
+    if (pohyb && dosedl) {
+      const nasobek = pohyb.klidoveDosednuti > 0 ? pohyb.razDosednuti / pohyb.klidoveDosednuti : 0;
+      let text =
+        nasobek >= 1.05
+          ? t("vysledek.dosednuti.raz", { sila: kN(pohyb.razDosednuti), nasobek: cislo(nasobek, 1) })
+          : t("vysledek.dosednuti.mekke", { sila: kN(pohyb.razDosednuti) });
+      // Kde o dosednutí jde medaile, řekne řádek i její mez: „měkké“ a „tvrdé“ se měří jí.
+      const bonus = uroven.mistrovska;
+      if (bonus?.druh === "dosednuti") {
+        text = t(pohyb.razDosednuti <= bonus.limit ? "vysledek.dosednuti.splneno" : "vysledek.dosednuti.nesplneno", {
+          text,
+          limit: kN(bonus.limit),
+        });
+      }
+      udaj("vysledek-dosednuti").replaceChildren(
+        ...bezNull([document.createTextNode(text), rozdil(pohyb.razDosednuti, minule?.pohyb?.razDosednuti, kN)]),
+      );
+      udaj("vysledek-dosednuti").dataset.sila = (pohyb.razDosednuti / 1000).toFixed(0);
+    }
+  }
+
   function ukazVysledek(b: Beh, vysledek: VysledekZkousky): void {
     b.vysledekUkazan = true;
     zapis("vysledek.zobrazen", { pruchod: vysledek.pruchod, sekund: sekundVUrovni() });
@@ -2032,6 +2271,31 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       vety.push(
         t("vysledek.shrnuti.cast", { prejelo: vysledek.prejelo, pocet: vysledek.ucastniku, spadlo: vysledek.spadlo }),
       );
+    }
+    // Pohyblivý most: proč neprošel, i když auta přejela.
+    if (!jePokus && !vysledek.rozpad) {
+      const naraz = b.udalosti.find((u) => u.druh === "lod" && u.stav === "narazila");
+      if (naraz && naraz.druh === "lod") {
+        const prut = naraz.prut ?? -1;
+        const prvekPrutu = b.navrh.pruty[prut]?.prvek;
+        vety.push(t("vysledek.shrnuti.lodNarazila", { prut: prut + 1, prvek: prvekPrutu ? nazevPrvku(prvekPrutu).toLowerCase() : "?" }));
+      }
+      const pohyb = vysledek.pohyb;
+      const maPisty = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "pist");
+      if (pohyb?.preklopeno) vety.push(t("vysledek.shrnuti.preklopeno"));
+      else if (pohyb && maPisty) {
+        // Píst na mezi síly: když kvůli tomu most neprošel, je to příčina; když prošel, jen poznámka.
+        const nestacil = pohyb.pretizenychPistu > 0 && (!pohyb.zvednuto || vysledek.lode.narazilo > 0);
+        if (!vysledek.pruchod && nestacil) vety.push(t("vysledek.shrnuti.pistNestaci"));
+        else if (!vysledek.pruchod && !pohyb.zvednuto) vety.push(t("vysledek.shrnuti.nezvednuto"));
+        else if (vysledek.pruchod && pohyb.pretizenychPistu > 0) vety.push(t("vysledek.shrnuti.pistNaMezi"));
+      }
+      if (pohyb && !pohyb.zamceno && !pohyb.preklopeno) vety.push(t("vysledek.shrnuti.nezamceno"));
+    }
+    // Most, který nevede až na předmostí, neprojde, i když kola mezeru přejela.
+    if (!jePokus && !vysledek.rozpad && vysledek.mezera && vysledek.spadlo === 0) {
+      const mezera = mezeryTras(b.navrh, uroven)[0];
+      if (mezera) vety.push(t("vysledek.shrnuti.mezera", { od: cislo(mezera.od, 0), do: cislo(mezera.do, 0) }));
     }
     // Kdo spadl proto, že na trase kus mostovky chybí, se to má dozvědět: jinak výsledek
     // hlásí pád a žádné porušení.
@@ -2122,7 +2386,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       poleAutobusu.dataset.zrychleni = cestujici.zrychleni.toFixed(3);
     }
 
-    vypisMedaile(udaj("vysledek-medaile"), uroven, vysledek.medaile);
+    vypisPohyb(b, vysledek, minule);
+
+    vypisMedaile(udaj("vysledek-medaile"), uroven, vysledek.medaile, rekord?.medaile);
     udaj("vysledek-cena").replaceChildren(
       ...bezNull([document.createTextNode(koruny(vysledek.cena)), rozdil(vysledek.cena, minule?.cena, koruny)]),
     );
@@ -2134,13 +2400,20 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       if (o.vyuziti > 0 && (nejvic < 0 || o.vyuziti > vysledek.obalka[nejvic]!.vyuziti)) nejvic = i;
     });
     const zmena = rozdil(vysledek.nejvetsiVyuziti, minule?.nejvetsiVyuziti, procenta);
+    // Těsně u meze mistrovské medaile se využití píše na desetinu procenta: „25 %“ u medaile
+    // „do 25 %“, kterou most nedostal (má 25,09 %), by vypadalo jako chyba hry.
+    const mezRezervy = uroven.mistrovska?.druh === "rezerva" ? uroven.mistrovska.limit : null;
+    const zapisVyuziti = (podil: number): string =>
+      mezRezervy !== null && podil !== mezRezervy && Math.round(podil * 100) === Math.round(mezRezervy * 100)
+        ? `${cislo(podil * 100, 2)}\u00a0%`
+        : procenta(podil);
     if (nejvic >= 0) {
       const o = vysledek.obalka[nejvic]!;
       const skok = document.createElement("button");
       skok.type = "button";
       skok.className = "vysledek__skok";
       skok.textContent = t("vysledek.vyuzitiPrutu", {
-        vyuziti: procenta(o.vyuziti),
+        vyuziti: zapisVyuziti(o.vyuziti),
         prut: nejvic + 1,
         zpusob: t(nazevZpusobu(o.zpusob)),
         cas: zapisCasu(o.cas),
@@ -2152,7 +2425,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       });
       poleVyuziti.replaceChildren(...bezNull([skok, zmena]));
     } else {
-      poleVyuziti.replaceChildren(...bezNull([document.createTextNode(procenta(vysledek.nejvetsiVyuziti)), zmena]));
+      poleVyuziti.replaceChildren(...bezNull([document.createTextNode(zapisVyuziti(vysledek.nejvetsiVyuziti)), zmena]));
     }
 
     // Porušení prutů a sjetí z podpor: každé jde rozkliknout na časové ose.
@@ -2240,6 +2513,22 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       if (uroven.jizdniRad.some((p) => !jeClovek(p.druh) && !jeKolejove(p.druh))) provoz.push(polozka(t(`zadani.vozovka.${uroven.nerovnost}`)));
       if (uroven.jizdniRad.some((p) => jeKolejove(p.druh))) provoz.push(polozka(t(`zadani.kolej.${uroven.nerovnost}`)));
     }
+    // Zvedání mostu a lodě patří do děje zkoušky stejně jako auta.
+    if (uroven.pohyb) {
+      provoz.push(polozka(t("zadani.pohyb", { zvednout: cislo(uroven.pohyb.zvednout, 0), sklopit: cislo(uroven.pohyb.sklopit, 0) })));
+    }
+    for (const lod of uroven.lode) {
+      provoz.push(
+        polozka(
+          t("zadani.lod", {
+            cas: cislo(lod.cas, 0),
+            trvani: cislo(lod.trvani, 0),
+            vyska: cislo(lod.vyska, 0),
+            sirka: cislo(lod.xMax - lod.xMin, 0),
+          }),
+        ),
+      );
+    }
     udaj("zadani-provoz").replaceChildren(...(provoz.length > 0 ? provoz : [polozka(t("zadani.provoz.zadny"))]));
 
     const stavba = uroven.povolenePrvky
@@ -2263,6 +2552,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     }
     if (smiLana) stavba.push(polozka(t("zadani.stavba.napinak")));
     if (uroven.povoleneSvary) stavba.push(polozka(t("zadani.stavba.svar", { zaPrut: koruny(CENA_SVARU) })));
+    if (uroven.pohyb) stavba.push(polozka(t("zadani.stavba.zamek", { zaKus: koruny(ZAMEK.cena) })));
     if (uroven.budic) stavba.push(polozka(t("zadani.stavba.budic")));
     if (uroven.rozpocet !== null) {
       stavba.push(polozka(t("zadani.stavba.rozpocet", { castka: koruny(uroven.rozpocet) })));
@@ -2481,6 +2771,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   }
   priKliknuti("svar-prepnout", prepniSvar);
   priKliknuti("dopnout", dopniLana);
+  priKliknuti("zamek-prepnout", prepniZamek);
+  priKliknuti("zdvih-min", () => rezim === "stavba" && editor.zmenZdvih(-1));
+  priKliknuti("zdvih-plus", () => rezim === "stavba" && editor.zmenZdvih(1));
   priKliknuti("tlumeni-min", () => rezim === "stavba" && editor.zmenTlumeni(-1));
   priKliknuti("tlumeni-plus", () => rezim === "stavba" && editor.zmenTlumeni(1));
   priKliknuti("smazat", smazVybrane);
@@ -2717,11 +3010,19 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   udaj("zadani").textContent = jeKlicTextu(klicZadani) ? t(klicZadani) : "";
   document.title = `${uroven.id} ${uroven.nazev} – ${t("hra.nazev")}`;
 
+  // Jízdní řád na liště: provoz, zvedání mostu a lodě v pořadí, v jakém přijdou.
+  const dej: { cas: number; text: string }[] = uroven.jizdniRad.map((polozka) => ({ cas: polozka.cas, text: zapisJizdy(polozka) }));
+  if (uroven.pohyb) {
+    dej.push({ cas: uroven.pohyb.zvednout, text: t("rad.zvednout", { cas: cislo(uroven.pohyb.zvednout, 0) }) });
+    dej.push({ cas: uroven.pohyb.sklopit, text: t("rad.sklopit", { cas: cislo(uroven.pohyb.sklopit, 0) }) });
+  }
+  for (const lod of uroven.lode) dej.push({ cas: lod.cas, text: t("rad.lod", { cas: cislo(lod.cas, 0), vyska: cislo(lod.vyska, 0) }) });
+  dej.sort((a, b) => a.cas - b.cas);
   udaj("jizdni-rad").replaceChildren(
-    ...uroven.jizdniRad.map((polozka) => {
+    ...dej.map((polozka) => {
       const uzel = document.createElement("span");
       uzel.className = "osa__polozka";
-      uzel.textContent = zapisJizdy(polozka);
+      uzel.textContent = polozka.text;
       return uzel;
     }),
   );

@@ -172,6 +172,21 @@
               <kbd>S</kbd><span data-udaj="svar-prepnout"></span>
             </button>
           </div>
+          <div class="paleta__nastaveni" data-nastaveni="zamek" hidden>
+            <h2 data-text="paleta.zamek"></h2>
+            <button type="button" class="paleta__tlacitko" data-akce="zamek-prepnout" data-popis="paleta.zamek.popis" aria-pressed="false">
+              <span data-udaj="zamek-prepnout"></span>
+            </button>
+          </div>
+          <div class="paleta__nastaveni" data-nastaveni="zdvih" hidden>
+            <h2 data-text="paleta.zdvih"></h2>
+            <div class="paleta__krokovac">
+              <button type="button" class="paleta__tlacitko" data-akce="zdvih-min" data-popis="paleta.zdvih.min">&minus;</button>
+              <output data-udaj="zdvih"></output>
+              <button type="button" class="paleta__tlacitko" data-akce="zdvih-plus" data-popis="paleta.zdvih.plus">+</button>
+            </div>
+            <p class="paleta__poznamka" data-udaj="zdvih-poznamka"></p>
+          </div>
           <div class="paleta__nastaveni" data-nastaveni="tlumeni" hidden>
             <h2 data-text="paleta.tlumeni"></h2>
             <div class="paleta__krokovac">
@@ -277,6 +292,12 @@
               <dd data-udaj="vysledek-kmitani" data-radek="kmitani"></dd>
               <dt data-text="vysledek.autobus" data-radek="autobus"></dt>
               <dd data-udaj="vysledek-autobus" data-radek="autobus"></dd>
+              <dt data-text="vysledek.pohyb" data-radek="pohyb"></dt>
+              <dd data-udaj="vysledek-pohyb" data-radek="pohyb"></dd>
+              <dt data-text="vysledek.pist" data-radek="pist"></dt>
+              <dd data-udaj="vysledek-pist" data-radek="pist"></dd>
+              <dt data-text="vysledek.dosednuti" data-radek="dosednuti"></dt>
+              <dd data-udaj="vysledek-dosednuti" data-radek="dosednuti"></dd>
               <dt data-text="vysledek.poruseni"></dt>
               <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
             </dl>

@@ -118,9 +118,9 @@ describe("přehled kampaně", () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
-    expect(kapitoly).toHaveLength(6);
-    expect(kapitoly.at(-1)).toContain("Trať");
-    expect(kapitoly.at(-1)).toContain("Kolejiště, lokomotiva a vozy");
+    expect(kapitoly.length).toBeGreaterThanOrEqual(6);
+    expect(kapitoly[5]).toContain("Trať");
+    expect(kapitoly[5]).toContain("Kolejiště, lokomotiva a vozy");
     await stranka.locator("#odemknout-vse").check();
     const karty = await stranka.locator(".karta").allInnerTexts();
     for (const nazev of ["První vlak", "Rychlík", "Uhelný vlak", "Dvě patra"]) {
@@ -214,8 +214,9 @@ describe("rychlík: pohodlí cestujících", () => {
     const hluboka = Number(await stranka.locator('[data-udaj="vysledek-autobus"]').getAttribute("data-zrychleni"));
     expect(hluboka).toBeLessThan(0.3);
     expect(hluboka).toBeLessThan(melka / 2);
-    // Hluboká příhrada je dražší než inženýrský rozpočet, zato má mistrovskou.
-    expect(await medaile()).toEqual(["true", "false", "true"]);
+    // Hluboká příhrada je dražší než inženýrský rozpočet, zato má mistrovskou. Medaile za
+    // rozpočet z předchozího mostu hráči zůstává a výsledek ji tak označí.
+    expect(await medaile()).toEqual(["true", "drive", "true"]);
     await stranka.screenshot({ path: `${SLOZKA}/t6-vysledek-rychlik.png` });
   }, 300_000);
 });

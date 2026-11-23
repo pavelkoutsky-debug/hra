@@ -1,8 +1,17 @@
 // Převod prvků katalogu na popis, kterému rozumí fyzikální jádro.
 
-import { KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu, type IdPrvku, type VlastnostiPrutu } from "../data/katalog";
+import {
+  KATALOG,
+  LADENY_TLUMIC,
+  neseVybaveni,
+  PIST,
+  vlastnostiPrutu,
+  zdvihPistu,
+  type IdPrvku,
+  type VlastnostiPrutu,
+} from "../data/katalog";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import type { NavrhMostu } from "../data/navrh";
+import { zamkyNavrhu, type NavrhMostu } from "../data/navrh";
 import { bodNaTrase, TOLERANCE_TRASY, type Uroven } from "../data/uroven";
 import {
   LANO,
@@ -65,6 +74,8 @@ const DIL_LANA = 2;
 const NEJVIC_DILU_LANA = 16;
 /** Hmotnost pružiny a tlumiče na metr délky (kování, píst), kg/m. */
 const HMOTNOST_PRUZINY = 20;
+/** Na jak dlouhé díly se skrytě dělí mostovka mostu, který se zvedá, m. */
+const DIL_POHYBLIVE_MOSTOVKY = 1;
 
 /**
  * Na kolik dílů se skrytě rozdělí nosník délky `delka`. Dva díly vystihnou první ohybový
@@ -101,11 +112,19 @@ export interface StavbaMostu {
    * jádra (pružina s tlumičem), který je spojuje.
    */
   tlumice: { stycnik: number; zavazi: number; prvek: number }[];
+  /** Písty: prut návrhu (pořadí), prvek jádra a zdvih v metrech (záporný se při zvedání zkracuje). */
+  pisty: { prut: number; prvek: number; zdvih: number }[];
+  /**
+   * Dělicí zámky: styčník (pořadí v návrhu i v jádře) a prvky jádra, které při odemknutí
+   * odejdou s druhou částí mostu; prázdný seznam u zámku na opěře.
+   */
+  /** Zámky: styčník soustavy a pruty návrhu (pořadí) druhé části mostu; u zámku na opěře žádné. */
+  zamky: { stycnik: number; pruty: number[] }[];
 }
 
 /**
  * Sestaví popis soustavy z návrhu mostu v dané úrovni. Předpokládá návrh, který prošel
- * kontrolou `zkontrolujNavrh`; s prvkem, který jádro ještě neumí (píst), skončí chybou.
+ * kontrolou `zkontrolujNavrh`.
  *
  * Pravidla:
  * - Styčník návrhu ležící v kotvě úrovně je podepřen podle jejího typu. Styčník v místě
@@ -114,6 +133,7 @@ export interface StavbaMostu {
  *   a tlumiče jsou kloubové vždy; betonový pilíř je naopak do styčníku vetknutý vždy.
  * - Dlouhé pruty a lana se skrytě dělí; díly jsou spojené tuze a sdílejí číslo prutu.
  * - Mostovka nese navíc hmotnost vybavení z úrovně.
+ * - Píst je pružina o tuhosti sloupce oleje; jeho pohyb a největší sílu řídí zkouška.
  */
 export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
   const popis: PopisSoustavy = { stycniky: [], prvky: [] };
@@ -124,7 +144,9 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
     index.set(st.id, i);
     const stycnik: PopisStycniku = { x: st.x, y: st.y };
     if (st.zavazi) stycnik.hmota = st.zavazi;
-    let svar = st.svar === true;
+    // Zámek pohyblivého mostu je čep: ohyb nepřenáší, ani kdyby návrh ve styčníku nesl svar
+    // (po odemknutí a zamknutí by tam stejně zůstal jen čep a most by byl jiný než v rozboru).
+    let svar = st.svar === true && !(uroven.pohyb && st.zamek);
     const kotva = uroven.kotvy.find((k) => k.x === st.x && k.y === st.y);
     const zaklad = uroven.zaklady.some((z) => z.x === st.x && z.y === st.y);
     if (kotva?.typ === "vetknuti" || zaklad) {
@@ -141,6 +163,7 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
 
   const utlumy: number[] = [];
   const mostovka: number[] = [];
+  const pisty: StavbaMostu["pisty"] = [];
   navrh.pruty.forEach((prut, cislo) => {
     const a = index.get(prut.a);
     const b = index.get(prut.b);
@@ -150,7 +173,15 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
     const delka = Math.sqrt((sb.x - sa.x) * (sb.x - sa.x) + (sb.y - sa.y) * (sb.y - sa.y));
     const druh = KATALOG[prut.prvek].druh;
 
-    if (druh === "pist") throw new Error(`Prut ${prut.id}: píst jádro zatím neumí.`);
+    if (druh === "pist") {
+      pisty.push({ prut: cislo, prvek: popis.prvky.length, zdvih: zdvihPistu(prut.zdvih, delka) });
+      popis.prvky.push({
+        ...popisPruziny(a, b, PIST.tuhostKratDelka / delka, PIST.tlumeni, PIST.hmotnostNaMetr),
+        prut: cislo,
+      });
+      utlumy.push(0);
+      return;
+    }
     if (druh === "pruzina" || druh === "tlumic") {
       popis.prvky.push({
         ...popisPruziny(a, b, prut.tuhost ?? 0, prut.tlumeni ?? KATALOG[prut.prvek].tlumeni?.vychozi ?? 0, HMOTNOST_PRUZINY),
@@ -176,6 +207,11 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
       const podKoly = uroven.trasy.some((t) => t.druh !== "lavka" && bodNaTrase(t, sa) && bodNaTrase(t, sb));
       if (podKoly) dilu = 2;
     }
+    // Mostovka pohyblivého mostu se dělí po metru. Ráz, kterým konec křídla dosedne na opěru,
+    // závisí na hmotě koncového styčníku; s hrubším dělením by vyšel jinak podle toho, na jak
+    // dlouhé díly hráč mostovku nakreslil (6 + 6 m o polovinu víc než 12 × 1 m). Po metru už
+    // se výsledek s dalším zjemněním nemění.
+    if (jeMostovka && uroven.pohyb) dilu = Math.max(dilu, Math.round(delka / DIL_POHYBLIVE_MOSTOVKY));
     // Předpětí lana: klidová délka se zkrátí tak, aby v napnutém laně byla zadaná síla;
     // záporné předpětí lano naopak prodlouží (viz `PREDPETI_LANA`).
     const predpeti = druh === "lano" ? (prut.predpeti ?? 0) * vlastnosti.unosnost.tah : 0;
@@ -245,5 +281,31 @@ export function sestavMost(uroven: Uroven, navrh: NavrhMostu): StavbaMostu {
     tlumice.push({ stycnik: i, zavazi, prvek });
   });
 
-  return { popis, stycnikuNavrhu: navrh.stycniky.length, utlumPrvku: Float64Array.from(utlumy), trasy, tlumice };
+  // Dělicí zámky: zámek mezi dvěma částmi mostu si pamatuje pruty druhé části; které prvky
+  // jádra jimi do styčníku vedou, se dohledá až při odemknutí. Bez fází zvedání se zámky
+  // neodemykají a nic nedělají.
+  const zamky: StavbaMostu["zamky"] = [];
+  if (uroven.pohyb) {
+    const poradiPrutu = new Map(navrh.pruty.map((p, i) => [p.id, i]));
+    for (const z of zamkyNavrhu(navrh, uroven)) {
+      const i = index.get(z.stycnik);
+      if (i === undefined || (z.druh !== "opera" && z.druh !== "kridla")) continue;
+      const pruty: number[] = [];
+      for (const id of z.druhaStrana) {
+        const poradi = poradiPrutu.get(id);
+        if (poradi !== undefined) pruty.push(poradi);
+      }
+      zamky.push({ stycnik: i, pruty });
+    }
+  }
+
+  return {
+    popis,
+    stycnikuNavrhu: navrh.stycniky.length,
+    utlumPrvku: Float64Array.from(utlumy),
+    trasy,
+    tlumice,
+    pisty,
+    zamky,
+  };
 }

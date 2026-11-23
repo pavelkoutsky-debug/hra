@@ -84,6 +84,8 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     budic: true,
     nejhorsiKomfort: 3,
     jizdniRad: [],
+    pohyb: null,
+    lode: [],
   };
 }
 
@@ -678,6 +680,34 @@ export const SCENARE_ZKOUSEK: readonly ScenarZkousky[] = [
       navrh: prihradaTrate(),
       nasada: 5,
     }),
+  },
+  {
+    // Sklopný most: píst zvedne svařené křídlo, loď propluje, křídlo dosedne na opěru a zámek
+    // zapadne; pak přejede dodávka. Hlídá písty, zámky a fáze zkoušky.
+    id: "sklopny-most",
+    trvani: 30,
+    zadani: () => {
+      const k = new Kreslic();
+      k.prut("mostovka-ocel", [0, 0], [6, 0]);
+      k.prut("mostovka-ocel", [6, 0], [12, 0]);
+      k.bod(6, 0, { svar: true });
+      k.bod(12, 0, { zamek: true });
+      k.prut("pist", [0, -3], [6, 0], { zdvih: 2 });
+      return {
+        uroven: {
+          ...urovenRegrese({ rozpeti: 12, kotvy: [{ x: 0, y: -3, typ: "pevna" }], sirka: 7, vybaveni: 300 }),
+          hladina: -6,
+          pohyb: { zvednout: 3, sklopit: 12 },
+          lode: [{ cas: 9.5, trvani: 2, xMin: 4, xMax: 11, vyska: 9 }],
+          jizdniRad: [
+            { cas: 0, trasa: "silnice", smer: 1, druh: "auto" },
+            { cas: 20, trasa: "silnice", smer: -1, druh: "dodavka" },
+          ],
+        },
+        navrh: k.navrh(),
+        nasada: 9,
+      };
+    },
   },
 ];
 

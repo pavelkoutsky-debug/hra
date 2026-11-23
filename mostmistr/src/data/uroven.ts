@@ -15,7 +15,7 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 5;
+export const VERZE_UROVNE = 6;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
@@ -31,6 +31,9 @@ const PREVODY_UROVNE: readonly Prevod[] = [
   // 4 → 5: vlak. Položka jízdního řádu s lokomotivou smí nést seznam vozů a kolejová vozidla
   // jezdí jen po trase druhu „kolej“. Starší úrovně vlaky nemají, takže se na nich nic nemění.
   (stara) => stara,
+  // 5 → 6: pohyblivé mosty. Úroveň může mít fáze zkoušky (kdy se most zvedá a sklápí) a lodě;
+  // starší úrovně mají mosty pevné.
+  (stara) => ({ ...stara, pohyb: null, lode: [] }),
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
@@ -69,8 +72,11 @@ export interface Brzdeni {
   zpomaleni?: number;
 }
 
-export const DRUHY_BONUSU = ["rezerva", "komfort-chodcu", "komfort-cestujicich"] as const;
-/** Podmínka mistrovské medaile: největší využití, nebo největší zrychlení v m/s². */
+export const DRUHY_BONUSU = ["rezerva", "komfort-chodcu", "komfort-cestujicich", "dosednuti"] as const;
+/**
+ * Podmínka mistrovské medaile: největší využití, největší zrychlení v m/s², nebo největší
+ * síla (N), kterou pohyblivý most při sklápění udeří do opěry.
+ */
 export interface BonusUrovne {
   druh: (typeof DRUHY_BONUSU)[number];
   limit: number;
@@ -100,6 +106,29 @@ export interface PolozkaJizdnihoRadu {
    * `pocet` té položky je počet lokomotiv v čele.
    */
   vozy?: SkupinaVozu[];
+}
+
+/**
+ * Fáze zkoušky pohyblivého mostu: kdy se zámky odemknou a písty začnou most zvedat a kdy
+ * ho začnou sklápět (po sklopení se zámky zase zamknou). Časy v sekundách od začátku zkoušky.
+ */
+export interface PohybMostu {
+  zvednout: number;
+  sklopit: number;
+}
+
+/**
+ * Loď, která pod mostem propluje. V bokorysu pluje kolmo k výkresu: po dobu průjezdu zabírá
+ * plavební profil, obdélník nad hladinou, do kterého nesmí zasahovat nic z mostu.
+ */
+export interface Lod {
+  /** Kdy příď vpluje pod most a jak dlouho průjezd trvá, s. */
+  cas: number;
+  trvani: number;
+  /** Plavební profil: odkud kam sahá podél mostu (m) a jak vysoko nad hladinu (m). */
+  xMin: number;
+  xMax: number;
+  vyska: number;
 }
 
 /** Několik stejných vozů za sebou ve vlaku. */
@@ -156,6 +185,10 @@ export interface Uroven {
    */
   nejhorsiKomfort: 1 | 2 | 3;
   jizdniRad: PolozkaJizdnihoRadu[];
+  /** Fáze zkoušky pohyblivého mostu; null u mostu, který se nehýbe. */
+  pohyb: PohybMostu | null;
+  /** Lodě, které při zkoušce pod mostem proplují. */
+  lode: Lod[];
 }
 
 const KLICE_UROVNE = [
@@ -184,6 +217,8 @@ const KLICE_UROVNE = [
   "budic",
   "nejhorsiKomfort",
   "jizdniRad",
+  "pohyb",
+  "lode",
 ] as const;
 
 function bod(h: unknown, cesta: string): Bod {
@@ -332,6 +367,25 @@ export function nactiUroven(data: unknown): Uroven {
     budic: logicka(o.budic, `${c}.budic`),
     nejhorsiKomfort: cislo(o.nejhorsiKomfort, `${c}.nejhorsiKomfort`, { min: 1, max: 3, cele: true }) as 1 | 2 | 3,
     jizdniRad: polozky(o.jizdniRad, `${c}.jizdniRad`, polozkaJizdnihoRadu),
+    pohyb: neboNull(o.pohyb, (v) => {
+      const p = objekt(v, `${c}.pohyb`);
+      jenZnameKlice(p, `${c}.pohyb`, ["zvednout", "sklopit"]);
+      return {
+        zvednout: cislo(p.zvednout, `${c}.pohyb.zvednout`, { min: 0, max: 300 }),
+        sklopit: cislo(p.sklopit, `${c}.pohyb.sklopit`, { min: 0, max: 300 }),
+      };
+    }),
+    lode: polozky(o.lode, `${c}.lode`, (v, cesta): Lod => {
+      const l = objekt(v, cesta);
+      jenZnameKlice(l, cesta, ["cas", "trvani", "xMin", "xMax", "vyska"]);
+      return {
+        cas: cislo(l.cas, `${cesta}.cas`, { min: 0, max: 300 }),
+        trvani: cislo(l.trvani, `${cesta}.trvani`, { min: 1, max: 60 }),
+        xMin: cislo(l.xMin, `${cesta}.xMin`),
+        xMax: cislo(l.xMax, `${cesta}.xMax`),
+        vyska: cislo(l.vyska, `${cesta}.vyska`, { min: 1, max: 60 }),
+      };
+    }),
   };
 
   zkontrolujSouvislosti(uroven, c);
@@ -396,6 +450,14 @@ function zkontrolujSouvislosti(u: Uroven, c: string): void {
     if (p.druh !== "lokomotiva" && jeKolejove(p.druh)) {
       throw new ChybaDat(`${c}.jizdniRad[${i}].druh`, "vůz bez lokomotivy nejede; zapiš ho mezi vozy lokomotivy");
     }
+  });
+
+  if (u.pohyb && u.pohyb.sklopit <= u.pohyb.zvednout) {
+    throw new ChybaDat(`${c}.pohyb.sklopit`, "most se musí nejdřív zvednout a pak teprve sklopit");
+  }
+  u.lode.forEach((l, i) => {
+    if (u.hladina === null) throw new ChybaDat(`${c}.lode[${i}]`, "loď potřebuje vodu: úroveň nemá hladinu");
+    if (l.xMax <= l.xMin) throw new ChybaDat(`${c}.lode[${i}].xMax`, "plavební profil musí mít kladnou šířku");
   });
 
   if (u.rozpocet !== null && u.inzenyrskyRozpocet !== null && u.inzenyrskyRozpocet > u.rozpocet) {

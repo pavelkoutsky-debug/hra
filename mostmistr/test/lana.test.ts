@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../src/data/cena";
 import { CENA_SVARU, KATALOG, PREDPETI_LANA, predpetiZeZkraceni, vlastnostiPrutu, zkraceniLana } from "../src/data/katalog";
 import { Kreslic } from "../src/data/kreslic";
-import { zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
+import { VERZE_NAVRHU, zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { Editor } from "../src/editor/editor";
 import { nastavPredpeti, nastavSvar, prazdnyNavrh, pridejPrut, zmenPrvek, zrcadli } from "../src/editor/upravy";
@@ -620,7 +620,7 @@ describe("nálezy nezávislých recenzí M4b", () => {
     expect(dobehni(zavesena, sLanem).vysledek()).toMatchObject({ pruchod: true, bezRovnovahy: false });
     // Jediné povolené lano mezi kotvami, bez provozu: krok výpočtu je platné číslo a zkouška doběhne.
     const lano: NavrhMostu = {
-      verze: 3,
+      verze: VERZE_NAVRHU,
       uroven: "4-04",
       stycniky: [{ id: 0, x: -18, y: 0 }, { id: 1, x: 0, y: 0 }],
       pruty: [{ id: 0, a: 0, b: 1, prvek: "lano", predpeti: -0.05 }],

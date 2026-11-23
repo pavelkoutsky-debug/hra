@@ -166,6 +166,10 @@ describe("ukázky v okně se zadáním", () => {
     "6-02",
     "6-03",
     "6-04",
+    "7-01",
+    "7-02",
+    "7-03",
+    "7-04",
   ]) {
     it(`ukázka úrovně ${id} se spočítá a přehrává: vlevo most neobstojí (v 6-02 jen houpe), vpravo ano`, async () => {
       await stranka.goto(`${adresa}?uroven=${id}`);

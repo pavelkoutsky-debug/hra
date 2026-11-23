@@ -1,11 +1,11 @@
 import { cenaNavrhu } from "./cena";
 import { jeUvnitr, type Bod, type Obdelnik } from "./geometrie";
-import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, PREDPETI_LANA, type IdPrvku } from "./katalog";
+import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, PIST, PREDPETI_LANA, zdvihPistu, type IdPrvku } from "./katalog";
 import { ChybaDat, cislo, jedenZ, jenZnameKlice, logicka, polozky, text, objekt, volitelne } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 import { bodNaTrase, vyskaTerenu, type Trasa, type Uroven } from "./uroven";
 
-export const VERZE_NAVRHU = 3;
+export const VERZE_NAVRHU = 4;
 
 /** Převody ze starších verzí formátu návrhu; viz `prevedNaAktualni`. */
 const PREVODY_NAVRHU: readonly Prevod[] = [
@@ -14,6 +14,18 @@ const PREVODY_NAVRHU: readonly Prevod[] = [
   // 2 → 3: předpětí lana smí být záporné (povolené lano, delší než nakreslené) i větší než 1.
   // Starší návrhy měly jen 0 až 1 a nic se v nich nemění.
   (stary) => stary,
+  // 3 → 4: píst nese zdvih (smí být záporný) místo délky po vysunutí. Písty do té doby hra
+  // neuměla, takže starší návrh žádný mít nemůže; kdyby měl, údaj se zahodí.
+  (stary) => ({
+    ...stary,
+    pruty: Array.isArray(stary.pruty)
+      ? stary.pruty.map((p: unknown) => {
+          if (typeof p !== "object" || p === null || !("vysunuti" in p)) return p;
+          const { vysunuti: _vysunuti, ...zbytek } = p as Record<string, unknown>;
+          return zbytek;
+        })
+      : stary.pruty,
+  }),
 ];
 
 /** Laděný tlumič zavěšený pod styčníkem: hmotnost závaží v kg a frekvence ladění v Hz. */
@@ -52,8 +64,11 @@ export interface PrutNavrhu {
   tuhost?: number;
   /** Součinitel tlumiče v N·s/m. */
   tlumeni?: number;
-  /** Délka vysunutého pístu v metrech. */
-  vysunuti?: number;
+  /**
+   * Zdvih pístu v metrech: o kolik se píst při zvedání mostu prodlouží; záporný se zkracuje.
+   * Když chybí, bere se výchozí (`zdvihPistu`).
+   */
+  zdvih?: number;
 }
 
 /** Most, jak ho hráč nakreslil. Neobsahuje ceny ani výsledky; ty se počítají z katalogu a zkouškou. */
@@ -93,7 +108,7 @@ function stycnik(h: unknown, cesta: string): StycnikNavrhu {
 
 function prut(h: unknown, cesta: string): PrutNavrhu {
   const o = objekt(h, cesta);
-  jenZnameKlice(o, cesta, ["id", "a", "b", "prvek", "predpeti", "tuhost", "tlumeni", "vysunuti"]);
+  jenZnameKlice(o, cesta, ["id", "a", "b", "prvek", "predpeti", "tuhost", "tlumeni", "zdvih"]);
   const p: PrutNavrhu = {
     id: cislo(o.id, `${cesta}.id`, { min: 0, cele: true }),
     a: cislo(o.a, `${cesta}.a`, { min: 0, cele: true }),
@@ -106,8 +121,8 @@ function prut(h: unknown, cesta: string): PrutNavrhu {
   if (tuhost !== undefined) p.tuhost = tuhost;
   const tlumeni = volitelne(o.tlumeni, (v) => cislo(v, `${cesta}.tlumeni`, { min: 0 }));
   if (tlumeni !== undefined) p.tlumeni = tlumeni;
-  const vysunuti = volitelne(o.vysunuti, (v) => cislo(v, `${cesta}.vysunuti`, { min: 0 }));
-  if (vysunuti !== undefined) p.vysunuti = vysunuti;
+  const zdvih = volitelne(o.zdvih, (v) => cislo(v, `${cesta}.zdvih`, { min: -8, max: 8 }));
+  if (zdvih !== undefined) p.zdvih = zdvih;
   return p;
 }
 
@@ -178,6 +193,12 @@ export type DruhProblemu =
   | "ladeny-tlumic-mimo-rozsah"
   | "tlumeni-mimo-rozsah"
   | "predpeti-mimo-rozsah"
+  | "zdvih-mimo-rozsah"
+  | "zdvih-za-uvrati"
+  | "zamek-nepovoleny"
+  | "zamek-na-vetknuti"
+  | "zamek-nedeli"
+  | "zamek-vic-casti"
   | "kolejiste-mimo-kolej"
   | "mostovka-na-koleji"
   | "nad-rozpocet";
@@ -210,6 +231,7 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (obsazeno.has(klic)) problemy.push({ druh: "stycniky-na-stejnem-miste", stycnik: s.id });
     else obsazeno.set(klic, s.id);
     if (s.svar && !uroven.povoleneSvary) problemy.push({ druh: "svar-nepovoleny", stycnik: s.id });
+    if (s.zamek && !uroven.pohyb) problemy.push({ druh: "zamek-nepovoleny", stycnik: s.id });
     if ((s.zavazi ?? 0) > uroven.nejvetsiZavazi) problemy.push({ druh: "zavazi-nepovolene", stycnik: s.id });
     if (s.tlumic) {
       const { hmota, frekvence } = s.tlumic;
@@ -247,6 +269,14 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (p.predpeti !== undefined && (p.predpeti < PREDPETI_LANA.nejmensi || p.predpeti > PREDPETI_LANA.nejvetsi)) {
       problemy.push({ druh: "predpeti-mimo-rozsah", prut: p.id });
     }
+    if (polozka.druh === "pist") {
+      if (Math.abs(zdvihPistu(p.zdvih, delka)) > PIST.nejvetsiPodilZdvihu * delka + 1e-9) {
+        problemy.push({ druh: "zdvih-mimo-rozsah", prut: p.id });
+      } else if (uroven.pohyb) {
+        const otoceni = otoceniKridla(navrh, uroven, p);
+        if (otoceni !== null && otoceni.cos < COS_NEJVETSIHO_OTOCENI) problemy.push({ druh: "zdvih-za-uvrati", prut: p.id });
+      }
+    }
     if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {
       problemy.push({ druh: "prut-v-zakazane-zone", prut: p.id });
     }
@@ -269,6 +299,11 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     }
   }
   for (const id of pilireMimoZaklad(navrh, uroven)) problemy.push({ druh: "pilir-mimo-zaklad", prut: id });
+  for (const z of zamkyNavrhu(navrh, uroven)) {
+    if (z.druh === "vetknuti") problemy.push({ druh: "zamek-na-vetknuti", stycnik: z.stycnik });
+    else if (z.druh === "nedeli") problemy.push({ druh: "zamek-nedeli", stycnik: z.stycnik });
+    else if (z.druh === "vic") problemy.push({ druh: "zamek-vic-casti", stycnik: z.stycnik });
+  }
   if (uroven.rozpocet !== null && cenaNavrhu(navrh) > uroven.rozpocet) problemy.push({ druh: "nad-rozpocet" });
   return problemy;
 }
@@ -308,6 +343,160 @@ export function mezeryTras(navrh: NavrhMostu, uroven: Uroven): MezeraTrasy[] {
     if (pokryto < konec - 1e-9) mezery.push({ trasa, od: pokryto, do: konec });
   }
   return mezery;
+}
+
+/**
+ * Zámek návrhu a co při odemknutí udělá. `opera`: styčník leží na opěře s ložiskem (posuvná
+ * kotva) a odemknutí mu vezme podporu. `kridla`: styčník spojuje dvě části mostu, které jinak
+ * pohromadě nedrží; `druhaStrana` jsou id prutů, které při odemknutí odejdou s druhou částí.
+ * Ostatní jsou chyby návrhu. `vetknuti`: zámek na čepu (pevné kotvě), ve vetknutí nebo na
+ * základu; čep křídlo drží a zámek by ho pustil celé. `nedeli`: zámek nic nerozpojí. `vic`:
+ * v zámku se potkávají tři a víc částí (počítá se i píst).
+ */
+export interface ZamekNavrhu {
+  stycnik: number;
+  druh: "opera" | "kridla" | "vetknuti" | "nedeli" | "vic";
+  druhaStrana: number[];
+}
+
+/** Kosinus největšího úhlu, o který smí píst křídlo otočit: 70°. */
+export const COS_NEJVETSIHO_OTOCENI = 0.3420201433256687;
+/** Největší úhel otočení křídla ve stupních; jen pro texty. */
+export const NEJVETSI_OTOCENI_KRIDLA = 70;
+
+/**
+ * O kolik píst křídlo otočí, když se vysune o svůj zdvih: kosinus úhlu otočení. Čep křídla se
+ * hledá takto: pata pístu je konec v kotvě, do které nevede nic jiného než písty; druhý konec
+ * drží křídlo, tedy pruty, ke kterým se od něj dá dojít bez pístů a bez průchodu zámkem. Čep
+ * je jediná pevná kotva křídla bez zámku. Kde čep takhle určit nejde (píst mezi dvěma částmi
+ * mostu, křídlo na dvou kotvách), vrací null a nic se nehlídá.
+ *
+ * Délka pístu L splňuje L² = D² + r² − 2·D·r·cos γ, kde D je vzdálenost paty od čepu, r
+ * vzdálenost úchytu od čepu a γ úhel mezi nimi. Největší je v úvrati (γ = 180°), kde píst
+ * leží v přímce s čepem a nemá žádné rameno; zdvih, který by vedl za ni, dá kosinus −1.
+ * Jen sčítání, násobení, dělení a odmocnina, aby pravidlo vyšlo ve všech prohlížečích stejně.
+ */
+export function otoceniKridla(navrh: NavrhMostu, uroven: Uroven, pist: PrutNavrhu): { cos: number } | null {
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  const a = podleId.get(pist.a);
+  const b = podleId.get(pist.b);
+  if (!a || !b) return null;
+  const jePist = (p: PrutNavrhu): boolean => KATALOG[p.prvek].druh === "pist";
+  const kotva = (s: StycnikNavrhu): Uroven["kotvy"][number] | undefined => uroven.kotvy.find((k) => k.x === s.x && k.y === s.y);
+  const jenPisty = (s: StycnikNavrhu): boolean => navrh.pruty.every((p) => (p.a !== s.id && p.b !== s.id) || jePist(p));
+  const pataA = kotva(a) !== undefined && jenPisty(a);
+  const pataB = kotva(b) !== undefined && jenPisty(b);
+  if (pataA === pataB) return null;
+  const pata = pataA ? a : b;
+  const uchyt = pataA ? b : a;
+
+  // Křídlo: všechno, k čemu se od úchytu dojde po prutech bez pístů; zámkem se neprochází.
+  const kridlo = new Set<number>([uchyt.id]);
+  const fronta = [uchyt.id];
+  while (fronta.length > 0) {
+    const i = fronta.pop()!;
+    if (i !== uchyt.id && podleId.get(i)?.zamek) continue;
+    for (const p of navrh.pruty) {
+      if (jePist(p) || (p.a !== i && p.b !== i)) continue;
+      const j = p.a === i ? p.b : p.a;
+      if (kridlo.has(j)) continue;
+      kridlo.add(j);
+      fronta.push(j);
+    }
+  }
+  let cep: StycnikNavrhu | null = null;
+  for (const id of kridlo) {
+    const s = podleId.get(id);
+    if (!s || s.zamek) continue;
+    const k = kotva(s);
+    if (!k) continue;
+    // Křídlo držené druhou kotvou se neotáčí; zámek by ji musel pustit.
+    if (k.typ !== "pevna" || cep !== null) return null;
+    cep = s;
+  }
+  if (!cep) return null;
+
+  const D2 = (pata.x - cep.x) * (pata.x - cep.x) + (pata.y - cep.y) * (pata.y - cep.y);
+  const r2 = (uchyt.x - cep.x) * (uchyt.x - cep.x) + (uchyt.y - cep.y) * (uchyt.y - cep.y);
+  const L02 = (pata.x - uchyt.x) * (pata.x - uchyt.x) + (pata.y - uchyt.y) * (pata.y - uchyt.y);
+  if (!(D2 > 0) || !(r2 > 0) || !(L02 > 0)) return null;
+  const L0 = Math.sqrt(L02);
+  const L = L0 + zdvihPistu(pist.zdvih, L0);
+  const dvaDr = 2 * Math.sqrt(D2 * r2);
+  const cos0 = (D2 + r2 - L02) / dvaDr;
+  const cosT = (D2 + r2 - L * L) / dvaDr;
+  // Délka, na kterou píst v žádné poloze křídla nedosáhne (za úvratí, nebo kratší než složený).
+  if (!(cosT > -1 && cosT < 1)) return { cos: -1 };
+  const sin0 = Math.sqrt(Math.max(0, 1 - cos0 * cos0));
+  const sinT = Math.sqrt(1 - cosT * cosT);
+  return { cos: cosT * cos0 + sinT * sin0 };
+}
+
+/**
+ * Rozebere zámky návrhu. Části mostu se hledají v návrhu, ze kterého se vyjmou všechny
+ * styčníky se zámkem mimo kotvy: pruty u zámku patří k téže části, když jejich vzdálené
+ * konce spojuje cesta, která žádným takovým zámkem neprochází.
+ */
+export function zamkyNavrhu(navrh: NavrhMostu, uroven: Uroven): ZamekNavrhu[] {
+  const zamky = navrh.stycniky.filter((s) => s.zamek);
+  if (zamky.length === 0) return [];
+  const vysledek: ZamekNavrhu[] = [];
+  const mezi = new Set<number>();
+  for (const s of zamky) {
+    const kotva = uroven.kotvy.find((k) => k.x === s.x && k.y === s.y);
+    const zaklad = uroven.zaklady.some((z) => z.x === s.x && z.y === s.y);
+    // Zámek na opěře patří na ložisko. Čep (pevná kotva) křídlo drží i při zvedání.
+    if (zaklad || (kotva && kotva.typ !== "posuvna")) vysledek.push({ stycnik: s.id, druh: "vetknuti", druhaStrana: [] });
+    else if (kotva) vysledek.push({ stycnik: s.id, druh: "opera", druhaStrana: [] });
+    else mezi.add(s.id);
+  }
+  if (mezi.size === 0) return vysledek;
+
+  // Části mostu bez zámků mezi křídly: každý styčník dostane číslo své části.
+  const cast = new Map<number, number>();
+  const sousede = new Map<number, number[]>();
+  for (const p of navrh.pruty) {
+    if (mezi.has(p.a) || mezi.has(p.b)) continue;
+    (sousede.get(p.a) ?? sousede.set(p.a, []).get(p.a)!).push(p.b);
+    (sousede.get(p.b) ?? sousede.set(p.b, []).get(p.b)!).push(p.a);
+  }
+  let casti = 0;
+  for (const s of navrh.stycniky) {
+    if (mezi.has(s.id) || cast.has(s.id)) continue;
+    const fronta = [s.id];
+    cast.set(s.id, casti);
+    while (fronta.length > 0) {
+      const i = fronta.pop()!;
+      for (const j of sousede.get(i) ?? []) {
+        if (cast.has(j)) continue;
+        cast.set(j, casti);
+        fronta.push(j);
+      }
+    }
+    casti += 1;
+  }
+  for (const s of zamky) {
+    if (!mezi.has(s.id)) continue;
+    // Pruty u zámku podle části, do které vede jejich druhý konec; prut mezi dvěma zámky
+    // nepatří k žádné části a tvoří vlastní skupinu.
+    const skupiny = new Map<number, number[]>();
+    let samostatne = -1;
+    for (const p of navrh.pruty) {
+      if (p.a !== s.id && p.b !== s.id) continue;
+      const druhy = p.a === s.id ? p.b : p.a;
+      const klic = cast.get(druhy) ?? samostatne--;
+      const skupina = skupiny.get(klic);
+      if (skupina) skupina.push(p.id);
+      else skupiny.set(klic, [p.id]);
+    }
+    if (skupiny.size !== 2) {
+      vysledek.push({ stycnik: s.id, druh: skupiny.size > 2 ? "vic" : "nedeli", druhaStrana: [] });
+      continue;
+    }
+    const [, druha] = [...skupiny.values()];
+    vysledek.push({ stycnik: s.id, druh: "kridla", druhaStrana: druha! });
+  }
+  return vysledek;
 }
 
 /**

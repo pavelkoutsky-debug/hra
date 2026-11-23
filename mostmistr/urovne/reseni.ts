@@ -441,6 +441,85 @@ function dvePatra(svislice?: (x: number) => IdPrvku, diagonaly?: (x: number) => 
   });
 }
 
+// ---- Pohyblivé mosty (kapitola 7) ----
+
+const OCELOVA: IdPrvku = "mostovka-ocel";
+
+/** Co má sklopný most mít; výchozí je všechno. */
+interface VybavaKridla {
+  /** Svařit styčníky mostovky uvnitř křídla. */
+  svar?: boolean;
+  zamek?: boolean;
+  /** Vzpěra z čepu vzhůru a táhlo ke konci křídla: výška vrcholu nad mostovkou, 0 bez nich. */
+  trojuhelnik?: number;
+}
+
+/**
+ * Křídlo sklopného mostu: ocelová mostovka od čepu `cep` k volnému konci `konec` po polích
+ * dlouhých `pole` (poslední smí být kratší), píst z kotvy `hloubka` metrů pod čepem do
+ * styčníku `kam` metrů od čepu.
+ */
+function kridlo(
+  k: Kreslic,
+  cep: number,
+  konec: number,
+  pole: number,
+  pist: { hloubka: number; kam: number; zdvih: number } | null,
+  vybava: VybavaKridla = {},
+): void {
+  const smer = konec > cep ? 1 : -1;
+  const delka = Math.abs(konec - cep);
+  for (let od = 0; od < delka; od += pole) {
+    const po = Math.min(delka, od + pole);
+    k.prut(OCELOVA, [cep + smer * od, 0], [cep + smer * po, 0]);
+    if (od > 0 && vybava.svar !== false) k.bod(cep + smer * od, 0, { svar: true });
+  }
+  if (pist) k.prut("pist", [cep, -pist.hloubka], [cep + smer * pist.kam, 0], { zdvih: pist.zdvih });
+  const h = vybava.trojuhelnik ?? 0;
+  if (h > 0) {
+    // Trojúhelník nad kořenem křídla: krátký sloup, šikmá vzpěra a táhlo, které drží konec křídla.
+    const vrchol: [number, number] = [cep + smer * pole, h];
+    k.prut(TO, [cep, 0], vrchol);
+    k.prut(O, [cep + smer * pole, 0], vrchol);
+    k.prut(TO, vrchol, [cep + smer * Math.min(delka, 3 * pole), 0]);
+    k.prut(O, vrchol, [cep + smer * 2 * pole, 0]);
+  }
+}
+
+/** Jednokřídlý sklopný most přes kanál široký `rozpeti`: čep vlevo, zámek na pravé opěře. */
+export function sklopny(
+  uroven: string,
+  rozpeti: number,
+  pole: number,
+  pist: { hloubka: number; kam: number; zdvih: number } | null,
+  vybava: VybavaKridla = {},
+): NavrhMostu {
+  return navrh(uroven, (k) => {
+    kridlo(k, 0, rozpeti, pole, pist, vybava);
+    if (vybava.zamek !== false) k.bod(rozpeti, 0, { zamek: true });
+  });
+}
+
+/** Jednokřídlý most, jehož křídlo je o metr kratší než kanál a nemá zámek. */
+function kratkeKridlo(uroven: string, rozpeti: number, pist: { hloubka: number; kam: number; zdvih: number }): NavrhMostu {
+  return navrh(uroven, (k) => kridlo(k, 0, rozpeti - 1, 6, pist));
+}
+
+/** Dvoukřídlý sklopný most: čepy v obou opěrách, křídla se potkávají uprostřed v zámku. */
+export function dvoukridly(
+  uroven: string,
+  rozpeti: number,
+  pole: number,
+  pist: { hloubka: number; kam: number; zdvih: number } | null,
+  vybava: VybavaKridla = {},
+): NavrhMostu {
+  return navrh(uroven, (k) => {
+    kridlo(k, 0, rozpeti / 2, pole, pist, vybava);
+    kridlo(k, rozpeti, rozpeti / 2, pole, pist, vybava);
+    if (vybava.zamek !== false) k.bod(rozpeti / 2, 0, { zamek: true });
+  });
+}
+
 export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
   "1-01": {
     pruchod: navrh("1-01", (k) => {
@@ -870,6 +949,81 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
       { nazev: "jen dvě mostovky", navrh: dvePatra() },
       { nazev: "jen svislice, bez diagonál", navrh: dvePatra(() => O) },
       { nazev: "všechno z lehkého profilu: svislice u podpor vybočí", navrh: dvePatra(() => O, () => O) },
+    ],
+  },
+
+  // ---- Kapitola 7: Přístav ----
+
+  // Zvedací most, 12 m: křídlo ze svařené ocelové mostovky, píst z kotvy ve zdi a zámek na
+  // protější opěře. Loď potřebuje křídlo zvednuté asi o 45°.
+  "7-01": {
+    pruchod: sklopny("7-01", 12, 3, { hloubka: 3, kam: 3, zdvih: 1.5 }),
+    rozpocet: sklopny("7-01", 12, 6, { hloubka: 3, kam: 6, zdvih: 2 }),
+    // Píst z hlubší kotvy má větší rameno: nese menší sílu a křídlo dosedá měkčeji.
+    mistrovska: sklopny("7-01", 12, 6, { hloubka: 5, kam: 6, zdvih: 2.5 }),
+    pady: [
+      { nazev: "jen mostovka", navrh: sklopny("7-01", 12, 6, null, { zamek: false }) },
+      { nazev: "bez zámku: konec křídla drží ložisko", navrh: sklopny("7-01", 12, 3, { hloubka: 3, kam: 3, zdvih: 1.5 }, { zamek: false }) },
+      { nazev: "nesvařená mostovka: křídlo se při zvedání složí", navrh: sklopny("7-01", 12, 6, { hloubka: 3, kam: 6, zdvih: 2 }, { svar: false }) },
+      { nazev: "malý zdvih: křídlo se nezvedne dost", navrh: sklopny("7-01", 12, 6, { hloubka: 3, kam: 6, zdvih: 1.5 }) },
+      { nazev: "křídlo o metr kratší, bez zámku: na opěru nedosáhne", navrh: kratkeKridlo("7-01", 12, { hloubka: 5, kam: 6, zdvih: 2.5 }) },
+    ],
+  },
+
+  // Dvě křídla, 24 m: dva sklopné mosty proti sobě se zámkem uprostřed. Zavřený most nesou
+  // jen čepy a písty, takže se pod autobusem uprostřed znatelně prohne.
+  "7-02": {
+    pruchod: dvoukridly("7-02", 24, 4, { hloubka: 5, kam: 4, zdvih: 2 }),
+    rozpocet: dvoukridly("7-02", 24, 6, { hloubka: 5, kam: 6, zdvih: 2.5 }),
+    mistrovska: dvoukridly("7-02", 24, 4, { hloubka: 5, kam: 4, zdvih: 2 }, { trojuhelnik: 3 }),
+    pady: [
+      { nazev: "jen mostovka", navrh: dvoukridly("7-02", 24, 6, null, { zamek: false }) },
+      { nazev: "bez zámku uprostřed: písty tlačí proti sobě", navrh: dvoukridly("7-02", 24, 6, { hloubka: 5, kam: 6, zdvih: 2.5 }, { zamek: false }) },
+      { nazev: "malý zdvih", navrh: dvoukridly("7-02", 24, 6, { hloubka: 5, kam: 6, zdvih: 1.5 }) },
+      {
+        nazev: "píst jen vlevo: pravé křídlo po odemknutí spadne",
+        navrh: navrh("7-02", (k) => {
+          kridlo(k, 0, 12, 6, { hloubka: 5, kam: 6, zdvih: 2.5 });
+          kridlo(k, 24, 12, 6, null);
+          k.bod(12, 0, { zamek: true });
+        }),
+      },
+    ],
+  },
+
+  // Dlouhé křídlo, 16 m: píst blízko čepu je na hraně síly (přetlakový ventil povoluje) a
+  // konec křídla udeří do opěry; z hlubší kotvy zvedá klidně, ale potřebuje větší zdvih.
+  // Zdvih smí křídlo zvednout nejvýš o 70°: z mělké kotvy do styčníku 6 m je to 2 m.
+  "7-03": {
+    pruchod: sklopny("7-03", 16, 4, { hloubka: 3, kam: 4, zdvih: 1.75 }),
+    rozpocet: sklopny("7-03", 16, 6, { hloubka: 3, kam: 6, zdvih: 2 }),
+    mistrovska: sklopny("7-03", 16, 4, { hloubka: 6, kam: 4, zdvih: 2.5 }),
+    pady: [
+      { nazev: "jen mostovka", navrh: sklopny("7-03", 16, 6, null, { zamek: false }) },
+      { nazev: "hluboká kotva s malým zdvihem", navrh: sklopny("7-03", 16, 4, { hloubka: 6, kam: 4, zdvih: 1.5 }) },
+      { nazev: "bez zámku", navrh: sklopny("7-03", 16, 4, { hloubka: 6, kam: 4, zdvih: 2.5 }, { zamek: false }) },
+    ],
+  },
+
+  // Velký přístav, 32 m: dvě šestnáctimetrová křídla s těžší vozovkou. Píst z mělké kotvy má
+  // k čepu krátké rameno: křídlo zvedne, ale zvednuté ho neudrží (ventil povolí, křídlo klesne
+  // a loď do něj narazí). Z hluboké kotvy má rameno delší a křídlo udrží. Trojúhelník nad
+  // kořenem křídla bere mostovce ohyb.
+  "7-04": {
+    pruchod: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.25 }),
+    rozpocet: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.5 }),
+    mistrovska: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.25 }, { trojuhelnik: 4 }),
+    pady: [
+      { nazev: "jen mostovka", navrh: dvoukridly("7-04", 32, 4, null, { zamek: false }) },
+      { nazev: "písty z mělkých kotev", navrh: dvoukridly("7-04", 32, 4, { hloubka: 3, kam: 4, zdvih: 1.75 }) },
+      { nazev: "bez zámku uprostřed", navrh: dvoukridly("7-04", 32, 4, { hloubka: 6, kam: 4, zdvih: 2.25 }, { zamek: false }) },
+      {
+        nazev: "křídla, která se uprostřed nepotkají",
+        navrh: navrh("7-04", (k) => {
+          kridlo(k, 0, 15, 5, { hloubka: 6, kam: 5, zdvih: 2.25 });
+          kridlo(k, 32, 17, 5, { hloubka: 6, kam: 5, zdvih: 2.25 });
+        }),
+      },
     ],
   },
 };
