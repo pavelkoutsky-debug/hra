@@ -40,7 +40,7 @@ import { VERZE_FYZIKY } from "../jadro/verze";
 import { prvek, udaj } from "../ui/dom";
 import { cislo, datum, hmotnost, koruny, meritkoVykresu, procenta } from "../ui/formaty";
 import { posunPrehravani, zapisCasu, type StavPrehravani } from "../ui/prehravani";
-import { jeKlicTextu, nazevUrovne, t, type KlicTextu } from "../ui/slovnik";
+import { aktualniJazyk, jeKlicTextu, nazevUrovne, t, type KlicTextu } from "../ui/slovnik";
 import { celyVyrez, obrazNaSvet, omezNaVyrez, posunO, svetNaObraz, zoomKolem, type Kamera } from "../vykres/kamera";
 import { nakresliKonstrukci } from "../vykres/konstrukce";
 import { nakresliNavrh, tloustkaPrutu } from "../vykres/navrh";
@@ -2854,7 +2854,13 @@ export function spustUroven(
     try {
       navrh = navrhZTextu(obsahOkna.value.trim());
     } catch (chyba) {
-      const duvod = chyba instanceof ChybaDat || chyba instanceof Error ? chyba.message : String(chyba);
+      // Věty kontroly dat jsou česky; v jiném jazyce stačí místo v zápisu, kde kontrola narazila.
+      const duvod =
+        chyba instanceof ChybaDat && aktualniJazyk() !== "cs"
+          ? chyba.cesta
+          : chyba instanceof Error
+            ? chyba.message
+            : String(chyba);
       udaj("okno-hlaseni").textContent = t("okno.import.chyba", { duvod });
       return;
     }
