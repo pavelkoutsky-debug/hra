@@ -84,11 +84,13 @@ Jde o **původní hru v žánru stavění mostů**: vlastní název, úrovně, g
 **Režimy**
 
 - **Kampaň s rozpočtem.** Sedm kapitol s rostoucí obtížností, postupné odemykání materiálů a typů provozu.
-- **Sandbox.** Volná stavba bez rozpočtu, všechny prvky, vozidla se pouštějí ručně, nastavitelná šířka údolí. K tomu budič s táhlem frekvence na pokusy s rezonancí.
+- **Sandbox.** Volná stavba bez rozpočtu, všechny prvky, vozidla se pouštějí ručně, nastavitelná šířka údolí. K tomu budič s táhlem frekvence na pokusy s rezonancí. *(M7: zkouška se počítá napřed a pak přehrává, proto si hráč provoz skládá předem jako jízdní řád; nastavuje i hloubku údolí, vodu, základy a druh trasy. Pohyblivé mosty v sandboxu nejsou.)*
 - **Výzvy o efektivitu.** Běží na úrovních kampaně s jinou metrikou a s prahy bronz, stříbro, zlato:
   - nejlevnější most,
   - nejlehčí most,
   - zkouška do zlomu: zatížení roste, dokud most nespadne, a boduje se únosnost na korunu.
+
+  *(M7: nejlevnější a nejlehčí most se měří při každé úspěšné zkoušce kampaně, bez zvláštního režimu; zkouška do zlomu je samostatný pokus. Zlato odpovídá nejlepšímu referenčnímu mostu úrovně.)*
 
 **Hodnocení v kampani: tři nezávislé medaile**
 

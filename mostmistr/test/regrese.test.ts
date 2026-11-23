@@ -50,7 +50,9 @@ describe("otisky referenčních mostů", () => {
     it(`${scenar.id}: otisk celé zkoušky se nezměnil`, () => {
       const vysledek = spustScenarZkousky(scenar);
       expect(vysledek.rozpadla).toBe(false);
-      expect(vysledek.poruseni).toBe(0);
+      // Zřícení je jen tam, kde být má (zkouška do zlomu).
+      if (scenar.zriceni) expect(vysledek.poruseni).toBeGreaterThan(0);
+      else expect(vysledek.poruseni).toBe(0);
       expect(vysledek.kroku).toBeGreaterThan(1000);
       nove[scenar.id] = vysledek.otisk;
       if (!ZAPIS) expect(vysledek.otisk, "změnil se výsledek výpočtu: viz hlavička tohoto souboru").toBe(otisky[scenar.id]);

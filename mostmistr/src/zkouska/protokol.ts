@@ -29,6 +29,17 @@ export interface VstupZkousky {
    * Výsledek se nepočítá do medailí.
    */
   budic?: BudicZkousky;
+  /**
+   * Zkouška do zlomu místo provozu: mostovku všech tras rovnoměrně zatěžuje síla, která
+   * roste, dokud se neporuší první prut, most nesjede z podpory nebo nepovolí píst. Jízdní
+   * řád se nepouští a medaile se neudělují; výsledek je v `VysledekZkousky.zlom`.
+   */
+  zlom?: ZlomZkousky;
+}
+
+export interface ZlomZkousky {
+  /** Zatížení mostovky v čase t je `narust`·t³ newtonů na metr délky. */
+  narust: number;
 }
 
 export interface BudicZkousky {
@@ -133,6 +144,23 @@ export interface PohybZkousky {
   nejvetsiSilaPistu: number;
 }
 
+/** Co most unesl při zkoušce do zlomu. */
+export interface VysledekZlomu {
+  /** Zatížení mostovky v okamžiku prvního porušení, N na metr délky. */
+  zatizeni: number;
+  /** Totéž jako celková síla na všech trasách, N. */
+  celkem: number;
+  /** Zatížená délka mostovky (součet rozpětí tras), m. */
+  delka: number;
+  /** Kdy porušení nastalo, s; null, když most vydržel všechno, co zkouška umí naložit. */
+  cas: number | null;
+  /**
+   * Prut návrhu, který se porušil první, nebo píst, který první povolil; −1, když most sjel
+   * z podpory, neměl klidovou polohu nebo vydržel.
+   */
+  prut: number;
+}
+
 /** Největší namáhání prutu za celou zkoušku. */
 export interface ObalkaPrutu {
   /** Největší využití; 1 je mez únosnosti. */
@@ -220,6 +248,8 @@ export interface VysledekZkousky {
    * most odpovídal nejsilněji; null, když se nerozkmital. U běžné zkoušky null.
    */
   budic: { frekvence: number | null; zrychleni: number; krivka: { f: number; a: number }[] } | null;
+  /** Výsledek zkoušky do zlomu; u běžné zkoušky null. */
+  zlom: VysledekZlomu | null;
   medaile: Medaile;
   /** Obálka namáhání; pořadí odpovídá prutům návrhu. */
   obalka: ObalkaPrutu[];

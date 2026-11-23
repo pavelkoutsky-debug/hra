@@ -1,7 +1,7 @@
 // Cena a hmotnost návrhu mostu. Ceny žijí jen v katalogu; uložené mosty je neobsahují,
 // takže přecenění prvku změní cenu všech mostů najednou.
 
-import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu, ZAMEK } from "./katalog";
+import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, neseVybaveni, PIST, vlastnostiPrutu, ZAMEK } from "./katalog";
 import type { NavrhMostu } from "./navrh";
 import type { Uroven } from "./uroven";
 
@@ -46,11 +46,37 @@ export function hmotnostNavrhu(navrh: NavrhMostu, uroven: Uroven): number {
   const delky = delkyPrutu(navrh);
   let hmotnost = 0;
   navrh.pruty.forEach((p, i) => {
+    // Píst váží jako ve zkoušce; bez něj by nosná konstrukce zvedacího mostu vážila nulu.
+    if (KATALOG[p.prvek].druh === "pist") hmotnost += delky[i]! * PIST.hmotnostNaMetr;
     const vlastnosti = vlastnostiPrutu(p.prvek, uroven.sirkaMostovky);
-    if (!vlastnosti) return; // tlumič, pružina a píst se do hmotnosti mostu nepočítají
+    if (!vlastnosti) return; // tlumič a pružina se do hmotnosti mostu nepočítají
     const vybaveni = neseVybaveni(p.prvek) ? uroven.hmotnostVybaveni : 0;
     hmotnost += delky[i]! * (vlastnosti.hmotnostNaMetr + vybaveni);
   });
   for (const s of navrh.stycniky) hmotnost += (s.zavazi ?? 0) + (s.tlumic?.hmota ?? 0);
+  return hmotnost;
+}
+
+/** Cena samotné mostovky návrhu v korunách: část ceny, kterou hráč úsporným mostem neovlivní. */
+export function cenaMostovky(navrh: NavrhMostu): number {
+  const delky = delkyPrutu(navrh);
+  let cena = 0;
+  navrh.pruty.forEach((p, i) => {
+    if (KATALOG[p.prvek].druh === "mostovka") cena += cenaPrutu(p.prvek, delky[i]!);
+  });
+  return Math.round(cena);
+}
+
+/** Hmotnost samotné mostovky návrhu včetně vybavení, kg. */
+export function hmotnostMostovky(navrh: NavrhMostu, uroven: Uroven): number {
+  const delky = delkyPrutu(navrh);
+  let hmotnost = 0;
+  navrh.pruty.forEach((p, i) => {
+    if (KATALOG[p.prvek].druh !== "mostovka") return;
+    const vlastnosti = vlastnostiPrutu(p.prvek, uroven.sirkaMostovky);
+    if (!vlastnosti) return;
+    const vybaveni = neseVybaveni(p.prvek) ? uroven.hmotnostVybaveni : 0;
+    hmotnost += delky[i]! * (vlastnosti.hmotnostNaMetr + vybaveni);
+  });
   return hmotnost;
 }

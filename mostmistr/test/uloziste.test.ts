@@ -2,7 +2,17 @@
 import { describe, expect, it } from "vitest";
 import { ulozeniNaText, ulozeniZTextu } from "../src/data/ulozeni";
 import { Kreslic } from "../src/zkouska/regrese";
-import { KLIC_CISEL, KLIC_ODEMCENI, KLIC_POSKOZENEHO, KLIC_ULOZENI, KLIC_ZVUKU, Uloziste, type Sklad } from "../src/hra/uloziste";
+import { ID_SANDBOXU, sandboxNaText, vychoziSandbox } from "../src/data/sandbox";
+import {
+  KLIC_CISEL,
+  KLIC_ODEMCENI,
+  KLIC_POSKOZENEHO,
+  KLIC_SANDBOXU,
+  KLIC_ULOZENI,
+  KLIC_ZVUKU,
+  Uloziste,
+  type Sklad,
+} from "../src/hra/uloziste";
 
 class SkladVPameti implements Sklad {
   readonly data = new Map<string, string>();
@@ -36,11 +46,18 @@ describe("úložiště postupu", () => {
     const sklad = new SkladVPameti();
     const prvni = new Uloziste(sklad);
     prvni.ulozNavrh(most());
-    prvni.zapocitej("1-01", PRUCHOD, 31000, 2);
+    prvni.zapocitej("1-01", PRUCHOD, 31000, 2, 914);
+    prvni.zapocitejZlom("1-01", 3.87, 2);
 
     const druhe = new Uloziste(sklad);
     expect(druhe.navrh("1-01")).toEqual(most());
-    expect(druhe.rekord("1-01")).toEqual({ verzeFyziky: 2, medaile: PRUCHOD, nejlepsiCena: 31000 });
+    expect(druhe.rekord("1-01")).toEqual({
+      verzeFyziky: 2,
+      medaile: PRUCHOD,
+      nejlepsiCena: 31000,
+      nejlepsiHmotnost: 914,
+      nejlepsiZlom: 3.87,
+    });
   });
 
   it("zapsaný text je platné uložení podle formátu dat", () => {
@@ -126,5 +143,45 @@ describe("úložiště postupu", () => {
     uloziste.odemcenoVse = true;
     expect(sklad.getItem(KLIC_ODEMCENI)).toBe("1");
     expect(new Uloziste(sklad).odemcenoVse).toBe(true);
+  });
+
+  it("sandbox: nastavení se ukládá, návštěva si pamatuje a most jde smazat", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    expect(uloziste.sandbox).toEqual(vychoziSandbox());
+    expect(uloziste.sandboxNavstiven).toBe(false);
+    uloziste.sandboxNavstiven = true;
+    const siroke = { ...vychoziSandbox(), rozpeti: 40, voda: false };
+    uloziste.sandbox = siroke;
+    const k = new Kreslic(ID_SANDBOXU);
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    uloziste.ulozNavrh(k.navrh());
+
+    const druhe = new Uloziste(sklad);
+    expect(druhe.sandbox).toEqual(siroke);
+    expect(druhe.sandboxNavstiven).toBe(true);
+    expect(druhe.navrh(ID_SANDBOXU)?.pruty).toHaveLength(1);
+    druhe.smazNavrh(ID_SANDBOXU);
+    expect(druhe.navrh(ID_SANDBOXU)).toBeUndefined();
+    expect(new Uloziste(sklad).navrh(ID_SANDBOXU)).toBeUndefined();
+    // Smazat most, který není, nic nerozbije.
+    druhe.smazNavrh("9-99");
+  });
+
+  it("sandbox: nečitelné nastavení se nahradí výchozím a most z neznámého údolí se zahodí", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    const k = new Kreslic(ID_SANDBOXU);
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    uloziste.ulozNavrh(k.navrh());
+    uloziste.ulozNavrh(most());
+    sklad.setItem(KLIC_SANDBOXU, "{rozbite");
+
+    const druhe = new Uloziste(sklad);
+    expect(druhe.sandbox).toEqual(vychoziSandbox());
+    expect(druhe.navrh(ID_SANDBOXU)).toBeUndefined();
+    // Mosty úrovní kampaně s tím nemají nic společného.
+    expect(druhe.navrh("1-01")).toEqual(most());
+    expect(sklad.getItem(KLIC_SANDBOXU)).toBe(sandboxNaText(vychoziSandbox()));
   });
 });

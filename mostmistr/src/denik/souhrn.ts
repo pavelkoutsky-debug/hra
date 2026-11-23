@@ -36,6 +36,12 @@ export interface SouhrnUrovne {
   prvky: Record<string, number>;
   /** Na čem mosty padaly: „prvek/způsob“ prvního porušení a kolikrát; „bez porušení“, když se nic nezlomilo. */
   selhani: Record<string, number>;
+  /** Kolik hráčů si otevřelo nápovědu a kolik z nich si nechalo ukázat i obrys mostu. */
+  hracuSNapovedou: number;
+  hracuSObrysem: number;
+  /** Kolik hráčů zkusilo zkoušku do zlomu a kolik těch zkoušek bylo. */
+  hracuDoZlomu: number;
+  zkousekDoZlomu: number;
 }
 
 export interface SouhrnDeniku {
@@ -68,6 +74,12 @@ export interface HracVUrovni {
   medaile: { pruchod: boolean; rozpocet: boolean; mistrovska: boolean };
   /** Cena nejlevnějšího mostu, se kterým hráč prošel; null bez průchodu. */
   nejlevnejsi: number | null;
+  /**
+   * Nejvyšší krok nápovědy, který hráč použil (0 žádný, 1 soupis, 2 obrys), a počet zkoušek
+   * do zlomu. Starší uložené výtahy tyhle údaje nemají, proto jsou volitelné.
+   */
+  napoveda?: number;
+  zlomu?: number;
 }
 
 export interface HracVeVytahu {
@@ -193,6 +205,8 @@ function novyHracVUrovni(): HracVUrovni {
     sekundDriv: 0,
     medaile: { pruchod: false, rozpocet: false, mistrovska: false },
     nejlevnejsi: null,
+    napoveda: 0,
+    zlomu: 0,
   };
 }
 
@@ -255,6 +269,12 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       const prvek = znamyPrvek(data.prvek);
       // Dlouhý tah rozdělený na díly dal víc prutů najednou.
       if (prvek !== null) pricti((v.prvky[u.uroven] ??= slovnik()), prvek, Math.max(1, Math.round(vMezich(data.dilu, NEJVIC_DILU))));
+    } else if (u.druh === "napoveda") {
+      // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
+      const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
+      zaznam.napoveda = Math.max(zaznam.napoveda ?? 0, krok);
+    } else if (u.druh === "zkouska.konec" && data.pokus === "zlom") {
+      zaznam.zlomu = (zaznam.zlomu ?? 0) + 1;
     } else if (u.druh === "zkouska.konec" && (data.pokus === null || data.pokus === undefined)) {
       zaznam.zkousek += 1;
       if (anoZ(data.pruchod)) {
@@ -341,6 +361,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
         cil.medaile.rozpocet ||= z.medaile.rozpocet;
         cil.medaile.mistrovska ||= z.medaile.mistrovska;
         if (z.nejlevnejsi !== null && (cil.nejlevnejsi === null || z.nejlevnejsi < cil.nejlevnejsi)) cil.nejlevnejsi = z.nejlevnejsi;
+        cil.napoveda = Math.max(cil.napoveda ?? 0, z.napoveda ?? 0);
+        cil.zlomu = (cil.zlomu ?? 0) + (z.zlomu ?? 0);
       }
     }
     for (const [uroven, pocty] of Object.entries(v.selhani)) {
@@ -388,6 +410,10 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         cenaPruchodu: cena === null ? null : Math.round(cena),
         prvky: odNejcastejsiho(v.prvky[uroven]),
         selhani: odNejcastejsiho(v.selhani[uroven]),
+        hracuSNapovedou: zaznamy.filter((z) => (z.napoveda ?? 0) >= 1).length,
+        hracuSObrysem: zaznamy.filter((z) => (z.napoveda ?? 0) >= 2).length,
+        hracuDoZlomu: zaznamy.filter((z) => (z.zlomu ?? 0) > 0).length,
+        zkousekDoZlomu: zaznamy.reduce((soucet, z) => soucet + (z.zlomu ?? 0), 0),
       };
     });
 

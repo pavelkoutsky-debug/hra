@@ -99,6 +99,8 @@ export function nakresliKonstrukci(
   jeKolej?: (prvek: number) => boolean,
   /** Délka válce pístu v metrech; bez ní se vezme podíl okamžité délky. */
   valecPistu?: (prvek: number) => number | undefined,
+  /** Jednotka u šipek vnějších sil; zkouška do zlomu kreslí zatížení na metr (kN/m). */
+  jednotkaSil = "kN",
 ): void {
   const m = kamera.meritko;
   const bod = (i: number): { x: number; y: number } =>
@@ -235,7 +237,7 @@ export function nakresliKonstrukci(
     ctx.stroke();
   }
 
-  nakresliSily(ctx, kamera, rozmer, s.sily);
+  nakresliSily(ctx, kamera, rozmer, s.sily, jednotkaSil);
   ctx.restore();
 }
 
@@ -338,8 +340,8 @@ export function nakresliZavazi(ctx: CanvasRenderingContext2D, p: BodObrazu, m: n
 /** Nejmenší rozestup popisků sousedních šipek v pixelech; hustší šipky zůstanou bez popisku. */
 const ROZESTUP_POPISKU = 74;
 
-/** Šipky vnějších sil: hrot v působišti, u paty velikost síly v kilonewtonech. */
-function nakresliSily(ctx: CanvasRenderingContext2D, kamera: Kamera, rozmer: Rozmer, sily: Float32Array): void {
+/** Šipky vnějších sil: hrot v působišti, u paty velikost síly v kilonewtonech (nebo v dané jednotce). */
+function nakresliSily(ctx: CanvasRenderingContext2D, kamera: Kamera, rozmer: Rozmer, sily: Float32Array, jednotka: string): void {
   const delka = mezi(1.3 * kamera.meritko, 30, 64);
   ctx.strokeStyle = BARVY.caraSilna;
   ctx.fillStyle = BARVY.caraSilna;
@@ -375,7 +377,7 @@ function nakresliSily(ctx: CanvasRenderingContext2D, kamera: Kamera, rozmer: Roz
     }
     posledniPopisek = pata;
     const kN = velikost / 1000;
-    ctx.fillText(`${cislo(kN, kN < 100 ? 1 : 0)} kN`, pata.x - 12 * sx, pata.y - 12 * sy + 4);
+    ctx.fillText(`${cislo(kN, kN < 100 ? 1 : 0)} ${jednotka}`, pata.x - 12 * sx, pata.y - 12 * sy + 4);
   }
   ctx.textAlign = "start";
 }

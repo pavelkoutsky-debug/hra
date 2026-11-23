@@ -1,6 +1,8 @@
 // Přehled kampaně: kapitoly, karty úrovní s náhledem výkresu, medailemi a zámky.
 
+import { zakladVyzev } from "../../urovne/vyzvy";
 import { BEZ_MEDAILI } from "../data/ulozeni";
+import { prahyVyzev } from "../data/vyzvy";
 import type { Denik } from "../denik/denik";
 import type { Uroven } from "../data/uroven";
 import { prvek, udaj } from "../ui/dom";
@@ -12,6 +14,7 @@ import { nakresliVykres } from "../vykres/vykres";
 import { znackyMedaili } from "./medaile";
 import type { Uloziste } from "./uloziste";
 import { pripojVazbu } from "./vazba";
+import { popisVyzev, stupneVyzev } from "./vyzvy";
 import { pripojZaznam } from "./zaznam";
 
 const SIRKA_NAHLEDU = 280;
@@ -101,11 +104,49 @@ function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Ul
         ? t("prehled.nejlepsiCena", { cena: koruny(nejlepsi) })
         : t(uloziste.navrh(uroven.id)?.pruty.length ? "prehled.rozpracovano" : "prehled.nezkouseno");
     stav.append(medaile, cena);
+    // Výzvy o efektivitu: součet stupňů, jakmile je úroveň projitá.
+    const zaklad = rekord?.medaile.pruchod ? zakladVyzev(uroven) : null;
+    if (zaklad) {
+      const prahy = prahyVyzev(zaklad);
+      const vyzvy = document.createElement("span");
+      vyzvy.className = "karta__vyzvy";
+      const { soucet } = stupneVyzev(prahy, rekord);
+      vyzvy.textContent = t("vyzvy.prehled", { soucet });
+      vyzvy.title = popisVyzev(prahy, rekord);
+      vyzvy.dataset.vyzvy = String(soucet);
+      stav.append(vyzvy);
+    }
   }
 
   obal.append(nahled, hlavicka, stav);
   polozka.append(obal);
   return polozka;
+}
+
+/** Kolik toho hráč v kampani dokázal: projité úrovně, medaile a stupně výzev o efektivitu. */
+export function postupKampani(
+  kampan: readonly Uroven[],
+  uloziste: Uloziste,
+): { projito: number; medaili: number; medailiCelkem: number; vyzev: number; vyzevCelkem: number } {
+  const postup = { projito: 0, medaili: 0, medailiCelkem: 0, vyzev: 0, vyzevCelkem: 0 };
+  for (const uroven of kampan) {
+    const rekord = uloziste.rekord(uroven.id);
+    const medaile = rekord?.medaile ?? BEZ_MEDAILI;
+    if (medaile.pruchod) postup.projito += 1;
+    // Medaili za rozpočet a mistrovskou má jen úroveň, která je uděluje.
+    postup.medailiCelkem += 1 + Number(uroven.inzenyrskyRozpocet !== null) + Number(uroven.mistrovska !== null);
+    postup.medaili +=
+      Number(medaile.pruchod) +
+      Number(medaile.rozpocet && uroven.inzenyrskyRozpocet !== null) +
+      Number(medaile.mistrovska && uroven.mistrovska !== null);
+    const zaklad = zakladVyzev(uroven);
+    if (zaklad) {
+      postup.vyzevCelkem += 9;
+      // Stupně výzev se počítají jen na projité úrovni, stejně jako je ukazuje její karta.
+      if (medaile.pruchod) postup.vyzev += stupneVyzev(prahyVyzev(zaklad), rekord).soucet;
+    }
+  }
+  return postup;
 }
 
 /** Spustí přehled kampaně. `hlaseni` je zpráva, kterou má přehled ukázat nahoře (neznámá úroveň). */
@@ -157,6 +198,31 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
 
   udaj("prehled-verze").textContent = `${t("hra.nazev")} ${__VERZE_HRY__} · ${__OTISK_SESTAVENI__}`;
   vykresli();
+
+  // Postup kampaní: kolik úrovní je projitých, kolik medailí a stupňů výzev hráč má.
+  const postup = postupKampani(kampan, uloziste);
+  const polePostupu = udaj("prehled-postup");
+  const dokonceno = postup.projito === kampan.length && kampan.length > 0;
+  polePostupu.textContent = t("prehled.postup", {
+    projito: postup.projito,
+    urovni: kampan.length,
+    medaili: postup.medaili,
+    medailiCelkem: postup.medailiCelkem,
+    vyzev: postup.vyzev,
+    vyzevCelkem: postup.vyzevCelkem,
+  });
+  polePostupu.title = t("prehled.postup.popis");
+  polePostupu.dataset.projito = String(postup.projito);
+  polePostupu.dataset.dokonceno = String(dokonceno);
+  // Dokončená kampaň má vlastní oznámení: věta přilepená za čísla by zanikla.
+  const poleDokonceno = udaj("prehled-dokonceno");
+  poleDokonceno.hidden = !dokonceno;
+  poleDokonceno.replaceChildren();
+  if (dokonceno) {
+    const nadpis = document.createElement("strong");
+    nadpis.textContent = t("prehled.dokonceno.nadpis");
+    poleDokonceno.append(nadpis, document.createTextNode(` ${t("prehled.dokonceno")}`));
+  }
   document.body.dataset.rezim = "prehled";
 
   // Zpětná vazba a deník hraní: v přehledu není most, který by šel přiložit.
@@ -166,6 +232,7 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   denik.zapis("prehled.otevren", {
     proslych: rekordy.filter((m) => m?.pruchod).length,
     medaili: rekordy.reduce((soucet, m) => soucet + (m ? Number(m.pruchod) + Number(m.rozpocet) + Number(m.mistrovska) : 0), 0),
+    vyzev: postup.vyzev,
     odemcenoVse: uloziste.odemcenoVse,
   });
 }

@@ -1,6 +1,6 @@
 # Mostmistr — stav vývoje
 
-Poslední aktualizace: 22. 11. 2026
+Poslední aktualizace: 23. 11. 2026
 
 ## Milníky
 
@@ -16,28 +16,103 @@ Poslední aktualizace: 22. 11. 2026
 | M4a Těžká doprava | Hotovo, sloučeno do `main` (22. 11. 2026) |
 | M4b Velká rozpětí | Hotovo, po třech nezávislých recenzích sloučeno do `main` (22. 11. 2026) |
 | M4c Zpětná vazba a deník hraní | Hotovo (přidáno na přání zadavatele 22. 11. 2026); čeká na nastavení hesla správce v Netlify |
-| M5 Železnice | Hotovo: kolejiště, vlak, kapitola 6; čeká na nezávislé recenze a sloučení |
-| M6 až M8 | Nezačato |
+| M5 Železnice | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
+| M6 Pohyblivé mosty | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
+| M7 Režimy | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
+| M8 Doladění | Rozpracováno |
 | M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
 
 ## Kde práce stojí (23. 11. 2026)
 
-- **M5** je sloučený do `main` (pull request 13).
-- **M6** je hotový včetně zapracování tří nezávislých recenzí (kód, hraní kapitoly 7, kontrola výpočtů; viz „Nezávislé recenze M6“) a slučuje se pull requestem 14.
-- **M7 Režimy** je další na řadě; plán níže. Pak M8 (výkon, dotyk, angličtina) a M9 (zvuky načisto, se schválením zadavatele).
+- **M5** a **M6** jsou sloučené do `main` (pull requesty 13 a 14).
+- **M7 Režimy** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M7 — výsledek“ a „Nezávislé recenze M7“).
+- Rozpracovaný je **M8** (výkon, dotyk, angličtina; k tomu odložené věci z recenzí: úzké okno, značky kotev, nápovědy na časové ose a fyzika vzpěru a plasticity z kontroly výpočtů M7). Pak **M9** (zvuky načisto, se schválením zadavatele).
 
-## M7 — plán
+## M7 — výsledek
 
-Zadání z koncepce (kap. 4 a 12): odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda. Kritérium: test projde kampaň od první do poslední úrovně s referenčními řešeními.
+Herní režimy: výzvy o efektivitu se zkouškou do zlomu, sandbox, nápověda a dokončení kampaně. Verze hry 0.13.0, verze fyziky 7 (výsledky dosavadních zkoušek se nemění), formát uloženého postupu 2.
 
-Co už je: odemykání úrovní v přehledu (včetně „odemknout vše“), tři medaile, rekordy a nejlepší cena v úložišti.
+**Zkouška do zlomu** (`src/zkouska/zlom.ts`, `VstupZkousky.zlom`). Místo provozu se na mostovku všech tras rovnoměrně přikládá zátěž, dokud se neporuší první prut, most nesjede z podpory nebo nepovolí píst; pak děj tři sekundy dobíhá.
 
-Co zbývá:
+- Zatížení roste s třetí mocninou času (20 N/m za s³): po 10 s leží na metru mostovky 20 kN, po 20 s 160 kN, po 30 s 540 kN. Stejná zkouška tak změří dřevěnou lávku i železniční viadukt; referenční mosty kampaně se lámou mezi 5. a 27. sekundou. Po 60 s zátěž neroste (most „unesl všechno“).
+- Zátěž jsou stejné síly po půl metru na mostovce (stejná cesta jako kola a chodci), takže ohyb mostovky mezi styčníky se počítá.
+- Výsledek (`VysledekZkousky.zlom`): zatížení na metr, celková síla, okamžik a prut, který povolil první. Medaile se neudělují; most nad rozpočet zkoušku nedostane.
+- Zkoušku dostane jen most, jehož mostovka vede od břehu k břehu (jinak by zátěž neměla na čem ležet), a do výzvy se počítá jen mostu, který před tím prošel běžnou zkouškou.
+- Ověřeno proti ručnímu výpočtu (`test/zlom.test.ts`): prosté dřevěné pole 4 m se zlomí při 8·M/L² s odchylkou 0,2 %; u křehkého porušení výsledek nezávisí na rychlosti zatěžování (do 3 % při 4× až 16× rychlejším zatěžování), u tvárného o pár procent ano (viz recenze níže); dvakrát širší mostovka unese dvakrát víc.
 
-1. **Průchod kampaní v prohlížeči** (`test/e2e/kampan.e2e.ts`): z čisté paměti prohlížeče postupně otevřít všech 28 úrovní, načíst referenční most pro průchod, spustit zkoušku a ověřit, že se odemkla další úroveň.
-2. **Sandbox**: volná stavba bez rozpočtu se všemi prvky, nastavitelná šířka údolí, provoz si hráč skládá sám (seznam položek jízdního řádu), budič s táhlem frekvence už je. Vstup z přehledu.
-3. **Výzvy o efektivitu** na úrovních kampaně: nejlevnější most, nejlehčí most a zkouška do zlomu (zatížení roste, dokud most nespadne; boduje se únosnost na korunu) s prahy bronz, stříbro, zlato odvozenými z referenčních mostů.
-4. **Nápověda**: postupné rady k úrovni (texty ve slovníku), nabídnuté po opakovaném neúspěchu.
+**Výzvy o efektivitu** (`src/data/vyzvy.ts`, `urovne/vyzvy.ts`, `src/hra/vyzvy.ts`). Na každé úrovni kampaně tři výzvy s prahy bronz, stříbro, zlato:
+
+- *Nejlevnější most* a *nejlehčí most* se měří při každé zkoušce, která projde (není na to zvláštní režim); rekord úrovně si je pamatuje.
+- *Únosnost na korunu* měří zkouška do zlomu (tlačítko „Do zlomu“ mezi pokusy v paletě, klávesa D).
+- Zlato odpovídá nejlepšímu referenčnímu mostu úrovně, takže je vždy dosažitelné (hlídá test). Stříbro a bronz dávají rezervu 15 % a 40 % jen na nosnou konstrukci (mostovku hráč úsporou neovlivní; jinak by u těžkých mostů dostal bronz každý), nejmíň ale 2 % a 5 % celého mostu, aby stupně nesplynuly; u ceny navíc stříbro a bronz nepřekročí třetinu a dvě třetiny cesty od zlata k rozpočtu úrovně. U únosnosti na korunu je to 70 % a 45 % referenčního mostu.
+- Stupně se porovnávají v číslech, která hráč vidí (`zobrazenaHodnota`): cena na koruny, hmotnost na tři platné číslice, únosnost na desetinu tuny na 100 000 Kč.
+- Únosnost referenčních mostů je uložená v `urovne/zlomy.json` (hra ji při spuštění počítat nemůže); `npm run vyzvy` ji změří znovu a test hlídá, že uložená čísla platí.
+- Ve hře: zlato každé výzvy v zadání úrovně, seznam výzev se všemi stupni ve výsledku (jakmile je úroveň projitá), „výzvy n z 9“ na kartě v přehledu, poznámka „o X % lepší než most autora hry“.
+
+**Sandbox „Pískoviště“** (`src/data/sandbox.ts`, `src/hra/sandbox.ts`, adresa `?sandbox`, vstup z přehledu). Volná stavba bez rozpočtu, medailí a rekordů se všemi hotovými prvky kromě pístu a pružiny.
+
+- Hráč nastavuje rozpětí údolí (6 až 72 m), hloubku (3 až 24 m), vodu, počet základů pro pilíře (0 až 3) a druh trasy (lávka, silnice, trať).
+- Provoz si skládá sám: až deset položek jízdního řádu (kolik, čeho, odkud, kdy). Koncepce chce „vozidla se pouštějí ručně“; zkouška se ale počítá napřed a pak přehrává, takže se provoz skládá předem (stejné řešení jako u budiče v M3b).
+- Z nastavení vzniká úroveň stejného formátu jako úrovně kampaně (id 0-01), takže ji editor, zkouška i rozbor umějí beze změny. Změna provozu nebo vody most nechá, změna údolí ho po potvrzení smaže.
+- Základů je tolik, kolik se do údolí vejde (aspoň tři metry od sebe), jinak nastavení řekne, kolik jich smí být. Po trati jedou vlaky jedním směrem (jedna kolej).
+- Budič, osa frekvencí, rezonanční křivka a laděný tlumič jsou tam, kde chodí lidé (lávka a silnice).
+
+**Nápověda** (`src/hra/napoveda.ts`, `src/data/soupis.ts`). Na úrovních kampaně tlačítko nahoře v paletě (vedle Zadání):
+
+- nejdřív soupis mostu, který úrovní projde (kolik prutů kterého prvku a kolik metrů, svary, zámky, napínáky, závaží s hmotností, tlumiče s laděním, zdvih pístu, cena a jestli se vejde do medaile za rozpočet),
+- na další kliknutí jeho obrys na výkresu (čárkované čáry, kroužky ve styčnících a popisky u svarů, zámků, závaží, tlumičů a pístů); který prut je z čeho, obrys neříká.
+- Po třetí zkoušce, která v jedné návštěvě neprojde, hra nápovědu jednou připomene.
+- Nápověda se bere z referenčního mostu pro průchod, takže je vždy pravdivá a nepotřebuje ručně psané rady.
+
+**Kampaň:** přehled ukazuje postup (projité úrovně, medaile, stupně výzev) a dokončenou kampaň oznámí zvlášť; výsledek poslední úrovně nabídne „Kampaň dokončena“, jen když je projitá každá úroveň.
+
+**Deník hraní:** nové události `napoveda` (krok 1 soupis, 2 obrys), `napoveda.nabidnuta`, `sandbox.nastaveni`; `zkouska.konec` nese druh pokusu `zlom`, únosnost a stupně výzev. Souhrn správce má u každé úrovně, kolik hráčů si otevřelo nápovědu (a obrys) a kolik zkoušelo do zlomu.
+
+**Jak je to ověřeno**
+
+- `test/zlom.test.ts`, `test/vyzvy.test.ts`, `test/sandbox.test.ts`, `test/soupis.test.ts`, `test/ulozeni.test.ts` (převod uloženého postupu z verze 1).
+- `test/e2e/kampan.e2e.ts`: **kritérium milníku** – z čisté paměti prohlížeče projde všech 28 úrovní s referenčními mosty, každá odemkne další a po poslední je kampaň dokončená.
+- `test/e2e/rezimy.e2e.ts`: výzvy a zkouška do zlomu, sandbox (nastavení údolí a provozu, trať) a nápověda v prohlížeči.
+- Regresní sada má scénář `zkouska-do-zlomu`. Scénáře s celou zkouškou teď krokuje zkouška, ne samotná simulace: dřív se v nich most vůbec nezvedal (zvedání řídí zkouška mezi kroky). Otisky `vlak-brzdi-na-stycich` a `sklopny-most` se proto změnily, výpočet ne.
+
+**Co ověřeno není / modelové volby**
+
+- Zlato ve výzvách je úroveň referenčních mostů, které nevznikaly jako nejlevnější, nejlehčí ani nejúnosnější možné: hráč je může překonat (hra mu to řekne). Prahy se dají zpřísnit podle toho, co hráči opravdu postaví (deník to zaznamená).
+- Zkouška do zlomu zatěžuje celou mostovku rovnoměrně; nejhorší poloha zátěže (jen půl mostu) se nezkouší.
+- U pohyblivých mostů se při zkoušce do zlomu most nezvedá a píst, který povolí, je první porušení.
+- Sandbox nemá pohyblivé mosty (píst, zámek, lodě) a údolí má vždy stejný tvar se šikmými svahy.
+- Nápověda ukazuje jeden most; jiná řešení (levnější, pro mistrovskou) neradí.
+
+### Nezávislé recenze M7 (23. 11. 2026)
+
+Tři čerství agenti bez znalosti mých závěrů: recenze kódu, hraní nových režimů v prohlížeči očima nováčka a nezávislá kontrola výpočtů (vlastní rámová MKP v Pythonu, lineární i geometricky nelineární). Kontrola výpočtů potvrdila zkoušku do zlomu: křehká porušení sedí na ručním výpočtu do 0,3 %, referenční mosty 4-03 a 4-04 na nelineárním výpočtu do 0,3 %, ceny a hmotnosti všech 84 referenčních mostů s rozdílem nula.
+
+**Zapracováno**
+
+- **Zkouška do zlomu bez mostovky dávala nesmyslný rekord** (všechny tři recenze; 1-01 s pěti trámy bez mostovky „unesl“ 15 502 t na 100 000 Kč). Zkouška teď chce mostovku od břehu k břehu: hra ji bez ní nepustí a řekne proč, jádro ji odmítne (`neplatny-vstup`).
+- **Zlato za únosnost dostal most, který úrovní neprojde** (most bez závaží, bez tlumiče, bez pístu). Do výzvy se počítá jen mostu, který v téže návštěvě prošel běžnou zkouškou; jinak výsledek řekne, že se zatím nepočítá.
+- **Zkouška do zlomu stavěla jiný most než běžná zkouška** (mostovka pohyblivého mostu nedělená po metru, svar místo čepu v zámku). Pokusy i zkouška do zlomu teď staví most podle úrovně, jak je; vypíná se jen řízení zvedání. Únosnosti kapitoly 7 se tím změnily o 0,2 % (`npm run vyzvy`).
+- **Most bez klidové polohy** zkouška do zlomu dál zatěžovala až 20 s; teď skončí po třech sekundách. Neplatný nárůst zátěže zkouška odmítne (dřív z něj vyšla zkouška bez provozu, která „prošla“).
+- **Prahy výzev:** bronz za cenu byl na sedmi úrovních nad rozpočtem (dostal ho každý most, který prošel), v kapitole 7 měly všechny stupně hmotnosti stejné číslo a zobrazení stupně nerozlišilo („936 kg · bez stupně · bronz do 936 kg“). Nová pravidla jsou popsaná výše; test chce ostré pořadí v zobrazených číslech a bronz pod rozpočtem na každé úrovni. Píst se počítá do hmotnosti mostu (200 kg/m jako ve zkoušce).
+- **Výsledek výzev** rozlišuje rekord a právě zkoušený most („rekord 36,0 t (tenhle most 22,8 t)“). Zadání ukazuje jen zlato každé výzvy (devět čísel na první úrovni mátlo). Stupně výzev se v přehledu počítají jen na projitých úrovních.
+- **„Kampaň dokončena“** se ukazovala i po průchodu poslední úrovně otevřené adresou; teď jen když je projitá každá úroveň, jinak „Zpět na přehled“. Dokončená kampaň má v přehledu vlastní oznámení.
+- **Nápověda a „Údolí a provoz“ byly hluboko pod okrajem palety** (až dvě a půl obrazovky). Zadání, Nápověda a nastavení pískoviště jsou teď nahoře v paletě.
+- **Nápověda tvrdila, že její most „není nejlevnější ani nejlepší“,** i když na třech zkoušených úrovních získal medaili za rozpočet. Věta se skládá podle skutečné ceny. Soupis říká hmotnost závaží, ladění tlumičů a zdvih pístu, obrys má tmavý podklad (je vidět i na hranici zakázané zóny) a popisky přídavků.
+- **Pískoviště:** medaile se tam neukazují a rekordy nezapisují; změna vody most nemaže; počet základů odpovídá nastavení (dřív jich potichu bylo míň a překrývaly se) a stojí souměrně; vlaky proti sobě na jedné koleji nastavení odmítne; přepnutí druhu trasy dá výchozí jízdní řád; plný jízdní řád řekne proč nepřidává; hlášení o počtu říká rozsah; bez paměti prohlížeče nese nastavení adresa; nečitelné nastavení zahodí i most z neznámého údolí; pružina (bez nastavení tuhosti) v paletě není; lávka má vybavení 60 kg/m jako v kampani; analýza je po otevření zavřená.
+- **Drobnosti:** při zkoušce do zlomu je razítko průhledné a legenda se láme vedle něj (údaj o zátěži byl schovaný), šipky mají jednotku kN/m, píst, který povolil, je vypsaný mezi porušeními, zdvojená věta o klidové poloze zmizela, nápověda se nepřipomíná tomu, kdo ji už otevřel, rekord bez nových polí už nezahodí celý postup, test „most nad rozpočet“ zkouší opravdu rozpočet.
+- **Testy:** most s mezerou, bez mostovky a prázdný; stavba pohyblivého mostu do zlomu; nejlepší ze tří referenčních mostů (ne jen uložený); úložiště sandboxu; každý druh provozu je v nabídce sandboxu, nebo vědomě vynechaný.
+
+**Nezapracováno (a proč)**
+
+- **Plastický moment se v tlaku krátí únosností v tahu** (`src/jadro/sily.ts`): tlačená ocelobetonová mostovka je v ohybu o 13 až 20 % slabší, než říká posudek, tedy opak toho, co hra učí. A **svařený styčník uprostřed tlačeného prutu půlí vzpěrnou délku** (až dvojnásobná únosnost za cenu svaru). Obojí je starší než M7 a mění výsledky běžných zkoušek: oprava znamená novou verzi fyziky, vyhratelnost všech úrovní a nové prahy. Patří do M8 jako samostatný krok s přeladěním.
+- **Tvárné porušení při zkoušce do zlomu závisí na rychlosti zatěžování** (+3 až +8 % proti statické mezi; zátěž roste i ve chvíli, kdy se kloub teprve otáčí). Hráč i referenční most se měří stejně, takže výzvu to nekřiví; oprava (zátěž neroste, dokud přibývá plastická práce) do M8 spolu s předchozím.
+- **Vzpěr se u děleného prutu počítá dvakrát** (Rankine i skutečný průhyb), štíhlé dřevo je o 8 až 14 % opatrnější než vlastní vzorec hry. Modelová volba na bezpečné straně; k rozhodnutí v M8.
+- **Zkouška do zlomu zatěžuje celý most naráz.** U zavěšeného mostu, příhrady přes pilíř a oblouku je horší zatížit půlku (poměr 0,39 až 0,75). Je to zapsaná modelová volba; výzva měří rovnoměrné zatížení.
+- **První porušení ukončí zkoušku, i když jde o vedlejší prut,** a nadbytečný prut tak umí únosnost „snížit“. Ošidit se tím nedá; nechává se.
+- **Zlato je snadné** (na 1-01 jde postavit most 2,7× účinnější než referenční). Prahy se zpřísní podle toho, co hráči opravdu postaví (deník to zaznamená).
+- **Správce nevidí most ze sandboxu** (v deníku není nastavení údolí) a řádek 0-01 v souhrnu míchá všechna údolí. Do M8.
+- **Dva vlaky za sebou na trati se mohou dohnat** a zkouška to nepozná (stejně jako auta); nastavení hlídá jen protisměr.
+- **V okně užším než 1000 px** se nevejde lišta a časová osa: řeší M8 (dotyk a úzké okno).
 
 ## M6 — výsledek
 
@@ -805,7 +880,7 @@ Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadav
 
 ## Další krok
 
-M5 Železnice (na začátku oprava vlastní tíhy svařených prutů, viz recenze M4b), M6 Pohyblivé mosty, M7 Režimy, M8 Doladění; každý s interními testy a nezávislou recenzí. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs.
+M8 Doladění (výkon, dotykové ovládání, angličtina a odložené drobnosti z recenzí M5 až M7), s interními testy a nezávislou recenzí. Zvuky se neladí; načisto se udělají v M9 pomocí ElevenLabs a schvaluje je zadavatel.
 
 ## Zpětná vazba zadavatele
 

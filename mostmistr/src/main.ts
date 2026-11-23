@@ -1,7 +1,8 @@
-// Vstupní bod hry: podle adresy otevře přehled kampaně, nebo obrazovku úrovně
-// (`?uroven=1-02`). Zkušební výkres 0-00 do kampaně nepatří, ale adresou otevřít jde.
+// Vstupní bod hry: podle adresy otevře přehled kampaně, obrazovku úrovně (`?uroven=1-02`)
+// nebo sandbox (`?sandbox`). Zkušební výkres 0-00 do kampaně nepatří, ale adresou otevřít jde.
 
 import { nactiKampan, nactiUrovne } from "../urovne/index";
+import { sandboxZTextu, urovenSandboxu } from "./data/sandbox";
 import { denikHry } from "./denik/prohlizec";
 import { spustPrehled } from "./hra/prehled";
 import { skladProhlizece, Uloziste } from "./hra/uloziste";
@@ -16,7 +17,18 @@ try {
   const id = new URLSearchParams(window.location.search).get("uroven");
   // Deník hraní: anonymní záznam toho, co se ve hře děje (viz src/denik/).
   const denik = denikHry();
-  if (id === null) {
+  const sandboxZAdresy = new URLSearchParams(window.location.search).get("sandbox");
+  if (sandboxZAdresy !== null) {
+    // Sandbox: úroveň se vyrobí z nastavení, které si hráč uložil. Kde prohlížeč nedá paměť,
+    // nese nastavení adresa; ta má pak přednost.
+    let nastaveni = uloziste.sandbox;
+    try {
+      if (sandboxZAdresy.startsWith("{")) nastaveni = sandboxZTextu(sandboxZAdresy);
+    } catch {
+      // Nastavení v adrese nejde přečíst: platí uložené.
+    }
+    spustUroven(urovenSandboxu(nastaveni), kampan, uloziste, denik, nastaveni);
+  } else if (id === null) {
     spustPrehled(kampan, uloziste, denik);
   } else {
     const uroven = nactiUrovne().find((u) => u.id === id);

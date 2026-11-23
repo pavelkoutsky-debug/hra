@@ -3,11 +3,13 @@
 // Sklad se předává zvenčí, takže stejný kód běží v prohlížeči i v testech.
 
 import type { NavrhMostu } from "../data/navrh";
+import { ID_SANDBOXU, sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
 import {
   prazdneUlozeni,
   ulozeniNaText,
   ulozeniZTextu,
   vylepsiRekord,
+  vylepsiZlom,
   type Medaile,
   type Rekord,
   type Ulozeni,
@@ -28,6 +30,9 @@ export const KLIC_ODEMCENI = "mostmistr.odemceno";
 export const KLIC_CISEL = "mostmistr.cisla";
 /** Volba hráče: hlasitost zvuku. */
 export const KLIC_ZVUKU = "mostmistr.zvuk";
+/** Nastavení sandboxu: údolí, trasa a provoz. */
+export const KLIC_SANDBOXU = "mostmistr.sandbox";
+export const KLIC_SANDBOX_NAVSTIVEN = "mostmistr.sandbox.navstiven";
 
 export const HLASITOSTI = ["nahlas", "potichu", "vypnuto"] as const;
 export type Hlasitost = (typeof HLASITOSTI)[number];
@@ -96,8 +101,16 @@ export class Uloziste {
   }
 
   /** Započítá výsledek zkoušky do rekordu úrovně a vrátí nový rekord. */
-  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number): Rekord {
-    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky);
+  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number): Rekord {
+    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost);
+    this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
+    this.#zapis();
+    return rekord;
+  }
+
+  /** Započítá výsledek zkoušky do zlomu (únosnost na korunu, N/Kč) a vrátí nový rekord. */
+  zapocitejZlom(idUrovne: string, unosnostNaKorunu: number, verzeFyziky: number): Rekord {
+    const rekord = vylepsiZlom(this.#ulozeni.rekordy[idUrovne], unosnostNaKorunu, verzeFyziky);
     this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
     this.#zapis();
     return rekord;
@@ -131,6 +144,43 @@ export class Uloziste {
 
   set hlasitost(hlasitost: Hlasitost) {
     this.#pis(KLIC_ZVUKU, hlasitost);
+  }
+
+  /** Nastavení sandboxu; výchozí, dokud si ho hráč nezmění nebo když uložené nejde přečíst. */
+  get sandbox(): NastaveniSandboxu {
+    const zapis = this.#cti(KLIC_SANDBOXU);
+    if (zapis === null) return vychoziSandbox();
+    try {
+      return sandboxZTextu(zapis);
+    } catch {
+      // Nečitelné nastavení: hra začne s výchozím údolím a rozestavěný most, který patřil do
+      // toho ztraceného, zahodí (jinak by v cizím údolí jen svítil chybami).
+      this.smazNavrh(ID_SANDBOXU);
+      this.#pis(KLIC_SANDBOXU, sandboxNaText(vychoziSandbox()));
+      return vychoziSandbox();
+    }
+  }
+
+  set sandbox(nastaveni: NastaveniSandboxu) {
+    this.#pis(KLIC_SANDBOXU, sandboxNaText(nastaveni));
+  }
+
+  /** Už hráč sandbox někdy otevřel? Podruhé se mu zadání samo neotvírá. */
+  get sandboxNavstiven(): boolean {
+    return this.#cti(KLIC_SANDBOX_NAVSTIVEN) === "1";
+  }
+
+  set sandboxNavstiven(navstiven: boolean) {
+    this.#pis(KLIC_SANDBOX_NAVSTIVEN, navstiven ? "1" : "0");
+  }
+
+  /** Smaže rozpracovaný most úrovně (sandbox po změně údolí). */
+  smazNavrh(idUrovne: string): void {
+    if (!(idUrovne in this.#ulozeni.navrhy)) return;
+    const navrhy = { ...this.#ulozeni.navrhy };
+    delete navrhy[idUrovne];
+    this.#ulozeni = { ...this.#ulozeni, navrhy };
+    this.#zapis();
   }
 
   #zapis(): void {

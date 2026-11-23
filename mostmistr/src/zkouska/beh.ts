@@ -1,4 +1,4 @@
-import { zkontrolujNavrh } from "../data/navrh";
+import { mezeryTras, zkontrolujNavrh } from "../data/navrh";
 import { VERZE_FYZIKY } from "../jadro/verze";
 import type { DopnutiLan, RozborMostu, ZpravaProZkousku, ZpravaZeZkousky } from "./protokol";
 import { dopniLana } from "./dopnuti";
@@ -84,8 +84,14 @@ export class BehZkousky {
       this.#posli({ typ: "chyba", kod: "neplatny-vstup", podrobnosti: problemy.map((p) => p.druh).join(", ") });
       return;
     }
+    // Zkouška do zlomu zatěžuje mostovku: kde na trase chybí, nic by neleželo a únosnost by se
+    // přesto počítala z celé délky trasy. Most, který nevede od břehu k břehu, ji nedostane.
+    if (vstup.zlom && mezeryTras(vstup.navrh, vstup.uroven).length > 0) {
+      this.#posli({ typ: "chyba", kod: "neplatny-vstup", podrobnosti: "zlom-bez-mostovky" });
+      return;
+    }
     try {
-      const zkouska = new Zkouska(vstup.uroven, vstup.navrh, vstup.nasada, vstup.brnknuti, vstup.budic);
+      const zkouska = new Zkouska(vstup.uroven, vstup.navrh, vstup.nasada, vstup.brnknuti, vstup.budic, vstup.zlom);
       this.#zkouska = zkouska;
       this.#posli({
         typ: "zacatek",

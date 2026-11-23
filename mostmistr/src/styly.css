@@ -25,6 +25,11 @@ body {
   display: none !important;
 }
 
+/* V pískovišti se nesoutěží: medaile tam nejsou vidět nikde. */
+body[data-sandbox] [data-jen-kampan] {
+  display: none !important;
+}
+
 /* Části stránky, které patří jen ke stavbě nebo jen ke zkoušce. */
 body[data-rezim="stavba"] [data-jen="zkouska"],
 body[data-rezim="zkouska"] [data-jen="stavba"] {
@@ -127,6 +132,11 @@ a.tlacitko {
 .tlacitko--hlavni[aria-pressed="true"] {
   background: transparent;
   color: var(--cara-silna);
+}
+
+/* Tlačítko, které teď nic nepřidá, ale po kliknutí řekne proč. */
+.tlacitko[aria-disabled="true"] {
+  opacity: 0.55;
 }
 
 .tlacitko:disabled {
@@ -252,6 +262,12 @@ a.tlacitko {
 
 /* Poslední řádek má jen dvě buňky: verzi a datum. */
 .pole__bunka:nth-last-child(-n + 2) {
+  grid-column: span 3;
+}
+
+/* Pískoviště nemá buňku s medailemi: cena a hmotnost si rozdělí celý řádek, ať nezbude díra. */
+body[data-sandbox] .pole__bunka:nth-child(2),
+body[data-sandbox] .pole__bunka:nth-child(3) {
   grid-column: span 3;
 }
 
@@ -659,6 +675,24 @@ a.tlacitko {
   gap: 4px;
 }
 
+/* Zadání, nápověda a nastavení pískoviště nahoře v paletě. */
+.paleta__uvod {
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.paleta__uvod .paleta__tlacitko {
+  justify-content: center;
+  text-align: center;
+}
+
+/* Nápověda a nastavení pískoviště patří ke stavbě; při zkoušce zašednou jako zbytek palety. */
+body[data-rezim="zkouska"] .paleta__uvod [data-akce="napoveda"],
+body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .paleta__tlacitko {
   display: flex;
   align-items: center;
@@ -765,6 +799,82 @@ a.tlacitko {
 .medaile [data-ziskana="drive"] .medaile__znak,
 .medaile [data-ziskana="drive"] .medaile__nazev {
   opacity: 0.55;
+}
+
+/* Výzvy o efektivitu: tři řádky se stupněm (tečky), názvem a tím, co hráč dokázal. */
+
+.vyzvy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.vyzvy li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  column-gap: 6px;
+}
+
+.vyzvy__znak {
+  grid-row: span 2;
+  color: var(--popisek);
+  letter-spacing: 1px;
+}
+
+.vyzvy [data-stupen="1"] .vyzvy__znak,
+.vyzvy [data-stupen="2"] .vyzvy__znak,
+.vyzvy [data-stupen="3"] .vyzvy__znak,
+.vyzvy [data-stupen="3"] .vyzvy__nazev {
+  color: var(--cara-silna);
+}
+
+.vyzvy__stav {
+  color: var(--popisek);
+}
+
+.vysledek__vyzvy h3 {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.okno__poznamka {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--popisek);
+}
+
+.prehled__postup {
+  margin: 0 0 14px;
+  color: var(--popisek);
+}
+
+.prehled__postup[data-dokonceno="true"] {
+  color: var(--cara-silna);
+}
+
+.prehled__dokonceno {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--cara-silna);
+  background: var(--zvyrazneni);
+  color: var(--cara-silna);
+}
+
+.prehled__dokonceno strong {
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.karta__vyzvy {
+  color: var(--popisek);
 }
 
 .medaile__podminka {
@@ -1031,6 +1141,85 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   width: min(560px, 94vw);
 }
 
+/* Sandbox: nastavení údolí a provozu */
+
+.okno--sandbox {
+  width: min(620px, 94vw);
+}
+
+.okno--sandbox h3 {
+  margin: 14px 0 2px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.sandbox__pole {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin: 10px 0 0;
+}
+
+.sandbox__pole label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sandbox__pole label > span:first-child {
+  flex: 1;
+}
+
+.sandbox__volba {
+  grid-column: 1 / -1;
+}
+
+.okno--sandbox input[type="number"],
+.okno--sandbox select {
+  padding: 4px 6px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.okno--sandbox input[type="number"] {
+  width: 68px;
+}
+
+.sandbox__provoz {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Dlouhý jízdní řád se posouvá uvnitř okna, aby tlačítka dole zůstala vidět i v nízkém okně. */
+  max-height: 32vh;
+  overflow-y: auto;
+  margin: 6px 0 8px;
+  padding: 2px 4px 2px 0;
+  list-style: none;
+}
+
+.sandbox__radek {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sandbox__radek select[data-pole="druh"] {
+  flex: 1;
+  min-width: 160px;
+}
+
+@media (max-width: 560px) {
+  .sandbox__pole {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .vazba__druhy {
   display: flex;
   flex-wrap: wrap;
@@ -1289,12 +1478,21 @@ a.karta__obal:hover {
   .pole {
     display: none;
   }
+
+  /* Popisové pole tu není, legenda smí přes celý výkres. */
+  .uroven .legenda {
+    max-width: calc(100% - 20px);
+  }
 }
 
 /* Legenda využití ve hře: je vidět, jen když jsou pruty obarvené využitím. */
 
 .uroven .legenda {
   bottom: 38px;
+  /* Vedle popisového pole: dlouhý údaj (zátěž při zkoušce do zlomu) se zalomí, neschová se pod ně. */
+  max-width: calc(100% - 396px);
+  flex-wrap: wrap;
+  row-gap: 4px;
   pointer-events: auto;
 }
 
