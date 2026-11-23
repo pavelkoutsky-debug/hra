@@ -171,8 +171,8 @@ function zpomaleniBrzdeni(polozka: PolozkaJizdnihoRadu): number {
 }
 
 /** Pauza mezi příchodem skákajícího davu na místo a prvním skokem a po posledním skoku, s. */
-const PAUZA_SKAKANI = 1;
-const VYCHOZI_TRVANI_SKAKANI = 10;
+export const PAUZA_SKAKANI = 1;
+export const VYCHOZI_TRVANI_SKAKANI = 10;
 /** Mezera mezi kapelou a davem, který jde za ní, m. */
 const MEZERA_ZA_KAPELOU = 3;
 

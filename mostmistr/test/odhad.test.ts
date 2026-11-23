@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
+import { urovenSandboxu } from "../src/data/sandbox";
 import type { Uroven } from "../src/data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
 import { MEZE_KOMFORTU } from "../src/jadro/komfort";
@@ -11,7 +12,7 @@ import { poddajnost, rezonancniKrivka, zakladOdezvy, zmenenyZaklad } from "../sr
 import { sestavSoustavu } from "../src/jadro/soustava";
 import { volneStupne } from "../src/jadro/stupne";
 import { najdiKlid } from "../src/jadro/ustaleni";
-import { cinitelSpicky, mostovkaTrasy, POCET_TVARU_ODHADU } from "../src/zkouska/odhad";
+import { cinitelSpicky, mostovkaTrasy, ODHAD_U_MEZE, POCET_TVARU_ODHADU } from "../src/zkouska/odhad";
 import type { RozborMostu } from "../src/zkouska/protokol";
 import { rozeberMost } from "../src/zkouska/rozbor";
 import { sestavMost } from "../src/zkouska/stavba";
@@ -37,14 +38,23 @@ function zkousej(u: Uroven, navrh: NavrhMostu) {
 /** Skupina, která most podle odhadu rozkmitá nejvíc. */
 const nejhorsi = (rozbor: RozborMostu) => rozbor.odhad!.skupiny.reduce((a, b) => (b.zrychleni > a.zrychleni ? b : a));
 
-/** Ocelová příhrada nad dřevěnou mostovkou s poli 4 m; `vysky` jsou výšky horního pásu nad každým vnitřním styčníkem. */
-function lavka(id: string, vysky: readonly number[]): NavrhMostu {
-  const pole = 4;
-  const rozpeti = pole * (vysky.length + 1);
+interface Doplnky {
+  /** Polohy styčníků mostovky, m; bez nich pole po 4 m. */
+  xs?: readonly number[];
+  /** Závaží v každém vnitřním styčníku mostovky, kg. */
+  zavazi?: number;
+  /** Laděné tlumiče: x styčníku mostovky, hmotnost, frekvence. */
+  tlumice?: readonly (readonly [number, number, number])[];
+}
+
+/** Ocelová příhrada nad dřevěnou mostovkou; `vysky` jsou výšky horního pásu nad každým vnitřním styčníkem mostovky. */
+function lavka(id: string, vysky: readonly number[], d: Doplnky = {}): NavrhMostu {
+  const xs = d.xs ?? Array.from({ length: vysky.length + 2 }, (_, i) => 4 * i);
+  const rozpeti = xs.at(-1)!;
   const k = new Kreslic(id);
-  for (let x = 0; x < rozpeti; x += pole) k.prut("mostovka-drevo", [x, 0], [x + pole, 0]);
+  for (let i = 0; i + 1 < xs.length; i++) k.prut("mostovka-drevo", [xs[i]!, 0], [xs[i + 1]!, 0]);
   const O = "ocel-lehka" as const;
-  const horni = vysky.map((h, i) => [pole * (i + 1), h] as [number, number]);
+  const horni = vysky.map((h, i) => [xs[i + 1]!, h] as [number, number]);
   k.prut(O, [0, 0], horni[0]!);
   k.prut(O, horni.at(-1)!, [rozpeti, 0]);
   for (let i = 0; i + 1 < horni.length; i++) k.prut(O, horni[i]!, horni[i + 1]!);
@@ -53,7 +63,14 @@ function lavka(id: string, vysky: readonly number[]): NavrhMostu {
     const kStredu = horni[i]![0] < rozpeti / 2;
     k.prut(O, kStredu ? horni[i]! : [horni[i]![0], 0], kStredu ? [horni[i + 1]![0], 0] : horni[i + 1]!);
   }
+  if (d.zavazi) for (const x of xs.slice(1, -1)) k.bod(x, 0, { zavazi: d.zavazi });
+  for (const [x, hmota, frekvence] of d.tlumice ?? []) k.bod(x, 0, { tlumic: { hmota, frekvence } });
   return k.navrh();
+}
+
+/** Lávka v pískovišti s jednou skupinou lidí. */
+function piskoviste(rozpeti: number, druh: "skakajici-dav" | "chodec" | "bezec", pocet: number): Uroven {
+  return urovenSandboxu({ verze: 1, rozpeti, hloubka: 8, druh: "lavka", voda: true, zaklady: 0, provoz: [{ druh, pocet, smer: 1, cas: 0 }] });
 }
 
 describe("ustálená odezva s připojenými těly", () => {
@@ -132,15 +149,25 @@ describe("ustálená odezva s připojenými těly", () => {
 });
 
 describe("činitel špičky volně jdoucích lidí", () => {
-  it("lidé s jedním rytmem ho nemají; roste s šířkou pásma kadencí a s dobou přechodu", () => {
+  it("lidé s jedním rytmem ho nemají; roste s rozptylem kadencí a s dobou přechodu", () => {
     expect(cinitelSpicky(0, 60)).toBe(1);
-    expect(cinitelSpicky(0.14, 5)).toBe(1);
-    // Běžecký závod: pásmo 0,14 Hz, přechod asi 20 s.
-    expect(cinitelSpicky(0.14, 21.5)).toBeCloseTo(1.18, 1);
-    // Dav: trojnásobek kroku má pásmo 0,9 Hz a dav jde mostem skoro minutu.
-    expect(cinitelSpicky(0.9, 56)).toBeCloseTo(1.98, 1);
-    expect(cinitelSpicky(0.9, 56)).toBeGreaterThan(cinitelSpicky(0.3, 56));
-    expect(cinitelSpicky(0.3, 56)).toBeGreaterThan(cinitelSpicky(0.3, 20));
+    // Úzké pásmo a krátký přechod: řady se sejít nestihnou.
+    expect(cinitelSpicky(0.07, 5)).toBe(1);
+    // Běžecký závod: rozptyl 0,07 Hz, přechod asi 20 s.
+    expect(cinitelSpicky(0.07, 21.5)).toBeGreaterThan(1.05);
+    expect(cinitelSpicky(0.07, 21.5)).toBeLessThan(1.25);
+    // Dav: trojnásobek kroku má rozptyl 0,45 Hz a dav jde mostem skoro minutu.
+    expect(cinitelSpicky(0.45, 56)).toBeGreaterThan(1.4);
+    expect(cinitelSpicky(0.45, 56)).toBeGreaterThan(cinitelSpicky(0.15, 56));
+    expect(cinitelSpicky(0.15, 56)).toBeGreaterThan(cinitelSpicky(0.15, 20));
+  });
+
+  it("počítá s tím, že zkouška kmitání průměruje přes sekundu: rychlé rázy širokého pásma se vyhladí", () => {
+    // Bez průměrování by největší výkon z K nezávislých okamžiků byl ln K násobek průměru.
+    const bezPrumeru = (rozptyl: number, doba: number): number => Math.sqrt(Math.log(1 + 2 * rozptyl * doba));
+    // Úzké pásmo (pomalé rázy) průměrování skoro nezmění, široké ano.
+    expect(cinitelSpicky(0.05, 200) / bezPrumeru(0.05, 200)).toBeGreaterThan(0.93);
+    expect(cinitelSpicky(0.45, 56) / bezPrumeru(0.45, 56)).toBeLessThan(0.85);
   });
 });
 
@@ -177,9 +204,8 @@ describe("most s lidmi", () => {
 });
 
 describe("odhad kmitání proti zkoušce", () => {
-  // Pod tímto podílem meze hra říká „v klidu“, nad tímto „nad mezí“ (viz `ODHAD_U_MEZE` v uroven.ts).
-  const KLID = 0.75;
-  const NAD = 1.25;
+  // Pod prvním podílem meze hra říká „v klidu“, nad druhým „nad mezí“.
+  const [KLID, NAD] = ODHAD_U_MEZE;
 
   it("referenční mosty všech úrovní s lidmi: odhad je do třetiny od zkoušky a nikdy netvrdí opak", () => {
     let mostu = 0;
@@ -199,8 +225,8 @@ describe("odhad kmitání proti zkoušce", () => {
         const popis = `${u.id} ${nazev}: odhad ${odhad.toFixed(2)}, zkouška ${zkouska.toFixed(2)}`;
         // Kde lidé ztrácejí krok (nad 2,5 m/s²), zkouška roste pomaleji než lineární odhad.
         if (zkouska < 2.5) pomery.push(odhad / zkouska);
-        expect(odhad / zkouska, popis).toBeGreaterThan(0.6);
-        expect(odhad / zkouska, popis).toBeLessThan(zkouska < 2.5 ? 1.35 : 1.6);
+        expect(odhad / zkouska, popis).toBeGreaterThan(0.72);
+        expect(odhad / zkouska, popis).toBeLessThan(zkouska < 2.5 ? 1.3 : 1.6);
         // Most, který na kmitání propadl, odhad nikdy neoznačí za klidný; most, který prošel, nikdy za jasně nevyhovující.
         if (zkouska > mez(u)) expect(odhad, popis).toBeGreaterThanOrEqual(KLID * mez(u));
         else expect(odhad, popis).toBeLessThanOrEqual(NAD * mez(u));
@@ -209,8 +235,8 @@ describe("odhad kmitání proti zkoušce", () => {
     expect(mostu).toBeGreaterThanOrEqual(30);
     pomery.sort((a, b) => a - b);
     const median = pomery[Math.floor(pomery.length / 2)]!;
-    expect(median).toBeGreaterThan(0.85);
-    expect(median).toBeLessThan(1.15);
+    expect(median).toBeGreaterThan(0.9);
+    expect(median).toBeLessThan(1.1);
   }, 400_000);
 
   it("příhrady, u kterých stará osa mlčela a most propadl, odhad pozná (2-04)", () => {
@@ -233,13 +259,47 @@ describe("odhad kmitání proti zkoušce", () => {
       if (zkouska > 2.5) expect(odhad, popis).toBeGreaterThan(NAD * 2.5);
       else expect(odhad, popis).toBeLessThan(2.5);
       expect(odhad / zkouska, popis).toBeGreaterThan(0.85);
-      expect(odhad / zkouska, popis).toBeLessThan(1.45);
+      // Nad 2,5 m/s² lidé ztrácejí krok a zkouška roste pomaleji než lineární odhad.
+      expect(odhad / zkouska, popis).toBeLessThan(zkouska > 2.5 ? 1.6 : 1.3);
     }
+  });
+
+  it("mostovka s různě dlouhými poli: místní kmitání pole odhad najde, ať skupina stojí kdekoli (2-02)", () => {
+    // Druhá kontrola výpočtů M11: příhrada 5 m nad mostovkou se styčníky po 4, 3, 4, 2 a 3 m.
+    // Odhad s osmi pevnými místy skupiny dával 1,84 („klid“), zkouška 2,53 a most propadl.
+    const odhad = rozeberMost(uroven("2-02"), lavka("2-02", [5, 5, 5, 5, 5, 5, 5, 5], { xs: [0, 4, 7, 11, 13, 16, 20, 23, 27, 28] })).odhad!.zrychleni;
+    expect(odhad).toBeGreaterThan(KLID * 2.5);
+    expect(odhad / 2.534).toBeGreaterThan(0.85);
+    expect(odhad / 2.534).toBeLessThan(1.2);
+  });
+
+  it("skákající dav v pískovišti skáče ve výchozím rytmu, i když ho položka neurčí", () => {
+    // Zkouška bere 2,2 Hz; odhad skákání dřív bez zadané kadence nepočítal a hlásil klid (0,37 proti 3,68).
+    const u = piskoviste(32, "skakajici-dav", 30);
+    const rozbor = rozeberMost(u, lavka(u.id, Array<number>(15).fill(2), { xs: Array.from({ length: 17 }, (_, i) => 2 * i) }));
+    expect(rozbor.odhad!.zrychleni / 3.68).toBeGreaterThan(0.85);
+    expect(rozbor.odhad!.zrychleni / 3.68).toBeLessThan(1.2);
+    expect(nejhorsi(rozbor).slozky[0]).toMatchObject({ rytmus: 2.2, nasobek: 2, vTaktu: true });
+    // Tlumič se pak ladí na skákání, ne na chůzi, kterou dav přišel.
+    expect(rozbor.tlumic!.cil).toBeCloseTo(4.4, 6);
+  });
+
+  it("jednotlivci se stejnou kadencí: s násadou zkoušky odhad zná jejich fáze a sedí se zkouškou", () => {
+    // Šedesát chodců na lávce 72 m (zkouška 0,58 m/s²). Bez fází se sčítaly jen výkony a na
+    // patnácti mostech recenzenta vyšel odhad na 0,49 až 0,60 zkoušky; s fázemi 0,83 až 1,23.
+    const u = piskoviste(72, "chodec", 60);
+    const most = lavka(u.id, Array<number>(17).fill(4));
+    const sFazemi = rozeberMost(u, most, nasadaUrovne(u)).odhad!.zrychleni;
+    expect(sFazemi / 0.58).toBeGreaterThan(0.85);
+    expect(sFazemi / 0.58).toBeLessThan(1.2);
+    expect(rozeberMost(u, most).odhad!.zrychleni).not.toBe(sFazemi);
   });
 
   it("odhad jmenuje skupinu a složku kroku, která most rozkmitá, stejně jako pak zkouška", () => {
     // 2-02: nízká příhrada kmitá krokem běhu, dvoumetrová jeho dvojnásobkem.
-    expect(nejhorsi(rozeberMost(uroven("2-02"), pad("2-02", "rytmu běhu")))).toMatchObject({ druh: "utvar", slozky: [{ rytmus: 3, nasobek: 1, vTaktu: true }, {}] });
+    const beh = nejhorsi(rozeberMost(uroven("2-02"), pad("2-02", "rytmu běhu")));
+    expect(beh.druh).toBe("utvar");
+    expect(beh.slozky[0]).toMatchObject({ druh: "utvar", polozka: 0, rytmus: 3, nasobek: 1, vTaktu: true });
     expect(nejhorsi(rozeberMost(uroven("2-02"), pad("2-02", "dvojnásobku"))).slozky[0]).toMatchObject({ rytmus: 3, nasobek: 2 });
     // 2-04: ze tří útvarů je nejhorší ten s krokem 2,3 Hz; vysokou příhradu trefí jeho trojnásobek.
     const prehlidka = nejhorsi(rozeberMost(uroven("2-04"), pad("2-04", "bez tlumičů")));
@@ -265,8 +325,19 @@ describe("rada a ladění tlumiče z odhadu", () => {
     expect(pochod.tezsi[0]).toBeGreaterThan(0.8);
     expect(pochod.tezsi[1]).toBeLessThan(0.8);
     expect(pochod.tuzsi[0]).toBeLessThan(0.8);
-    // Most s laděným tlumičem radu „tužší/těžší“ nedostává: tam se ladí tlumič.
+    // Most hluboko pod mezí radu nepotřebuje a rozbor ji nepočítá.
     expect(rozeberMost(uroven("5-02"), RESENI["5-02"]!.pruchod).smer).toBeNull();
+    expect(rozeberMost(uroven("2-04"), RESENI["2-04"]!.mistrovska).smer).toBeNull();
+  });
+
+  it("rada počítá se všemi skupinami: tužší most, který jednomu útvaru ujede a jiný trefí, neporadí (2-04)", () => {
+    // Druhá kontrola výpočtů M11: příhrada 1 m se závažím 1500 kg v každém styčníku kmitá pod
+    // útvarem s krokem 1,7 Hz. Rada spočítaná jen pro něj slibovala s 1,3× tužším mostem čtvrtinu
+    // kmitání; zkouška s takovým mostem naměřila 1,44násobek (trefí ho útvar s krokem 2,0 Hz).
+    const smer = rozeberMost(uroven("2-04"), lavka("2-04", [1, 1, 1, 1, 1, 1, 1], { zavazi: 1500 })).smer!;
+    expect(smer.tuzsi[0]).toBeGreaterThan(1.2);
+    // Dvakrát těžší most by pomohl: ujede všem třem rytmům dolů.
+    expect(smer.tezsi[1]).toBeLessThan(0.8);
   });
 
   it("cíl ladění je rytmus, který most bez tlumičů rozkmitá nejvíc; tlumič odhad výrazně sníží", () => {
@@ -278,7 +349,7 @@ describe("rada a ladění tlumiče z odhadu", () => {
     for (const [id, cil] of cile) {
       const rozbor = rozeberMost(uroven(id), RESENI[id]!.pruchod);
       const bez = rozbor.odhadBezTlumicu!;
-      expect(bez.skupiny.reduce((a, b) => (b.zrychleni > a.zrychleni ? b : a)).slozky[0]!.frekvence, id).toBeCloseTo(cil, 6);
+      expect(rozbor.tlumic!.cil, id).toBeCloseTo(cil, 6);
       expect(rozbor.odhad!.zrychleni, id).toBeLessThan(0.6 * bez.zrychleni);
       // Bez tlumiče by most propadl, s ním projde: odhad to ví předem.
       expect(bez.zrychleni, id).toBeGreaterThan(1.25 * mez(uroven(id)));
@@ -286,12 +357,41 @@ describe("rada a ladění tlumiče z odhadu", () => {
     }
   });
 
-  it("lehký tlumič nestačí, i když je naladěný: odhad zůstane vysoko (osa dřív hlásila „tlumič je naladěný“)", () => {
+  it("most bez tlumiče: rozbor spočítá, co by udělal tlumič naladěný na cíl", () => {
+    const rozbor = rozeberMost(uroven("5-02"), pad("5-02", "bez tlumiče"));
+    expect(rozbor.odhadBezTlumicu).toBeNull();
+    expect(rozbor.tlumic).toMatchObject({ cil: 2.6, polozka: 0, nasobek: 1, preladeny: null, tezsi: null, jinde: null });
+    // Zkouška: bez tlumiče 3,7 m/s², s tlumičem 600 kg uprostřed kolem 1,3.
+    expect(rozbor.tlumic!.novy!).toBeLessThan(0.5);
+    // Úroveň bez laděných tlumičů radu k tlumiči nemá.
+    expect(rozeberMost(uroven("2-03"), pad("2-03", "bez závaží")).tlumic).toBeNull();
+  });
+
+  it("most s tlumičem: rozbor pozná, jestli pomůže přeladění, těžší závaží, nebo jiné místo", () => {
     const u = uroven("5-02");
     const navrh = RESENI["5-02"]!.pruchod;
-    const lehky: NavrhMostu = { ...navrh, stycniky: navrh.stycniky.map((s) => (s.tlumic ? { ...s, tlumic: { hmota: 50, frekvence: 2.6 } } : s)) };
-    const rozbor = rozeberMost(u, lehky);
-    expect(rozbor.odhad!.zrychleni).toBeGreaterThan(mez(u));
-    expect(rozbor.odhad!.zrychleni).toBeGreaterThan(2 * rozeberMost(u, navrh).odhad!.zrychleni);
+    const sTlumicem = (tlumic: { hmota: number; frekvence: number }): NavrhMostu => ({ ...navrh, stycniky: navrh.stycniky.map((s) => (s.tlumic ? { ...s, tlumic } : s)) });
+    // Rozladěný tlumič: přeladění na rytmus pomůže.
+    const rozladeny = rozeberMost(u, sTlumicem({ hmota: 600, frekvence: 3.2 })).tlumic!;
+    expect(rozladeny.preladeny!).toBeLessThan(0.9);
+    // Lehký tlumič naladěný správně: přeladit nejde, pomůže těžší závaží.
+    const lehky = rozeberMost(u, sTlumicem({ hmota: 50, frekvence: 2.6 }));
+    expect(lehky.odhad!.zrychleni).toBeGreaterThan(mez(u));
+    expect(lehky.odhad!.zrychleni).toBeGreaterThan(2 * rozeberMost(u, navrh).odhad!.zrychleni);
+    expect(lehky.tlumic!.preladeny).toBeNull();
+    expect(lehky.tlumic!.tezsi!).toBeLessThan(0.6);
+    // Tlumič uprostřed mostu jinam nepatří.
+    expect(lehky.tlumic!.jinde === null || lehky.tlumic!.jinde > 0.9).toBe(true);
+    // 5-03: těžký a naladěný tlumič čtyři metry od opěry (zkouška 3,05 m/s², most propadl).
+    // Chybí mu poloha, ne hmotnost: uprostřed mostu by stačil poloviční (zkouška 1,42).
+    const uKraje = rozeberMost(uroven("5-03"), lavka("5-03", Array<number>(8).fill(1), { tlumice: [[4, 1200, 2.0]] }));
+    expect(uKraje.odhad!.zrychleni / 3.05).toBeGreaterThan(0.8);
+    expect(uKraje.tlumic).toMatchObject({ cil: 2, preladeny: null, tezsi: null, jindeX: 16 });
+    expect(uKraje.tlumic!.jinde!).toBeLessThan(0.6);
+    // Když úprava tlumiče pomůže, tužší a těžší most se nezkouší.
+    expect(uKraje.smer).toBeNull();
+    const uprostred = rozeberMost(uroven("5-03"), lavka("5-03", Array<number>(8).fill(1), { tlumice: [[16, 600, 2.0]] }));
+    expect(uprostred.odhad!.zrychleni / 1.42).toBeGreaterThan(0.85);
+    expect(uprostred.odhad!.zrychleni / 1.42).toBeLessThan(1.15);
   });
 });

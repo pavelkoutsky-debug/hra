@@ -9,11 +9,12 @@
 //
 // Výsledek slouží hráči při stavbě. Do zkoušky nevstupuje, takže smí používat cokoli.
 
-import { vlastniTvarySoustavy } from "./matice";
+import { vlastniTvarySoustavy, type VlastniTvary } from "./matice";
 import type { Soustava } from "./soustava";
 
 /** Kolik vlastních tvarů křivka bere v úvahu; vyšší leží daleko nad pásmem kroků lidí. */
-const POCET_TVARU = 14;
+export const POCET_TVARU_ODEZVY = 14;
+const POCET_TVARU = POCET_TVARU_ODEZVY;
 
 /**
  * Matice tlumení v souřadnicích vlastních tvarů (m × m po řádcích): poměrný útlum `utlum`
@@ -103,6 +104,8 @@ function vyres(A: Float64Array, B: Float64Array, n: number, k: number): boolean 
  * křivce vidět každý tvar kmitání, ať má uzel kdekoli.
  *
  * `utlum` je poměrný útlum konstrukce. Vrací null, když soustava nemá klidovou polohu.
+ * `tvary14` jsou už spočítané vlastní tvary téže soustavy (prvních `POCET_TVARU_ODEZVY`), když je
+ * volající má: hledání tvarů je na velkém mostě to nejdražší.
  */
 export function rezonancniKrivka(
   s: Soustava,
@@ -110,10 +113,11 @@ export function rezonancniKrivka(
   mista: readonly number[],
   frekvence: readonly number[],
   utlum: number,
+  tvary14?: VlastniTvary | null,
 ): Float64Array | null {
   const n = stupne.length;
   if (n === 0 || mista.length === 0) return new Float64Array(frekvence.length);
-  const vlastni = vlastniTvarySoustavy(s, stupne, Math.min(POCET_TVARU, n));
+  const vlastni = tvary14 ?? vlastniTvarySoustavy(s, stupne, Math.min(POCET_TVARU, n));
   if (!vlastni) return null;
   const { omega, tvary } = vlastni;
   const m = omega.length;
@@ -185,6 +189,7 @@ export interface ZakladOdezvy {
 /**
  * Připraví výpočet ustálené odezvy soustavy v její aktuální (klidové) poloze ve styčnících
  * `mista`. Vrací null, když soustava nemá volné stupně nebo se tvary nepodaří najít.
+ * `hotoveTvary` jsou už spočítané vlastní tvary téže soustavy v počtu `pocetTvaru`.
  */
 export function zakladOdezvy(
   s: Soustava,
@@ -192,10 +197,11 @@ export function zakladOdezvy(
   mista: readonly number[],
   utlum: number,
   pocetTvaru = POCET_TVARU,
+  hotoveTvary?: VlastniTvary | null,
 ): ZakladOdezvy | null {
   const n = stupne.length;
   if (n === 0) return null;
-  const vlastni = vlastniTvarySoustavy(s, stupne, Math.min(pocetTvaru, n));
+  const vlastni = hotoveTvary ?? vlastniTvarySoustavy(s, stupne, Math.min(pocetTvaru, n));
   if (!vlastni) return null;
   const { omega, tvary } = vlastni;
   const m = omega.length;

@@ -90,7 +90,7 @@ import {
   slozkyKroku,
   type PricinaKmitani,
 } from "../zkouska/kmitani";
-import type { OdhadKmitani, OdhadSkupiny } from "../zkouska/odhad";
+import { ODHAD_U_MEZE, type OdhadKmitani, type OdhadSkupiny, type SlozkaOdhadu } from "../zkouska/odhad";
 import {
   jenKloub,
   konecZaberu,
@@ -147,14 +147,10 @@ const PRODLEVA_DRZENI = 400;
 const OPAKOVANI_DRZENI = 80;
 /** Od jakého průvěsu mostovky pod vlastní tíhou (m) na něj hra při stavbě upozorní. */
 const PRUVES_K_HLASENI = 0.1;
-/**
- * Jak odhad kmitání stojí proti mezi úrovně: pod prvním podílem meze je most podle odhadu
- * v klidu, nad druhým nad mezí, mezi nimi rozhodne zkouška. Šířka pásma odpovídá přesnosti
- * odhadu (zkoušky mostů všech úrovní s lidmi vyšly na 0,66 až 1,25 násobek odhadu).
- */
-const ODHAD_U_MEZE = [0.75, 1.25] as const;
 /** O kolik musí tužší nebo těžší most odhad zmenšit (podíl), aby ho hra poradila. */
 const RADA_OD = 0.8;
+/** Od jakého poměru k dnešnímu odhadu se za pomoc počítá úprava tlumiče, který na mostě už je. */
+const UPRAVA_TLUMICE_OD = 0.9;
 /** Jak blízko (podíl frekvence) musí být číslo z pokusu vlastní frekvenci, aby šlo o ni. */
 const SHODA_POKUSU = 0.06;
 /** Za jak dlouho (s) kreslené zvětšení pohybu doběhne k cíli. */
@@ -1549,7 +1545,7 @@ export function spustUroven(
     idRozboru += 1;
     const id = idRozboru;
     const navrh = editor.navrh;
-    casovacRozboru = window.setTimeout(() => pomocny.posli({ typ: "rozbor", id, uroven, navrh }), PRODLEVA_ROZBORU);
+    casovacRozboru = window.setTimeout(() => pomocny.posli({ typ: "rozbor", id, uroven, navrh, nasada: nasadaUrovne(uroven) }), PRODLEVA_ROZBORU);
     obnovOsuFrekvenci();
   }
 
@@ -1568,7 +1564,7 @@ export function spustUroven(
    * Složka kroku slovy: „krok 2,3 Hz“, „dvojnásobek kroku 2,3 Hz“; u lidí bez jednoho rytmu
    * „krok kolem 1,7 Hz“, u skákajícího davu „skákání 2,2 Hz“.
    */
-  function slozkaSlovy(slozka: { druh?: string; rytmus: number; nasobek: 1 | 2 | 3; vTaktu?: boolean; pasmo?: number }): string {
+  function slozkaSlovy(slozka: { druh?: string; rytmus: number; nasobek: 1 | 2 | 3 | 4; vTaktu?: boolean; pasmo?: number }): string {
     const kolem = slozka.vTaktu === false ? slozka.druh !== "chodec" && slozka.druh !== "bezec" : (slozka.pasmo ?? 0) > 0;
     const zaklad = slozka.druh === "skakajici-dav" && !kolem ? "frekvence.skoky" : kolem ? "frekvence.slozka.kolem" : "frekvence.slozka";
     return t(`${zaklad}.${slozka.nasobek}`, { krok: cislo(slozka.rytmus, 1) });
@@ -1582,6 +1578,15 @@ export function spustUroven(
   /** Mez kmitání úrovně, m/s². */
   const MEZ_KMITANI = MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!;
 
+  /**
+   * Změřené kmitání na setiny. Hodnota těsně nad mezí by se zaokrouhlila na mez samu a hráč by
+   * četl „2,50, mez 2,5“ u mostu, který neprošel: taková se píše o setinu výš.
+   */
+  function zmereneKmitani(zrychleni: number): string {
+    const text = cislo(zrychleni, 2);
+    return zrychleni > MEZ_KMITANI && text === cislo(MEZ_KMITANI, 2) ? cislo(MEZ_KMITANI + 0.01, 2) : text;
+  }
+
   /** Jak odhad kmitání stojí proti mezi úrovně. */
   function stavOdhadu(zrychleni: number): "klid" | "u-meze" | "nad-mezi" {
     if (zrychleni < ODHAD_U_MEZE[0] * MEZ_KMITANI) return "klid";
@@ -1594,44 +1599,70 @@ export function spustUroven(
   }
 
   /**
-   * Co by kmitání zmenšilo, podle rozboru mostu `r`: tužší nebo těžší most (rozbor to zkusil
-   * spočítat), tlumič, jeho ladění. Radí jen to, co úroveň dovoluje. Prázdný text, když rozbor
-   * odhad nemá.
+   * Co by kmitání zmenšilo, podle rozboru mostu `r`. Radí jen to, co rozbor spočítal (odhad
+   * s mostem tužším a těžším, s tlumičem novým, přeladěným, těžším nebo jinde) a co úroveň
+   * dovoluje postavit, v pořadí od nástroje, který úroveň učí. `kratce` vrátí jen první radu
+   * (do řádku pod osou), jinak všechny. Prázdný text, když rozbor odhad nemá.
    */
   function radaKeKmitani(r: RozborMostu, kratce = false): string {
     if (!r.odhad) return "";
+    const odhad = r.odhad.zrychleni;
+    const po = (pomer: number): string => zrychleniSlovy(pomer * odhad);
     const vety: string[] = [];
-    const ladenyPovolen = uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota;
+    const rady: string[] = [];
+    const tl = r.tlumic;
     if (r.odhadBezTlumicu) {
-      // Most má laděný tlumič: pomáhá, je naladěný, je dost těžký?
-      const cil = cilLadeni();
-      const tlumice = editor.navrh.stycniky.flatMap((st) => (st.tlumic ? [st.tlumic] : []));
-      const nejbliz = cil === null ? null : tlumice.reduce((a, b) => (Math.abs(b.frekvence - cil) < Math.abs(a.frekvence - cil) ? b : a), tlumice[0]!);
-      const rozladeny = cil !== null && nejbliz !== null && Math.abs(nejbliz.frekvence - cil) > LADENY_TLUMIC.krokFrekvence / 2 + 1e-9;
-      if (!kratce && r.odhad.zrychleni < r.odhadBezTlumicu.zrychleni) {
-        vety.push(t("kmitani.rada.tlumicPomaha", { bez: zrychleniSlovy(r.odhadBezTlumicu.zrychleni), s: zrychleniSlovy(r.odhad.zrychleni) }));
+      // Most má laděný tlumič: co dělá a která jeho úprava by pomohla nejvíc.
+      if (r.odhad.zrychleni < r.odhadBezTlumicu.zrychleni) {
+        vety.push(t("kmitani.rada.tlumicPomaha", { bez: zrychleniSlovy(r.odhadBezTlumicu.zrychleni), s: zrychleniSlovy(odhad) }));
       }
-      if (rozladeny) vety.push(t("kmitani.rada.ladeni", { mam: cislo(nejbliz!.frekvence, 2), f: cislo(cil!, 2) }));
-      else if (stavOdhadu(r.odhad.zrychleni) !== "klid") vety.push(t("kmitani.rada.tlumicNestaci"));
-      return vety.join(" ");
+      if (tl) {
+        const upravy: { pomer: number; veta: string }[] = [];
+        if (tl.preladeny !== null) upravy.push({ pomer: tl.preladeny, veta: t("kmitani.rada.preladit", { f: cislo(tl.cil, 2), a: po(tl.preladeny) }) });
+        if (tl.jinde !== null && tl.jindeX !== null) upravy.push({ pomer: tl.jinde, veta: t("kmitani.rada.jinde", { x: cislo(tl.jindeX, 0), a: po(tl.jinde) }) });
+        if (tl.tezsi !== null) upravy.push({ pomer: tl.tezsi, veta: t("kmitani.rada.tezsiTlumic", { kg: celeCislo(uroven.nejvetsiTlumic), a: po(tl.tezsi) }) });
+        upravy.sort((x, y) => x.pomer - y.pomer);
+        for (const uprava of upravy) if (uprava.pomer <= UPRAVA_TLUMICE_OD) rady.push(uprava.veta);
+        if (rady.length === 0 && r.smer) rady.push(t("kmitani.rada.tlumicVic"));
+      }
+    } else if (tl && tl.novy !== null && tl.novy <= RADA_OD && uroven.nejvetsiTlumic >= LADENY_TLUMIC.nejmensiHmota) {
+      rady.push(t("kmitani.rada.novyTlumic", { f: cislo(tl.cil, 2), a: po(tl.novy) }));
     }
-    let tezsi = false;
+    // Tlumič do kotvy: nástroj úrovně, která ho má, a rozbor ho zkusil.
+    if (r.viskozni !== null && r.viskozni <= RADA_OD) rady.push(t("kmitani.rada.viskozni", { a: po(r.viskozni) }));
     if (r.smer) {
-      const moznosti: string[] = [];
-      if (r.smer.tuzsi[0] <= RADA_OD) moznosti.push(t("kmitani.rada.tuzsi"));
-      else if (r.smer.tuzsi[1] <= RADA_OD) moznosti.push(t("kmitani.rada.tuzsi.vyrazne"));
-      if (r.smer.tezsi[0] <= RADA_OD) moznosti.push(t("kmitani.rada.tezsi"));
-      else if (r.smer.tezsi[1] <= RADA_OD) moznosti.push(t("kmitani.rada.tezsi.vyrazne"));
-      tezsi = r.smer.tezsi[0] <= RADA_OD || r.smer.tezsi[1] <= RADA_OD;
-      if (moznosti.length === 2) vety.push(t("kmitani.rada.pomohl.dva", { a: moznosti[0]!, b: moznosti[1]! }));
-      else if (moznosti.length === 1) vety.push(t("kmitani.rada.pomohl", { co: moznosti[0]! }));
-      else if (!kratce) vety.push(t("kmitani.rada.nic"));
+      const pomuze = (pomery: [number, number]): "" | ".vyrazne" | null => (pomery[0] <= RADA_OD ? "" : pomery[1] <= RADA_OD ? ".vyrazne" : null);
+      const tezsi = pomuze(r.smer.tezsi);
+      const tuzsi = pomuze(r.smer.tuzsi);
+      // Těžší most se dá postavit závažím; kde závaží není, hra ho neradí.
+      if (tezsi !== null && uroven.nejvetsiZavazi > 0) rady.push(t(`kmitani.rada.zavazi${tezsi}`));
+      if (tuzsi !== null) rady.push(t(`kmitani.rada.tuzsi${tuzsi}`));
+      if (tezsi === null && tuzsi === null) {
+        const prvni = rady.length === 0;
+        rady.push(t("kmitani.rada.nic"));
+        // Co rozbor nespočítal, se jen nabízí k vyzkoušení.
+        if (prvni) rady.push(t("kmitani.rada.jinak"));
+      }
     }
-    if (kratce && vety.length > 0) return vety.join(" ");
-    if (tezsi && uroven.nejvetsiZavazi > 0) vety.push(t("kmitani.rada.zavazi"));
-    if (ladenyPovolen) vety.push(t("kmitani.rada.tlumic"));
-    else if (uroven.povolenePrvky.includes("tlumic")) vety.push(t("kmitani.rada.viskozni"));
-    return vety.join(" ");
+    if (kratce) return rady[0] ?? "";
+    return [...vety, ...rady].join(" ");
+  }
+
+  /**
+   * Má návrh viskózní tlumič, jehož konec nic nedrží (není na kotvě a nevede do něj nic dalšího)?
+   * Takový most nemá klidovou polohu, takže rozbor nic nespočítá, a tlumič nic nebrzdí.
+   */
+  function maVolnyTlumic(): boolean {
+    const navrh = editor.navrh;
+    const naKotve = (id: number): boolean => {
+      const st = navrh.stycniky.find((x) => x.id === id);
+      return st !== undefined && uroven.kotvy.some((k) => k.x === st.x && k.y === st.y);
+    };
+    return navrh.pruty.some(
+      (prut) =>
+        KATALOG[prut.prvek].druh === "tlumic" &&
+        [prut.a, prut.b].some((konec) => !naKotve(konec) && !navrh.pruty.some((jiny) => jiny !== prut && (jiny.a === konec || jiny.b === konec))),
+    );
   }
 
   /**
@@ -1690,6 +1721,7 @@ export function spustUroven(
     if (rozbor === undefined) text = t("frekvence.pocitaSe");
     else if (nalezStavby().slozeni) text = t("frekvence.slozeni");
     else if (nalezStavby().volny) text = t("frekvence.volny");
+    else if ((rozbor === null || !rozbor.stabilni) && maVolnyTlumic()) text = t("frekvence.volnyTlumic");
     else if (rozbor === null || !rozbor.stabilni || rozbor.frekvence.length === 0) text = t("frekvence.bezMostu");
     else {
       // Most s laděnými tlumiči se ukazuje bez nich a tlumiče zvlášť: hráč je ladí na most.
@@ -1737,19 +1769,22 @@ export function spustUroven(
         if (odhad) {
           const nejhorsi = nejhorsiSkupina(odhad);
           const hlavni = nejhorsi.slozky[0];
-          const polozka = uroven.jizdniRad[nejhorsi.polozka]!;
+          // Kmitání naměřené zkouškou platí jen u mostu, který ji vydržel celý: most, který se
+          // zřítil, kmitání změřené nemá (nebo jen z chvíle před pádem) a osa u něj zůstává u odhadu.
           const zmereno = platnaObalka();
-          const komfort = zmereno && !beh?.zlom ? zmereno.komfort : null;
+          const cely = zmereno !== null && zmereno.poruseni === 0 && zmereno.spadlo === 0 && !zmereno.rozpad && !zmereno.bezRovnovahy;
+          const komfort = zmereno && cely && !beh?.zlom ? zmereno.komfort : null;
           const hodnoty = { a: zrychleniSlovy(odhad.zrychleni), mez: cislo(MEZ_KMITANI, 1) };
           if (hlavni) {
-            const kdo = kdoJdeRytmem(nejhorsi.druh, hlavni.rytmus);
-            const slozka = slozkaSlovy({ ...hlavni, druh: nejhorsi.druh });
+            const kdo = kdoJdeRytmem(hlavni.druh, hlavni.rytmus);
+            const slozka = slozkaSlovy(hlavni);
             if (komfort) {
               stav = komfort.zrychleni > MEZ_KMITANI ? "nad-mezi" : "klid";
-              text = t("frekvence.zkouska", { a: cislo(komfort.zrychleni, 2), mez: hodnoty.mez });
-              titulky.push(t("frekvence.popis.zkouska", { a: cislo(komfort.zrychleni, 2), odhad: hodnoty.a }));
+              text = t("frekvence.zkouska", { a: zmereneKmitani(komfort.zrychleni), mez: hodnoty.mez });
+              titulky.push(t("frekvence.popis.zkouska", { a: zmereneKmitani(komfort.zrychleni), odhad: hodnoty.a }));
+              // Číslo je největší naměřené kmitání, takže i příčina se čte ve chvíli, kdy nastalo.
               const zmerene = beh ? kmitaniBehu(beh) : null;
-              const pricina = zmerene ? kdoASlozka(zmerene.rozhodla) : null;
+              const pricina = zmerene ? kdoASlozka(zmerene.nejvic) : null;
               if (pricina) text = t("frekvence.zkouska.kdo", { veta: text, ...pricina });
               osa.dataset.zkouska = komfort.zrychleni.toFixed(2);
             } else {
@@ -1761,10 +1796,10 @@ export function spustUroven(
             const rada = stav === "klid" ? "" : radaKeKmitani(rozbor, true);
             if (rada) text = `${velkymPismenem(text)}. ${rada}`;
             osa.dataset.odhad = odhad.zrychleni.toFixed(2);
-            osa.dataset.hlavni = `${polozka.druh};${hlavni.nasobek};${hlavni.rytmus}`;
+            osa.dataset.hlavni = `${hlavni.druh};${hlavni.nasobek};${hlavni.rytmus}`;
             // Na ose se zvýrazní složka kroku, o které je řeč.
             for (const uzel of uzly) {
-              if (uzel.dataset.slozka === `${nejhorsi.druh};${hlavni.rytmus};${hlavni.nasobek}`) uzel.classList.add("frekvence__krok--hlavni");
+              if (uzel.dataset.slozka === `${hlavni.druh};${hlavni.rytmus};${hlavni.nasobek}`) uzel.classList.add("frekvence__krok--hlavni");
             }
           }
           for (const skupina of odhad.skupiny) {
@@ -1774,7 +1809,13 @@ export function spustUroven(
                 a: zrychleniSlovy(skupina.zrychleni),
                 slozky: skupina.slozky
                   .slice(0, 3)
-                  .map((x) => t("frekvence.popis.slozka", { slozka: slozkaSlovy({ ...x, druh: skupina.druh }), a: zrychleniSlovy(x.zrychleni) }))
+                  // Když je s tou skupinou na mostě někdo další, patří část kmitání jemu: složka řekne komu.
+                  .map((x) =>
+                    t("frekvence.popis.slozka", {
+                      slozka: x.polozka === skupina.polozka ? slozkaSlovy(x) : `${kdoJdeRytmem(x.druh, x.rytmus)}, ${slozkaSlovy(x)}`,
+                      a: zrychleniSlovy(x.zrychleni),
+                    }),
+                  )
                   .join("; "),
               }),
             );
@@ -1793,7 +1834,6 @@ export function spustUroven(
       delete osa.dataset.zkouska;
       delete osa.dataset.hlavni;
     }
-    znacky.replaceChildren(...uzly);    if (stav === "") delete osa.dataset.shoda;
     znacky.replaceChildren(...uzly);
     const popis = udaj("frekvence-popis");
     popis.textContent = text;
@@ -1804,23 +1844,24 @@ export function spustUroven(
   }
 
   /**
-   * Na co ladit laděný tlumič: na frekvenci, na které lidé most bez tlumičů rozkmitají nejvíc
-   * (nejsilnější složka kroku skupiny s největším odhadem). Budicí rytmus je daný a tlumič
-   * pomáhá nejvíc na frekvenci, na kterou je naladěný; zkoušky to potvrzují. Kde lidé nejsou,
-   * je cílem první vlastní frekvence mostu bez tlumičů. Null, dokud rozbor není.
+   * Na co ladit laděný tlumič: na rytmus, který most bez tlumičů rozkmitá nejvíc, a když je
+   * takových víc, na ten, se kterým naladěný tlumič odhad sníží nejvíc (počítá rozbor,
+   * `RozborMostu.tlumic`). Budicí rytmus je daný lidmi a tlumič pomáhá nejvíc na frekvenci, na
+   * kterou je naladěný; zkoušky to potvrzují. Kde lidé nejsou, je cílem první vlastní frekvence
+   * mostu bez tlumičů. Null, dokud rozbor není.
    */
-  function cilLadeniSPopisem(): { f: number; skupina: OdhadSkupiny | null } | null {
+  function cilLadeniSPopisem(): { f: number; slozka: SlozkaOdhadu | null } | null {
     // Dokud se po úpravě počítá nový rozbor, platí ten minulý: ladění tlumiče most bez tlumičů nemění.
     const znamy = rozbor === undefined ? posledniZnamyRozbor : rozbor;
     if (!znamy || !znamy.stabilni) return null;
     const odhad = znamy.odhadBezTlumicu ?? znamy.odhad;
-    if (odhad) {
-      const skupina = nejhorsiSkupina(odhad);
-      const slozka = skupina.slozky[0];
-      if (slozka) return { f: slozka.frekvence, skupina };
+    const cil = znamy.tlumic;
+    if (odhad && cil) {
+      const slozka = odhad.skupiny.flatMap((sk) => sk.slozky).find((sl) => sl.polozka === cil.polozka && sl.nasobek === cil.nasobek);
+      return { f: cil.cil, slozka: slozka ?? null };
     }
     const f = znamy.bezTlumicu?.prazdny[0] ?? znamy.frekvence[0];
-    return f === undefined ? null : { f, skupina: null };
+    return f === undefined ? null : { f, slozka: null };
   }
 
   function cilLadeni(): number | null {
@@ -1839,15 +1880,9 @@ export function spustUroven(
       delete document.body.dataset.cilLadeni;
       return;
     }
-    const slozka = cil.skupina?.slozky[0];
-    poznamka.textContent =
-      cil.skupina && slozka
-        ? t("paleta.ladeny.cil", {
-            kdo: kdoJdeRytmem(cil.skupina.druh, slozka.rytmus),
-            slozka: slozkaSlovy({ ...slozka, druh: cil.skupina.druh }),
-            f: cislo(cil.f, 2),
-          })
-        : t("paleta.ladeny.cil.most", { f: cislo(cil.f, 2) });
+    poznamka.textContent = cil.slozka
+      ? t("paleta.ladeny.cil", { kdo: kdoJdeRytmem(cil.slozka.druh, cil.slozka.rytmus), slozka: slozkaSlovy(cil.slozka), f: cislo(cil.f, 2) })
+      : t("paleta.ladeny.cil.most", { f: cislo(cil.f, 2) });
     // Tlumič jde ladit po krocích a jen ve svém rozsahu: tlačítko řekne, proč zrovna nejde.
     const mimoRozsah = cil.f < LADENY_TLUMIC.nejmensiFrekvence || cil.f > LADENY_TLUMIC.nejvetsiFrekvence;
     const naladeno = Math.abs(ladeny.frekvence - cil.f) <= LADENY_TLUMIC.krokFrekvence / 2 + 1e-9;
@@ -2409,8 +2444,10 @@ export function spustUroven(
       platnoKrivky.dataset.nejvyssiPrazdny = vrcholyPrazdneho.reduce((a, b) => Math.max(a, b.hodnota), 0).toFixed(4);
       platnoKrivky.dataset.strop = String(stropKrivky);
       const klic = krivka.obsazeny ? "analyza.krivka.spickaSLidmi" : "analyza.krivka.spicka";
+      // Křivka bez vrcholu v rozsahu osy (tuhý most, lidé ho utlumí) žádnou „nejvyšší špičku“ nemá.
       udaj("krivka-popis").textContent =
-        t(klic, { hodnota: cislo(nejvyssi.hodnota, 2), f: cislo(nejvyssi.f, 2) }) + (mereni ? ` ${t("analyza.krivka.zmereno")}` : "");
+        (nejvyssi.hodnota > 0 ? t(klic, { hodnota: cislo(nejvyssi.hodnota, 2), f: cislo(nejvyssi.f, 2) }) : t("analyza.krivka.bezSpicky")) +
+        (mereni ? ` ${t("analyza.krivka.zmereno")}` : "");
     }
 
     const frekvence = rozbor?.stabilni ? rozbor.frekvence : [];
@@ -2490,13 +2527,14 @@ export function spustUroven(
   }
 
   /**
-   * Zavěsí pod vybrané styčníky laděný tlumič, nebo ho odebere. Další tlumič je stejný jako
-   * ten, který most už má; první se naladí na rytmus, kterým lidé most rozkmitají nejvíc (viz
-   * `cilLadeni`). Když se rozbor po poslední úpravě teprve počítá, poslouží ten předchozí.
+   * Zavěsí pod vybrané styčníky laděný tlumič, nebo ho odebere. Nový tlumič se naladí na
+   * rytmus, kterým lidé most rozkmitají nejvíc (viz `cilLadeni`), i když ten, který most už má,
+   * je naladěný jinak; závaží má stejné jako on. Když se rozbor po poslední úpravě teprve
+   * počítá, poslouží ten předchozí.
    */
   function zavesLadenyTlumic(): void {
     const vzor = editor.navrh.stycniky.find((st) => st.tlumic)?.tlumic;
-    const frekvence = vzor?.frekvence ?? cilLadeni() ?? 2;
+    const frekvence = cilLadeni() ?? vzor?.frekvence ?? 2;
     editor.prepniLadenyTlumic(vzor?.hmota ?? Math.min(300, uroven.nejvetsiTlumic), frekvence);
   }
 

@@ -75,7 +75,7 @@ describe("pravidla a cena", () => {
     for (const [hmota, frekvence] of [
       [20, 2.3],
       [600, 0.5],
-      [600, 7],
+      [600, 9],
     ] as const) {
       const problemy = zkontrolujNavrh(sTlumicem(hmota, frekvence), uroven);
       expect(problemy).toEqual([{ druh: "ladeny-tlumic-mimo-rozsah", stycnik: stred.id }]);

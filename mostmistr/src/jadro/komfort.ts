@@ -14,7 +14,7 @@ import type { Soustava } from "./soustava";
 /** Časové konstanty filtrů v sekundách: 1/(2π·10 Hz), 1/(2π·0,5 Hz) a okno průměrování. */
 const RC_DOLNI_PROPUST = 1 / (2 * Math.PI * 10);
 const RC_HORNI_PROPUST = 1 / (2 * Math.PI * 0.5);
-const OKNO_PRUMERU = 1;
+export const OKNO_PRUMERU = 1;
 
 /** Meze tříd komfortu v m/s²: do první výborný, do druhé střední, do třetí nízký, nad ní nepřijatelný. */
 export const MEZE_KOMFORTU = [0.5, 1, 2.5] as const;

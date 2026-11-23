@@ -176,6 +176,8 @@ export function principMostu(rysy: RysyMostu): string[] {
     return vety;
   }
   if (rysy.soustava === "nosnik") vety.push(rysy.svary ? "nosnik.svareny" : "nosnik");
+  // Zavěšený most s jediným pylonem: věta nesmí mluvit o pylonech.
+  else if (rysy.soustava === "zaveseny" && rysy.pylonu === 1) vety.push("zaveseny.jeden");
   else vety.push(rysy.soustava);
   if (rysy.vzperyNavic) vety.push("vzpery.navic");
   if (rysy.vesadloNavic) vety.push("vesadlo.navic");

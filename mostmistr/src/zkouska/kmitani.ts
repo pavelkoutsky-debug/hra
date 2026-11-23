@@ -9,7 +9,7 @@ import type { IdProvozu } from "../data/katalog";
 import type { Uroven } from "../data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { jeClovek } from "./provoz";
-import { hmotnostUcastnika, modelUcastnika, rytmusLidi, skokan } from "./vozidla";
+import { hmotnostUcastnika, KADENCE_DAVU, modelUcastnika, ROZPTYL_DAVU, rytmusLidi, skokan } from "./vozidla";
 import type { Zaznam } from "./zaznam";
 
 /** Jedna složka síly kroku: rytmus skupiny lidí nebo jeho násobek. */
@@ -39,27 +39,23 @@ export const SILNA_SLOZKA = 0.5;
 
 /**
  * Složky síly kroku všech lidí z jízdního řádu úrovně, seřazené podle frekvence. Každý rytmus
- * jednou; u skákajícího davu se bere rytmus skákání, u průvodu takt kapely.
+ * jednou. Průvod má dva: takt kapely a volný krok davu, který jde za ní; skákající dav rytmus
+ * skákání a volný krok, kterým na místo přijde a odejde.
  */
 export function slozkyKroku(uroven: Uroven): SlozkaKroku[] {
   const slozky: SlozkaKroku[] = [];
   const hotove = new Set<string>();
-  for (const polozka of uroven.jizdniRad) {
-    if (!jeClovek(polozka.druh)) continue;
-    const rytmus = rytmusLidi(polozka.druh, polozka.kadence);
-    if (!rytmus) continue;
-    const klic = `${polozka.druh}:${rytmus.f}`;
-    if (hotove.has(klic)) continue;
-    hotove.add(klic);
-    const model = polozka.druh === "skakajici-dav" ? skokan(rytmus.f) : modelUcastnika(polozka.druh, polozka.kadence);
+  const pridej = (druh: IdProvozu, rytmus: { f: number; rozptyl: number }, model: ReturnType<typeof modelUcastnika>): void => {
+    const klic = `${druh}:${rytmus.f}`;
     const amplitudy = model?.buzeni?.amplitudy;
-    if (!model || !amplitudy) continue;
+    if (hotove.has(klic) || !model || !amplitudy) return;
+    hotove.add(klic);
     const vaha = hmotnostUcastnika(model) * TIHOVE_ZRYCHLENI;
     for (const nasobek of [1, 2, 3] as const) {
       const sila = Math.hypot(amplitudy[2 * nasobek - 2] ?? 0, amplitudy[2 * nasobek - 1] ?? 0) / vaha;
       if (!(sila > 0)) continue;
       slozky.push({
-        druh: polozka.druh,
+        druh,
         rytmus: rytmus.f,
         nasobek,
         frekvence: nasobek * rytmus.f,
@@ -67,6 +63,15 @@ export function slozkyKroku(uroven: Uroven): SlozkaKroku[] {
         // Dvě směrodatné odchylky na každou stranu pokryjí skoro všechny lidi ve skupině.
         pasmo: 2 * nasobek * rytmus.rozptyl,
       });
+    }
+  };
+  for (const polozka of uroven.jizdniRad) {
+    if (!jeClovek(polozka.druh)) continue;
+    const rytmus = rytmusLidi(polozka.druh, polozka.kadence);
+    if (!rytmus) continue;
+    pridej(polozka.druh, rytmus, polozka.druh === "skakajici-dav" ? skokan(rytmus.f) : modelUcastnika(polozka.druh, polozka.kadence));
+    if (polozka.druh === "pruvod" || polozka.druh === "skakajici-dav") {
+      pridej(polozka.druh, { f: KADENCE_DAVU, rozptyl: ROZPTYL_DAVU }, modelUcastnika("dav"));
     }
   }
   return slozky.sort((a, b) => a.frekvence - b.frekvence || b.sila - a.sila);
@@ -290,6 +295,8 @@ function najdiSnimek(snimky: Zaznam["snimky"], cas: number): number {
  * (skupina přeběhne jedno pole mostovky) má vrchol o desetiny Hz vedle.
  */
 const OKOLI_SLOZKY = 0.2;
+/** O kolik se smějí lišit podíly dvou rytmů na kmitání, aby se počítaly za stejné. */
+const SHODA_PODILU = 0.03;
 /** Od jakého podílu na kmitání se rytmus jmenuje jako jeho příčina. */
 const PREVAHA_RYTMU = 0.5;
 /** Jak daleko (podíl frekvence) smí být vlastní frekvence mostu, aby se k ní kmitání přiřadilo. */
@@ -344,7 +351,7 @@ export function pricinaKmitani(zaznam: Zaznam, stycnik: number, cas: number, slo
   }
   if (!(celkem > 0)) return { frekvence, rytmus: null };
 
-  const rytmy = new Map<string, RytmusVKmitani & { nejvic: number }>();
+  const rytmy = new Map<string, RytmusVKmitani & { nejvic: number; pasmo: number }>();
   for (const slozka of slozky) {
     // Největší zrychlení v okolí složky (u skupiny bez jednoho rytmu v celém jejím pásmu).
     let nejvic = 0;
@@ -354,7 +361,7 @@ export function pricinaKmitani(zaznam: Zaznam, stycnik: number, cas: number, slo
     const klic = `${slozka.druh}:${slozka.rytmus}`;
     let rytmus = rytmy.get(klic);
     if (!rytmus) {
-      rytmus = { druh: slozka.druh, rytmus: slozka.rytmus, podil: 0, nasobek: slozka.nasobek, frekvence: slozka.frekvence, nejvic: 0 };
+      rytmus = { druh: slozka.druh, rytmus: slozka.rytmus, podil: 0, nasobek: slozka.nasobek, frekvence: slozka.frekvence, nejvic: 0, pasmo: slozka.pasmo / slozka.nasobek };
       rytmy.set(klic, rytmus);
     }
     rytmus.podil += (nejvic * nejvic) / celkem;
@@ -364,12 +371,14 @@ export function pricinaKmitani(zaznam: Zaznam, stycnik: number, cas: number, slo
       rytmus.frekvence = slozka.frekvence;
     }
   }
-  let nejlepsi: (RytmusVKmitani & { nejvic: number }) | null = null;
+  // Pásmo volně jdoucího davu pokryje i rytmus útvaru nebo kapely vedle něj a podíly pak vyjdou
+  // stejné: při shodě se jmenuje ten, kdo jde jedním rytmem (užší pásmo), ne dav.
+  let nejlepsi: (RytmusVKmitani & { nejvic: number; pasmo: number }) | null = null;
   for (const rytmus of rytmy.values()) {
-    if (!nejlepsi || rytmus.podil > nejlepsi.podil) nejlepsi = rytmus;
+    if (!nejlepsi || rytmus.podil > nejlepsi.podil + SHODA_PODILU || (rytmus.podil > nejlepsi.podil - SHODA_PODILU && rytmus.pasmo < nejlepsi.pasmo)) nejlepsi = rytmus;
   }
   if (!nejlepsi || nejlepsi.podil < PREVAHA_RYTMU) return { frekvence, rytmus: null };
-  const { nejvic: _nejvic, ...rytmus } = nejlepsi;
+  const { nejvic: _nejvic, pasmo: _pasmo, ...rytmus } = nejlepsi;
   return { frekvence, rytmus: { ...rytmus, podil: Math.min(1, rytmus.podil) } };
 }
 

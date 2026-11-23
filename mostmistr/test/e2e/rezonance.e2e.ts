@@ -187,7 +187,8 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await osa().getAttribute("data-stav")).toBe("nad-mezi");
     expect(await osa().getAttribute("data-hlavni")).toBe("utvar;1;2.3");
     expect((await stranka.locator('[data-udaj="frekvence-popis"]').evaluate((uzel) => uzel.textContent ?? "")).replace(/[  ]/g, " ")).toMatch(
-      /^Odhad kmitání \d,\d m\/s², mez je 2,5: pochodující útvar, krok 2,3 Hz\. Pomohl by [^.]+ most\.$/,
+      // Rada je nástroj, který úroveň učí, a číslo k němu rozbor spočítal.
+      /^Odhad kmitání \d,\d m\/s², mez je 2,5: pochodující útvar, krok 2,3 Hz\. Pomohl by tlumič mezi mostem a kotvou: odhad asi \d,\d+ m\/s²\.$/,
     );
     // Tři útvary, každý svým krokem: tři značky kroku, k nim dvojnásobky a trojnásobky.
     expect(await stranka.locator('.frekvence__krok[data-nasobek="1"]').count()).toBe(3);
@@ -318,7 +319,7 @@ describe("kmitání mostovky rozhoduje", () => {
     expect(shrnuti).toContain("Most rozkmital krok lidí: pochodující útvar, krok 2,0 Hz.");
     expect(shrnuti).toContain("Nejvíc pak kmital pod jiným rytmem: pochodující útvar, krok 2,3 Hz.");
     expect(shrnuti).toMatch(/Trefuje se do 1\. vlastní frekvence mostu \(2,\d\d Hz, s lidmi 2,\d\d Hz\)\./);
-    expect(shrnuti).toContain("Kmitání zkrotí i tlumič mezi mostem a pevnou kotvou.");
+    expect(shrnuti).toMatch(/Pomohl by tlumič mezi mostem a kotvou: odhad asi \d,\d+ m\/s²\./);
     // Odkaz skočí do okamžiku největšího kmitání; legenda ukazuje okamžitou hodnotu.
     await rozbalVysledek();
     await stranka.locator('[data-udaj="vysledek-kmitani"] button').click();

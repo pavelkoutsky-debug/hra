@@ -68,7 +68,14 @@ describe("složky síly kroku", () => {
     expect(beh[0]!.sila).toBeCloseTo(Math.PI / 2, 6);
     expect(beh[1]!.sila).toBeCloseTo(2 / 3, 6);
     expect(beh.every((s) => s.sila >= SILNA_SLOZKA)).toBe(true);
-    const skakani = slozkyKroku(uroven("5-04"));
+    // Skákající dav má na ose i volný krok, kterým na místo přijde (kolem 1,7 Hz); tady jde o skákání.
+    const vse = slozkyKroku(uroven("5-04"));
+    expect(vse.filter((s) => s.rytmus !== 2.2).map((s) => [s.nasobek, s.rytmus, s.pasmo > 0])).toEqual([
+      [1, 1.7, true],
+      [2, 1.7, true],
+      [3, 1.7, true],
+    ]);
+    const skakani = vse.filter((s) => s.rytmus === 2.2);
     expect(skakani.map((s) => [s.nasobek, s.rytmus])).toEqual([
       [1, 2.2],
       [2, 2.2],

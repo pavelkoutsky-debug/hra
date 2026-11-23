@@ -1061,8 +1061,9 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   color: var(--cara);
   font-size: 12px;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  /* Příčina je na konci věty; vedle tlačítka Další úroveň se do dvou řádků nevešla. */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 /* Medaile v pruhu: tři značky s názvem, získané svítí. */
@@ -2265,8 +2266,9 @@ body[data-rezim="stavba"] .uroven .legenda {
   font-size: 12px;
   line-height: 1.25;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  /* Věta nese odhad, kdo most rozkmitá, a radu: rada je na konci a nesmí se uříznout. */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 @media (min-width: 1500px) {

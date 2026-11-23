@@ -52,6 +52,34 @@ export interface BudicZkousky {
   trvani: number;
 }
 
+/** Co rozbor spočítal o laděném tlumiči (viz `RozborMostu.tlumic`). */
+export interface RadaKTlumici {
+  /**
+   * Rytmus, na který se vyplatí ladit, Hz: ze složek kroku, které most bez tlumičů rozkmitají
+   * nejvíc, ta, se kterou naladěný tlumič odhad sníží nejvíc.
+   */
+  cil: number;
+  /** Položka jízdního řádu a násobek kroku, kterým ten rytmus patří. */
+  polozka: number;
+  nasobek: 1 | 2 | 3 | 4;
+  /**
+   * Most bez tlumiče: odhad s jedním tlumičem největší dovolené hmotnosti zavěšeným ve
+   * styčníku mostovky, kde most kmitá nejvíc, naladěným na `cil`. Null u mostu s tlumičem
+   * a tam, kde se rada nepočítala.
+   */
+  novy: number | null;
+  /** Most s tlumiči: tytéž tlumiče naladěné na `cil`. Null, když už tak naladěné jsou. */
+  preladeny: number | null;
+  /** Most s tlumiči: tytéž tlumiče s největším dovoleným závažím. Null, když ho už mají. */
+  tezsi: number | null;
+  /**
+   * Most s tlumiči: nejtěžší tlumič přenesený do styčníku mostovky, kde most bez tlumičů kmitá
+   * nejvíc (`jindeX` je jeho vzdálenost od levého konce mostovky, m). Null, když tam už visí.
+   */
+  jinde: number | null;
+  jindeX: number | null;
+}
+
 /** Rozbor mostu ve stavebním režimu: maticový výpočet bez časové simulace. */
 export interface RozborMostu {
   /** Most má pod vlastní tíhou klidovou polohu; mechanismus ji nemá a frekvence nejsou. */
@@ -79,11 +107,24 @@ export interface RozborMostu {
   /** Tentýž odhad pro most bez laděných tlumičů; null u mostu, který žádný nemá. */
   odhadBezTlumicu: OdhadKmitani | null;
   /**
-   * Co by s odhadem (pro skupinu, která most rozkmitá nejvíc) udělal tužší a těžší most: poměr
-   * k dnešnímu odhadu pro každou ze změn `ZMENY_PRO_RADU` (pod 1 by kmital míň). Null bez
-   * odhadu a u mostu s laděným tlumičem.
+   * Co by s odhadem udělal tužší a těžší most: poměr k dnešnímu odhadu pro každou ze změn
+   * `ZMENY_PRO_RADU` (pod 1 by kmital míň). Počítá se se všemi skupinami lidí: tužší most může
+   * jednomu rytmu ujet a jiný trefit. Null bez odhadu, u mostu, který kmitá hluboko pod mezí
+   * (rada není potřeba), a u mostu s laděným tlumičem, kterému pomůže úprava tlumiče.
    */
   smer: { tuzsi: [number, number]; tezsi: [number, number] } | null;
+  /**
+   * Laděný tlumič: na jaký rytmus ho ladit a co by s odhadem udělaly jeho úpravy (poměr
+   * k dnešnímu odhadu, pod 1 by most kmital míň). Null v úrovni, která tlumič nedovoluje,
+   * a tam, kde odhad není.
+   */
+  tlumic: RadaKTlumici | null;
+  /**
+   * Co by s odhadem udělal viskózní tlumič z každé kotvy pod mostovkou k nejbližšímu styčníku
+   * mostovky, kam dosáhne: poměr k dnešnímu odhadu (pod 1 by most kmital míň), lepší ze dvou
+   * zkoušených tlumení. Null v úrovni bez tlumiče nebo bez takové kotvy a tam, kde se rady nepočítají.
+   */
+  viskozni: number | null;
   /**
    * Tvary kmitání prázdného mostu ke každé frekvenci z `frekvence`: posuny styčníků návrhu
    * (dx0, dy0, dx1, dy1, …) v pořadí, v jakém jsou v návrhu. Největší posun má velikost 1.
@@ -329,8 +370,11 @@ export type ZpravaProZkousku =
   | { typ: "ahoj" }
   | { typ: "start"; vstup: VstupZkousky }
   | { typ: "stop" }
-  /** Žádost o rozbor mostu; `id` se vrátí v odpovědi, aby šla poznat zastaralá. */
-  | { typ: "rozbor"; id: number; uroven: Uroven; navrh: NavrhMostu }
+  /**
+   * Žádost o rozbor mostu; `id` se vrátí v odpovědi, aby šla poznat zastaralá. `nasada` je
+   * násada, se kterou most pojede zkouška: odhad kmitání podle ní zná fáze kroků jednotlivců.
+   */
+  | { typ: "rozbor"; id: number; uroven: Uroven; navrh: NavrhMostu; nasada?: number }
   /** Žádost o automatické dopnutí lan; `id` se vrátí v odpovědi. */
   | { typ: "dopnuti"; id: number; uroven: Uroven; navrh: NavrhMostu };
 
