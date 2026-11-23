@@ -186,7 +186,10 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await frekvenceMostu()).toBeLessThan(2.9);
     expect(await osa().getAttribute("data-stav")).toBe("shoda");
     expect(await udaj("frekvence-popis")).toBe("krok 2,3 Hz je u vlastní frekvence");
-    expect(await stranka.locator(".frekvence__krok:not(.frekvence__krok--dvojnasobek)").count()).toBe(3);
+    // Tři útvary, každý svým krokem: tři značky kroku, k nim dvojnásobky a trojnásobky.
+    expect(await stranka.locator('.frekvence__krok[data-nasobek="1"]').count()).toBe(3);
+    expect(await stranka.locator(".frekvence__krok--dvojnasobek").count()).toBe(3);
+    expect(await stranka.locator(".frekvence__krok--trojnasobek").count()).toBe(3);
     await stranka.screenshot({ path: `${SLOZKA}/42-osa-frekvenci.png` });
   });
 
@@ -266,7 +269,11 @@ describe("brnknutí", () => {
     const namerena = Number(await telo("brnknuti"));
     expect(namerena).toBeGreaterThan(0.93 * vlastni);
     expect(namerena).toBeLessThan(1.07 * vlastni);
-    expect(await udaj("vysledek-shrnuti")).toMatch(/^Most kmitá na \d,\d\d Hz\.$/);
+    // Brnknutí, osa i tvary kmitání mluví o téže frekvenci, a výsledek to řekne.
+    expect(await udaj("vysledek-shrnuti")).toMatch(
+      /^Most kmitá na \d,\d\d Hz\. To je 1\. vlastní frekvence prázdného mostu; na ose frekvencí je to plný trojúhelník u \d,\d\d Hz\.$/,
+    );
+    expect(await telo("pokus-tvar")).toBe("1");
     // Pokus se nepočítá: žádné medaile, žádná další úroveň.
     expect(await stranka.locator('[data-udaj="vysledek-medaile"]').isVisible()).toBe(false);
     expect(await udaj("medaile")).not.toContain("◆");
@@ -281,7 +288,9 @@ describe("kmitání mostovky rozhoduje", () => {
     expect(await vyzkousej()).toBe("MOST NEOBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toMatch(/(Přešli a přejeli|Přešli|Přejeli) všichni/);
     expect(await udaj("vysledek-shrnuti")).toContain("rozkmital víc, než se dá snést");
-    expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · nepřijatelné · v čase \d+,\d s$/);
+    // Pod číslem je i frekvence, na které most kmital, a čí je to rytmus.
+    expect(await udaj("vysledek-kmitani")).toMatch(/^\d,\d\d m\/s² · nepřijatelné · v čase \d+,\d s\s*nejvíc na 2,3 Hz \(pochodující útvar, rytmus 2,3 Hz\)$/);
+    expect(await udaj("vysledek-shrnuti")).toContain("Na té frekvenci ho budí pochodující útvar: rytmus 2,3 Hz.");
     // Odkaz skočí do okamžiku největšího kmitání; legenda ukazuje okamžitou hodnotu.
     await rozbalVysledek();
     await stranka.locator('[data-udaj="vysledek-kmitani"] button').click();

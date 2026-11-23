@@ -9,7 +9,7 @@ import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import { pridejSilyBremen, vytvorBremena, type Bremena, type PopisBremene } from "../jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { tridaKomfortu, vytvorMereniKomfortu, zmerKomfort, type MereniKomfortu } from "../jadro/komfort";
+import { MEZE_KOMFORTU, tridaKomfortu, vytvorMereniKomfortu, zmerKomfort, type MereniKomfortu } from "../jadro/komfort";
 import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
@@ -34,6 +34,7 @@ import {
 import { otiskSimulace } from "./otisk";
 import { jeClovek, naplanujProvoz, PREJEL, pridejOdporVody, Provoz, type PopisUcastnika } from "./provoz";
 import { frekvenceBudice, jeStaly, vyhodnotBudic } from "./budic";
+import { dominantniFrekvence } from "./kmitani";
 import type {
   BudicZkousky,
   KomfortZkousky,
@@ -59,6 +60,10 @@ const NEJDELSI_PAD = 5;
 const TRVANI_BEZ_PROVOZU = 3;
 /** Jak dlouho se sleduje most rozkmitaný brnknutím, v sekundách. */
 const TRVANI_BRNKNUTI = 4;
+/** Kolikrát za sekundu se zapisuje poloha brnknutého styčníku a v jakém pásmu se hledá jeho frekvence, Hz. */
+const VZORKU_BRNKNUTI = 120;
+const BRNKNUTI_OD = 0.3;
+const BRNKNUTI_DO = 25;
 /** Jak dlouho se most sleduje poté, co budič dojel na konec svého rozsahu, v sekundách. */
 const DOBEH_BUDICE = 1;
 /** Po jaké době se zapisuje další bod křivky změřené budičem, v sekundách. */
@@ -139,6 +144,8 @@ export class Zkouska {
   readonly #navrh: NavrhMostu;
   readonly #kresleni: PopisKresleni;
   readonly #obalka: ObalkaPrutu[];
+  /** Obálka z doby, kdy byl most ještě celý; null, dokud se nic neporušilo. */
+  #obalkaDoPoruseni: ObalkaPrutu[] | null = null;
   readonly #reakce: ReakcePodpory[];
   /** Měření kmitání mostovky; null v úrovni, kde přes most nejdou lidé. */
   readonly #komfort: MereniKomfortu | null;
@@ -194,8 +201,10 @@ export class Zkouska {
 
   /** Styčník, kterým se brnklo, a okamžiky, kdy jeho svislá rychlost změnila znaménko. */
   readonly #brnknuty: number;
-  readonly #obraty: number[] = [];
-  #minulaRychlost = 0;
+  /** Svislá poloha brnknutého styčníku v čase: z ní se čte, na jaké frekvenci most kmitá. */
+  readonly #casyBrnknuti: number[] = [];
+  readonly #polohyBrnknuti: number[] = [];
+  #dalsiVzorekBrnknuti = 0;
 
   /**
    * `brnknuti` zkoušku změní v pokus s volným kmitáním: provoz se nepouští, daný styčník
@@ -339,7 +348,8 @@ export class Zkouska {
         stycniky.add(s.prvekA[e]!);
         stycniky.add(s.prvekB[e]!);
       }
-      this.#komfort = vytvorMereniKomfortu(s, stycniky);
+      // Mez úrovně: od jejího překročení už most pro lidi neobstojí.
+      this.#komfort = vytvorMereniKomfortu(s, stycniky, MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]);
     } else {
       this.#komfort = null;
     }
@@ -717,11 +727,10 @@ export class Zkouska {
         this.#sledujLode(davka.udalosti);
         if (this.#uroven.pohyb) this.#sledujPreklopeni(davka.udalosti);
       }
-      if (this.#brnknuty >= 0) {
-        // Obraty svislého pohybu brnknutého styčníku: mezi dvěma sousedními je půl periody.
-        const rychlost = s.vy[this.#brnknuty]!;
-        if (rychlost * this.#minulaRychlost < 0) this.#obraty.push(sim.cas);
-        if (rychlost !== 0) this.#minulaRychlost = rychlost;
+      if (this.#brnknuty >= 0 && sim.cas >= this.#dalsiVzorekBrnknuti) {
+        this.#casyBrnknuti.push(sim.cas);
+        this.#polohyBrnknuti.push(s.y[this.#brnknuty]!);
+        this.#dalsiVzorekBrnknuti += 1 / VZORKU_BRNKNUTI;
       }
       // Kmitání rozbitého mostu už o pohodlí chodců nevypovídá.
       if (this.#komfort && !sim.porusena) {
@@ -813,6 +822,18 @@ export class Zkouska {
   #aktualizujObalku(): void {
     const s = this.simulace.soustava;
     const cas = this.simulace.cas;
+    // První porušení: obálka z doby, kdy byl most celý, se odloží stranou. Prut, který povolil,
+    // v ní má aspoň 100 % (obálka se nepočítá v každém kroku a špičku mohla minout).
+    if (this.#obalkaDoPoruseni === null && this.simulace.porusena) {
+      this.#obalkaDoPoruseni = this.#obalka.map((o) => ({ ...o }));
+      const prvni = this.simulace.udalosti[0];
+      const zaznam = prvni && prvni.prut >= 0 ? this.#obalkaDoPoruseni[prvni.prut] : undefined;
+      if (prvni && zaznam && !(zaznam.vyuziti >= 1)) {
+        zaznam.vyuziti = 1;
+        zaznam.zpusob = prvni.zpusob;
+        zaznam.cas = prvni.cas;
+      }
+    }
     for (let e = 0; e < s.pocetPrvku; e++) {
       const prut = s.prut[e]!;
       if (prut < 0 || s.utrzeny[e] === 1) continue;
@@ -881,7 +902,15 @@ export class Zkouska {
     // Budič není člověk: jeho měření se nehodnotí jako komfort, ale vrací se jako křivka.
     const mereni = this.#budic ? null : this.#komfort;
     const komfort: KomfortZkousky | null =
-      mereni === null ? null : { zrychleni: mereni.nejvetsi, cas: mereni.cas, trida: tridaKomfortu(mereni.nejvetsi) };
+      mereni === null
+        ? null
+        : {
+            zrychleni: mereni.nejvetsi,
+            cas: mereni.cas,
+            trida: tridaKomfortu(mereni.nejvetsi),
+            stycnik: mereni.stycnik,
+            prekroceno: mereni.prekroceni >= 0 ? mereni.prekroceni : null,
+          };
     // Počítá se jen vozidlo, které most přejelo celý; to, které spadlo nebo na most nedojelo,
     // jízdu po mostě nezměřilo (a pád by se tvářil jako nepohodlí).
     let komfortCestujicich: KomfortZkousky | null = null;
@@ -893,7 +922,7 @@ export class Zkouska {
         nejvetsi = vuz.mereni.nejvetsi;
         kdy = vuz.mereni.cas;
       }
-      komfortCestujicich = { zrychleni: nejvetsi, cas: kdy, trida: tridaKomfortu(nejvetsi) };
+      komfortCestujicich = { zrychleni: nejvetsi, cas: kdy, trida: tridaKomfortu(nejvetsi), stycnik: -1, prekroceno: null };
     }
     let vysledekBudice: VysledekZkousky["budic"] = null;
     if (this.#budic) {
@@ -938,11 +967,12 @@ export class Zkouska {
       pohybVPoradku &&
       !mezera;
     const bonus = uroven.mistrovska;
-    // Brnknutí je pokus, ne zkouška: frekvence se určí z obratů pohybu a medaile se neudělují.
+    // Brnknutí je pokus, ne zkouška: medaile se neudělují. Frekvence je ta, na které se styčník
+    // vychyloval nejvíc. Počítat obraty pohybu nestačí: kde kmitá víc tvarů najednou (most
+    // s laděným tlumičem), vyšlo by číslo, které není žádnou vlastní frekvencí mostu.
     let frekvenceKmitani: number | null = null;
-    if (this.#brnknuty >= 0 && this.#obraty.length >= 3) {
-      const doba = this.#obraty.at(-1)! - this.#obraty[0]!;
-      if (doba > 0) frekvenceKmitani = (this.#obraty.length - 1) / (2 * doba);
+    if (this.#brnknuty >= 0) {
+      frekvenceKmitani = dominantniFrekvence(this.#casyBrnknuti, this.#polohyBrnknuti, false, BRNKNUTI_OD, BRNKNUTI_DO);
     }
     const zkouska = this.#brnknuty < 0 && this.#budic === null && this.#zlom === null;
     let zlom: VysledekZlomu | null = null;
@@ -996,6 +1026,7 @@ export class Zkouska {
       zlom,
       medaile,
       obalka: this.#obalka.map((o) => ({ ...o })),
+      obalkaDoPoruseni: this.#obalkaDoPoruseni?.map((o) => ({ ...o })) ?? null,
       reakce: this.#reakce.map((r) => ({ ...r })),
       bezRovnovahy: this.bezRovnovahy,
       pruvesVKlidu: this.pruvesVKlidu,

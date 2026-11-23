@@ -38,8 +38,11 @@ export interface DataKrivky {
   krok: number;
   prazdny: readonly number[];
   obsazeny: readonly number[] | null;
-  /** Kroky lidí: frekvence v Hz a poloviční šířka pásma, ve kterém se pohybují. */
-  kroky: readonly { f: number; pasmo: number }[];
+  /**
+   * Složky síly kroku lidí: frekvence v Hz, poloviční šířka pásma, ve kterém se pohybují,
+   * a kolikátý násobek kroku to je (1 krok sám).
+   */
+  slozky: readonly { frekvence: number; pasmo: number; nasobek: number }[];
   /** Pravý okraj vodorovné osy v Hz a horní okraj svislé osy (m/s² na 1 kN). */
   rozsah: number;
   strop: number;
@@ -99,31 +102,29 @@ function ram(
 /**
  * Rezonanční křivka: vodorovně frekvence buzení, svisle zrychlení mostovky na jednotkovou
  * sílu. Plná čára je most s lidmi (nebo prázdný, když v úrovni lidé nejsou), tenká
- * přerušovaná prázdný most. Svislé pruhy jsou kroky lidí a jejich dvojnásobky.
+ * přerušovaná prázdný most. Svislé pruhy jsou kroky lidí a jejich násobky.
  */
 export function nakresliKrivku(ctx: Kontext, sirka: number, vyska: number, data: DataKrivky): void {
   const { x0, y0, w, h } = ram(ctx, sirka, vyska, [zapis(data.strop)]);
   const naX = (f: number): number => x0 + (w * Math.min(f, data.rozsah)) / data.rozsah;
   const naY = (hodnota: number): number => y0 + h - h * Math.min(1, hodnota / data.strop);
 
-  // Kroky lidí a jejich dvojnásobky.
-  for (const krok of data.kroky) {
-    for (const nasobek of [1, 2]) {
-      const f = nasobek * krok.f;
-      if (f > data.rozsah) continue;
-      if (krok.pasmo > 0) {
-        ctx.fillStyle = "rgba(143, 208, 255, 0.22)";
-        const leva = naX(nasobek * (krok.f - krok.pasmo));
-        ctx.fillRect(leva, y0, naX(nasobek * (krok.f + krok.pasmo)) - leva, h);
-      }
-      ctx.strokeStyle = nasobek === 1 ? BARVY.voda : BARVY.popisek;
-      ctx.lineWidth = nasobek === 1 ? 1.5 : 1;
-      ctx.setLineDash(nasobek === 1 ? [] : [3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(Math.round(naX(f)) + 0.5, y0);
-      ctx.lineTo(Math.round(naX(f)) + 0.5, y0 + h);
-      ctx.stroke();
+  // Kroky lidí a jejich násobky: krok plnou čarou, dvojnásobek čárkovaně, trojnásobek tečkovaně.
+  for (const slozka of data.slozky) {
+    const f = slozka.frekvence;
+    if (f > data.rozsah) continue;
+    if (slozka.pasmo > 0) {
+      ctx.fillStyle = "rgba(143, 208, 255, 0.22)";
+      const leva = naX(f - slozka.pasmo);
+      ctx.fillRect(leva, y0, naX(f + slozka.pasmo) - leva, h);
     }
+    ctx.strokeStyle = slozka.nasobek === 1 ? BARVY.voda : BARVY.popisek;
+    ctx.lineWidth = slozka.nasobek === 1 ? 1.5 : 1;
+    ctx.setLineDash(slozka.nasobek === 1 ? [] : slozka.nasobek === 2 ? [3, 3] : [1, 3]);
+    ctx.beginPath();
+    ctx.moveTo(Math.round(naX(f)) + 0.5, y0);
+    ctx.lineTo(Math.round(naX(f)) + 0.5, y0 + h);
+    ctx.stroke();
   }
   ctx.setLineDash([]);
 
@@ -139,12 +140,15 @@ export function nakresliKrivku(ctx: Kontext, sirka: number, vyska: number, data:
 
   const cara = (hodnoty: readonly number[]): void => {
     ctx.beginPath();
-    hodnoty.forEach((hodnota, i) => {
-      const x = naX(data.od + i * data.krok);
-      const y = naY(hodnota);
+    for (let i = 0; i < hodnoty.length; i++) {
+      const f = data.od + i * data.krok;
+      // Křivka může být spočítaná dál, než kam sahá osa.
+      if (f > data.rozsah + 1e-9) break;
+      const x = naX(f);
+      const y = naY(hodnoty[i]!);
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
-    });
+    }
     ctx.stroke();
   };
   ctx.lineJoin = "round";

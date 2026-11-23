@@ -435,13 +435,19 @@ describe("nápověda", () => {
     expect(await akce("napoveda").isVisible()).toBe(true);
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
-    expect(await telo("napoveda")).toBe("soupis");
+    // První krok je jen princip; materiál a obrys jsou další dva kroky.
+    expect(await telo("napoveda")).toBe("princip");
+    expect(await udaj("napoveda-princip")).toContain("příhrada nad ní");
+    await akce("napoveda-dalsi").click();
+    expect(await telo("napoveda")).toBe("material");
     const soupis = (await stranka.locator('[data-udaj="napoveda-soupis"] li').allInnerTexts()).map((v) => v.replace(/[  ]/g, " "));
     expect(soupis[0]).toMatch(/^Dřevěná mostovka: \d+× \(dohromady 12 m\)$/);
     expect(soupis.some((r) => r.startsWith("Lehký trám: "))).toBe(true);
     expect(await udaj("napoveda-cena")).toMatch(/^Stojí [\d ]+ Kč\./);
     await stranka.screenshot({ path: `${SLOZKA}/r8-napoveda.png` });
 
+    await akce("napoveda-dalsi").click();
+    expect(await telo("napoveda")).toBe("obrys-nabidka");
     await akce("napoveda-obrys").click();
     // S obrysem se staví: okno uhne a obrys zůstane na výkresu.
     expect(await stranka.locator("#okno-napoveda[open]").count()).toBe(0);
@@ -450,7 +456,7 @@ describe("nápověda", () => {
     await akce("napoveda").click();
     expect(await akce("napoveda-obrys").innerText()).toBe("Schovat obrys");
     await akce("napoveda-obrys").click();
-    expect(await telo("napoveda")).toBe("soupis");
+    expect(await telo("napoveda")).toBe("obrys-nabidka");
     await stranka.keyboard.press("Escape");
   });
 
@@ -466,6 +472,7 @@ describe("nápověda", () => {
     await otevri("1-01");
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    await akce("napoveda-dalsi").click();
     expect((await udaj("napoveda-cena")).replace(/[  ]/g, " ")).toBe(
       "Stojí 33 133 Kč, takže se vejde i do medaile za rozpočet (do 33 500 Kč). Mistrovskou medaili ani zlato ve výzvách ti nezaručí.",
     );
@@ -476,16 +483,22 @@ describe("nápověda", () => {
     await otevri("2-03");
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await udaj("napoveda-princip")).toContain("Na mostovce jsou závaží");
+    await akce("napoveda-dalsi").click();
     let soupis = (await stranka.locator('[data-udaj="napoveda-soupis"] li').allInnerTexts()).map((v) => v.replace(/[  ]/g, " "));
     expect(soupis.some((r) => /^styčníky se závažím: 3 \(.*\d kg\)$/.test(r)), soupis.join(" | ")).toBe(true);
+    await akce("napoveda-dalsi").click();
     await akce("napoveda-obrys").click();
     expect(await telo("napoveda")).toBe("obrys");
     await stranka.screenshot({ path: `${SLOZKA}/r9b-napoveda-obrys-zavazi.png` });
     await otevri("7-01");
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await udaj("napoveda-princip")).toContain("zvedá ho píst");
+    await akce("napoveda-dalsi").click();
     soupis = (await stranka.locator('[data-udaj="napoveda-soupis"] li').allInnerTexts()).map((v) => v.replace(/[  ]/g, " "));
     expect(soupis.some((r) => /^zdvih pístu: [+−][\d,]+ m$/.test(r)), soupis.join(" | ")).toBe(true);
+    await akce("napoveda-dalsi").click();
     await akce("napoveda-obrys").click();
     await stranka.screenshot({ path: `${SLOZKA}/r9c-napoveda-obrys-pist.png` });
   });

@@ -1,6 +1,7 @@
-// Čísla využití u prutů: malé popisky v procentech uprostřed každého prutu, podobně jako
-// kóta přerušující čáru na výkresu. Popisky, které by se překryly, se posunou podél prutu;
-// když není kam, vynechají se (přednost mají nejvíc namáhané pruty).
+// Čísla využití u prutů: malé popisky v procentech uprostřed prutu, podobně jako kóta
+// přerušující čáru na výkresu. Popisky, které by se překryly, se posunou podél prutu; když
+// není kam, vynechají se. Přednost mají nejvíc namáhané pruty a u mostu z mnoha prutů se
+// popíšou jen ty: využití ostatních je vidět z barvy a po kliknutí na prut.
 
 import type { Bod } from "../data/geometrie";
 import { procenta } from "../ui/formaty";
@@ -18,6 +19,12 @@ export interface CisloVyuziti {
 const NEJKRATSI_PRUT = 30;
 /** Pod tímto využitím se číslo nekreslí: prut prakticky nic nenese. */
 const NEJMENSI_VYUZITI = 0.005;
+/**
+ * Kolik čísel se nanejvýš kreslí: u mostu z desítek prutů by popisky zakryly most. Zůstanou
+ * nejvíc namáhané pruty; prut využitý aspoň z `VZDY_OD` má číslo vždycky.
+ */
+export const NEJVIC_CISEL = 16;
+export const VZDY_OD = 0.8;
 /** Místa podél prutu, která se zkoušejí postupně, když je střed obsazený. */
 const MISTA = [0.5, 0.36, 0.64, 0.26, 0.74];
 const VYSKA = 13;
@@ -37,7 +44,8 @@ export function nakresliCislaVyuziti(ctx: CanvasRenderingContext2D, polozky: rea
   const serazene = polozky
     .map((p) => ({ ...p, vyuziti: Math.abs(p.vyuziti) }))
     .filter((p) => p.vyuziti >= NEJMENSI_VYUZITI && Math.hypot(p.b.x - p.a.x, p.b.y - p.a.y) >= NEJKRATSI_PRUT)
-    .sort((p, q) => q.vyuziti - p.vyuziti);
+    .sort((p, q) => q.vyuziti - p.vyuziti)
+    .filter((p, poradi) => poradi < NEJVIC_CISEL || p.vyuziti >= VZDY_OD);
 
   ctx.save();
   ctx.font = `10px ${PISMO}`;

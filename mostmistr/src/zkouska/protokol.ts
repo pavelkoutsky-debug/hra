@@ -63,6 +63,12 @@ export interface RozborMostu {
    */
   frekvenceObsazeneho: number[];
   /**
+   * Vlastní frekvence mostu bez laděných tlumičů, prázdného a obsazeného lidmi (Hz, vzestupně).
+   * Na frekvenci obsazeného mostu se tlumič ladí: `frekvence` a `frekvenceObsazeneho` už tlumiče
+   * obsahují a rezonanci, kterou mají krotit, ukazují rozštěpenou. Null u mostu bez tlumičů.
+   */
+  bezTlumicu: { prazdny: number[]; obsazeny: number[] } | null;
+  /**
    * Tvary kmitání prázdného mostu ke každé frekvenci z `frekvence`: posuny styčníků návrhu
    * (dx0, dy0, dx1, dy1, …) v pořadí, v jakém jsou v návrhu. Největší posun má velikost 1.
    */
@@ -77,6 +83,12 @@ export interface RozborMostu {
    * které visí povolené, a null u prutu, který lano není.
    */
   tahyLan: (number | null)[];
+  /**
+   * Průvěs mostovky pod vlastní tíhou: o kolik metrů se styčník mostovky nejvíc liší od výkresu
+   * a který to je (pořadí v návrhu). U mostu s lany prozradí nedopnuté napínáky. Null, když
+   * most nemá klidovou polohu nebo mostovku.
+   */
+  pruves: { metru: number; stycnik: number } | null;
   /**
    * Kde a proč se skládá most bez klidové polohy (viz `slozeni.ts`); null u mostu, který ji má,
    * a když se místo určit nedá.
@@ -210,6 +222,16 @@ export interface KomfortZkousky {
   cas: number;
   /** Třída komfortu: 1 výborný, 2 střední, 3 nízký, 4 nepřijatelný. */
   trida: 1 | 2 | 3 | 4;
+  /**
+   * Styčník soustavy (pořadí v polohách snímku), ve kterém největší zrychlení nastalo; −1,
+   * když se nic nenaměřilo. Podle něj se ze záznamu pozná, na jaké frekvenci most kmital.
+   */
+  stycnik: number;
+  /**
+   * Kdy kmitání poprvé přesáhlo mez, se kterou úroveň most ještě přijme, v sekundách; null,
+   * když ji nepřesáhlo (nebo se s mezí neměřilo, jako u cestujících).
+   */
+  prekroceno: number | null;
 }
 
 export interface VysledekZkousky {
@@ -267,6 +289,12 @@ export interface VysledekZkousky {
   medaile: Medaile;
   /** Obálka namáhání; pořadí odpovídá prutům návrhu. */
   obalka: ObalkaPrutu[];
+  /**
+   * Obálka namáhání do chvíle, než se na mostě něco poprvé porušilo nebo sjelo z podpory: co
+   * most nesl, dokud byl celý. Po porušení se pruty namáhají pádem a ta čísla o návrhu nic
+   * neříkají. Prut, který povolil první, tu má využití aspoň 100 %. Null, když se nic neporušilo.
+   */
+  obalkaDoPoruseni: ObalkaPrutu[] | null;
   /** Reakce v podporách: pro každý podepřený styčník návrhu největší síly za zkoušku. */
   reakce: ReakcePodpory[];
   /** Most neměl pod vlastní tíhou klidovou polohu (chybí mu ztužení) a zkouška začala z nakreslené. */

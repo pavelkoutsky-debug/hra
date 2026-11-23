@@ -546,6 +546,17 @@ export class Editor {
     return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence } : t)), "ladeny");
   }
 
+  /**
+   * Naladí laděné tlumiče ve vybraných styčnících na frekvenci `frekvence` (Hz), zaokrouhlenou
+   * na krok ladění a omezenou na vyrobitelný rozsah. Vrací false, když není co ladit nebo už
+   * tak naladěné jsou.
+   */
+  naladTlumic(frekvence: number): boolean {
+    if (!this.ladenyTlumicVyberu) return false;
+    const nova = frekvenceTlumice(frekvence);
+    return this.#zmen(nastavLadenyTlumic(this.#navrh, this.vybraneStycniky, (t) => (t ? { ...t, frekvence: nova } : t)), "ladeny");
+  }
+
   #hmotaTlumice(hmota: number): number {
     const krok = LADENY_TLUMIC.krokHmoty;
     const nejvic = Math.floor(this.uroven.nejvetsiTlumic / krok) * krok;

@@ -1,0 +1,498 @@
+// Milník M11 v bezhlavém prohlížeči: osa frekvencí se všemi složkami kroku, ladění tlumiče,
+// kmitání při zkoušce (hlášení, příčina, zvětšený pohyb), nápověda po krocích a čitelnost stavby.
+import { mkdirSync } from "node:fs";
+import { chromium, type Browser, type Page } from "playwright";
+import { preview, type PreviewServer } from "vite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
+import { RESENI } from "../../urovne/reseni";
+import { prijimejDenik } from "./server-deniku";
+
+const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
+const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
+
+let server: PreviewServer;
+let prohlizec: Browser;
+let stranka: Page;
+let adresa: string;
+const chyby: string[] = [];
+
+const udaj = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).innerText();
+const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
+const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
+const osa = () => stranka.locator('[data-udaj="osa-frekvenci"]');
+const bezMezer = (text: string): string => text.replace(/[  ]/g, " ");
+
+async function bodSveta(x: number, y: number): Promise<{ x: number; y: number }> {
+  return stranka.evaluate(
+    ([sx, sy, volic]) => {
+      const platno = document.querySelector<HTMLCanvasElement>(volic as string)!;
+      const [kx, ky, m] = platno.dataset.kamera!.split(";").map(Number) as [number, number, number];
+      const o = platno.getBoundingClientRect();
+      return { x: o.left + o.width / 2 + ((sx as number) - kx) * m, y: o.top + o.height / 2 - ((sy as number) - ky) * m };
+    },
+    [x, y, PLATNO] as const,
+  );
+}
+
+async function klikni(x: number, y: number): Promise<void> {
+  const p = await bodSveta(x, y);
+  await stranka.mouse.click(p.x, p.y);
+}
+
+async function otevri(id: string): Promise<void> {
+  await stranka.goto(`${adresa}?uroven=${id}&vyvoj=1`);
+  await stranka.locator(PLATNO).waitFor();
+  const tlacitko = stranka.locator('#okno-zadani[open] button[value="zavrit"]');
+  if ((await tlacitko.count()) > 0) await tlacitko.click();
+}
+
+async function nactiMost(navrh: NavrhMostu): Promise<void> {
+  await akce("import").click();
+  await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
+  await akce("okno-nacist").click();
+  // Rozbor běží v pomocném vlákně: osa na něj čeká.
+  await expect.poll(() => udaj("frekvence-popis").catch(() => ""), { timeout: 15_000 }).not.toBe("počítá se…");
+}
+
+async function pust(): Promise<void> {
+  await stranka.locator(PLATNO).focus();
+  await stranka.keyboard.press("Space");
+  expect(await telo("rezim")).toBe("zkouska");
+}
+
+async function dopocitej(): Promise<void> {
+  await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
+  expect(await telo("zkouska")).toBe("hotovo");
+}
+
+async function naKonec(): Promise<string> {
+  await akce("na-konec").click();
+  await stranka.locator(".vysledek").waitFor({ state: "visible" });
+  return udaj("vysledek-nadpis");
+}
+
+async function rozbalVysledek(): Promise<void> {
+  if ((await stranka.locator(".vysledek").getAttribute("data-sbaleno")) === "true") await akce("vysledek-sbalit").click();
+}
+
+const cas = async (): Promise<number> => Number(await stranka.locator("#cas").inputValue());
+const pad = (uroven: string, cast: string): NavrhMostu => RESENI[uroven]!.pady.find((p) => p.nazev.includes(cast))!.navrh;
+
+beforeAll(async () => {
+  mkdirSync(SLOZKA, { recursive: true });
+  server = await preview({ preview: { port: 4208, strictPort: false, host: "127.0.0.1" }, logLevel: "silent" });
+  prijimejDenik(server);
+  const mistni = server.resolvedUrls?.local[0];
+  if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
+  adresa = mistni;
+  prohlizec = await chromium.launch();
+  stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
+  stranka.on("console", (zprava) => {
+    if (zprava.type() === "error") chyby.push(zprava.text());
+  });
+});
+
+afterAll(async () => {
+  await prohlizec?.close();
+  await new Promise<void>((hotovo) => server?.httpServer.close(() => hotovo()));
+});
+
+describe("osa frekvencí", () => {
+  it("ukazuje krok i jeho násobky a varuje, když dvojnásobek běhu leží u vlastní frekvence", async () => {
+    await otevri("2-02");
+    await nactiMost(pad("2-02", "dvojnásobku"));
+    expect(await osa().getAttribute("data-stav")).toBe("shoda");
+    expect(await osa().getAttribute("data-shoda")).toBe("2;3;1");
+    expect(await udaj("frekvence-popis")).toMatch(/^dvojnásobek kroku 3,0 Hz je u vlastní frekvence( \(\+\d\))?$/);
+    // Značky: krok, dvojnásobek a trojnásobek; běh je silný; most má trojúhelník prázdný i obsazený.
+    const znacky = osa().locator(".frekvence__znacky");
+    expect(await znacky.locator('.frekvence__krok[data-nasobek="1"]').count()).toBe(2);
+    expect(await znacky.locator(".frekvence__krok--dvojnasobek").count()).toBe(2);
+    expect(await znacky.locator(".frekvence__krok--trojnasobek").count()).toBe(1);
+    expect(await znacky.locator(".frekvence__krok--silna").count()).toBe(2);
+    expect(await znacky.locator(".frekvence__most:not(.frekvence__most--obsazeny)").count()).toBeGreaterThanOrEqual(1);
+    expect(await znacky.locator(".frekvence__most--obsazeny").count()).toBeGreaterThanOrEqual(1);
+    // Bublina značky říká, kdo tak jde a jak silně.
+    expect(bezMezer((await znacky.locator(".frekvence__krok--dvojnasobek.frekvence__krok--silna").getAttribute("title")) ?? "")).toBe(
+      "pochodující útvar: dvojnásobek kroku 3,0 Hz (6,0 Hz), síla 67 % váhy člověka",
+    );
+    // Osa sahá za nejvyšší složku kroku (6 Hz), ne dál než je třeba.
+    expect(await znacky.locator(".frekvence__dilek span").last().innerText()).toBe("7");
+    // Jízdní řád vedle osy nezmizel.
+    const rad = (await stranka.locator(".osa__rad").boundingBox())!;
+    expect(rad.width).toBeGreaterThanOrEqual(190);
+    expect(await stranka.locator(".osa__polozka").first().isVisible()).toBe(true);
+    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k1-osa-shoda.png` });
+  });
+
+  it("silný běh kus od vlastní frekvence dostane upozornění bez žluté", async () => {
+    await nactiMost(RESENI["2-02"]!.pruchod);
+    expect(await osa().getAttribute("data-stav")).toBe("blizko");
+    expect(bezMezer(await udaj("frekvence-popis"))).toMatch(/^dvojnásobek kroku 3,0 Hz je jen 1\d % od vlastní frekvence( \(\+\d\))?$/);
+    expect(await stranka.locator('[data-udaj="frekvence-popis"]').getAttribute("title")).toContain("Rozhodne zkouška");
+    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k2-osa-blizko.png` });
+  });
+
+  it("most daleko od všech rytmů varování nemá", async () => {
+    await nactiMost(RESENI["2-02"]!.mistrovska);
+    expect(await osa().getAttribute("data-stav")).toBe("");
+    expect(await osa().getAttribute("data-shoda")).toBeNull();
+    expect(await udaj("frekvence-popis")).toMatch(/^most \d,\d\d Hz, s lidmi \d,\d\d Hz$/);
+  });
+});
+
+describe("kmitání při zkoušce", () => {
+  it("když kmitání přesáhne mez, hra to řekne hned a výsledek nečeká na konec osy", async () => {
+    await nactiMost(pad("2-02", "dvojnásobku"));
+    await pust();
+    await dopocitej();
+    await stranka.locator('[data-rychlost="4"]').click();
+    await stranka.locator("body[data-kmitani-nad-mez]").waitFor({ timeout: 60_000 });
+    expect(await udaj("hlaseni")).toBe("Kmitání přesáhlo 2,5 m/s²: takhle most lidem nevyhoví.");
+    const prekroceno = Number(await telo("kmitani-nad-mez"));
+    await stranka.locator(".vysledek").waitFor({ state: "visible", timeout: 30_000 });
+    const trvani = Number(await stranka.locator("#cas").getAttribute("max"));
+    const ukazano = await cas();
+    expect(ukazano).toBeGreaterThanOrEqual(prekroceno + 3 - 0.05);
+    expect(ukazano).toBeLessThan(trvani - 5);
+    expect(await udaj("vysledek-nadpis")).toBe("MOST NEOBSTÁL");
+    await stranka.screenshot({ path: `${SLOZKA}/k3-kmitani-vysledek.png` });
+  });
+
+  it("výsledek jmenuje rytmus, který most rozhoupal, a vlastní frekvenci vedle něj", async () => {
+    expect(await telo("kmitani-rytmus")).toBe("utvar;2;3");
+    expect(Number(await telo("kmitani-frekvence"))).toBeGreaterThan(5.8);
+    expect(Number(await telo("kmitani-frekvence"))).toBeLessThan(6.2);
+    expect(await telo("pricina")).toMatch(/^Kmitání \d,\d\d m\/s² na 6,0 Hz: pochodující útvar, dvojnásobek rytmu 3,0 Hz\.$/);
+    expect(await udaj("vysledek-veta")).toMatch(/^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² na 6,0 Hz: pochodující útvar, dvojnásobek rytmu 3,0 Hz\.$/);
+    await rozbalVysledek();
+    const shrnuti = await udaj("vysledek-shrnuti");
+    expect(shrnuti).toContain("Most kmital na 6,0 Hz. Na té frekvenci ho budí pochodující útvar: dvojnásobek rytmu 3,0 Hz.");
+    expect(shrnuti).toMatch(/1\. vlastní frekvence mostu \(6,\d\d Hz, s lidmi 6,\d\d Hz\) je hned vedle\./);
+    expect(shrnuti).toContain("Dostaň vlastní frekvenci mostu dál od 6,0 Hz");
+    // Úroveň 2-02 závaží ani tlumič nenabízí: rada o nich mlčí.
+    expect(shrnuti).not.toContain("Závaží");
+    expect(shrnuti).not.toContain("tlumič");
+    expect(await udaj("vysledek-kmitani")).toContain("nejvíc na 6,0 Hz (pochodující útvar, dvojnásobek rytmu 3,0 Hz)");
+    await stranka.screenshot({ path: `${SLOZKA}/k4-kmitani-podrobnosti.png` });
+  });
+
+  it("pohyb celého mostu se kreslí zvětšený; popisek v legendě je vypínač a volba se pamatuje", async () => {
+    const nasobek = Number(await telo("zvetseni"));
+    expect(nasobek).toBeGreaterThanOrEqual(10);
+    const tlacitko = akce("zvetseni");
+    expect(await tlacitko.isVisible()).toBe(true);
+    expect(await tlacitko.getAttribute("aria-pressed")).toBe("true");
+    expect(bezMezer(await tlacitko.innerText())).toBe(`pohyb ${nasobek}×`);
+    await akce("prehrat-znovu").click();
+    await expect.poll(cas, { timeout: 20_000 }).toBeGreaterThan(1.5);
+    await stranka.screenshot({ path: `${SLOZKA}/k5-zvetseny-pohyb.png` });
+    await tlacitko.click();
+    expect(await telo("zvetseni")).toBe("1");
+    expect(await tlacitko.getAttribute("aria-pressed")).toBe("false");
+    expect(bezMezer(await tlacitko.innerText())).toBe("pohyb 1×");
+    // Volba platí i pro další zkoušku.
+    await stranka.keyboard.press("Escape");
+    await pust();
+    await dopocitej();
+    await naKonec();
+    expect(await telo("zvetseni")).toBe("1");
+    expect(await tlacitko.getAttribute("aria-pressed")).toBe("false");
+    await tlacitko.click();
+    expect(Number(await telo("zvetseni"))).toBe(nasobek);
+    await akce("upravit").click();
+    // Při stavbě tlačítko není.
+    expect(await tlacitko.isVisible()).toBe(false);
+  });
+
+  it("most, který projde, hlášení o mezi nedostane, ale frekvenci kmitání v podrobnostech má", async () => {
+    await otevri("2-03");
+    await nactiMost(RESENI["2-03"]!.pruchod);
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    expect(await telo("kmitani-nad-mez")).toBeNull();
+    await rozbalVysledek();
+    expect(await udaj("vysledek-kmitani")).toContain("nejvíc na 2,3 Hz (pochodující útvar, rytmus 2,3 Hz)");
+    expect(Number(await telo("zvetseni"))).toBeGreaterThan(1);
+    await akce("upravit").click();
+  });
+
+  it("most, který se zlomil, se nezvětšuje a největší využití se bere z doby, kdy byl celý", async () => {
+    await otevri("1-03");
+    await nactiMost(pad("1-03", "plochá"));
+    await pust();
+    await dopocitej();
+    await naKonec();
+    expect(await telo("zvetseni")).toBe("1");
+    expect(await akce("zvetseni").isVisible()).toBe(false);
+    await rozbalVysledek();
+    const vyuziti = stranka.locator('[data-udaj="vysledek-vyuziti"]');
+    expect(await vyuziti.getAttribute("data-do-poruseni")).toBe("true");
+    expect(await vyuziti.innerText()).toContain("než most poprvé povolil");
+    expect(bezMezer(await vyuziti.innerText())).toMatch(/^1\d\d % · prut \d+/);
+    await akce("upravit").click();
+  });
+});
+
+describe("laděný tlumič", () => {
+  it("osa ukazuje most bez tlumiče a tlumič zvlášť; naladěný tlumič varování krotí", async () => {
+    await otevri("5-02");
+    await nactiMost(RESENI["5-02"]!.pruchod);
+    expect(await osa().getAttribute("data-stav")).toBe("tlumeno");
+    expect(await udaj("frekvence-popis")).toBe("krok 2,6 Hz je u vlastní frekvence; tlumič je na ni naladěný");
+    expect(await osa().locator(".frekvence__tlumic").count()).toBe(1);
+    expect(bezMezer((await osa().locator(".frekvence__tlumic").getAttribute("title")) ?? "")).toContain("laděný tlumič: 2,50 Hz");
+    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k6-osa-tlumic.png` });
+  });
+
+  it("nastavení tlumiče říká, na jakou frekvenci ladit, a tlačítkem ji nastaví", async () => {
+    const tlumic = RESENI["5-02"]!.pruchod.stycniky.find((s) => s.tlumic)!;
+    await stranka.keyboard.press("v");
+    await klikni(tlumic.x, tlumic.y);
+    await stranka.locator('[data-nastaveni="ladeny"]').waitFor({ state: "visible" });
+    const cil = Number(await telo("cil-ladeni"));
+    expect(cil).toBeGreaterThan(2.3);
+    expect(cil).toBeLessThan(2.6);
+    expect(bezMezer(await udaj("ladeny-cil"))).toMatch(/^Most s lidmi kmitá bez tlumičů na 2,\d\d Hz\. Na tu frekvenci tlumič lad\.$/);
+    // Referenční most je naladěný: není co ladit.
+    expect(await akce("ladeny-naladit").isDisabled()).toBe(true);
+    // Rozladění o 0,2 Hz: osa varuje a tlačítko nabízí cestu zpět.
+    for (let i = 0; i < 4; i++) await akce("ladeny-frekvence-plus").click();
+    expect(await udaj("ladeny-frekvence")).toBe("2,70 Hz");
+    await expect.poll(() => osa().getAttribute("data-stav"), { timeout: 10_000 }).toBe("shoda");
+    expect(await udaj("frekvence-popis")).toBe("krok 2,6 Hz je u vlastní frekvence; tlumič je naladěný jinam");
+    // Cíl ladění se rozladěním tlumiče nemění: je to most bez tlumičů.
+    expect(Number(await telo("cil-ladeni"))).toBeCloseTo(cil, 3);
+    expect(await akce("ladeny-naladit").isDisabled()).toBe(false);
+    await akce("ladeny-naladit").click();
+    expect(await udaj("ladeny-frekvence")).toBe("2,50 Hz");
+    await expect.poll(() => osa().getAttribute("data-stav"), { timeout: 10_000 }).toBe("tlumeno");
+    expect(await akce("ladeny-naladit").isDisabled()).toBe(true);
+    await stranka.screenshot({ path: `${SLOZKA}/k7-ladeni-tlumice.png` });
+    await stranka.keyboard.press("Escape");
+  });
+
+  it("tvary kmitání a brnknutí mluví o soustavě s tlumičem a řeknou to", async () => {
+    // V páté kapitole je analytický panel otevřený hned; kdyby nebyl, otevře se.
+    if ((await telo("analyza")) !== "otevrena") await stranka.keyboard.press("a");
+    expect(await telo("analyza")).toBe("otevrena");
+    expect(await stranka.locator('[data-udaj="tvary"] button').count()).toBe(3);
+    expect(bezMezer(await udaj("tvary-poznamka"))).toMatch(/^S tlumičem jsou to tvary celé soustavy; osa ukazuje most bez tlumiče \(2,\d\d Hz\)\.$/);
+    await stranka.keyboard.press("a");
+    await stranka.keyboard.press("b");
+    const stred = await bodSveta(16, 0);
+    await stranka.mouse.move(stred.x, stred.y);
+    await stranka.mouse.down();
+    await stranka.mouse.move(stred.x, stred.y + 60, { steps: 4 });
+    await stranka.mouse.up();
+    await stranka.locator('body[data-zkouska="hotovo"]').waitFor({ timeout: 60_000 });
+    await naKonec();
+    // Změřená frekvence je jedna z vlastních frekvencí soustavy z rozboru, ne číslo mezi nimi.
+    expect(Number(await telo("pokus-tvar"))).toBeGreaterThanOrEqual(1);
+    expect(bezMezer(await udaj("vysledek-shrnuti"))).toMatch(
+      /^Most kmitá na \d,\d\d Hz\. To je \d\. tvar kmitání mostu s laděným tlumičem \(\d,\d\d Hz\)\. Osa frekvencí ukazuje most bez tlumiče \(2,\d\d Hz\): na ten se tlumič ladí\.$/,
+    );
+    await akce("upravit").click();
+    await stranka.keyboard.press("b");
+  });
+});
+
+describe("nápověda po krocích", () => {
+  it("první krok prozradí jen princip se skicou; medaile jsou zamčené s vysvětlením", async () => {
+    await otevri("1-01");
+    await akce("napoveda").click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await telo("napoveda")).toBe("princip");
+    expect(await telo("napoveda-most")).toBe("pruchod");
+    expect(await stranka.locator("#okno-napoveda").getAttribute("data-soustava")).toBe("trojuhelnik-nad");
+    expect(await udaj("napoveda-uvod")).toBe("Jeden most, který touhle úrovní projde, nese takhle:");
+    expect(await udaj("napoveda-princip")).toBe("Mostovku drží pár prutů nad ní: tvoří s ní trojúhelník a ten se neprohne.");
+    // Skica je nakreslená (světlé čáry na tmavém podkladu).
+    const svetlych = await stranka.locator('[data-udaj="napoveda-skica"]').evaluate((uzel) => {
+      const platno = uzel as HTMLCanvasElement;
+      const data = platno.getContext("2d")!.getImageData(0, 0, platno.width, platno.height).data;
+      let pocet = 0;
+      for (let i = 0; i < data.length; i += 4) if (data[i + 3]! > 100 && data[i]! > 180) pocet++;
+      return pocet;
+    });
+    expect(svetlych).toBeGreaterThan(200);
+    // Materiál ani obrys zatím vidět nejsou.
+    expect(await stranka.locator('[data-udaj="napoveda-soupis"]').isVisible()).toBe(false);
+    expect(await akce("napoveda-obrys").isVisible()).toBe(false);
+    expect(await akce("napoveda-dalsi").innerText()).toBe("Další krok: z čeho je");
+    // Nápověda k medailím je zamčená a říká proč.
+    const medaile = stranka.locator('[data-udaj="napoveda-mosty"] button');
+    expect(await medaile.allInnerTexts()).toEqual(["Průchod", "Medaile za rozpočet", "Mistrovská medaile"]);
+    expect(await medaile.nth(2).getAttribute("aria-disabled")).toBe("true");
+    expect(await udaj("napoveda-zamceno")).toBe("Nápověda k medailím se odemkne, až úrovní projdeš.");
+    // Zamčené tlačítko jde zmáčknout, jen nic neudělá (není vypnuté, aby šlo přečíst proč).
+    await medaile.nth(2).click({ force: true });
+    expect(await telo("napoveda-most")).toBe("pruchod");
+    await stranka.locator("#okno-napoveda").screenshot({ path: `${SLOZKA}/k8-napoveda-princip.png` });
+  });
+
+  it("druhý krok přidá materiál a cenu, třetí obrys na výkresu", async () => {
+    await akce("napoveda-dalsi").click();
+    expect(await telo("napoveda")).toBe("material");
+    const soupis = (await stranka.locator('[data-udaj="napoveda-soupis"] li').allInnerTexts()).map(bezMezer);
+    expect(soupis).toEqual(["Dřevěná mostovka: 2× (dohromady 8 m)", "Lehký trám: 3× (dohromady 10,9 m)"]);
+    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč/);
+    expect(await akce("napoveda-dalsi").innerText()).toBe("Další krok: obrys");
+    await akce("napoveda-dalsi").click();
+    expect(await telo("napoveda")).toBe("obrys-nabidka");
+    expect(await akce("napoveda-dalsi").isVisible()).toBe(false);
+    expect(await akce("napoveda-obrys").innerText()).toBe("Ukázat obrys na výkresu");
+    await stranka.locator("#okno-napoveda").screenshot({ path: `${SLOZKA}/k9-napoveda-kroky.png` });
+    await akce("napoveda-obrys").click();
+    expect(await stranka.locator("#okno-napoveda[open]").count()).toBe(0);
+    expect(await telo("napoveda")).toBe("obrys");
+    await stranka.screenshot({ path: `${SLOZKA}/k10-napoveda-obrys.png` });
+    // Znovu otevřená nápověda si kroky pamatuje a obrys jde schovat.
+    await akce("napoveda").click();
+    expect(await stranka.locator('[data-udaj="napoveda-soupis"]').isVisible()).toBe(true);
+    expect(await akce("napoveda-obrys").innerText()).toBe("Schovat obrys");
+    await akce("napoveda-obrys").click();
+    expect(await telo("napoveda")).toBe("obrys-nabidka");
+    await stranka.locator('#okno-napoveda button[value="zavrit"]').click();
+  });
+
+  it("po projití úrovně se odemkne nápověda k medailím a mluví o jiném mostě", async () => {
+    await nactiMostBezOsy(RESENI["1-01"]!.pruchod);
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    await akce("upravit").click();
+    await akce("napoveda").click();
+    const medaile = stranka.locator('[data-udaj="napoveda-mosty"] button');
+    expect(await medaile.nth(2).getAttribute("aria-disabled")).toBe("false");
+    expect(await stranka.locator('[data-udaj="napoveda-zamceno"]').isVisible()).toBe(false);
+    await medaile.nth(2).click();
+    expect(await telo("napoveda-most")).toBe("mistrovska");
+    expect(await telo("napoveda")).toBe("princip");
+    expect(await udaj("napoveda-uvod")).toBe("Jeden most, který získá mistrovskou medaili, nese takhle:");
+    expect(await udaj("napoveda-princip")).toBe("Mostovku podpírá pár prutů zdola: tvoří s ní trojúhelník a ten se neprohne.");
+    expect(await stranka.locator("#okno-napoveda").getAttribute("data-soustava")).toBe("trojuhelnik-pod");
+    await akce("napoveda-dalsi").click();
+    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč a splní podmínku mistrovské medaile: průchod a žádný prut využitý nad 9 %\.$/);
+    // Most pro medaili za rozpočet má vlastní kroky: začíná principem.
+    await medaile.nth(1).click();
+    expect(await telo("napoveda")).toBe("princip");
+    await akce("napoveda-dalsi").click();
+    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč: do medaile za rozpočet \(do [\d ]+ Kč\) se vejde\.$/);
+    await stranka.locator("#okno-napoveda").screenshot({ path: `${SLOZKA}/k11-napoveda-medaile.png` });
+    await stranka.locator('#okno-napoveda button[value="zavrit"]').click();
+  });
+});
+
+/** Načte most v úrovni bez osy frekvencí (není na co čekat). */
+async function nactiMostBezOsy(navrh: NavrhMostu): Promise<void> {
+  await akce("import").click();
+  await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
+  await akce("okno-nacist").click();
+}
+
+describe("čitelnost stavby", () => {
+  it("řádek rad pod výkresem se mění podle nástroje a výběru; údaje o vybraném prutu jsou v paletě", async () => {
+    await otevri("1-03");
+    await nactiMostBezOsy(RESENI["1-03"]!.pruchod);
+    const rada = stranka.locator('[data-udaj="rada-stavby"]');
+    /** Řádek rad nesmí zajet pod popisové pole v rohu výkresu. */
+    const vejdeSe = async (): Promise<void> => {
+      const r = (await rada.boundingBox())!;
+      const pole = (await stranka.locator("dl.pole").boundingBox())!;
+      expect(r.x + r.width, await rada.innerText()).toBeLessThanOrEqual(pole.x);
+    };
+    expect(await rada.getAttribute("data-rada")).toBe("kresleni");
+    expect(await rada.innerText()).toContain("tažení ze styčníku: prut");
+    await vejdeSe();
+    await stranka.keyboard.press("v");
+    expect(await rada.getAttribute("data-rada")).toBe("vyber");
+    expect(await rada.innerText()).toContain("Shift+klik: přidat");
+    await vejdeSe();
+    // Kliknutí doprostřed prvního dílu mostovky ho vybere.
+    await klikni(2, 0);
+    expect(await rada.getAttribute("data-rada")).toBe("vybranePruty");
+    expect(await rada.innerText()).toContain("číslice: jiný prvek pro vybrané pruty");
+    await vejdeSe();
+    const panel = stranka.locator('[data-nastaveni="vyber"]');
+    expect(await panel.isVisible()).toBe(true);
+    expect(await udaj("vyber-nadpis")).toMatch(/^VYBRANÝ PRUT \d+$/i);
+    expect(bezMezer(await udaj("vyber-udaje"))).toMatch(/^Dřevěná mostovka\n4,00 m · 10 000 Kč$/);
+    expect(await telo("vyber-metru")).toBe("4.00");
+    // Shift+klik přidá další prut: panel sčítá.
+    const dalsi = await bodSveta(6, 0);
+    await stranka.keyboard.down("Shift");
+    await stranka.mouse.click(dalsi.x, dalsi.y);
+    await stranka.keyboard.up("Shift");
+    expect(await udaj("vyber-nadpis")).toMatch(/^VYBRÁNO 2 PRUTŮ$/i);
+    expect(bezMezer(await udaj("vyber-udaje"))).toMatch(/^Dřevěná mostovka\n8,0 m · 20 000 Kč$/);
+    await stranka.screenshot({ path: `${SLOZKA}/k12-vybrane-pruty.png` });
+    await stranka.keyboard.press("Escape");
+    expect(await panel.isVisible()).toBe(false);
+    // Po zkoušce je u jediného prutu i jeho největší využití.
+    await pust();
+    await dopocitej();
+    await naKonec();
+    await akce("upravit").click();
+    await stranka.keyboard.press("v");
+    await klikni(2, 0);
+    expect(bezMezer(await udaj("vyber-udaje"))).toMatch(/v poslední zkoušce nejvýš \d+ % \(.+\)$/);
+    await stranka.keyboard.press("Escape");
+    await stranka.keyboard.press("1");
+    expect(await rada.getAttribute("data-rada")).toBe("kresleni");
+  });
+
+  it("nástroje jsou v paletě nad prvky a na výšce 900 px se vejdou i s prvky a pokusy", async () => {
+    const s = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+    try {
+      await s.goto(`${adresa}?uroven=4-04&vyvoj=1`);
+      await s.locator(PLATNO).waitFor();
+      await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      const dno = async (volic: string): Promise<number> => {
+        const o = (await s.locator(volic).first().boundingBox())!;
+        return o.y + o.height;
+      };
+      // Nástroje jsou hned pod Zadáním a Nápovědou, nad prvky.
+      expect(await dno('[data-akce="vyber"]')).toBeLessThan((await s.locator(".paleta__prvky button").first().boundingBox())!.y);
+      expect(await s.locator('[data-akce="vyber"]').innerText()).toMatch(/Výběr$/);
+      // Všechno, čím se staví a zkouší, je vidět bez posouvání palety.
+      for (const volic of ['[data-akce="znovu"]', ".paleta__prvky button:last-child", '[data-akce="dopnout"]', '[data-akce="zlom"]']) {
+        expect(await dno(volic), volic).toBeLessThanOrEqual(900);
+      }
+      // Výňatek ze zadání je krátký a celé zadání je na jedno kliknutí.
+      const vynatek = (await s.locator('[data-udaj="zadani"]').boundingBox())!;
+      expect(vynatek.height).toBeLessThan(100);
+      await s.locator('[data-akce="zadani-cele"]').click();
+      await s.locator("#okno-zadani").waitFor({ state: "visible" });
+      await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      // Název úrovně v liště není oříznutý.
+      const nazev = s.locator('[data-udaj="uroven"]');
+      expect(await nazev.evaluate((u) => u.scrollWidth <= u.clientWidth)).toBe(true);
+      expect(await nazev.getAttribute("title")).toContain("Náklad století");
+      await s.screenshot({ path: `${SLOZKA}/k13-paleta-900.png` });
+    } finally {
+      await s.close();
+    }
+  });
+
+  it("most s povolenými lany má při stavbě značku s průvěsem; dopnutý ji nemá", async () => {
+    await otevri("4-04");
+    const visuty = RESENI["4-04"]!.pruchod;
+    await nactiMostBezOsy(visuty);
+    await expect.poll(() => udaj("frekvence-popis").catch(() => "hotovo"), { timeout: 20_000 }).not.toBe("počítá se…");
+    await stranka.waitForTimeout(600);
+    expect(await telo("pruves")).toBeNull();
+    const povoleny: NavrhMostu = { ...visuty, pruty: visuty.pruty.map(({ predpeti: _predpeti, ...p }) => p) };
+    await nactiMostBezOsy(povoleny);
+    await expect.poll(() => telo("pruves"), { timeout: 30_000 }).not.toBeNull();
+    expect(Number(await telo("pruves"))).toBeGreaterThan(100);
+    await stranka.screenshot({ path: `${SLOZKA}/k14-pruves.png` });
+  });
+
+  it("za celou dobu nenastala žádná chyba ve stránce", () => {
+    expect(chyby).toEqual([]);
+  });
+});
