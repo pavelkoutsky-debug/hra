@@ -400,8 +400,9 @@ interface Dvojkoli {
 
 /**
  * Uložení koleje pod jedním dvojkolím: kolejnice na podložkách a dřevěných mostnicích.
- * Tuhost koleje pod kolem bývá 30 až 80 MN/m, pod dvojkolím tedy kolem 120 MN/m; dvojkolí
- * na ní poskakuje kolem 40 Hz.
+ * Tuhost koleje pod kolem bývá 30 až 80 MN/m (měkčí konec toho, co se na tratích měří), pod
+ * dvojkolím tedy kolem 120 MN/m; dvojkolí vozu na ní poskakuje kolem 46 Hz, těžší dvojkolí
+ * lokomotivy kolem 30 Hz.
  */
 const ULOZENI_KOLEJE = { tuhost: 120e6, tlumeni: 60e3 };
 /** Výška rámu podvozku nad osou dvojkolí a skříně nad rámem (nebo nad osou), m. */
@@ -447,8 +448,9 @@ function kolejoveVozidlo(delka: number, polomer: number, teziste: number, dvojko
  * Čtyřnápravová elektrická lokomotiva: 88 t (4 × 22 t), délka přes nárazníky 16,8 m, dva
  * podvozky s rozvorem 2,8 m, otočné čepy 8,3 m od sebe, kola průměru 1 250 mm. Dvojkolí
  * s převodovkou a částí motoru váží 3,5 t, rám podvozku s motory 11 t (5,5 t na dvojkolí),
- * skříň 52 t. Skříň se na druhotném vypružení houpe kolem 1,6 Hz; prvotní vypružení má
- * tuhost kolem 4 MN/m na dvojkolí, takže vše nad dvojkolím by na něm samotném kmitalo 2,4 Hz.
+ * skříň 52 t. Druhotné vypružení samo by skříň houpalo na 1,6 Hz a prvotní (kolem 4 MN/m na
+ * dvojkolí) vše nad dvojkolím na 2,4 Hz; obě pružiny za sebou dávají celému vozidlu vlastní
+ * frekvence 1,4 Hz (houpání skříně) a 5,1 Hz (rám podvozku).
  */
 function lokomotiva(): ModelUcastnika {
   return kolejoveVozidlo(
@@ -471,7 +473,8 @@ function lokomotiva(): ModelUcastnika {
 /**
  * Čtyřnápravový otevřený nákladní vůz: délka přes nárazníky 14,04 m, dva podvozky s rozvorem
  * 1,8 m, otočné čepy 9 m od sebe, kola průměru 920 mm, dvojkolí 1,5 t. Podvozek má jen
- * prvotní vypružení s třecím tlumením. Ložený vůz (90 t, 22,5 t na nápravu) na něm sedí
+ * prvotní vypružení s třecím tlumením. Rozměry má vůz řady Eas; hmotnost 90 t odpovídá
+ * traťové třídě D (22,5 t na nápravu, 6,4 t na metr). Ložený vůz na něm sedí
  * o 35 mm a houpe se kolem 2,6 Hz; prázdný (22 t) sedí jen na vnějších pružinách, které se
  * stlačí o centimetr, a houpe se kolem 5 Hz.
  */
@@ -489,9 +492,9 @@ function nakladniVuz(hmotnost: number, frekvence: number, teziste: number): Mode
 /**
  * Osobní vůz s cestujícími: 45 t (4 × 11,25 t), délka přes nárazníky 26,4 m, dva podvozky
  * s rozvorem 2,5 m, otočné čepy 19 m od sebe, kola průměru 920 mm. Dvojkolí 1,5 t, rám
- * podvozku 2,6 t (1,3 t na dvojkolí), skříň 34 t. Skříň se na měkkém druhotném vypružení
- * houpe kolem 1,1 Hz; prvotní vypružení má tuhost 2,4 MN/m na dvojkolí, takže vše nad
- * dvojkolím by na něm samotném kmitalo 2,5 Hz (rám podvozku mezi oběma pružinami kolem 7 Hz).
+ * podvozku 2,6 t (1,3 t na dvojkolí), skříň 34 t. Měkké druhotné vypružení samo by skříň
+ * houpalo na 1,1 Hz a prvotní (2,4 MN/m na dvojkolí) vše nad dvojkolím na 2,5 Hz; dohromady
+ * se skříň houpe kolem 1,0 Hz a rám podvozku mezi oběma pružinami kmitá kolem 7 Hz.
  */
 function osobniVuz(): ModelUcastnika {
   return kolejoveVozidlo(

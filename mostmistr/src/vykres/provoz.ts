@@ -3,7 +3,7 @@
 // Polohy bere ze snímku záznamu (styčníky kol a karoserie), krok chodce z času děje.
 
 import type { Bod } from "../data/geometrie";
-import { CEKA, PREJEL, type PopisUcastnika } from "../zkouska/provoz";
+import { CEKA, type PopisUcastnika } from "../zkouska/provoz";
 import { KADENCE_BEHU } from "../zkouska/vozidla";
 import type { Snimek } from "../zkouska/zaznam";
 import { BARVY } from "./barvy";
@@ -34,7 +34,9 @@ export function nakresliProvoz(
 
   ucastnici.forEach((u, poradi) => {
     const stav = snimek.provoz[poradi];
-    if (stav === undefined || stav === CEKA || stav === PREJEL) return;
+    // Kdo most přejel, jede dál po předmostí a je vidět, dokud nevyjede z obrazu: vlak se tak
+    // za mostem nerozpadá na vozy, které po jednom mizí.
+    if (stav === undefined || stav === CEKA) return;
     const kola = u.kola.map(bod);
     if (kola.some((k) => k === null)) return;
     const naObraz = (b: Bod): Bod => svetNaObraz(kamera, rozmer, b);
@@ -285,6 +287,9 @@ function nakresliVuz(
   for (const k of kola) kolo(ctx, k, r);
 }
 
+/** Výplň skříní kolejových vozidel: barva pozadí, přes kterou prosvítá konstrukce za vozem. */
+const PRUSVITNA_SKRIN = "rgba(16, 63, 120, 0.5)";
+
 /**
  * Kolejové vozidlo. Rozměry jsou v metrech vůči prvnímu dvojkolí (dopředu kladně) a vůči
  * spojnici styčníků skříně, která leží 0,9 m nad osami kol; odpovídají modelům ve `vozidla.ts`.
@@ -300,6 +305,10 @@ function nakresliKolejoveVozidlo(
 ): void {
   const predni = karoserie[0]!;
   const p = ramVozu(predni, predni, karoserie[karoserie.length - 1]!, m);
+  // Skříně jsou poloprůhledné: vlak je delší než most a jinak by po celou dobu průjezdu
+  // zakrýval příhradu, kterou hráč postavil nad kolejí.
+  ctx.save();
+  ctx.fillStyle = PRUSVITNA_SKRIN;
   // Podvozky: rám mezi dvojkolími, o kus nad osami kol.
   for (let i = 0; i + 1 < kola.length; i += 2) {
     const a = kola[i]!;
@@ -316,10 +325,10 @@ function nakresliKolejoveVozidlo(
       [p(2.6, -0.2), p(2.85, -0.2)],
       [p(-13.7, -0.2), p(-13.95, -0.2)],
       [p(0.6, 0.4), p(-11.7, 0.4)],
-      // Sběrač: dvě ramena do kolena a lišta.
-      [p(-3.4, 2.25), p(-2.2, 2.95)],
-      [p(-2.2, 2.95), p(-3.4, 3.65)],
-      [p(-3.9, 3.65), p(-2.9, 3.65)],
+      // Sběrač stažený na střechu: trolej se na výkresu nekreslí a zdvižený by trčel do příhrady.
+      [p(-3.5, 2.25), p(-2.3, 2.42)],
+      [p(-2.3, 2.42), p(-3.5, 2.58)],
+      [p(-4, 2.58), p(-3, 2.58)],
     ];
     for (let x = -0.4; x > -11; x -= 1.3) zebra.push([p(x, 1.1), p(x, 1.9)]);
     cary(ctx, zebra);
@@ -352,6 +361,7 @@ function nakresliKolejoveVozidlo(
       ctx.stroke();
     }
   }
+  ctx.restore();
   for (const k of kola) kolo(ctx, k, r);
 }
 

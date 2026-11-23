@@ -1,5 +1,5 @@
 {
-  "verzeFyziky": 6,
+  "verzeFyziky": 7,
   "otisky": {
     "tram-kloubovy": "c839819f7f635d87",
     "tram-svareny": "2beec9f4193c6f04",
@@ -20,6 +20,7 @@
     "pretizeni-drevo": "506a997d5338f14f",
     "pretizeni-ocel": "ad1ee84d7ba0cb53",
     "pretizeni-zaveseny": "fad2bcd7836d48e3",
-    "dlouhy-most": "d7003dfa086abc6c"
+    "dlouhy-most": "d7003dfa086abc6c",
+    "vlak-brzdi-na-stycich": "a145e73b90175409"
   }
 }

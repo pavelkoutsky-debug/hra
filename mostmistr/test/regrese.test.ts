@@ -14,7 +14,9 @@ import {
   Otisk,
   pripravScenar,
   SCENARE,
+  SCENARE_ZKOUSEK,
   spustScenar,
+  spustScenarZkousky,
   urovenRegrese,
   type Scenar,
   type ZadaniScenare,
@@ -44,13 +46,24 @@ describe("otisky referenčních mostů", () => {
     }, 60_000);
   }
 
+  for (const scenar of SCENARE_ZKOUSEK) {
+    it(`${scenar.id}: otisk celé zkoušky se nezměnil`, () => {
+      const vysledek = spustScenarZkousky(scenar);
+      expect(vysledek.rozpadla).toBe(false);
+      expect(vysledek.poruseni).toBe(0);
+      expect(vysledek.kroku).toBeGreaterThan(1000);
+      nove[scenar.id] = vysledek.otisk;
+      if (!ZAPIS) expect(vysledek.otisk, "změnil se výsledek výpočtu: viz hlavička tohoto souboru").toBe(otisky[scenar.id]);
+    }, 120_000);
+  }
+
   it("uložené otisky patří k aktuální verzi fyziky a ke všem scénářům", () => {
     if (ZAPIS) {
       writeFileSync(SOUBOR, `${JSON.stringify({ verzeFyziky: VERZE_FYZIKY, otisky: nove }, null, 2)}\n`);
       return;
     }
     expect(ulozene.verzeFyziky).toBe(VERZE_FYZIKY);
-    expect(Object.keys(otisky).sort()).toEqual(SCENARE.map((s) => s.id).sort());
+    expect(Object.keys(otisky).sort()).toEqual([...SCENARE, ...SCENARE_ZKOUSEK].map((s) => s.id).sort());
   });
 });
 

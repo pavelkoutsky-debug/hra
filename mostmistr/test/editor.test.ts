@@ -275,6 +275,31 @@ describe("editor", () => {
     expect(e.zrcadli()).toBe(false);
   });
 
+  it("zrcadlení spojí pás dotažený k ose s jeho obrazem v jeden prut; kde do styčníku vede ještě něco, nechá ho být", () => {
+    const { e, tahni } = novy();
+    tahni([0, 0], [4, 0]);
+    e.zvolPrvek("drevo-lehke");
+    tahni([0, 0], [2, 2]);
+    tahni([2, 2], [4, 2]);
+    expect(e.zrcadli()).toBe(true);
+    const bod = (id: number): [number, number] => {
+      const st = e.navrh.stycniky.find((x) => x.id === id)!;
+      return [st.x, st.y];
+    };
+    const konce = e.navrh.pruty.map((p) => [bod(p.a), bod(p.b)].sort((p1, p2) => p1[0] - p2[0] || p1[1] - p2[1]));
+    // Horní pás je jeden prut od (2, 2) do (6, 2); styčník na ose zmizel a s ním i kloub.
+    expect(konce).toContainEqual([[2, 2], [6, 2]]);
+    expect(e.navrh.stycniky.some((st) => st.x === 4 && st.y === 2)).toBe(false);
+    // Mostovka se nespojila: čtyřmetrová pole jsou nejdelší, jaká jdou, a osmimetrové by pravidla nepustila.
+    expect(konce).toContainEqual([[0, 0], [4, 0]]);
+    expect(konce).toContainEqual([[4, 0], [8, 0]]);
+    expect(e.navrh.pruty).toHaveLength(5);
+    expect(zkontrolujNavrh(e.navrh, uroven)).toEqual([]);
+    // Krok zpět vrátí stav před zrcadlením celý.
+    e.zpet();
+    expect(e.navrh.pruty).toHaveLength(3);
+  });
+
   it("hlásí každou změnu, kterou je potřeba překreslit nebo uložit", () => {
     const { e, zmen, tahni } = novy();
     tahni([0, 0], [4, 0]);

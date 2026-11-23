@@ -15,7 +15,7 @@ import {
   zkraceniLana,
   type IdPrvku,
 } from "../data/katalog";
-import type { DruhProblemu, NavrhMostu, TlumicStycniku } from "../data/navrh";
+import { zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type TlumicStycniku } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPrutu, lzeZacit } from "./pravidla";
 import {
@@ -28,6 +28,7 @@ import {
   nastavZdvih,
   posunStycnik,
   pridejPrut,
+  spojNaOse,
   prutMezi,
   smaz,
   stycnikV,
@@ -800,6 +801,16 @@ export class Editor {
       if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
       // Laděný tlumič v ose mostu má obraz sám v sobě; jinde ho obraz dostane, pokud žádný nemá.
       if (tlumic) postupny = nastavLadenyTlumic(postupny, new Set([obraz.id]), (dosavadni) => dosavadni ?? tlumic);
+    }
+    // Pás dotažený k ose a jeho obraz se spojí v jeden prut, pokud to pravidla úrovně dovolí.
+    const pridane = new Set(postupny.pruty.filter((p) => !stare.has(p.id)).map((p) => p.id));
+    const spojeny = spojNaOse(postupny, osa, pridane, [...this.uroven.kotvy, ...this.uroven.zaklady]);
+    if (spojeny !== postupny) {
+      const drive = new Set(zkontrolujNavrh(postupny, this.uroven).map((p) => `${p.druh}:${p.stycnik ?? ""}:${p.prut ?? ""}`));
+      const horsi = zkontrolujNavrh(spojeny, this.uroven).some(
+        (p) => p.druh !== "nad-rozpocet" && !drive.has(`${p.druh}:${p.stycnik ?? ""}:${p.prut ?? ""}`),
+      );
+      if (!horsi) postupny = spojeny;
     }
     this.posledniDuvod = duvod;
     if (!this.#zmen(postupny, "zrcadleni")) {

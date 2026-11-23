@@ -3,7 +3,7 @@ import { vyskaTerenu, type Kotva, type Trasa, type TypKotvy, type Uroven } from 
 import { delka, vyskovaKota } from "../ui/formaty";
 import { t } from "../ui/slovnik";
 import { BARVY, PISMO, cara } from "./barvy";
-import { nakresliPrazce } from "./kolej";
+import { nakresliPrazcePredmosti } from "./kolej";
 import { svetNaObraz, viditelnaOblast, type Kamera, type Rozmer } from "./kamera";
 import { nakresliLod, nakresliPlavebniProfil, viditelnostLodi } from "./pohyb";
 import { krokyRastru, roztecSrafovani } from "./rastr";
@@ -367,9 +367,9 @@ function nakresliTrasu(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {
   ctx.lineCap = "butt";
   ctx.stroke();
   if (trasa.druh === "kolej" && m >= 4) {
-    // Pražce jen v té části předmostí, která je vidět.
-    nakresliPrazce(ctx, { x: Math.max(levyKraj.x, -tloustka), y: zacatek.y }, zacatek, m, tloustka);
-    nakresliPrazce(ctx, konec, { x: Math.min(pravyKraj.x, s.rozmer.sirka + tloustka), y: konec.y }, m, tloustka);
+    // Pražce se měří od konce trasy, takže při posunu pohledu stojí na místě.
+    nakresliPrazcePredmosti(ctx, zacatek, -1, s.rozmer.sirka, m, tloustka);
+    nakresliPrazcePredmosti(ctx, konec, 1, s.rozmer.sirka, m, tloustka);
   }
 
   // Niveleta: kudy má vést mostovka, kterou hráč postaví.
@@ -381,6 +381,15 @@ function nakresliTrasu(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // Kde je tras víc (most o dvou patrech), říká popisek u levého konce, která je která.
+  if (s.uroven.trasy.length > 1 && !s.nahled && m >= 6) {
+    ctx.font = `11px ${PISMO}`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = BARVY.popisek;
+    ctx.fillText(t(`vykres.trasa.${trasa.druh}`), zacatek.x + 8, zacatek.y - tloustka / 2 - 3);
+  }
 }
 
 function nakresliOsu(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {

@@ -181,8 +181,10 @@ export interface VysledekZkousky {
   /** Lodě: kolik jich mělo proplout, kolik proplulo a kolik narazilo do mostu. */
   lode: { celkem: number; proplulo: number; narazilo: number };
   /**
-   * Pohodlí cestujících: největší svislé zrychlení karoserie autobusu, dokud jel po mostě
-   * (stejné měření a třídy jako u chodců). Null, když přes most žádný autobus nejel.
+   * Pohodlí cestujících: největší svislé zrychlení karoserie autobusu nebo skříně osobního
+   * vozu po dobu, kdy sám jel po mostě (stejné měření a třídy jako u chodců). Počítají se jen
+   * vozidla, která most přejela celý; nula s časem nula znamená, že žádné takové nebylo.
+   * Null, když v úrovni autobus ani osobní vůz nejede.
    */
   komfortCestujicich: KomfortZkousky | null;
   /** Cena mostu v korunách. */

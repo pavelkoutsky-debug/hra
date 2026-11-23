@@ -918,7 +918,10 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   display: flex;
   gap: 6px;
   min-width: 0;
-  overflow: hidden;
+  /* Dlouhý jízdní řád (vlak s vozy a auta) se do úzkého okna nevejde: dá se posunout. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .osa .lista__skupina {

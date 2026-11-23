@@ -162,14 +162,19 @@ describe("ukázky v okně se zadáním", () => {
     "5-02",
     "5-03",
     "5-04",
+    "6-01",
+    "6-02",
+    "6-03",
+    "6-04",
   ]) {
-    it(`ukázka úrovně ${id} se spočítá a přehrává: vlevo most neobstojí, vpravo ano`, async () => {
+    it(`ukázka úrovně ${id} se spočítá a přehrává: vlevo most neobstojí (v 6-02 jen houpe), vpravo ano`, async () => {
       await stranka.goto(`${adresa}?uroven=${id}`);
       await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
       const ukazka = stranka.locator('[data-udaj="ukazka"]');
       expect(await ukazka.isVisible()).toBe(true);
       await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 150_000 });
-      expect(await ukazka.locator('[data-strana="a"]').getAttribute("data-pruchod")).toBe("false");
+      // Ukázka 6-02 je o pohodlí cestujících: oba mosty vlak unesou a liší se jen houpáním.
+      expect(await ukazka.locator('[data-strana="a"]').getAttribute("data-pruchod")).toBe(id === "6-02" ? "true" : "false");
       expect(await ukazka.locator('[data-strana="b"]').getAttribute("data-pruchod")).toBe("true");
       for (const strana of ["a", "b"]) {
         expect(await ukazka.locator(`[data-strana="${strana}"] [data-stav]`).innerText()).not.toContain("nepodařilo");
