@@ -20,14 +20,14 @@ Poslední aktualizace: 23. 11. 2026
 | M6 Pohyblivé mosty | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M7 Režimy | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M8 Doladění | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
-| M9 Zvuk načisto (ElevenLabs) | Až po dokončení všech ostatních milníků |
+| M9 Zvuk načisto (ElevenLabs) | **Nedělá se.** Zadavatel 23. 11. 2026 rozhodl nechat zvuky, jak jsou (ze syntezátoru) |
 
 ## Kde práce stojí (23. 11. 2026)
 
 - **M5** a **M6** jsou sloučené do `main` (pull requesty 13 a 14).
 - **M7 Režimy** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M7 — výsledek“ a „Nezávislé recenze M7“).
 - **M8 Doladění** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M8 — výsledek“ a „Nezávislé recenze M8“).
-- Zbývá **M9** (zvuky načisto pomocí ElevenLabs). Ten jediný čeká na zadavatele: zvuky si má poslechnout a schválit.
+- **M9** (zvuky načisto pomocí ElevenLabs) se nedělá: zadavatel 23. 11. 2026 rozhodl nechat zvuky ze syntezátoru, jak jsou. **Plán milníků z koncepce je tím hotový.**
 
 ## M8 — výsledek
 
@@ -67,7 +67,7 @@ Doladění: angličtina, dotykové ovládání a telefon, plynulost přehráván
 - Zkouška do zlomu čeká se zátěží, dokud se otevírá plastický kloub: ocelobetonové pole 6 m dává 451,6 až 451,7 kN/m při zatěžování 4× až 64× rychlejším i pomalejším (ručně 451,8). Zkoušku ukončují hodiny zátěže, ne čas děje.
 - Referenční mosty, mosty, které mají spadnout, i ukázky dopadají v běžných zkouškách stejně (vyhratelnost beze změny); změnily se únosnosti při zkoušce do zlomu (`npm run vyzvy`).
 
-**Ověření:** 1 083 testů jednotek a 221 testů v prohlížeči (Chromium), obojí po zapracování recenzí. Firefox a Safari se dál nezkoušely; skutečný telefon taky ne (jen emulace mobilního zobrazení v Chromiu).
+**Ověření:** 1 082 testů jednotek a 221 testů v prohlížeči (Chromium), obojí po zapracování recenzí. Firefox a Safari se dál nezkoušely; skutečný telefon taky ne (jen emulace mobilního zobrazení v Chromiu).
 
 ### Nezávislé recenze M8 (23. 11. 2026)
 
@@ -950,7 +950,12 @@ Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadav
 
 ## Další krok
 
-M9: zvuky načisto pomocí ElevenLabs. Připravím ukázky zvuků k poslechu a zadavatel vybere; do té doby zůstávají pracovní zvuky ze syntezátoru.
+Plán milníků je hotový (M0 až M8; M9 se na přání zadavatele nedělá). Další práce už není naplánovaná; co zůstává otevřené, kdyby se ve vývoji pokračovalo:
+
+- **Neověřeno:** bitová shoda výpočtu ve Firefoxu a Safari (stránka `/otisky.html` je připravená, v kontejneru je jen Chromium) a hra na skutečném telefonu a tabletu (zkoušela se jen emulace).
+- **Čeká na zadavatele:** heslo správce v Netlify pro stránku zpětné vazby a deníku hraní (viz „M4c — výsledek“).
+- **Data od hráčů:** ladění obtížnosti podle deníku hraní, až nějaká data budou.
+- **Vědomě nezapracované body recenzí** jsou u každého milníku v oddílu „Nezávislé recenze“ (u M8 například posudek tlačeného tvárného prutu a rezervy mostů 6-03).
 
 ## Zpětná vazba zadavatele
 
@@ -969,6 +974,8 @@ M9: zvuky načisto pomocí ElevenLabs. Připravím ukázky zvuků k poslechu a z
 - 22. 11. 2026, k náhledu M3z: „Nechme tyhle zvuky zatím jako pracovní“ a **zvuky se budou ještě předělávat pomocí ElevenLabs, ale až po dokončení ostatních fází projektu**. Zapsáno jako milník M9 v koncepci. Pozn.: v dialogu s otázkou nešly odkazy zkopírovat ani otevřít; odkazy na náhled proto vždy posílat přímo do textu odpovědi.
 
 - 22. 11. 2026: zadavatel rozhodl **M3z sloučit a pokračovat na M3b**; pracovní zvuky mají být ve výchozím stavu **zapnuté potichu**.
+
+- 23. 11. 2026, po sloučení M8: na otázku, jak pojmout M9 (ukázka šesti zvuků, celá sada, dvě varianty ke každému, nebo nic), zadavatel zvolil **„Zvuky nechat, jak jsou“**. M9 se nedělá a zvuky ze syntezátoru jsou konečné. Přes ElevenLabs se nic nevygenerovalo (jen odhad ceny: asi 55 kreditů za zvuk).
 
 - 22. 11. 2026: zadavatel rozhodl **M3b sloučit a jít na M4a**. Hned potom na tabletu našel chybu: **v úrovni 5-04 se neukázala ukázka** („ukázku se nepodařilo spočítat“). Opraveno, viz „Oprava po M3b“; zadavatel opravu nechal sloučit hned.
 
