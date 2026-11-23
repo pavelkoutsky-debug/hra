@@ -89,6 +89,8 @@ const OKRAJ_VYKRESU = 28;
 const KROK_ZOOMU_TLACITKEM = 1.25;
 /** Jak daleko od prutu se při zkoušce ještě počítá kliknutí na něj, v pixelech. */
 const DOSAH_KLIKNUTI = 9;
+/** Jak blízko značce na časové ose musí ukazatel být, aby se ukázal její popis (pixely). */
+const DOSAH_ZNACKY_OSY = 7;
 /** Kolik porušení výsledek vypíše jmenovitě; zbytek shrne počtem. */
 const NEJVIC_VYPSANYCH_PORUSENI = 5;
 /** Po jaké době zmizí hlášení, které na nic nečeká, v milisekundách. */
@@ -239,6 +241,7 @@ export function spustUroven(
   const tahlo = prvek("#cas", HTMLInputElement);
   const pruhSpocitano = prvek("#obrazovka-uroven .osa__spocitano", HTMLElement);
   const znackyOsy = prvek("#obrazovka-uroven .osa__znacky", HTMLElement);
+  const bublinaOsy = prvek("#obrazovka-uroven .osa__bublina", HTMLElement);
   const panelVysledku = prvek(".vysledek", HTMLElement);
   const paletaPrvku = prvek(".paleta__prvky", HTMLElement);
   const rozpocet = prvek(".rozpocet", HTMLElement);
@@ -2053,27 +2056,105 @@ export function spustUroven(
     platno.prekresli();
   }
 
+  /** Co značky na časové ose znamenají: čas a popis pro bublinu nad osou. */
+  let popisyZnacek: { cas: number; popis: string }[] = [];
+
+  /** Účastník provozu jedním slovem („chodec“, „nákladní vůz“). */
+  function nazevProvozu(druh: string): string {
+    const klic = `provoz.${druh}`;
+    return jeKlicTextu(klic) ? t(klic) : t("provoz.jiny");
+  }
+
   /** Značky na časové ose: výjezdy účastníků, porušení prutů a pády. */
   function obnovZnacky(): void {
+    popisyZnacek = [];
+    bublinaOsy.hidden = true;
     if (!beh) {
       znackyOsy.replaceChildren();
       return;
     }
-    const delka = delkaDeje(beh);
-    const znacka = (cas: number, druh: string): HTMLElement => {
+    const b = beh;
+    const delka = delkaDeje(b);
+    const znacka = (cas: number, druh: string, popis: string): HTMLElement => {
       const uzel = document.createElement("span");
       uzel.className = `osa__znacka osa__znacka--${druh}`;
       uzel.style.left = `${(100 * Math.min(1, Math.max(0, cas / delka))).toFixed(2)}%`;
+      popisyZnacek.push({ cas, popis });
       return uzel;
     };
     if (!(delka > 0)) return;
+    // Skupina, která vyjíždí naráz (řady útvaru), má jednu značku s počtem.
+    const vyjezdy = new Map<string, { cas: number; druh: string; pocet: number }>();
+    for (const u of b.ucastnici) {
+      const klic = `${u.start}|${u.druh}`;
+      const zaznam = vyjezdy.get(klic);
+      if (zaznam) zaznam.pocet += u.lidi ?? 1;
+      else vyjezdy.set(klic, { cas: u.start, druh: u.druh, pocet: u.lidi ?? 1 });
+    }
+    const popisUdalosti = (u: Udalost): string => {
+      switch (u.druh) {
+        case "poruseni":
+          return t("osa.znacka.poruseni", { prut: u.prut + 1 });
+        case "sjeti":
+          return t("osa.znacka.sjeti");
+        case "pad": {
+          const kdo = b.ucastnici.find((ucastnik) => ucastnik.polozka === u.polozka && ucastnik.clen === u.clen);
+          return t("osa.znacka.pad", { kdo: nazevProvozu(kdo?.druh ?? "") });
+        }
+        case "pohyb":
+          return t(`osa.znacka.pohyb.${u.faze}`);
+        case "lod":
+          return t(u.stav === "narazila" ? "osa.znacka.lodNarazila" : "osa.znacka.lodProplula");
+        default:
+          return "";
+      }
+    };
     znackyOsy.replaceChildren(
-      ...beh.ucastnici.map((u) => znacka(u.start, "vyjezd")),
-      ...beh.udalosti
+      ...[...vyjezdy.values()].map((v) =>
+        znacka(
+          v.cas,
+          "vyjezd",
+          t("osa.znacka.vyjezd", { kdo: v.pocet > 1 ? t("rad.vice", { pocet: v.pocet, kdo: nazevProvozu(v.druh) }) : nazevProvozu(v.druh) }),
+        ),
+      ),
+      ...b.udalosti
         .filter((u) => u.druh !== "prujezd")
         // Zvedání mostu a proplutí lodi jsou běžný děj; červená patří jen nárazu lodi.
-        .map((u) => znacka(u.cas, u.druh === "lod" ? (u.stav === "narazila" ? "naraz" : "lod") : u.druh)),
+        .map((u) => znacka(u.cas, u.druh === "lod" ? (u.stav === "narazila" ? "naraz" : "lod") : u.druh, popisUdalosti(u))),
     );
+  }
+
+  /**
+   * Bublina nad časovou osou: ukazatel poblíž značky řekne, co značka znamená. Značky samy
+   * kliknutí nechytají (ležely by na táhle), proto se hledá nejbližší podle místa ukazatele.
+   */
+  function ukazBublinuOsy(udalost: PointerEvent): void {
+    const draha = tahlo.getBoundingClientRect();
+    const delka = beh ? delkaDeje(beh) : 0;
+    if (!beh || !(delka > 0) || draha.width <= 0) {
+      bublinaOsy.hidden = true;
+      return;
+    }
+    let nejblizsi: { cas: number; popis: string } | null = null;
+    let nejmensi = DOSAH_ZNACKY_OSY;
+    for (const z of popisyZnacek) {
+      const vzdalenost = Math.abs(draha.left + (draha.width * Math.min(1, Math.max(0, z.cas / delka))) - udalost.clientX);
+      if (vzdalenost <= nejmensi) {
+        nejmensi = vzdalenost;
+        nejblizsi = z;
+      }
+    }
+    if (!nejblizsi) {
+      bublinaOsy.hidden = true;
+      return;
+    }
+    // Víc značek ve stejném okamžiku (řetěz porušení) se vypíše pod sebe, nejvýš čtyři.
+    const stejne = popisyZnacek.filter((z) => Math.abs(z.cas - nejblizsi!.cas) < 0.05);
+    const radky = stejne.slice(0, 4).map((z) => `${zapisCasu(z.cas)} · ${z.popis}`);
+    if (stejne.length > 4) radky.push(t("vysledek.poruseni.dalsi", { pocet: stejne.length - 4 }));
+    bublinaOsy.textContent = radky.join("\n");
+    bublinaOsy.style.left = `${(100 * Math.min(1, Math.max(0, nejblizsi.cas / delka))).toFixed(2)}%`;
+    bublinaOsy.hidden = false;
   }
 
   function prepniPrehravani(): void {
@@ -3027,6 +3108,15 @@ export function spustUroven(
     });
   }
   tahlo.addEventListener("input", () => skocNa(Number(tahlo.value)));
+  // Popis značek: u myši pod ukazatelem, u prstu při tažení táhla.
+  tahlo.addEventListener("pointermove", ukazBublinuOsy);
+  tahlo.addEventListener("pointerdown", ukazBublinuOsy);
+  for (const konec of ["pointerleave", "pointerup", "pointercancel"] as const) {
+    tahlo.addEventListener(konec, (udalost) => {
+      // Prst po zvednutí nad osou nezůstává; myš ano a bublina s ní.
+      if (konec !== "pointerup" || udalost.pointerType !== "mouse") bublinaOsy.hidden = true;
+    });
+  }
 
   // Po kliknutí myší na tlačítko se pozornost vrací na výkres, aby mezerník dál pouštěl
   // zkoušku a nemačkal znovu poslední tlačítko.

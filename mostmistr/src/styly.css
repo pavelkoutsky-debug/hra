@@ -449,6 +449,22 @@ a.tlacitko {
   background: #ff4d3d;
 }
 
+/* Popis značky, ke které je ukazatel nejblíž: stojí nad osou u té značky. */
+.osa__bublina {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 3;
+  transform: translateX(-50%);
+  max-width: min(320px, 80vw);
+  padding: 3px 8px;
+  background: var(--lista);
+  border: 1px solid var(--cara);
+  color: var(--cara-silna);
+  font-size: 11px;
+  white-space: pre;
+  pointer-events: none;
+}
+
 .poruseni {
   margin: 0;
   padding: 0;
