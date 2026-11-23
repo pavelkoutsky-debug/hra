@@ -106,20 +106,36 @@ describe("píst", () => {
     expect(sim.rozpadla).toBe(false);
   });
 
-  it("slabý píst těžké křídlo nezvedne: přetlakový ventil ho zastaví a křídlo zůstane dole", () => {
-    // K držení je potřeba asi 53 kN; píst na 60 kN křídlo udrží, ale při zvedání rameno síly
-    // klesá a tíha na volném konci ne, takže ho nezvedne celé.
-    const { sim, s, pisty } = spust(60_000);
+  it("slabý píst těžké křídlo nezvedne: přetlakový ventil ho zastaví tam, kde mu síla přestane stačit", () => {
+    // K držení dole je potřeba 52,9 kN (tuhé křídlo; s průhybem o něco víc). Při zvedání klesá
+    // rameno pístu rychleji než moment tíhy, takže potřebná síla roste až k 55,7 kN kolem 20°;
+    // píst na 54,5 kN křídlo nadzvedne o pár stupňů a zastaví se.
+    const { sim, s, pisty } = spust(54_500);
     const klid = s.y[2]!;
     pisty.vysunout = true;
-    while (sim.cas < 10) sim.krok();
+    while (sim.cas < 12) sim.krok();
     expect(pistyVCili(s, pisty)).toBe(false);
     expect(pisty.pretizen[0]).toBe(1);
-    expect(s.y[2]!).toBeLessThan(8 * Math.sin(uhelKridla(ZASUNUTY + ZDVIH)) - 0.5);
-    expect(s.y[2]!).toBeGreaterThan(klid - 0.05);
-    // Síla v pístu nepřekročí jeho největší sílu (až na tlumič, který za pohybu přidá málo).
-    expect(-s.osovaSila[2]!).toBeLessThan(1.05 * 60_000);
+    expect(s.y[2]!).toBeGreaterThan(klid + 0.1);
+    expect(s.y[2]!).toBeLessThan(8 * Math.sin((14 * Math.PI) / 180));
+    // Síla v pístu nepřekročí jeho největší sílu ani se škrcením oleje.
+    expect(-s.osovaSila[2]!).toBeLessThan(1.02 * 54_500);
     expect(sim.rozpadla).toBe(false);
+  });
+
+  it("píst na hraně síly křídlo zvedne, ale pomaleji: ventil mu nedovolí jet plnou rychlostí", () => {
+    const { sim, s, pisty } = spust(60_000);
+    pisty.vysunout = true;
+    let nejvic = 0;
+    while (!pistyVCili(s, pisty) && sim.cas < 20) {
+      sim.krok();
+      nejvic = Math.max(nejvic, -s.osovaSila[2]!);
+    }
+    // Plnou rychlostí by zdvih trval 4,8 s.
+    expect(sim.cas).toBeGreaterThan(6);
+    expect(sim.cas).toBeLessThan(12);
+    expect(nejvic).toBeLessThan(1.02 * 60_000);
+    expect(s.klidovaDelka[2]!).toBe(ZASUNUTY + ZDVIH);
   });
 
   it("rozjíždí se a dojíždí plynule: s konečným zrychlením trvá zdvih déle a konec křídla se pak houpe méně", () => {

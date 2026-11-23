@@ -2,7 +2,7 @@
 // rozdělaný tah myší a po zkoušce obálka namáhání.
 
 import type { Bod } from "../data/geometrie";
-import { KATALOG, LADENY_TLUMIC, zkraceniLana, type IdPrvku } from "../data/katalog";
+import { KATALOG, LADENY_TLUMIC, zdvihPistu, zkraceniLana, type IdPrvku } from "../data/katalog";
 import type { NavrhMostu, ProblemNavrhu } from "../data/navrh";
 import type { Tah } from "../editor/editor";
 import { cislo, delka as zapisDelky } from "../ui/formaty";
@@ -10,6 +10,7 @@ import { BARVY, PISMO, cara } from "./barvy";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
 import { nakresliPruzinu, nakresliTlumic, nakresliZavazi } from "./konstrukce";
 import { nakresliPrazce } from "./kolej";
+import { delkaValce, nakresliPist, nakresliZamek } from "./pohyb";
 import { barvaVyuziti } from "./skala";
 
 export interface StavNavrhu {
@@ -78,6 +79,41 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
       const pa = naObraz(a);
       const pb = naObraz(b);
       const tloustka = tloustkaPrutu(p.prvek, m);
+      if (KATALOG[p.prvek].druh === "pist") {
+        if (s.vybranePruty.has(p.id)) {
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.strokeStyle = "rgba(143, 208, 255, 0.55)";
+          ctx.lineWidth = 18;
+          ctx.stroke();
+        }
+        const metry = Math.hypot(b.x - a.x, b.y - a.y);
+        const zdvih = zdvihPistu(p.zdvih, metry);
+        const barva = spatnePruty.has(p.id) ? BARVY.varovani : BARVY.caraSilna;
+        nakresliPist(ctx, pa, pb, m, barva, delkaValce(metry, zdvih) * m);
+        // Zdvih je u pístu vidět vždy: rozhoduje o tom, jak vysoko se most zvedne.
+        ctx.font = `10px ${PISMO}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const text = `${zdvih > 0 ? "+" : zdvih < 0 ? "−" : ""}${cislo(Math.abs(zdvih), 2)} m`;
+        const stred = { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 };
+        const kolmo = { x: -(pb.y - pa.y), y: pb.x - pa.x };
+        const norma = Math.hypot(kolmo.x, kolmo.y) || 1;
+        // Popisek stojí vedle pístu na té straně, která je na obrazovce níž nebo vpravo.
+        const znamenko = kolmo.y > 0 || (kolmo.y === 0 && kolmo.x > 0) ? 1 : -1;
+        const odstup = 22;
+        const x = stred.x + (znamenko * kolmo.x * odstup) / norma;
+        const y = stred.y + (znamenko * kolmo.y * odstup) / norma;
+        const sirka = ctx.measureText(text).width + 8;
+        ctx.fillStyle = "rgba(11, 47, 92, 0.85)";
+        ctx.fillRect(x - sirka / 2, y - 8, sirka, 16);
+        ctx.fillStyle = barva;
+        ctx.fillText(text, x, y);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        return;
+      }
       if (KATALOG[p.prvek].druh === "tlumic") {
         if (s.vybranePruty.has(p.id)) {
           ctx.beginPath();
@@ -227,6 +263,12 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
     ctx.fillStyle = s.vybraneStycniky.has(st.id) ? "#8fd0ff" : BARVY.pozadi;
     ctx.fill();
     ctx.stroke();
+  }
+
+  // Dělicí zámek: kosočtverec kolem styčníku.
+  for (const st of s.navrh.stycniky) {
+    if (!st.zamek) continue;
+    nakresliZamek(ctx, naObraz(st), m, spatneStycniky.has(st.id) ? BARVY.varovani : BARVY.caraSilna, false);
   }
 
   // Místo, odkud lze táhnout nový prut.

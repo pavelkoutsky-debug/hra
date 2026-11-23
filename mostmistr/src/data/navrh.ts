@@ -1,6 +1,6 @@
 import { cenaNavrhu } from "./cena";
 import { jeUvnitr, type Bod, type Obdelnik } from "./geometrie";
-import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, PIST, PREDPETI_LANA, type IdPrvku } from "./katalog";
+import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, PIST, PREDPETI_LANA, zdvihPistu, type IdPrvku } from "./katalog";
 import { ChybaDat, cislo, jedenZ, jenZnameKlice, logicka, polozky, text, objekt, volitelne } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 import { vyskaTerenu, type Uroven } from "./uroven";
@@ -66,7 +66,7 @@ export interface PrutNavrhu {
   tlumeni?: number;
   /**
    * Zdvih pístu v metrech: o kolik se píst při zvedání mostu prodlouží; záporný se zkracuje.
-   * Když chybí, bere se `PIST.vychoziZdvih`.
+   * Když chybí, bere se výchozí (`zdvihPistu`).
    */
   zdvih?: number;
 }
@@ -265,7 +265,7 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (p.predpeti !== undefined && (p.predpeti < PREDPETI_LANA.nejmensi || p.predpeti > PREDPETI_LANA.nejvetsi)) {
       problemy.push({ druh: "predpeti-mimo-rozsah", prut: p.id });
     }
-    if (polozka.druh === "pist" && Math.abs(p.zdvih ?? PIST.vychoziZdvih) > PIST.nejvetsiPodilZdvihu * delka + 1e-9) {
+    if (polozka.druh === "pist" && Math.abs(zdvihPistu(p.zdvih, delka)) > PIST.nejvetsiPodilZdvihu * delka + 1e-9) {
       problemy.push({ druh: "zdvih-mimo-rozsah", prut: p.id });
     }
     if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {

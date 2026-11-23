@@ -72,8 +72,11 @@ export interface Brzdeni {
   zpomaleni?: number;
 }
 
-export const DRUHY_BONUSU = ["rezerva", "komfort-chodcu", "komfort-cestujicich"] as const;
-/** Podmínka mistrovské medaile: největší využití, nebo největší zrychlení v m/s². */
+export const DRUHY_BONUSU = ["rezerva", "komfort-chodcu", "komfort-cestujicich", "dosednuti"] as const;
+/**
+ * Podmínka mistrovské medaile: největší využití, největší zrychlení v m/s², nebo největší
+ * síla (N), kterou pohyblivý most při sklápění udeří do opěry.
+ */
 export interface BonusUrovne {
   druh: (typeof DRUHY_BONUSU)[number];
   limit: number;

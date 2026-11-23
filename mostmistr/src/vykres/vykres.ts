@@ -5,6 +5,7 @@ import { t } from "../ui/slovnik";
 import { BARVY, PISMO, cara } from "./barvy";
 import { nakresliPrazce } from "./kolej";
 import { svetNaObraz, viditelnaOblast, type Kamera, type Rozmer } from "./kamera";
+import { nakresliLod, nakresliPlavebniProfil, viditelnostLodi } from "./pohyb";
 import { krokyRastru, roztecSrafovani } from "./rastr";
 
 export interface StavVykresu {
@@ -17,6 +18,13 @@ export interface StavVykresu {
   nahled?: boolean;
   /** Bez osy mostu a kóty rozpětí; v malé ukázce by zakrývaly most. */
   bezKot?: boolean;
+  /**
+   * Čas přehrávané zkoušky v sekundách: lodě se kreslí, jen když právě plují. Bez něj (při
+   * stavbě) je vidět jen jejich plavební profil s popiskem.
+   */
+  cas?: number;
+  /** Lodě (pořadí v úrovni), které do mostu narazily; kreslí se barvou varování. */
+  narazeneLode?: ReadonlySet<number>;
 }
 
 type Kontext = CanvasRenderingContext2D;
@@ -40,6 +48,7 @@ export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
   nakresliVodu(ctx, s);
   nakresliTeren(ctx, s);
   for (const zona of s.uroven.zakazaneZony) nakresliZakazanouZonu(ctx, s, zona);
+  nakresliLode(ctx, s);
   for (const zaklad of s.uroven.zaklady) nakresliZaklad(ctx, s, zaklad);
   for (const trasa of s.uroven.trasy) nakresliTrasu(ctx, s, trasa);
 
@@ -54,6 +63,26 @@ export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
   if (!s.nahled) nakresliPopiskyRastru(ctx, s.kamera, s.rozmer);
   if (s.kurzor) nakresliKurzor(ctx, s, s.kurzor);
   ctx.restore();
+}
+
+/**
+ * Lodě úrovně. Při stavbě je vidět plavební profil každé lodi s výškou a časem připlutí;
+ * při zkoušce profil zůstává slabě naznačený a loď se objeví, když pluje.
+ */
+function nakresliLode(ctx: Kontext, s: StavVykresu): void {
+  const hladina = s.uroven.hladina;
+  if (hladina === null) return;
+  s.uroven.lode.forEach((lod, k) => {
+    if (s.cas === undefined) {
+      const popisek = s.nahled ? null : t("vykres.plavebniProfil", { vyska: delka(lod.vyska), cas: lod.cas });
+      nakresliPlavebniProfil(ctx, s.kamera, s.rozmer, hladina, lod, popisek, 0.9);
+      return;
+    }
+    nakresliPlavebniProfil(ctx, s.kamera, s.rozmer, hladina, lod, null, 0.35);
+    const narazila = s.narazeneLode?.has(k) ?? false;
+    const videt = viditelnostLodi(lod, s.cas);
+    if (videt > 0) nakresliLod(ctx, s.kamera, s.rozmer, hladina, lod, videt, narazila);
+  });
 }
 
 /** Podklad modráku: barva pozadí a rastr. Společný pro hru i zkušebnu. */

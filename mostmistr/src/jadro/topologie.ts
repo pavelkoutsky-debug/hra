@@ -39,6 +39,7 @@ const POLE_PRVKU = [
   "kBB",
   "beta",
   "tlumic",
+  "rychlostKlidove",
   "EA",
   "EI",
   "GAs",

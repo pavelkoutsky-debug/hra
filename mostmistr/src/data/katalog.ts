@@ -131,6 +131,7 @@ export const MATERIALY: Readonly<Record<IdMaterialu, Material>> = {
 export const ID_PRVKU = [
   "mostovka-drevo",
   "mostovka-ocelobeton",
+  "mostovka-ocel",
   "kolejiste",
   "drevo-lehke",
   "drevo-tezke",
@@ -243,6 +244,23 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     cena: { zaMetr: 12000 },
     material: "ocelobeton",
     prurez: { A: 340e-4, I: 24700e-8, As: 283e-4, Av: 17e-4, W: 766e-6, Wpl: 793e-6, hmotnostNaMetr: 520 },
+    naMetrSirky: true,
+  },
+  // Ortotropní ocelová mostovka pohyblivých mostů: plech 14 mm vyztužený podélnými žebry
+  // lichoběžníkového průřezu (výška 300 mm, tloušťka 8 mm, po 600 mm). Na metr šířky:
+  // - plocha: plech 140 cm² + stěny žeber 82,8 cm² + pásnice žeber 26,7 cm² = 250 cm², tedy 196 kg,
+  // - těžiště 92 mm pod horním povrchem, moment setrvačnosti 33 600 cm⁴,
+  // - průřezový modul ke spodním vláknům 33 600 / 22,6 = 1 487 cm³, plastický asi o čtvrtinu větší,
+  // - smyk nesou stěny žeber.
+  // Je skoro třikrát lehčí než ocelobetonová a tužší, ale o hodně dražší: proto se dává tam,
+  // kde se každá tuna musí zvedat.
+  "mostovka-ocel": {
+    druh: "mostovka",
+    nejvetsiDelka: 6,
+    hotovo: true,
+    cena: { zaMetr: 26000 },
+    material: "ocel",
+    prurez: { A: 250e-4, I: 33600e-8, As: 82.8e-4, W: 1487e-6, Wpl: 1860e-6, hmotnostNaMetr: 196 },
     naMetrSirky: true,
   },
   // Kolej na mostnicích: dvě kolejnice 60E1 na dřevěných mostnicích po 0,6 m a pod nimi dva
@@ -371,8 +389,11 @@ export const PIST = {
   nejvetsiSila: 1_500_000,
   /** Tuhost válce krát jeho délka, N (objemový modul oleje × plocha pístu). */
   tuhostKratDelka: 92e6,
-  /** Tlumení pohybu pístu ve válci, N·s/m. */
-  tlumeni: 100e3,
+  /**
+   * Tlumení válce, N·s/m: škrcení průtoku oleje brzdí každý pohyb, který se liší od řízeného.
+   * Křídlu o hmotnosti desítek tun to dává poměrný útlum kolem třetiny.
+   */
+  tlumeni: 1.5e6,
   /** Hmotnost válce na metr délky, kg/m. */
   hmotnostNaMetr: 200,
   /** Rychlost vysouvání a zasouvání, m/s, a zrychlení při rozjezdu a dojezdu, m/s². */
@@ -388,6 +409,11 @@ export const PIST = {
 /** Největší zdvih (v obou směrech) pístu nakresleného v délce `delka`, zaokrouhlený dolů na krok. */
 export function nejvetsiZdvih(delka: number): number {
   return Math.floor((PIST.nejvetsiPodilZdvihu * delka) / PIST.krokZdvihu + 1e-9) * PIST.krokZdvihu;
+}
+
+/** Zdvih pístu nakresleného v délce `delka`: nastavený, jinak výchozí (nejvýš tolik, kolik píst dokáže). */
+export function zdvihPistu(zdvih: number | undefined, delka: number): number {
+  return zdvih ?? Math.min(PIST.vychoziZdvih, nejvetsiZdvih(delka));
 }
 
 /** Dělicí zámek pohyblivého mostu: cena za kus, tuhost dosedací plochy a čepu, poměrný útlum. */

@@ -8,6 +8,10 @@
 // most něco dosedne), přetlakový ventil povolí: píst se zastaví nebo ustupuje a drží právě
 // svou největší sílu.
 //
+// Olej protéká škrticími ventily, takže válec silně tlumí každý pohyb, který se liší od
+// řízeného: tlumič prvku brzdí rozdíl mezi skutečnou a řízenou rychlostí prodlužování
+// (`Soustava.rychlostKlidove`). Bez toho by se křídlo na sloupci oleje houpalo jako na pružině.
+//
 // Počítá se jen sčítáním, násobením, dělením a odmocninou (délka prvku), takže výsledek je
 // ve všech prohlížečích stejný.
 
@@ -61,9 +65,10 @@ export function vytvorPisty(
 }
 
 /**
- * Posune klidové délky pístů o krok `dt` směrem k cíli. Píst, jehož síla by přesáhla
- * `nejvetsiSila`, dostane jen takovou klidovou délku, při které drží právě tuto sílu.
- * Volá se jednou na začátku každého kroku simulace.
+ * Posune klidové délky pístů o krok `dt` směrem k cíli. Přetlakový ventil hlídá, aby píst
+ * netlačil ani netáhl víc než `nejvetsiSila`: řízená rychlost se sníží tak, aby součet síly
+ * sloupce oleje a škrcení mez nepřesáhl, a klidová délka se drží nejvýš o `síla/tuhost` od
+ * skutečné délky. Volá se jednou na začátku každého kroku simulace.
  */
 export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
   const zmenaRychlosti = p.zrychleni * dt;
@@ -73,9 +78,7 @@ export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
     let klidova = s.klidovaDelka[e]!;
     let rychlost = p.okamzita[i]!;
     const zbyva = cil - klidova;
-    if (zbyva === 0 && rychlost === 0) {
-      // Píst stojí v cíli.
-    } else {
+    if (zbyva !== 0 || rychlost !== 0) {
       // Rychlost, jakou smí píst k cíli nejvýš jet, aby před ním stihl zastavit: v² = 2·a·s.
       const vzdalenost = zbyva < 0 ? -zbyva : zbyva;
       let zadana = Math.sqrt(2 * p.zrychleni * vzdalenost);
@@ -88,23 +91,43 @@ export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
         rychlost -= zmenaRychlosti;
         if (rychlost < zadana) rychlost = zadana;
       }
-      const posun = rychlost * dt;
-      // Poslední krok do cíle: píst v něm zastaví přesně.
-      if ((zbyva > 0 && posun >= zbyva) || (zbyva < 0 && posun <= zbyva)) {
-        klidova = cil;
-        rychlost = 0;
-      } else {
-        klidova += posun;
-      }
     }
-    // Síla v prvku je tuhost × (délka − klidová délka): kladná táhne, záporná tlačí.
+
+    // Skutečná délka pístu a rychlost, jakou se právě prodlužuje.
     const a = s.prvekA[e]!;
     const b = s.prvekB[e]!;
     const dx = s.x[b]! - s.x[a]!;
     const dy = s.y[b]! - s.y[a]!;
     const delka = Math.sqrt(dx * dx + dy * dy);
-    const vule = p.nejvetsiSila / s.tuhostOsova[e]!;
+    const skutecna = delka > 0 ? (dx * (s.vx[b]! - s.vx[a]!) + dy * (s.vy[b]! - s.vy[a]!)) / delka : 0;
+    // Síla v prvku: sloupec oleje tuhost × (délka − klidová) a škrcení tlumič × (skutečná −
+    // řízená rychlost); kladná táhne, záporná tlačí. Ventil nepustí řízenou rychlost tak
+    // daleko od skutečné, aby jejich součet přesáhl největší sílu.
     let pretizen = 0;
+    const tlumic = s.tlumic[e]!;
+    if (tlumic > 0) {
+      const pruzina = s.tuhostOsova[e]! * (delka - klidova);
+      const nejvys = skutecna + (p.nejvetsiSila + pruzina) / tlumic;
+      const nejniz = skutecna - (p.nejvetsiSila - pruzina) / tlumic;
+      if (rychlost > nejvys) {
+        rychlost = nejvys;
+        pretizen = 1;
+      } else if (rychlost < nejniz) {
+        rychlost = nejniz;
+        pretizen = 1;
+      }
+    }
+
+    const posun = rychlost * dt;
+    // Poslední krok do cíle: píst v něm zastaví přesně.
+    if ((zbyva > 0 && posun >= zbyva) || (zbyva < 0 && posun <= zbyva)) {
+      klidova = cil;
+      rychlost = 0;
+    } else {
+      klidova += posun;
+    }
+
+    const vule = p.nejvetsiSila / s.tuhostOsova[e]!;
     if (klidova > delka + vule) {
       klidova = delka + vule;
       pretizen = 1;
@@ -112,10 +135,9 @@ export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
       klidova = delka - vule;
       pretizen = 1;
     }
-    // Píst, který ventil zastavil, se rozjíždí znovu od nuly.
-    if (pretizen === 1) rychlost = 0;
     p.pretizen[i] = pretizen;
     p.okamzita[i] = rychlost;
+    s.rychlostKlidove[e] = rychlost;
     s.klidovaDelka[e] = klidova;
   }
 }

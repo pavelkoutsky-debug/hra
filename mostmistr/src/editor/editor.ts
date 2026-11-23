@@ -6,9 +6,12 @@ import {
   KATALOG,
   KROK_ZAVAZI,
   LADENY_TLUMIC,
+  PIST,
   PREDPETI_LANA,
   STUPNE_TLUMENI,
+  nejvetsiZdvih,
   predpetiZeZkraceni,
+  zdvihPistu,
   zkraceniLana,
   type IdPrvku,
 } from "../data/katalog";
@@ -20,7 +23,9 @@ import {
   nastavPredpeti,
   nastavSvar,
   nastavTlumeni,
+  nastavZamek,
   nastavZavazi,
+  nastavZdvih,
   posunStycnik,
   pridejPrut,
   prutMezi,
@@ -667,6 +672,72 @@ export class Editor {
     return this.#zmen(nastavSvar(this.#navrh, this.vybraneStycniky, !dosavadni), "svar");
   }
 
+  /**
+   * Mají vybrané styčníky dělicí zámek? Null, když není vybraný žádný styčník nebo úroveň
+   * zámky nezná (most se v ní nezvedá); true, jen když ho mají všechny.
+   */
+  get zamekVyberu(): boolean | null {
+    if (this.vybraneStycniky.size === 0 || !this.uroven.pohyb) return null;
+    return this.#navrh.stycniky.every((s) => !this.vybraneStycniky.has(s.id) || s.zamek === true);
+  }
+
+  /** Dá vybraným styčníkům zámek; když už ho mají všechny, zámky odebere. */
+  prepniZamek(): boolean {
+    const dosavadni = this.zamekVyberu;
+    if (dosavadni === null) return false;
+    return this.#zmen(nastavZamek(this.#navrh, this.vybraneStycniky, !dosavadni), "zamek");
+  }
+
+  /** Vybrané písty: id prutu a nakreslená délka. */
+  #vybranePisty(): Map<number, number> {
+    const pisty = new Map<number, number>();
+    const podleId = new Map(this.#navrh.stycniky.map((s) => [s.id, s]));
+    for (const p of this.#navrh.pruty) {
+      if (!this.vybranePruty.has(p.id) || KATALOG[p.prvek].druh !== "pist") continue;
+      const a = podleId.get(p.a);
+      const b = podleId.get(p.b);
+      if (a && b) pisty.set(p.id, Math.hypot(b.x - a.x, b.y - a.y));
+    }
+    return pisty;
+  }
+
+  /**
+   * Zdvih vybraných pístů v metrech: zdvih prvního z nich, největší zdvih, jaký všechny
+   * vybrané dokážou, a zda se jejich zdvihy liší. Null, když není vybraný žádný píst.
+   */
+  get zdvihVyberu(): { zdvih: number; nejvetsi: number; ruzne: boolean } | null {
+    const pisty = this.#vybranePisty();
+    if (pisty.size === 0) return null;
+    let prvni: number | null = null;
+    let nejvetsi = Infinity;
+    let ruzne = false;
+    for (const p of this.#navrh.pruty) {
+      const delka = pisty.get(p.id);
+      if (delka === undefined) continue;
+      const zdvih = zdvihPistu(p.zdvih, delka);
+      if (prvni === null) prvni = zdvih;
+      else if (Math.abs(zdvih - prvni) > 1e-9) ruzne = true;
+      nejvetsi = Math.min(nejvetsi, nejvetsiZdvih(delka));
+    }
+    return { zdvih: prvni ?? 0, nejvetsi, ruzne };
+  }
+
+  /** Změní zdvih vybraných pístů o daný počet kroků; všechny dostanou stejnou hodnotu. */
+  zmenZdvih(kroku: number): boolean {
+    const dosavadni = this.zdvihVyberu;
+    if (dosavadni === null) return false;
+    const krok = PIST.krokZdvihu;
+    const novy = Math.round(dosavadni.zdvih / krok + kroku) * krok;
+    return this.#zmen(nastavZdvih(this.#navrh, new Set(this.#vybranePisty().keys()), () => novy), "zdvih");
+  }
+
+  /** Počet pístů v návrhu. */
+  get pocetPistu(): number {
+    let pocet = 0;
+    for (const p of this.#navrh.pruty) if (KATALOG[p.prvek].druh === "pist") pocet += 1;
+    return pocet;
+  }
+
   /** Doplní zrcadlový obraz mostu (nebo výběru) podle osy hlavní trasy. */
   zrcadli(): boolean {
     const trasa = this.uroven.trasy[0];
@@ -702,6 +773,10 @@ export class Editor {
         const predpeti = p.predpeti;
         postupny = nastavPredpeti(postupny, new Set([obrazPrutu.id]), () => predpeti);
       }
+      if (p.zdvih !== undefined && obrazPrutu) {
+        const zdvih = p.zdvih;
+        postupny = nastavZdvih(postupny, new Set([obrazPrutu.id]), () => zdvih);
+      }
       for (const [vzor, obraz] of [[a, idA], [b, idB]] as const) {
         const zavazi = vzor.zavazi;
         if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz]), (dosavadni) => Math.max(dosavadni, zavazi));
@@ -717,10 +792,11 @@ export class Editor {
     for (const vzor of this.#navrh.stycniky) {
       const zavazi = vzor.zavazi;
       const tlumic = vzor.tlumic;
-      if ((!zavazi && !tlumic && !vzor.svar) || !zrcadlene.has(vzor.id)) continue;
+      if ((!zavazi && !tlumic && !vzor.svar && !vzor.zamek) || !zrcadlene.has(vzor.id)) continue;
       const obraz = stycnikV(postupny, { x: 2 * osa - vzor.x, y: vzor.y });
       if (!obraz) continue;
       if (vzor.svar && this.uroven.povoleneSvary) postupny = nastavSvar(postupny, new Set([obraz.id]), true);
+      if (vzor.zamek && this.uroven.pohyb) postupny = nastavZamek(postupny, new Set([obraz.id]), true);
       if (zavazi) postupny = nastavZavazi(postupny, new Set([obraz.id]), (dosavadni) => Math.max(dosavadni, zavazi));
       // Laděný tlumič v ose mostu má obraz sám v sobě; jinde ho obraz dostane, pokud žádný nemá.
       if (tlumic) postupny = nastavLadenyTlumic(postupny, new Set([obraz.id]), (dosavadni) => dosavadni ?? tlumic);
