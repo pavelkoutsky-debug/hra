@@ -95,8 +95,11 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     expect(prvky).toHaveLength(2);
     expect(prvky[0]).toContain("Ocelobetonová mostovka");
     expect(prvky[1]).toContain("Lehký ocelový profil");
-    // Úroveň bez kmitání lidí nemá pokusy ani osu frekvencí.
-    expect(await stranka.locator('[data-cast="pokusy"]').isVisible()).toBe(false);
+    // Úroveň bez kmitání lidí nemá brnknutí, budič ani osu frekvencí; z pokusů jen zkoušku do zlomu.
+    expect(await stranka.locator('[data-akce="brnknout"]').isVisible()).toBe(false);
+    expect(await stranka.locator('[data-akce="budic"]').isVisible()).toBe(false);
+    expect(await stranka.locator('[data-akce="zlom"]').isVisible()).toBe(true);
+    expect(await stranka.locator('[data-udaj="osa-frekvenci"]').isVisible()).toBe(false);
   });
 
   it("metr vysoká příhrada se zlomí pod vlastní tíhou; čtyřmetrová získá mistrovskou medaili", async () => {

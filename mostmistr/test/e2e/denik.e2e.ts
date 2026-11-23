@@ -455,9 +455,12 @@ describe("stránka správce", () => {
     const bunky = await souhrn.allInnerTexts();
     expect(bunky.slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
     // Cena průchodu proti rozpočtům úrovně a z čeho hráč stavěl.
-    expect(bunky[9]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 33 500 Kč");
+    // Nápovědu si hráč neotevřel a do zlomu nezkoušel.
+    expect(bunky[9]).toBe("0 / 0");
+    expect(bunky[10]).toBe("0 / 0");
+    expect(bunky[11]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 33 500 Kč");
     // (Čtvrtý trám hráč nakreslil s vypnutým záznamem, takže o něm deník neví.)
-    expect(bunky[10]).toBe("drevo-lehke 3×, mostovka-drevo 2×");
+    expect(bunky[12]).toBe("drevo-lehke 3×, mostovka-drevo 2×");
     // Souhrn za delší období: sčítá dny, ze kterých deník je.
     await stranka.locator("#obdobi").selectOption("30");
     await expect.poll(() => stranka.locator("#souhrn-nadpis").textContent()).toContain("(1 dní s deníkem)");
