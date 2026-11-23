@@ -68,9 +68,9 @@ import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
 import { nasadaUrovne } from "../../urovne/index";
 import { zakladVyzev } from "../../urovne/vyzvy";
-import { prahyVyzev, unosnostNaKorunu } from "../data/vyzvy";
+import { DRUHY_VYZEV, prahyVyzev, unosnostNaKorunu } from "../data/vyzvy";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { ZKOUSKA_DO_ZLOMU } from "../zkouska/zlom";
+import { zatizeniZlomu, ZKOUSKA_DO_ZLOMU } from "../zkouska/zlom";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
 import { pripojVazbu } from "./vazba";
@@ -2646,6 +2646,23 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (oknoZadani.open) return;
     zadaniOtevrenoV = Date.now();
     vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
+    // Výzvy o efektivitu: prahy bronz, stříbro a zlato; jen kde je úroveň má.
+    for (const uzel of oknoZadani.querySelectorAll<HTMLElement>('[data-cast="zadani-vyzvy"]')) uzel.hidden = prahy === null;
+    if (prahy) {
+      udaj("zadani-vyzvy").replaceChildren(
+        ...DRUHY_VYZEV.map((druh) => {
+          const [bronz, stribro, zlato] = prahy[druh];
+          const uzel = document.createElement("li");
+          uzel.textContent = t(`vyzvy.zadani.${druh}`, {
+            bronz: zapisVyzvy(druh, bronz),
+            stribro: zapisVyzvy(druh, stribro),
+            zlato: zapisVyzvy(druh, zlato),
+          });
+          uzel.dataset.vyzva = druh;
+          return uzel;
+        }),
+      );
+    }
     oknoZadani.showModal();
     // Okno se otevírá odshora, i když je vyšší než obrazovka; mezerník a Enter ho zavřou.
     prvek('#okno-zadani button[value="zavrit"]', HTMLButtonElement).focus({ preventScroll: true });
@@ -3051,6 +3068,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         text = t("legenda.budic", {
           f: cislo(frekvenceBudice(b.budic, prehravani.cas), 2),
           zrychleni: cislo(snimek.kmitani, 2),
+        });
+      } else if (b.zlom) {
+        // Zkouška do zlomu: kolik zátěže na mostě právě leží. Po prvním porušení už neroste.
+        const zlomeno =
+          b.vysledek?.zlom?.cas ?? b.udalosti.find((u) => u.druh === "poruseni" || u.druh === "sjeti")?.cas ?? Infinity;
+        const naMetr = zatizeniZlomu(ZKOUSKA_DO_ZLOMU, Math.min(prehravani.cas, zlomeno));
+        let delka = 0;
+        for (const trasa of uroven.trasy) delka += Math.abs(trasa.konec.x - trasa.zacatek.x);
+        text = t("legenda.zlom", {
+          naMetr: cislo(naMetr / 1000, 1),
+          tun: cislo((naMetr * delka) / TIHOVE_ZRYCHLENI / 1000, 1),
         });
       } else if (maLidi && !b.pokus && b.zaznam.stavV(prehravani.cas, snimek) !== null) {
         text = t("legenda.kmitani", { zrychleni: cislo(snimek.kmitani, 2) });

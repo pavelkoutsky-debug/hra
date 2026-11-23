@@ -767,6 +767,60 @@ a.tlacitko {
   opacity: 0.55;
 }
 
+/* Výzvy o efektivitu: tři řádky se stupněm (tečky), názvem a tím, co hráč dokázal. */
+
+.vyzvy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.vyzvy li {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  column-gap: 6px;
+}
+
+.vyzvy__znak {
+  grid-row: span 2;
+  color: var(--popisek);
+  letter-spacing: 1px;
+}
+
+.vyzvy [data-stupen="1"] .vyzvy__znak,
+.vyzvy [data-stupen="2"] .vyzvy__znak,
+.vyzvy [data-stupen="3"] .vyzvy__znak,
+.vyzvy [data-stupen="3"] .vyzvy__nazev {
+  color: var(--cara-silna);
+}
+
+.vyzvy__stav {
+  color: var(--popisek);
+}
+
+.vysledek__vyzvy h3 {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.okno__poznamka {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--popisek);
+}
+
+.karta__vyzvy {
+  color: var(--popisek);
+}
+
 .medaile__podminka {
   color: var(--popisek);
   font-size: 11px;

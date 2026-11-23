@@ -275,6 +275,7 @@ const CS = {
   "paleta.budic.celyRozsah": "{od}–{do} Hz",
   "budic.navod": "Klikni na styčník mostu, do kterého má budič bušit.",
   "legenda.budic": "budič {f} Hz · kmitání {zrychleni} m/s²",
+  "legenda.zlom": "zátěž {naMetr} kN na metr · celkem {tun} t",
   "vysledek.budic": "Budič",
   "vysledek.budic.rozmitani":
     "Budič projel rytmy tam a zpět. Most odpovídal nejsilněji kolem {f} Hz: až {a} m/s² na 1 kN síly. Při přelaďování se most nestihne rozkmitat naplno; kolik vydrží doopravdy, ukáže stálý rytmus. Budič je teď nastavený na {f} Hz.",

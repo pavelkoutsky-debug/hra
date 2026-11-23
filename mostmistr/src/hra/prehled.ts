@@ -1,6 +1,8 @@
 // Přehled kampaně: kapitoly, karty úrovní s náhledem výkresu, medailemi a zámky.
 
+import { zakladVyzev } from "../../urovne/vyzvy";
 import { BEZ_MEDAILI } from "../data/ulozeni";
+import { prahyVyzev } from "../data/vyzvy";
 import type { Denik } from "../denik/denik";
 import type { Uroven } from "../data/uroven";
 import { prvek, udaj } from "../ui/dom";
@@ -12,6 +14,7 @@ import { nakresliVykres } from "../vykres/vykres";
 import { znackyMedaili } from "./medaile";
 import type { Uloziste } from "./uloziste";
 import { pripojVazbu } from "./vazba";
+import { popisVyzev, stupneVyzev } from "./vyzvy";
 import { pripojZaznam } from "./zaznam";
 
 const SIRKA_NAHLEDU = 280;
@@ -101,6 +104,18 @@ function kartaUrovne(uroven: Uroven, predchozi: Uroven | undefined, uloziste: Ul
         ? t("prehled.nejlepsiCena", { cena: koruny(nejlepsi) })
         : t(uloziste.navrh(uroven.id)?.pruty.length ? "prehled.rozpracovano" : "prehled.nezkouseno");
     stav.append(medaile, cena);
+    // Výzvy o efektivitu: součet stupňů, jakmile je úroveň projitá.
+    const zaklad = rekord?.medaile.pruchod ? zakladVyzev(uroven) : null;
+    if (zaklad) {
+      const prahy = prahyVyzev(zaklad);
+      const vyzvy = document.createElement("span");
+      vyzvy.className = "karta__vyzvy";
+      const { soucet } = stupneVyzev(prahy, rekord);
+      vyzvy.textContent = t("vyzvy.prehled", { soucet });
+      vyzvy.title = popisVyzev(prahy, rekord);
+      vyzvy.dataset.vyzvy = String(soucet);
+      stav.append(vyzvy);
+    }
   }
 
   obal.append(nahled, hlavicka, stav);
