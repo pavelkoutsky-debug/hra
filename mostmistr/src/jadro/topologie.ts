@@ -240,3 +240,20 @@ export function odpojKonec(s: Soustava, e: number, konecB: boolean): number {
   prepoctiHmoty(s);
   return novy;
 }
+
+/**
+ * Rozdělí styčník na dva: prvky `prvky` se od něj odpojí a jejich konce převezme nový
+ * styčník na stejném místě se stejnou rychlostí a natočením. Původní styčník si nechá
+ * podpory, přidanou hmotu a ostatní prvky. Tak se rozpojuje dělicí zámek mezi křídly
+ * pohyblivého mostu. Vrací index nového styčníku; volající pak přepočítá, co na stavbě závisí.
+ */
+export function rozdelStycnik(s: Soustava, stycnik: number, prvky: readonly number[]): number {
+  const novy = pridejStycnik(s, stycnik);
+  for (const e of prvky) {
+    if (s.prvekA[e] === stycnik) s.prvekA[e] = novy;
+    if (s.prvekB[e] === stycnik) s.prvekB[e] = novy;
+  }
+  prepoctiHmoty(s);
+  return novy;
+}
+
