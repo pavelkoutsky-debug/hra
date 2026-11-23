@@ -8,6 +8,7 @@ import {
   ulozeniNaText,
   ulozeniZTextu,
   vylepsiRekord,
+  vylepsiZlom,
   type Medaile,
   type Rekord,
   type Ulozeni,
@@ -96,8 +97,16 @@ export class Uloziste {
   }
 
   /** Započítá výsledek zkoušky do rekordu úrovně a vrátí nový rekord. */
-  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number): Rekord {
-    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky);
+  zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number): Rekord {
+    const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost);
+    this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
+    this.#zapis();
+    return rekord;
+  }
+
+  /** Započítá výsledek zkoušky do zlomu (únosnost na korunu, N/Kč) a vrátí nový rekord. */
+  zapocitejZlom(idUrovne: string, unosnostNaKorunu: number, verzeFyziky: number): Rekord {
+    const rekord = vylepsiZlom(this.#ulozeni.rekordy[idUrovne], unosnostNaKorunu, verzeFyziky);
     this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
     this.#zapis();
     return rekord;

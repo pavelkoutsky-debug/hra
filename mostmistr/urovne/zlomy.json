@@ -1,0 +1,117 @@
+{
+  "verzeFyziky": 7,
+  "urovne": {
+    "1-01": {
+      "reseni": "mistrovska",
+      "naKorunu": 3.8731488708754305
+    },
+    "1-02": {
+      "reseni": "rozpocet",
+      "naKorunu": 6.540347382045793
+    },
+    "1-03": {
+      "reseni": "mistrovska",
+      "naKorunu": 8.556702193908814
+    },
+    "1-04": {
+      "reseni": "mistrovska",
+      "naKorunu": 4.186615611929748
+    },
+    "2-01": {
+      "reseni": "pruchod",
+      "naKorunu": 5.91390982750024
+    },
+    "2-02": {
+      "reseni": "pruchod",
+      "naKorunu": 4.987138281682412
+    },
+    "2-03": {
+      "reseni": "rozpocet",
+      "naKorunu": 2.1317375758653294
+    },
+    "2-04": {
+      "reseni": "pruchod",
+      "naKorunu": 4.106082172973686
+    },
+    "3-01": {
+      "reseni": "mistrovska",
+      "naKorunu": 4.947213043536023
+    },
+    "3-02": {
+      "reseni": "mistrovska",
+      "naKorunu": 6.784283520486474
+    },
+    "3-03": {
+      "reseni": "mistrovska",
+      "naKorunu": 8.89629608197483
+    },
+    "3-04": {
+      "reseni": "mistrovska",
+      "naKorunu": 7.3525693885199015
+    },
+    "4-01": {
+      "reseni": "mistrovska",
+      "naKorunu": 11.08277954635624
+    },
+    "4-02": {
+      "reseni": "mistrovska",
+      "naKorunu": 6.842953550237513
+    },
+    "4-03": {
+      "reseni": "mistrovska",
+      "naKorunu": 8.411228338233958
+    },
+    "4-04": {
+      "reseni": "mistrovska",
+      "naKorunu": 1.8240324961065206
+    },
+    "5-01": {
+      "reseni": "pruchod",
+      "naKorunu": 3.2786187189685045
+    },
+    "5-02": {
+      "reseni": "rozpocet",
+      "naKorunu": 2.3306915353198914
+    },
+    "5-03": {
+      "reseni": "rozpocet",
+      "naKorunu": 1.7793489622604208
+    },
+    "5-04": {
+      "reseni": "rozpocet",
+      "naKorunu": 3.2812063414262167
+    },
+    "6-01": {
+      "reseni": "mistrovska",
+      "naKorunu": 11.165222452658435
+    },
+    "6-02": {
+      "reseni": "mistrovska",
+      "naKorunu": 7.018898188292964
+    },
+    "6-03": {
+      "reseni": "mistrovska",
+      "naKorunu": 9.747962302583584
+    },
+    "6-04": {
+      "reseni": "mistrovska",
+      "naKorunu": 4.672585474115714
+    },
+    "7-01": {
+      "reseni": "mistrovska",
+      "naKorunu": 11.81950386424586
+    },
+    "7-02": {
+      "reseni": "rozpocet",
+      "naKorunu": 4.67849909688899
+    },
+    "7-03": {
+      "reseni": "rozpocet",
+      "naKorunu": 6.205912231735307
+    },
+    "7-04": {
+      "reseni": "pruchod",
+      "naKorunu": 3.2978618523148473
+    }
+  }
+}

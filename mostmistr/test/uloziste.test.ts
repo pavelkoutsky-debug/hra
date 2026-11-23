@@ -36,11 +36,18 @@ describe("úložiště postupu", () => {
     const sklad = new SkladVPameti();
     const prvni = new Uloziste(sklad);
     prvni.ulozNavrh(most());
-    prvni.zapocitej("1-01", PRUCHOD, 31000, 2);
+    prvni.zapocitej("1-01", PRUCHOD, 31000, 2, 914);
+    prvni.zapocitejZlom("1-01", 3.87, 2);
 
     const druhe = new Uloziste(sklad);
     expect(druhe.navrh("1-01")).toEqual(most());
-    expect(druhe.rekord("1-01")).toEqual({ verzeFyziky: 2, medaile: PRUCHOD, nejlepsiCena: 31000 });
+    expect(druhe.rekord("1-01")).toEqual({
+      verzeFyziky: 2,
+      medaile: PRUCHOD,
+      nejlepsiCena: 31000,
+      nejlepsiHmotnost: 914,
+      nejlepsiZlom: 3.87,
+    });
   });
 
   it("zapsaný text je platné uložení podle formátu dat", () => {
