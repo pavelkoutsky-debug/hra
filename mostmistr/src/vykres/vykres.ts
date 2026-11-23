@@ -43,11 +43,27 @@ function mezi(v: number, min: number, max: number): number {
  * CSS pixel (viz `Platno`).
  */
 export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
+  nakresliSpodekVykresu(ctx, s);
+  nakresliVrsekVykresu(ctx, s);
+}
+
+/**
+ * Spodní vrstva výkresu: podklad s rastrem, voda, terén a zakázané zóny. Nezávisí na čase
+ * zkoušky ani na kurzoru, takže ji přehrávání smí nakreslit jednou a pak jen přenášet
+ * (viz `UlozenaVrstva`).
+ */
+export function nakresliSpodekVykresu(ctx: Kontext, s: StavVykresu): void {
   ctx.save();
   nakresliPodklad(ctx, s.kamera, s.rozmer);
   nakresliVodu(ctx, s);
   nakresliTeren(ctx, s);
   for (const zona of s.uroven.zakazaneZony) nakresliZakazanouZonu(ctx, s, zona);
+  ctx.restore();
+}
+
+/** Vrchní vrstva výkresu: lodě, základy, trasy, osa a kóta rozpětí, kotvy, okraj, popisky a kurzor. */
+export function nakresliVrsekVykresu(ctx: Kontext, s: StavVykresu): void {
+  ctx.save();
   nakresliLode(ctx, s);
   for (const zaklad of s.uroven.zaklady) nakresliZaklad(ctx, s, zaklad);
   for (const trasa of s.uroven.trasy) nakresliTrasu(ctx, s, trasa);
@@ -58,11 +74,58 @@ export function nakresliVykres(ctx: Kontext, s: StavVykresu): void {
     nakresliKotuRozpeti(ctx, s, hlavniTrasa);
   }
   for (const kotva of s.uroven.kotvy) nakresliKotvu(ctx, s, kotva);
+  if (s.uroven.pohyb && !s.nahled) nakresliPopiskyKotev(ctx, s);
 
   nakresliOkrajVykresu(ctx, s);
   if (!s.nahled) nakresliPopiskyRastru(ctx, s.kamera, s.rozmer);
   if (s.kurzor) nakresliKurzor(ctx, s, s.kurzor);
   ctx.restore();
+}
+
+/**
+ * Pohyblivý most: pevné kotvy mají stejnou značku, ale dvojí úlohu. Na konci trasy se kolem
+ * kotvy otáčí křídlo (čep), kotvy pod ní jsou opěrou pro píst. Popisek stojí na straně břehu,
+ * kde nepřekáží stavbě.
+ */
+function nakresliPopiskyKotev(ctx: Kontext, s: StavVykresu): void {
+  const m = s.kamera.meritko;
+  const hlavni = s.uroven.trasy[0];
+  // Při malém měřítku (telefon naležato) by se popisky kotev tři metry pod sebou překrývaly.
+  if (m < 12 || !hlavni) return;
+  const stred = (hlavni.zacatek.x + hlavni.konec.x) / 2;
+  const naKonciTrasy = (kotva: Kotva): boolean =>
+    s.uroven.trasy.some(
+      (trasa) =>
+        (trasa.zacatek.x === kotva.x && trasa.zacatek.y === kotva.y) || (trasa.konec.x === kotva.x && trasa.konec.y === kotva.y),
+    );
+  ctx.font = `10px ${PISMO}`;
+  ctx.textBaseline = "middle";
+  // Dvě kotvy pro píst na stejném břehu rozlišuje zadání jako mělkou a hlubokou; popisek taky.
+  const proPist = s.uroven.kotvy.filter((kotva) => kotva.typ === "pevna" && !naKonciTrasy(kotva));
+  const nazevKotvyPistu = (kotva: Kotva): string => {
+    const naBrehu = proPist.filter((jina) => jina.x <= stred === kotva.x <= stred);
+    if (naBrehu.length < 2) return t("vykres.kotvaPist");
+    if (naBrehu.every((jina) => jina.y <= kotva.y)) return t("vykres.kotvaPist.melka");
+    if (naBrehu.every((jina) => jina.y >= kotva.y)) return t("vykres.kotvaPist.hluboka");
+    return t("vykres.kotvaPist");
+  };
+  for (const kotva of s.uroven.kotvy) {
+    if (kotva.typ !== "pevna") continue;
+    const cep = naKonciTrasy(kotva);
+    const text = cep ? t("vykres.kotvaCep") : nazevKotvyPistu(kotva);
+    const p = svetNaObraz(s.kamera, s.rozmer, kotva);
+    const vlevo = kotva.x <= stred;
+    const odstup = mezi(0.55 * m, 9, 22) + 8;
+    const sirka = ctx.measureText(text).width;
+    // Čep má popisek pod úrovní vozovky, ať nestojí v předmostí; kotva pístu ve své výšce.
+    const x = vlevo ? p.x - odstup : p.x + odstup;
+    const y = cep ? p.y + 16 : p.y;
+    ctx.fillStyle = BARVY.pozadi;
+    ctx.fillRect((vlevo ? x - sirka : x) - 3, y - 7, sirka + 6, 14);
+    ctx.textAlign = vlevo ? "right" : "left";
+    ctx.fillStyle = BARVY.popisek;
+    ctx.fillText(text, x, y);
+  }
 }
 
 /**

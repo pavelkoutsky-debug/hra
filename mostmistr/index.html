@@ -16,6 +16,7 @@
         <span class="lista__nazev" data-text="hra.nazev"></span>
         <span class="lista__oddil" data-text="prehled.nadpis"></span>
         <span class="lista__mezera"></span>
+        <button type="button" class="tlacitko" data-akce="jazyk"></button>
         <a class="tlacitko" href="?sandbox=1" data-akce="otevrit-sandbox" data-text="prehled.sandbox" data-popis="prehled.sandbox.popis"></a>
         <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/zkusebna.html" data-text="lista.zkusebna"></a>
@@ -70,9 +71,12 @@
         <button type="button" class="tlacitko" data-akce="zvuk" data-popis="zvuk.popis" aria-pressed="true"></button>
         <button type="button" class="tlacitko lista__vazba" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/" data-text="lista.kampan"></a>
+        <!-- Telefon: Zpět a Smazat jsou v paletě pod okrajem okna, proto jsou i tady. -->
+        <button type="button" class="tlacitko tlacitko--znak lista__telefon" data-akce="zpet-rychle" data-popis="paleta.zpet.popis" data-jen="stavba">↩</button>
+        <button type="button" class="tlacitko tlacitko--znak lista__telefon" data-akce="smazat-rychle" data-popis="paleta.smazat.popis" data-jen="stavba">Del</button>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
         <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
-        <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres"></button>
+        <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres" data-kratce-text="lista.celyVykres.kratce"></button>
       </header>
 
       <div class="uroven">
@@ -141,6 +145,7 @@
             </button>
           </div>
 
+          <div class="paleta__nastaveni-obal">
           <div class="paleta__nastaveni" data-nastaveni="zavazi" hidden>
             <h2 data-text="paleta.zavazi"></h2>
             <div class="paleta__krokovac">
@@ -214,6 +219,7 @@
               <button type="button" class="paleta__tlacitko" data-akce="tlumeni-plus" data-popis="paleta.tlumeni.plus">+</button>
             </div>
           </div>
+          </div>
 
           <h2 data-text="paleta.most"></h2>
           <div class="paleta__dvojice">
@@ -239,9 +245,9 @@
 
           <div class="legenda">
             <span data-text="zkusebna.legenda.vyuziti"></span>
-            <span>0 %</span>
+            <span data-procenta="0">0 %</span>
             <span class="legenda__skala"></span>
-            <span>100 %</span>
+            <span data-procenta="1">100 %</span>
             <span><span class="legenda__cara"></span> <span data-text="zkusebna.legenda.tlak"></span></span>
             <span><span class="legenda__cara legenda__cara--tah"></span> <span data-text="zkusebna.legenda.tah"></span></span>
             <button type="button" class="legenda__prepinac" data-akce="cisla" data-popis="legenda.cisla.popis" aria-pressed="true">
@@ -294,6 +300,7 @@
 
           <section class="vysledek" hidden>
             <div class="vysledek__hlavicka">
+              <button type="button" class="tlacitko tlacitko--znak vysledek__sbalit" data-akce="vysledek-sbalit" aria-expanded="true"></button>
               <span class="vysledek__otisk" data-udaj="otisk"></span>
               <h2 data-udaj="vysledek-nadpis"></h2>
               <p data-udaj="vysledek-shrnuti"></p>
@@ -404,6 +411,7 @@
           <div class="osa__drah" data-jen="zkouska">
             <span class="osa__spocitano"></span>
             <span class="osa__znacky"></span>
+            <output class="osa__bublina" data-udaj="osa-znacka" hidden></output>
             <input type="range" id="cas" min="0" max="1" step="0.01" value="0" data-popis="zkouska.cas" />
           </div>
           <output class="osa__cas" data-udaj="cas" data-jen="zkouska"></output>
@@ -531,12 +539,13 @@
             <p class="okno__skutecnost" data-udaj="zadani-skutecnost" hidden></p>
           </div>
           <div class="okno__vedlejsi">
+            <!-- Medaile jsou cíl úrovně: stojí nahoře, ať nejsou v dlouhém zadání pod okrajem okna. -->
+            <h3 data-text="zadani.medaile" data-jen-kampan></h3>
+            <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
             <h3 data-text="zadani.provoz"></h3>
             <ul class="okno__seznam" data-udaj="zadani-provoz"></ul>
             <h3 data-text="zadani.stavba"></h3>
             <ul class="okno__seznam" data-udaj="zadani-stavba"></ul>
-            <h3 data-text="zadani.medaile" data-jen-kampan></h3>
-            <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
             <h3 data-text="vyzvy.nadpis" data-cast="zadani-vyzvy"></h3>
             <p class="okno__poznamka" data-text="vyzvy.uvod" data-cast="zadani-vyzvy"></p>
             <ul class="okno__seznam" data-udaj="zadani-vyzvy" data-cast="zadani-vyzvy"></ul>
@@ -554,7 +563,7 @@
       </form>
     </dialog>
 
-    <noscript>Mostmistr potřebuje zapnutý JavaScript.</noscript>
+    <noscript>Mostmistr potřebuje zapnutý JavaScript. / Mostmistr needs JavaScript turned on.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

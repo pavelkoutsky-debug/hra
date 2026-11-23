@@ -152,8 +152,14 @@ export interface VysledekZlomu {
   celkem: number;
   /** Zatížená délka mostovky (součet rozpětí tras), m. */
   delka: number;
-  /** Kdy porušení nastalo, s; null, když most vydržel všechno, co zkouška umí naložit. */
+  /** Kdy porušení nastalo, s; null, když se most do konce zkoušky neporušil. */
   cas: number | null;
+  /**
+   * Most se neporušil, ale zkouška na něj nestihla naložit všechno, co umí: trvale se
+   * přetvářel, zátěž proto přibývala pomalu a děj skončil na nejdelší době. `zatizeni` je to,
+   * co na mostě leželo na konci.
+   */
+  nedolozeno: boolean;
   /**
    * Prut návrhu, který se porušil první, nebo píst, který první povolil; −1, když most sjel
    * z podpory, neměl klidovou polohu nebo vydržel.

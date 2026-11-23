@@ -57,6 +57,7 @@ describe("úložiště postupu", () => {
       nejlepsiCena: 31000,
       nejlepsiHmotnost: 914,
       nejlepsiZlom: 3.87,
+      verzeZlomu: 2,
     });
   });
 

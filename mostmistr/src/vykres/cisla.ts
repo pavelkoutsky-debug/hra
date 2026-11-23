@@ -3,6 +3,7 @@
 // když není kam, vynechají se (přednost mají nejvíc namáhané pruty).
 
 import type { Bod } from "../data/geometrie";
+import { procenta } from "../ui/formaty";
 import { BARVY, PISMO } from "./barvy";
 import { barvaVyuziti } from "./skala";
 
@@ -44,7 +45,7 @@ export function nakresliCislaVyuziti(ctx: CanvasRenderingContext2D, polozky: rea
   ctx.textBaseline = "middle";
   const obsazeno: Obdelnik[] = [];
   for (const p of serazene) {
-    const text = `${Math.round(p.vyuziti * 100)} %`;
+    const text = procenta(p.vyuziti).replace("\u00a0", " ");
     const sirka = ctx.measureText(text).width + 8;
     let misto: Obdelnik | null = null;
     for (const podil of MISTA) {

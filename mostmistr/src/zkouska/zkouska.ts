@@ -46,7 +46,7 @@ import type {
   ZlomZkousky,
 } from "./protokol";
 import { sestavMost } from "./stavba";
-import { DOBEH_ZLOMU, NEJDELSI_ZLOM, ROZTEC_ZATEZE, zatizeniZlomu } from "./zlom";
+import { DOBEH_ZLOMU, NEJDELSI_DEJ_ZLOMU, NEJDELSI_ZLOM, ROZTEC_ZATEZE, zatizeniZlomu } from "./zlom";
 import { plastickeKlouby, topologieSoustavy, type PopisKresleni, type Snimek, type Topologie } from "./zaznam";
 
 /** Počet snímků záznamu na sekundu děje. */
@@ -181,6 +181,14 @@ export class Zkouska {
   readonly #zatez: { bremena: Bremena; roztec: number }[] = [];
   #delkaZateze = 0;
   #zlomCas: number | null = null;
+  /**
+   * Hodiny zátěže při zkoušce do zlomu, s. Běží s časem zkoušky, ale stojí, dokud se v mostě
+   * otevírá plastický kloub nebo se táhne ocel po kluzu (přibývá plastická práce): tvárné
+   * porušení potřebuje čas, a kdyby zátěž mezitím rostla dál, připsala by mostu únosnost,
+   * kterou nemá (podle rychlosti zatěžování o 3 až 8 %).
+   */
+  #zlomHodiny = 0;
+  #zlomPrace = 0;
   #zlomZatizeni = 0;
   #zlomPrut = -1;
 
@@ -377,6 +385,8 @@ export class Zkouska {
     for (const lod of uroven.lode) trvani = Math.max(trvani, lod.cas + lod.trvani + DOBEH);
     this.trvani = trvani;
     if (plan.ucastnici.length === 0 && !uroven.pohyb && uroven.lode.length === 0) this.#konec = bezProvozu;
+    // Zkoušku do zlomu ukončují hodiny zátěže (viz pokracuj), ne čas děje: ten má jen pojistku.
+    if (this.#zlom) this.#konec = NEJDELSI_DEJ_ZLOMU;
     // Most bez klidové polohy neunesl nic; trosky stačí nechat dopadnout, zatěžovat je nemá smysl.
     if (this.#zlom && this.bezRovnovahy) this.#konec = DOBEH_ZLOMU;
     // Až nakonec: přetržení mění stavbu a ohlašuje to všemu, co se výše připravilo.
@@ -452,7 +462,7 @@ export class Zkouska {
         if (budic && cas <= budic.trvani) s.fy[budic.stycnik] = s.fy[budic.stycnik]! - budic.sila * this.#fazeBudice[1];
         if (this.#zlom && !this.bezRovnovahy) {
           // Po prvním porušení zátěž už neroste: zůstává ležet, kde byla.
-          const q = this.#zlomCas === null ? zatizeniZlomu(this.#zlom, cas) : this.#zlomZatizeni;
+          const q = this.#zlomCas === null ? zatizeniZlomu(this.#zlom, this.#zlomHodiny) : this.#zlomZatizeni;
           for (const z of this.#zatez) {
             const sila = q * z.roztec;
             const { bremena } = z;
@@ -694,6 +704,13 @@ export class Zkouska {
     const do_ = sim.cas + sekundDeje;
     while (sim.cas < do_ && !this.hotovo) {
       sim.krok();
+      if (this.#zlom && this.#zlomCas === null) {
+        // Zátěž přibývá, jen když se most v tomhle kroku trvale nepřetvořil.
+        if (!(s.plastickaPrace > this.#zlomPrace)) this.#zlomHodiny += sim.dt;
+        this.#zlomPrace = s.plastickaPrace;
+        // Zátěž dorostla na největší, kterou zkouška umí naložit: most vydržel.
+        if (this.#zlomHodiny >= NEJDELSI_ZLOM) this.#konec = sim.cas;
+      }
       let novaStavba = this.#ridPohyb(davka.udalosti);
       if (sim.kroku % INTERVAL_OBALKY === 0) {
         this.#aktualizujObalku();
@@ -787,7 +804,7 @@ export class Zkouska {
   #zlomeno(cas: number, prut: number): void {
     if (!this.#zlom || this.#zlomCas !== null) return;
     this.#zlomCas = cas;
-    this.#zlomZatizeni = zatizeniZlomu(this.#zlom, cas);
+    this.#zlomZatizeni = zatizeniZlomu(this.#zlom, this.#zlomHodiny);
     this.#zlomPrut = prut;
     this.#konec = Math.min(this.#konec, cas + DOBEH_ZLOMU);
   }
@@ -935,7 +952,7 @@ export class Zkouska {
       const zatizeni = this.bezRovnovahy
         ? 0
         : this.#zlomCas === null
-          ? zatizeniZlomu(this.#zlom, this.simulace.cas)
+          ? zatizeniZlomu(this.#zlom, this.#zlomHodiny)
           : this.#zlomZatizeni;
       zlom = {
         zatizeni,
@@ -943,6 +960,7 @@ export class Zkouska {
         delka: this.#delkaZateze,
         cas: this.bezRovnovahy ? 0 : this.#zlomCas,
         prut: this.#zlomPrut,
+        nedolozeno: !this.bezRovnovahy && this.#zlomCas === null && this.#zlomHodiny < NEJDELSI_ZLOM,
       };
     }
     const medaile: Medaile = {

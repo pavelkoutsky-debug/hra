@@ -89,7 +89,7 @@ beforeAll(async () => {
   if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
   adresa = mistni;
   prohlizec = await chromium.launch();
-  stranka = await prohlizec.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {
     if (zprava.type() === "error") chyby.push(zprava.text());
@@ -197,7 +197,8 @@ describe("paleta: laděný tlumič mezi prvky a pokusy", () => {
     const prvky = await stranka.locator(".paleta__prvky button").allInnerTexts();
     expect(prvky).toHaveLength(3);
     expect(prvky[2]).toContain("Laděný tlumič");
-    expect(prvky[2]).toContain("30\u202f000\u00a0Kč + 30\u00a0Kč/kg · do 1000 kg");
+    // Číslo se v řádku s cenou neodtrhne od jednotky ani od „do“: mezi nimi jsou nedělitelné mezery.
+    expect(prvky[2]).toContain("30\u202f000\u00a0Kč + 30\u00a0Kč/kg · do\u00a01000\u00a0kg");
     // Budič a brnknutí nejsou zašedlé; bez mostu poradí, co jim chybí.
     for (const [jmeno, rada] of [
       ["budic", "Budič potřebuje most, do kterého může bušit. Nejdřív ho nakresli."],

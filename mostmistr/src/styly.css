@@ -51,6 +51,22 @@ body {
   grid-template-rows: auto 1fr;
   height: 100vh;
   height: 100dvh;
+  /*
+   * Pojistka: nic uvnitř nesmí stránku roztáhnout. Na telefonu by širší dokument posunul okna
+   * mimo obrazovku a dal se odtáhnout prstem do stran.
+   */
+  overflow: hidden;
+  overflow: clip;
+}
+
+/* Výkres se zvětšuje sám dvěma prsty; stažení prstů vedle něj nemá zvětšit celou stránku. */
+#obrazovka-uroven {
+  touch-action: pan-x pan-y;
+}
+
+/* Tlačítka, která jsou v liště jen na telefonu. */
+.lista__telefon {
+  display: none;
 }
 
 /* Horní lišta */
@@ -437,6 +453,13 @@ body[data-sandbox] .pole__bunka:nth-child(3) {
   align-items: center;
 }
 
+/* Značky vyčnívají nad táhlo i pod něj: pruh, kde ukazatel hledá jejich popis, je vyšší. */
+.osa__drah::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0;
+}
+
 /* Světlejší pruh pod táhlem ukazuje, kolik děje je už spočítáno. */
 .osa__spocitano {
   position: absolute;
@@ -463,6 +486,24 @@ body[data-sandbox] .pole__bunka:nth-child(3) {
   width: 2px;
   margin-left: -1px;
   background: #ff4d3d;
+}
+
+/* Popis značky, ke které je ukazatel nejblíž: stojí nad osou u té značky. */
+.osa__bublina {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 3;
+  /* Vodorovnou polohu nastavuje skript: u krajů osy bublinu drží v okně. */
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: 3px 8px;
+  background: var(--lista);
+  border: 1px solid var(--cara);
+  color: var(--cara-silna);
+  font-size: 11px;
+  white-space: pre-line;
+  pointer-events: none;
 }
 
 .poruseni {
@@ -725,6 +766,7 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
 }
 
 .paleta kbd {
+  flex: none;
   min-width: 18px;
   padding: 0 3px;
   border: 1px solid rgb(207 227 255 / 0.5);
@@ -1013,6 +1055,41 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   margin: 4px 0 0 12px;
   color: var(--popisek);
   font-size: 10px;
+}
+
+/* Sbalení výsledku: zůstane jen řádek s verdiktem, aby byl vidět most a analýza. */
+.vysledek__sbalit {
+  float: right;
+  margin: -4px -6px 0 10px;
+}
+
+.vysledek[data-sbaleno="ano"] {
+  display: block;
+  width: auto;
+  max-width: calc(100% - 20px);
+  padding: 8px 12px;
+}
+
+.vysledek[data-sbaleno="ano"] > :not(.vysledek__hlavicka),
+.vysledek[data-sbaleno="ano"] .vysledek__hlavicka > :not(h2):not(.vysledek__sbalit) {
+  display: none;
+}
+
+.vysledek[data-sbaleno="ano"] .vysledek__hlavicka {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vysledek[data-sbaleno="ano"] h2 {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.vysledek[data-sbaleno="ano"] .vysledek__sbalit {
+  order: 1;
+  float: none;
+  margin: 0 -4px 0 0;
 }
 
 @media (max-width: 1000px) {
@@ -1471,6 +1548,20 @@ a.karta__obal:hover {
     grid-template-columns: 168px minmax(0, 1fr);
   }
 
+  /*
+   * Úzká paleta: dvojice tlačítek (Smazat a Vše pryč, Zpět a Znovu) se vedle sebe nevejdou
+   * a pravé by přišlo o okraj. Sloupce se smějí zúžit a text zalomit v mezeře.
+   */
+  .paleta__dvojice {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .paleta__dvojice .paleta__tlacitko {
+    min-width: 0;
+    gap: 4px;
+    padding-inline: 5px;
+  }
+
   .rozpocet__pruh {
     width: 80px;
   }
@@ -1683,6 +1774,12 @@ body[data-rezim="stavba"] .uroven .legenda {
   text-transform: uppercase;
 }
 
+/* Jednotka v nadpisu se verzálkami nepíše: mm nejsou MM. */
+.jednotka {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .analyza__cast {
   display: grid;
   gap: 4px;
@@ -1863,7 +1960,10 @@ body[data-rezim="stavba"] .uroven .legenda {
 }
 
 .frekvence__popis {
+  min-width: 0;
+  overflow: hidden;
   color: var(--cara-silna);
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
 }
@@ -1925,6 +2025,11 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 .okno__vedlejsi .medaile {
   margin-top: 0;
+}
+
+/* Medaile stojí v zadání nahoře; nadpis pod nimi potřebuje odstup jako mezi ostatními oddíly. */
+.okno__vedlejsi .medaile + h3 {
+  margin-top: 14px;
 }
 
 @media (max-width: 860px) {
@@ -2012,16 +2117,30 @@ body[data-rezim="stavba"] .uroven .legenda {
  * Nastavení toho, co je vybrané (napínák lana, svar, závaží, tlumič), drží u spodního okraje
  * palety: v nízkém okně je paleta delší než obrazovka a nastavení by jinak zůstalo pod ní.
  */
-.paleta__nastaveni:not([hidden]) {
+.paleta__nastaveni-obal {
   position: sticky;
   bottom: -14px;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
   margin: 0 -10px;
-  padding: 2px 10px 12px;
   background: rgb(11 47 92);
-  border-top: 1px solid rgb(207 227 255 / 0.6);
   box-shadow: 0 -8px 12px rgb(4 20 46 / 0.5);
+}
+
+/*
+ * U spodního okraje drží společný obal, ne každé nastavení zvlášť: u styčníku se svarem, který
+ * smí dostat i zámek, jsou vidět dvě najednou a jedno by jinak zakrylo druhé.
+ */
+.paleta__nastaveni-obal:not(:has(.paleta__nastaveni:not([hidden]))) {
+  display: none;
+}
+
+.paleta__nastaveni:not([hidden]) {
+  flex-shrink: 0;
+  padding: 2px 10px 12px;
+  border-top: 1px solid rgb(207 227 255 / 0.6);
 }
 
 /* Nízké okno: prvky palety těsněji, ať je jich vidět víc najednou. */
@@ -2092,4 +2211,237 @@ body[data-rezim="stavba"] .uroven .legenda {
   .hra--prehled .lista__oddil {
     display: none;
   }
+}
+
+/*
+ * Telefon a úzké okno. Do 1100 px šířky lišta úrovně nemá název hry (zpět vede tlačítko
+ * Kampaň), ovládání přehrávání se zalamuje, aby táhlo času neuteklo za okraj, a legenda
+ * využití se láme vedle popisového pole. Do 900 px zmizí i pruh rozpočtu a tlačítka + a −
+ * (výkres se zvětšuje dvěma prsty nebo kolečkem). Do 700 px se obrazovka úrovně skládá pod
+ * sebe: výkres, časová osa a paleta dole ve dvou sloupcích.
+ */
+@media (max-width: 1100px) {
+  #obrazovka-uroven .lista__nazev {
+    display: none;
+  }
+
+  .uroven .osa {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .uroven .osa__drah {
+    flex: 1 1 240px;
+  }
+
+  /*
+   * Jízdní řád a osa frekvencí se vedle sebe nevejdou: každý dostane vlastní řádek a dlouhý
+   * popis se zalomí. Bez toho by obrazovka byla širší než okno.
+   */
+  .uroven .osa__rad {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Osa frekvencí sdílí řádek s tlačítkem analýzy. */
+  .uroven .osa__frekvence {
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .uroven .frekvence {
+    flex: 0 1 250px;
+    min-width: 0;
+  }
+
+  .uroven .frekvence__popis {
+    flex: 1 1 200px;
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .uroven .legenda {
+    max-width: calc(100% - 396px);
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 900px) {
+  #obrazovka-uroven .rozpocet__pruh,
+  #obrazovka-uroven [data-akce="oddalit"],
+  #obrazovka-uroven [data-akce="priblizit"] {
+    display: none;
+  }
+
+  /* Popisové pole tu už není, legenda smí přes celý výkres. */
+  .uroven .legenda {
+    max-width: calc(100% - 20px);
+  }
+}
+
+@media (max-width: 700px) {
+  .lista {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    overflow: visible;
+    padding: 6px 8px;
+  }
+
+  /* Mezera v liště je na telefonu zlom řádku. */
+  .lista__mezera {
+    flex: 0 0 100%;
+    height: 0;
+    margin-top: -6px;
+  }
+
+  #obrazovka-uroven .rozpocet {
+    flex: 1 1 auto;
+  }
+
+  .uroven {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+
+  .uroven .vykres {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .uroven .osa {
+    grid-row: 2;
+    grid-column: 1;
+    gap: 6px 8px;
+    padding: 6px 8px;
+  }
+
+  .uroven .osa__drah {
+    flex: 1 1 60%;
+    min-width: 180px;
+  }
+
+  .uroven .frekvence {
+    flex: 1 1 160px;
+  }
+
+  .lista__telefon {
+    display: inline-block;
+  }
+
+  /* Druhý řádek lišty se musí vejít na šířku telefonu: užší tlačítka a „Celý výkres“ zkráceně. */
+  #obrazovka-uroven .lista .tlacitko {
+    padding-inline: 9px;
+  }
+
+  #obrazovka-uroven [data-akce="cely-vykres"] {
+    font-size: 0;
+  }
+
+  #obrazovka-uroven [data-akce="cely-vykres"]::before {
+    content: attr(data-kratce);
+    font-size: 13px;
+  }
+
+  /*
+   * Stavba: jízdní řád v jednom řádku (posouvá se prstem), osa frekvencí vedle tlačítka
+   * analýzy. Nadpisy tu nejsou; každý řádek navíc bere výšku výkresu.
+   */
+  .uroven .osa__rad .osa__nadpis,
+  .uroven .osa__frekvence .osa__nadpis {
+    display: none;
+  }
+
+
+  /* Okna: tlačítka zůstanou v okně i u dlouhého formuláře. */
+  .okno {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .uroven .paleta {
+    grid-row: 3;
+    grid-column: 1;
+    max-height: 34vh;
+    max-height: 34dvh;
+    border-right: 0;
+    border-top: 1px solid rgb(207 227 255 / 0.6);
+  }
+
+  /* Při zkoušce se nestaví: paleta ustoupí výkresu a výsledku. */
+  body[data-rezim="zkouska"] .uroven .paleta {
+    display: none;
+  }
+
+  .paleta__prvky,
+  .paleta__pokusy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .vysledek {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analyza {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    max-height: calc(100% - 12px);
+  }
+}
+
+/* Prst potřebuje větší cíl než myš: aspoň 44 px. */
+@media (pointer: coarse) {
+  .tlacitko,
+  .paleta__tlacitko {
+    min-height: 44px;
+  }
+
+  .tlacitko--znak,
+  .paleta__krokovac .paleta__tlacitko {
+    min-width: 44px;
+  }
+
+  .legenda__prepinac {
+    min-height: 32px;
+    padding-inline: 8px;
+  }
+
+  /* Táhlo času: vyšší pruh, ať se dá chytit. */
+  .osa input[type="range"] {
+    height: 32px;
+  }
+
+  .okno input:not([type="checkbox"], [type="radio"], [type="range"]),
+  .okno select {
+    min-height: 40px;
+  }
+
+  .okno input[type="checkbox"],
+  .okno input[type="radio"] {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Nízké okno (telefon naležato): nadpisy jízdního řádu a osy frekvencí ustoupí výkresu. */
+@media (max-height: 500px) {
+  .uroven .osa__rad .osa__nadpis,
+  .uroven .osa__frekvence .osa__nadpis {
+    display: none;
+  }
+
+  .uroven .osa {
+    padding-block: 4px;
+    row-gap: 4px;
+  }
+}
+
+/* Přehrát a Pauza jsou různě dlouhá slova: tlačítko drží šířku, ať osa při pauze neposkočí. */
+.osa [data-akce="prehrat"] {
+  min-width: 104px;
 }

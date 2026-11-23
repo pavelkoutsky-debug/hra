@@ -6,7 +6,9 @@ import { ChybaDat, cislo, jenZnameKlice, logicka, neboNull, objekt } from "./kon
 import { nactiNavrh, type NavrhMostu } from "./navrh";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_ULOZENI = 2;
+export const VERZE_ULOZENI = 3;
+/** Verze fyziky, se kterou se měřily všechny rekordy zkoušky do zlomu uložené ve formátu 2. */
+const FYZIKA_ZLOMU_VE_FORMATU_2 = 7;
 
 /** Převody ze starších verzí formátu uložení; viz `prevedNaAktualni`. */
 const PREVODY_ULOZENI: readonly Prevod[] = [
@@ -16,6 +18,16 @@ const PREVODY_ULOZENI: readonly Prevod[] = [
     const rekordy: Record<string, unknown> = {};
     for (const [id, zaznam] of Object.entries(objekt(stare.rekordy ?? {}, "ulozeni.rekordy"))) {
       rekordy[id] = { ...objekt(zaznam, `ulozeni.rekordy.${id}`), nejlepsiHmotnost: null, nejlepsiZlom: null };
+    }
+    return { ...stare, rekordy };
+  },
+  // 2 → 3: rekord zkoušky do zlomu si pamatuje, se kterou verzí fyziky byl změřen. Únosnost je
+  // výsledek výpočtu: po změně fyziky by starý rekord držel stupeň, na který už nejde dosáhnout.
+  (stare) => {
+    const rekordy: Record<string, unknown> = {};
+    for (const [id, zaznam] of Object.entries(objekt(stare.rekordy ?? {}, "ulozeni.rekordy"))) {
+      const o = objekt(zaznam, `ulozeni.rekordy.${id}`);
+      rekordy[id] = { ...o, verzeZlomu: o.nejlepsiZlom === null || o.nejlepsiZlom === undefined ? null : FYZIKA_ZLOMU_VE_FORMATU_2 };
     }
     return { ...stare, rekordy };
   },
@@ -41,6 +53,8 @@ export interface Rekord {
   nejlepsiHmotnost: number | null;
   /** Největší únosnost na korunu ze zkoušky do zlomu, N/Kč; null, dokud ji hráč nezkusil. */
   nejlepsiZlom: number | null;
+  /** Verze fyziky, se kterou byl `nejlepsiZlom` změřen; null, dokud změřen nebyl. Viz `platnyZlom`. */
+  verzeZlomu: number | null;
 }
 
 export interface Ulozeni {
@@ -66,7 +80,7 @@ function medaile(h: unknown, cesta: string): Medaile {
 
 function rekord(h: unknown, cesta: string): Rekord {
   const o = objekt(h, cesta);
-  jenZnameKlice(o, cesta, ["verzeFyziky", "medaile", "nejlepsiCena", "nejlepsiHmotnost", "nejlepsiZlom"]);
+  jenZnameKlice(o, cesta, ["verzeFyziky", "medaile", "nejlepsiCena", "nejlepsiHmotnost", "nejlepsiZlom", "verzeZlomu"]);
   return {
     verzeFyziky: cislo(o.verzeFyziky, `${cesta}.verzeFyziky`, { min: 0, cele: true }),
     medaile: medaile(o.medaile, `${cesta}.medaile`),
@@ -74,6 +88,8 @@ function rekord(h: unknown, cesta: string): Rekord {
     // Rekordy výzev smějí v zápisu chybět (ruční úprava, starší sestavení): čtou se jako nezměřené.
     nejlepsiHmotnost: neboNull(o.nejlepsiHmotnost ?? null, (v) => cislo(v, `${cesta}.nejlepsiHmotnost`, { min: 0 })),
     nejlepsiZlom: neboNull(o.nejlepsiZlom ?? null, (v) => cislo(v, `${cesta}.nejlepsiZlom`, { min: 0 })),
+    // Rekord bez verze (ruční úprava) se čte jako změřený neznámou fyzikou, tedy neplatný.
+    verzeZlomu: neboNull(o.verzeZlomu ?? null, (v) => cislo(v, `${cesta}.verzeZlomu`, { min: 0, cele: true })),
   };
 }
 
@@ -144,12 +160,29 @@ export function vylepsiRekord(
     nejlepsiCena,
     nejlepsiHmotnost,
     nejlepsiZlom: dosavadni?.nejlepsiZlom ?? null,
+    verzeZlomu: dosavadni?.verzeZlomu ?? null,
   };
 }
 
 /**
+ * Rekord zkoušky do zlomu, pokud platí pro dnešní fyziku; jinak null. Únosnost je výsledek
+ * výpočtu a prahy výzvy se s každou verzí fyziky měří znovu: rekord změřený jinou verzí by se
+ * s nimi nedal poctivě porovnat. Medaile a cena takhle nezastarávají (viz `vylepsiRekord`).
+ */
+export function platnyZlom(rekord: Rekord | undefined, verzeFyziky: number): number | null {
+  if (!rekord || rekord.verzeZlomu !== verzeFyziky) return null;
+  return rekord.nejlepsiZlom;
+}
+
+/** Má úroveň rekord zkoušky do zlomu změřený jinou verzí fyziky, než je dnešní? */
+export function zastaralyZlom(rekord: Rekord | undefined, verzeFyziky: number): boolean {
+  return rekord !== undefined && rekord.nejlepsiZlom !== null && rekord.verzeZlomu !== verzeFyziky;
+}
+
+/**
  * Započítá výsledek zkoušky do zlomu: únosnost na korunu (N/Kč) se jen zvyšuje. Medaile
- * ani cenu zkouška do zlomu nemění.
+ * ani cenu zkouška do zlomu nemění. Rekord změřený jinou verzí fyziky se nepočítá: první
+ * měření s dnešní fyzikou ho nahradí, i kdyby vyšlo menší.
  */
 export function vylepsiZlom(dosavadni: Rekord | undefined, unosnostNaKorunu: number, verzeFyziky: number): Rekord {
   const zaklad: Rekord = dosavadni ?? {
@@ -158,7 +191,9 @@ export function vylepsiZlom(dosavadni: Rekord | undefined, unosnostNaKorunu: num
     nejlepsiCena: null,
     nejlepsiHmotnost: null,
     nejlepsiZlom: null,
+    verzeZlomu: null,
   };
-  if (!(unosnostNaKorunu > 0) || (zaklad.nejlepsiZlom !== null && unosnostNaKorunu <= zaklad.nejlepsiZlom)) return zaklad;
-  return { ...zaklad, verzeFyziky, nejlepsiZlom: unosnostNaKorunu };
+  const platny = platnyZlom(zaklad, verzeFyziky);
+  if (!(unosnostNaKorunu > 0) || (platny !== null && unosnostNaKorunu <= platny)) return zaklad;
+  return { ...zaklad, verzeFyziky, nejlepsiZlom: unosnostNaKorunu, verzeZlomu: verzeFyziky };
 }

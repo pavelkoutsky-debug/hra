@@ -239,6 +239,195 @@ describe("most sestavený z návrhu", () => {
   });
 });
 
+describe("vzpěrná délka", () => {
+  /** Vzpěrné délky prutů návrhu podle pořadí prutu (první díl každého prutu). */
+  function vzperne(k: Kreslic, uprava: Parameters<typeof urovenRegrese>[0] = { rozpeti: 8, sirka: 2, vybaveni: 40 }): number[] {
+    const navrh = k.navrh();
+    const stavba = sestavMost(urovenRegrese(uprava), navrh);
+    return navrh.pruty.map((_, cislo) => stavba.popis.prvky.find((p) => p.prut === cislo)!.vzpernaDelka!);
+  }
+  const PUL = Math.sqrt(8);
+
+  /** Krokev z opěry do vrcholu (4, 4) ze dvou kusů se styčníkem v (2, 2) a druhá krokev dolů. */
+  function vesadlo(): Kreslic {
+    const k = new Kreslic();
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    k.prut("mostovka-drevo", [4, 0], [8, 0]);
+    k.prut("drevo-lehke", [0, 0], [2, 2]);
+    k.prut("drevo-lehke", [2, 2], [4, 4]);
+    k.prut("drevo-lehke", [4, 4], [8, 0]);
+    k.prut("drevo-lehke", [4, 0], [4, 4]);
+    return k;
+  }
+
+  it("svar uprostřed prutu jeho vzpěrnou délku nezkrátí: vybočí celý", () => {
+    const k = vesadlo();
+    k.bod(2, 2, { svar: true });
+    const delky = vzperne(k);
+    // Oba kusy krokve mají vzpěrnou délku celé krokve, ne své poloviny.
+    expect(delky[2]).toBeCloseTo(2 * PUL, 12);
+    expect(delky[3]).toBeCloseTo(2 * PUL, 12);
+    // Krokev nakreslená vcelku na druhé straně má stejnou.
+    expect(delky[4]).toBeCloseTo(2 * PUL, 12);
+    expect(delky[5]).toBe(4);
+  });
+
+  it("styčník, do kterého vede další prut, vzpěrnou délku dělí", () => {
+    const k = vesadlo();
+    k.bod(2, 2, { svar: true });
+    // Vzpěra z mostovky do poloviny krokve ji tam podepře.
+    k.prut("drevo-lehke", [2, 2], [4, 0]);
+    const delky = vzperne(k);
+    expect(delky[2]).toBeCloseTo(PUL, 12);
+    expect(delky[3]).toBeCloseTo(PUL, 12);
+  });
+
+  it("pahýl s volným koncem (ani dvojitý) ani tlumič styčník nedrží: vzpěrná délka zůstává celá", () => {
+    // Svar uprostřed krokve a z něj metrový pahýl do vzduchu.
+    const pahyl = vesadlo();
+    pahyl.bod(2, 2, { svar: true });
+    pahyl.prut("drevo-lehke", [2, 2], [2, 3]);
+    expect(vzperne(pahyl)[2]).toBeCloseTo(2 * PUL, 12);
+    expect(vzperne(pahyl)[3]).toBeCloseTo(2 * PUL, 12);
+    // Tlumič z poloviny krokve do mostovky nemá tuhost, o kterou by se krokev opřela.
+    const tlumic = vesadlo();
+    tlumic.bod(2, 2, { svar: true });
+    tlumic.prut("tlumic", [2, 2], [2, 0]);
+    expect(vzperne(tlumic)[2]).toBeCloseTo(2 * PUL, 12);
+    // Pahýl ze dvou kusů (do vzduchu a ještě kousek dál) taky nikam nevede.
+    const dvojity = vesadlo();
+    dvojity.bod(2, 2, { svar: true });
+    dvojity.prut("drevo-lehke", [2, 2], [2, 3]);
+    dvojity.prut("drevo-lehke", [2, 3], [1, 4]);
+    expect(vzperne(dvojity)[2]).toBeCloseTo(2 * PUL, 12);
+  });
+
+  it("lano drží styčník jen s druhým lanem na opačné straně: samo umí jen táhnout", () => {
+    // Jedno lano z poloviny krokve dolů do mostovky: vybočení směrem k lanu nezabrání.
+    const jedno = vesadlo();
+    jedno.bod(2, 2, { svar: true });
+    jedno.prut("lano", [2, 2], [4, 0]);
+    expect(vzperne(jedno)[2]).toBeCloseTo(2 * PUL, 12);
+    // Dvě lana na stejné straně krokve taky ne.
+    const stejnaStrana = vesadlo();
+    stejnaStrana.bod(2, 2, { svar: true });
+    stejnaStrana.prut("lano", [2, 2], [4, 0]);
+    stejnaStrana.prut("lano", [2, 2], [8, 0]);
+    expect(vzperne(stejnaStrana)[2]).toBeCloseTo(2 * PUL, 12);
+    // Lano dolů do mostovky a druhé nahoru přes krokev do sloupku: táhnou proti sobě, styčník drží.
+    const obeStrany = vesadlo();
+    obeStrany.bod(2, 2, { svar: true });
+    obeStrany.prut("lano", [2, 2], [4, 0]);
+    obeStrany.prut("drevo-lehke", [4, 4], [4, 6]);
+    obeStrany.prut("drevo-lehke", [4, 6], [8, 0]);
+    obeStrany.prut("lano", [2, 2], [4, 6]);
+    const delky = vzperne(obeStrany);
+    expect(delky[2]).toBeCloseTo(PUL, 12);
+    expect(delky[3]).toBeCloseTo(PUL, 12);
+  });
+
+  it("trojúhelník přistavěný jen k řetězu ho neopře; sloupek vzpínadla ano", () => {
+    // Vzpěra z poloviny krokve do bodu, který drží jen pata téže krokve: trojúhelník se hýbe s ní.
+    const falesny = vesadlo();
+    falesny.bod(2, 2, { svar: true });
+    falesny.prut("drevo-lehke", [2, 2], [1, 3]);
+    falesny.prut("drevo-lehke", [1, 3], [0, 0]);
+    expect(vzperne(falesny)[2]).toBeCloseTo(2 * PUL, 12);
+    // Vzpínadlo: svařená mostovka 2×4 m, pod středem sloupek a z jeho paty táhla na oba konce
+    // mostovky. Sloupek střed mostovky drží, i když táhla končí na koncích téhož řetězu.
+    const vzpinadlo = new Kreslic();
+    vzpinadlo.prut("mostovka-drevo", [0, 0], [4, 0]);
+    vzpinadlo.prut("mostovka-drevo", [4, 0], [8, 0]);
+    vzpinadlo.bod(4, 0, { svar: true });
+    expect(vzperne(vzpinadlo)).toEqual([8, 8]);
+    vzpinadlo.prut("drevo-lehke", [4, 0], [4, -2]);
+    vzpinadlo.prut("drevo-lehke", [0, 0], [4, -2]);
+    vzpinadlo.prut("drevo-lehke", [4, -2], [8, 0]);
+    expect(vzperne(vzpinadlo).slice(0, 2)).toEqual([4, 4]);
+    // S jediným táhlem je pata sloupku držená jen z jedné strany: střed mostovky neopře.
+    const jednostranne = new Kreslic();
+    jednostranne.prut("mostovka-drevo", [0, 0], [4, 0]);
+    jednostranne.prut("mostovka-drevo", [4, 0], [8, 0]);
+    jednostranne.bod(4, 0, { svar: true });
+    jednostranne.prut("drevo-lehke", [4, 0], [4, -2]);
+    jednostranne.prut("drevo-lehke", [0, 0], [4, -2]);
+    expect(vzperne(jednostranne).slice(0, 2)).toEqual([8, 8]);
+  });
+
+  it("posuvné ložisko drží prut jen napříč svému posunu: svislý sloup do strany ne", () => {
+    const zaklad = urovenRegrese({ rozpeti: 8, sirka: 2, vybaveni: 40 });
+    // Posuvná kotva ve vzduchu v bodě (2, 3): drží jen svisle.
+    const uroven = { ...zaklad, kotvy: [...zaklad.kotvy, { x: 2, y: 3, typ: "posuvna" as const }] };
+    const delky = (k: Kreslic): number[] => {
+      const navrh = k.navrh();
+      const stavba = sestavMost(uroven, navrh);
+      return navrh.pruty.map((_, cislo) => stavba.popis.prvky.find((p) => p.prut === cislo)!.vzpernaDelka!);
+    };
+    // Svislý sloup ze dvou svařených kusů prochází ložiskem: do strany ho nedrží, vybočí celý.
+    const sloup = new Kreslic();
+    sloup.prut("drevo-lehke", [2, 1], [2, 3]);
+    sloup.prut("drevo-lehke", [2, 3], [2, 5]);
+    sloup.bod(2, 3, { svar: true });
+    expect(delky(sloup)).toEqual([4, 4]);
+    // Vodorovný prut přes totéž ložisko: svislému vybočení ložisko brání, délka se dělí.
+    const tram = new Kreslic();
+    tram.prut("drevo-lehke", [0, 3], [2, 3]);
+    tram.prut("drevo-lehke", [2, 3], [4, 3]);
+    tram.bod(2, 3, { svar: true });
+    expect(delky(tram)).toEqual([2, 2]);
+  });
+
+  it("bez svaru se pruty neřetězí a lomený tah taky ne", () => {
+    // Kloub uprostřed: každý kus je sám za sebe (a krokev je mechanismus, to řeší zkouška).
+    const kloub = vzperne(vesadlo());
+    expect(kloub[2]).toBeCloseTo(PUL, 12);
+    // Svar, ale pruty nejsou v přímce: (0,0)–(2,2) a (2,2)–(4,3).
+    const k = new Kreslic();
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    k.prut("mostovka-drevo", [4, 0], [8, 0]);
+    k.prut("drevo-lehke", [0, 0], [2, 2]);
+    k.prut("drevo-lehke", [2, 2], [4, 3]);
+    k.bod(2, 2, { svar: true });
+    const lomene = vzperne(k);
+    expect(lomene[2]).toBeCloseTo(PUL, 12);
+    expect(lomene[3]).toBeCloseTo(Math.sqrt(5), 12);
+  });
+
+  it("řetěz jde přes víc svarů a končí na podpoře", () => {
+    // Svařená mostovka ze čtyř dílů přes dvě pole: uprostřed (8, 0) leží na pilíři s kotvou.
+    const k = new Kreslic();
+    for (let x = 0; x < 16; x += 4) k.prut("mostovka-drevo", [x, 0], [x + 4, 0]);
+    k.svarVse();
+    const uroven = { rozpeti: 16, sirka: 2, vybaveni: 40 };
+    const navrh = k.navrh();
+    const zaklad = urovenRegrese(uroven);
+    const sPodporou = { ...zaklad, kotvy: [...zaklad.kotvy, { x: 8, y: 0, typ: "posuvna" as const }] };
+    const delky = (u: typeof zaklad): number[] =>
+      navrh.pruty.map((_, cislo) => sestavMost(u, navrh).popis.prvky.find((p) => p.prut === cislo)!.vzpernaDelka!);
+    // Bez podpory uprostřed je to jeden prut přes celé rozpětí.
+    expect(delky(zaklad)).toEqual([16, 16, 16, 16]);
+    // Podpora řetěz dělí na dvě pole po osmi metrech.
+    expect(delky(sPodporou)).toEqual([8, 8, 8, 8]);
+  });
+
+  it("pilíře nad sebou jsou jeden sloup i bez svaru; lano a píst se neřetězí", () => {
+    const k = new Kreslic();
+    k.prut("mostovka-ocelobeton", [0, 0], [6, 0]);
+    k.prut("mostovka-ocelobeton", [6, 0], [12, 0]);
+    k.prut("pilir", [6, -12], [6, -6]);
+    k.prut("pilir", [6, -6], [6, 0]);
+    const zaklad = urovenRegrese({ rozpeti: 12, sirka: 7, vybaveni: 600 });
+    const uroven = { ...zaklad, zaklady: [{ x: 6, y: -12 }], povolenePrvky: [...zaklad.povolenePrvky, "pilir" as const] };
+    const navrh = k.navrh();
+    const stavba = sestavMost(uroven, navrh);
+    const delka = (cislo: number): number => stavba.popis.prvky.find((p) => p.prut === cislo)!.vzpernaDelka!;
+    expect(delka(2)).toBe(12);
+    expect(delka(3)).toBe(12);
+    // Mostovka nad pilířem má ve styčníku tři pruty: neřetězí se.
+    expect(delka(0)).toBe(6);
+  });
+});
+
 describe("útlum tvarů mostu z více materiálů", () => {
   it("leží mezi útlumy materiálů a tvar, ve kterém pracuje hlavně dřevo, tlumí víc", () => {
     const uroven = urovenRegrese({ rozpeti: 24 });

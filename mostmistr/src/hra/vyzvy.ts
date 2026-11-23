@@ -1,7 +1,7 @@
 // Výzvy o efektivitu na stránce: seznam tří výzev úrovně s tím, co hráč dokázal, jaký má
 // stupeň a co chce stupeň další. Pravidla a prahy jsou v `src/data/vyzvy.ts`.
 
-import type { Rekord } from "../data/ulozeni";
+import { platnyZlom, zastaralyZlom, type Rekord } from "../data/ulozeni";
 import {
   dalsiPrah,
   DRUHY_VYZEV,
@@ -13,6 +13,7 @@ import {
   type StupenVyzvy,
   type ZakladVyzev,
 } from "../data/vyzvy";
+import { VERZE_FYZIKY } from "../jadro/verze";
 import { celeCislo, cislo, koruny, procenta } from "../ui/formaty";
 import { t } from "../ui/slovnik";
 
@@ -34,10 +35,13 @@ export function zapisVyzvy(druh: DruhVyzvy, hodnota: number): string {
   return t("vyzva.zlom.hodnota", { tun: cislo(videt, 1) });
 }
 
-/** Co hráč ve výzvě zatím dokázal; null, dokud ji neměřil. */
+/**
+ * Co hráč ve výzvě zatím dokázal; null, dokud ji neměřil. Únosnost změřená jinou verzí
+ * fyziky se nepočítá (viz `platnyZlom`).
+ */
 export function hodnotaVyzvy(druh: DruhVyzvy, rekord: Rekord | undefined): number | null {
   if (!rekord) return null;
-  return druh === "cena" ? rekord.nejlepsiCena : druh === "hmotnost" ? rekord.nejlepsiHmotnost : rekord.nejlepsiZlom;
+  return druh === "cena" ? rekord.nejlepsiCena : druh === "hmotnost" ? rekord.nejlepsiHmotnost : platnyZlom(rekord, VERZE_FYZIKY);
 }
 
 /** Stupně všech tří výzev úrovně a jejich součet (0 až 9). */
@@ -86,7 +90,9 @@ export function vypisVyzvy(
       const stav = document.createElement("span");
       stav.className = "vyzvy__stav";
       const casti: string[] = [];
-      if (hodnota === null) casti.push(t(druh === "zlom" ? "vyzva.zlom.nezkouseno" : "vyzva.nezmereno"));
+      // Rekord změřený starší verzí výpočtu neplatí; hráč má vědět, proč zmizel.
+      if (hodnota === null && druh === "zlom" && zastaralyZlom(rekord, VERZE_FYZIKY)) casti.push(t("vyzva.zlom.zastaralo"));
+      else if (hodnota === null) casti.push(t(druh === "zlom" ? "vyzva.zlom.nezkouseno" : "vyzva.nezmereno"));
       else {
         // Řádek ukazuje rekord. Když právě zkoušený most dopadl jinak, řekne to, jinak by pod
         // sebou stála dvě různá čísla bez vysvětlení.

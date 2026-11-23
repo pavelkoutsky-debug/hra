@@ -3,6 +3,7 @@
 import type { Bod, Obdelnik } from "../data/geometrie";
 import { doplnTexty, prvek, udaj } from "../ui/dom";
 import { cislo } from "../ui/formaty";
+import { pripravJazyk } from "../ui/jazyk";
 import { posunPrehravani, zapisCasu, type StavPrehravani } from "../ui/prehravani";
 import { t, type KlicTextu } from "../ui/slovnik";
 import { celyVyrez, omezNaVyrez, posunO, zoomKolem, type Kamera } from "../vykres/kamera";
@@ -19,6 +20,7 @@ import type { ZpravaProZkusebnu, ZpravaZeZkusebny } from "./zpravy";
 
 const OKRAJ_VYKRESU = 30;
 
+pripravJazyk();
 doplnTexty();
 
 const canvas = prvek(".vykres__platno", HTMLCanvasElement);
@@ -52,6 +54,8 @@ let pohledJeVychozi = true;
 const platno = new Platno(
   canvas,
   (ctx, rozmer) => {
+    // Háček pro testy v prohlížeči: střed a měřítko pohledu, stejně jako ve hře.
+    canvas.dataset.kamera = `${kamera.x};${kamera.y};${kamera.meritko}`;
     nakresliPodklad(ctx, kamera, rozmer);
     const stavba = zaznam.stavV(prehravani.cas, snimek);
     if (stavba) nakresliKonstrukci(ctx, kamera, rozmer, stavba, snimek, POLOMER_KOLA);

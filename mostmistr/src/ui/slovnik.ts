@@ -1,10 +1,15 @@
-// Všechny texty hry na jednom místě, aby šla později doplnit angličtina.
+// Všechny texty hry na jednom místě. Čeština je tady, angličtina ve `slovnik-en.ts` se stejnými
+// klíči; který jazyk platí, říká `nastavJazyk` (v prohlížeči podle volby hráče, viz `jazyk.ts`).
+
+import { EN, NAZVY_UROVNI_EN } from "./slovnik-en";
 
 const CS = {
   "hra.nazev": "Mostmistr",
+  "jazyk.prepnout": "Přepnout hru do angličtiny (Switch to English)",
   "lista.oddalit": "Oddálit",
   "lista.priblizit": "Přiblížit",
   "lista.celyVykres": "Celý výkres",
+  "lista.celyVykres.kratce": "Celý",
   "napoveda.ovladani": "tažení ze styčníku: nový prut · kolečko: zoom · pravé tlačítko: posun · mezerník: zkouška",
   "napoveda.zkouska": "kliknutí na prut: jeho největší namáhání · P: pauza · čárka a tečka: krok · mezerník: stavba",
   "pole.nazev": "Název",
@@ -15,6 +20,10 @@ const CS = {
   "pole.datum": "Datum",
   "pole.fyzikaNedostupna": "nedostupná",
   "vykres.hladina": "hladina {vyska}",
+  "vykres.kotvaCep": "čep křídla",
+  "vykres.kotvaPist": "kotva pro píst",
+  "vykres.kotvaPist.melka": "mělká kotva pro píst",
+  "vykres.kotvaPist.hluboka": "hluboká kotva pro píst",
   "vykres.zakazanaZona": "zakázaná zóna",
   "vykres.plavebniProfil": "loď {vyska} · {cas}. s",
   "vykres.trasa.kolej": "kolej",
@@ -50,6 +59,7 @@ const CS = {
   "zkusebna.mereni": "Měření výkonu",
   "zkusebna.otisky": "Shoda výpočtu",
   "zkusebna.zvuky": "Zvuky",
+  "zkusebna.titulek": "Mostmistr – zkušebna",
   "zkusebna.poruseni": "Porušení",
   "zkusebna.poruseni.zadne": "Konstrukce vydržela bez porušení.",
   "zkusebna.poruseni.radek": "{cas} s · prut {prut}: {zpusob}, {nasledek}",
@@ -135,6 +145,21 @@ const CS = {
   "zkouska.pozastavit": "❙❙ Pozastavit",
   "zkouska.naKonec": "Na konec",
   "zkouska.cas": "Čas děje",
+  "osa.znacka.vyjezd": "vyráží: {kdo}",
+  "osa.znacka.poruseni": "porušení prutu {prut}",
+  "osa.znacka.sjeti": "konec mostu sjel z posuvné podpory",
+  "osa.znacka.pad": "{kdo} padá z mostu",
+  "osa.znacka.padLidi": "z mostu padá {pocet} lidí",
+  "osa.znacka.pohyb.odemceno": "zámky se odemkly, most se zvedá",
+  "osa.znacka.pohyb.zvedani": "most se zvedá",
+  "osa.znacka.pohyb.dosedl": "most dosedl",
+  "osa.znacka.pohyb.bezPistu": "most se měl zvednout, ale nemá píst",
+  "osa.znacka.pohyb.zvednuto": "most je zvednutý",
+  "osa.znacka.pohyb.sklapeni": "most se sklápí",
+  "osa.znacka.pohyb.zamceno": "zámky zapadly",
+  "osa.znacka.pohyb.preklopeno": "křídlo se překlopilo",
+  "osa.znacka.lodProplula": "loď proplula",
+  "osa.znacka.lodNarazila": "loď narazila do mostu",
   "zkouska.pocitaSe": "počítá se…",
   "zkouska.chyba": "Zkoušku se nepodařilo spočítat: {duvod}",
   "zkouska.chyba.jina-verze-fyziky": "hra a simulace mají různou verzi; obnov stránku",
@@ -454,6 +479,8 @@ const CS = {
   "zadani.medaile": "Medaile",
   "zadani.ovladani":
     "Prut nakreslíš tažením myší z kotvy nebo ze styčníku. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",
+  "zadani.ovladani.dotyk":
+    "Prut nakreslíš tažením prstu z kotvy nebo ze styčníku. Dvěma prsty výkres posouváš a zvětšuješ. Zkoušku pustíš tlačítkem ▶ Zkouška a na časové ose ji můžeš zpomalit, krokovat i vracet.",
   "zadani.zacit": "Jdu stavět",
   "zadani.skutecnost": "Ve skutečnosti: {text}",
 
@@ -709,6 +736,7 @@ const CS = {
   "vyzva.stupen.3": "zlato",
   "vyzva.nezmereno": "zatím nezměřeno: projdi zkouškou",
   "vyzva.zlom.nezkouseno": "zatím nezměřeno: pusť Do zlomu na mostě, který prošel",
+  "vyzva.zlom.zastaralo": "starý rekord se měřil starší verzí výpočtu: pusť Do zlomu znovu",
   "vyzva.zlom.hodnota": "{tun} t na 100 000 Kč",
   "vyzva.rekord": "rekord {rekord} (tenhle most {tento})",
   "vyzva.dalsi.do": "{stupen} do {prah}",
@@ -726,7 +754,7 @@ const CS = {
   "vysledek.neobstal": "Most neobstál",
   "vysledek.rozpad": "Výpočet se rozpadl",
   "vysledek.shrnuti.vsichni": "Přešli a přejeli všichni ({pocet}).",
-  "vysledek.shrnuti.cast": "Přejelo {prejelo} z {pocet}, spadlo {spadlo}.",
+  "vysledek.shrnuti.cast": "Na druhý břeh se dostalo {prejelo} z {pocet}, spadlo {spadlo}.",
   "vysledek.shrnuti.bezProvozu": "Most stál jen pod vlastní tíhou.",
   "vysledek.shrnuti.rozpad": "Simulace se numericky rozpadla a výsledek neplatí. Pošli mi prosím diagnostiku.",
   "vysledek.nedopnuto":
@@ -749,6 +777,8 @@ const CS = {
   "vysledek.dalsi": "Další úroveň ▸",
   "vysledek.diagnostika": "Diagnostika",
   "vysledek.otisk": "otisk {otisk}",
+  "vysledek.sbalit": "Sbalit výsledek, ať je vidět most",
+  "vysledek.rozbalit": "Rozbalit výsledek",
   "obalka.prut": "Prut {prut}: největší využití {vyuziti} ({zpusob}) v čase {cas}",
   "obalka.bezNamahani": "Prut {prut}: při zkoušce nebyl namáhaný",
   "paleta.zlom": "Do zlomu",
@@ -758,6 +788,8 @@ const CS = {
   "vysledek.zlom.unesl": "Most unesl {tun} ({sila}, tedy {naMetr} na metr mostovky).",
   "vysledek.zlom.pist": "První povolil píst (prut {prut}): přetlakový ventil ho pod zátěží pustil v čase {cas}.",
   "vysledek.zlom.vydrzel": "Most unesl všechno, co zkouška umí naložit: {tun} ({naMetr} na metr mostovky).",
+  "vysledek.zlom.nedolozeno":
+    "Most se pod zátěží trvale přetvářel, ale nepovolil. Zkouška skončila dřív, než naložila všechno, co umí; unesl nejméně {tun} ({naMetr} na metr mostovky).",
   "vysledek.zlom.nic": "Most nemá klidovou polohu: neunesl ani sám sebe.",
   "vysledek.zlom.naKorunu": "Při ceně {cena} je to {hodnota}.",
   "vysledek.zlom.nepocitaSe": "Do výzvy o únosnost se to zatím nepočítá: tenhle most ještě neprošel běžnou zkouškou. Pusť ji mezerníkem a pak zkoušku do zlomu zopakuj.",
@@ -777,6 +809,8 @@ const CS = {
   "okno.import.nadpis": "Import mostu",
   "okno.import.popis": "Vlož text mostu z exportu. Nahradí rozpracovaný most; jde to vrátit přes Zpět.",
   "okno.import.chyba": "Tenhle text most není: {duvod}",
+  "okno.import.neniMost": "Tenhle text není most z exportu Mostmistra.",
+  "okno.import.novejsi": "Tenhle most je z novější verze hry, než je tahle. Načti stránku znovu a zkus to ještě jednou.",
   "okno.import.jinaUroven": "Most je nakreslený pro úroveň {uroven}, ne pro tuto.",
   "okno.diagnostika.nadpis": "Diagnostika",
   "okno.diagnostika.popis": "Verze hry, úroveň, most a výsledek zkoušky. Tohle mi pošli, když se něco chová divně.",
@@ -955,9 +989,33 @@ const CS = {
 
 export type KlicTextu = keyof typeof CS;
 
-/** Vrátí text podle klíče a doplní hodnoty na místa označená {jmenem}. */
+export const JAZYKY = ["cs", "en"] as const;
+export type Jazyk = (typeof JAZYKY)[number];
+
+/** Jazyk, ve kterém `t` vrací texty a `formaty.ts` píše čísla. Mimo prohlížeč čeština. */
+let jazyk: Jazyk = "cs";
+
+export function nastavJazyk(novy: Jazyk): void {
+  jazyk = novy;
+}
+
+export function aktualniJazyk(): Jazyk {
+  return jazyk;
+}
+
+/** Texty obou jazyků pro testy úplnosti překladu. */
+export const TEXTY: { readonly cs: Readonly<Record<KlicTextu, string>>; readonly en: Readonly<Partial<Record<KlicTextu, string>>> } = {
+  cs: CS,
+  en: EN,
+};
+
+/**
+ * Vrátí text podle klíče a doplní hodnoty na místa označená {jmenem}. Kdyby anglický text
+ * chyběl, vrátí český: lepší cizí věta než prázdné tlačítko (test hlídá, že nechybí žádný).
+ */
 export function t(klic: KlicTextu, hodnoty: Readonly<Record<string, string | number>> = {}): string {
-  return CS[klic].replace(/\{(\w+)\}/g, (cele: string, jmeno: string) => {
+  const text = (jazyk === "en" ? EN[klic] : undefined) ?? CS[klic];
+  return text.replace(/\{(\w+)\}/g, (cele: string, jmeno: string) => {
     const hodnota = hodnoty[jmeno];
     return hodnota === undefined ? cele : String(hodnota);
   });
@@ -965,4 +1023,9 @@ export function t(klic: KlicTextu, hodnoty: Readonly<Record<string, string | num
 
 export function jeKlicTextu(klic: string): klic is KlicTextu {
   return klic in CS;
+}
+
+/** Název úrovně v jazyce hry: český je v souboru úrovně, anglický ve slovníku. */
+export function nazevUrovne(uroven: { id: string; nazev: string }): string {
+  return jazyk === "en" ? (NAZVY_UROVNI_EN[uroven.id] ?? uroven.nazev) : uroven.nazev;
 }

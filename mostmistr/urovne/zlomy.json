@@ -1,13 +1,13 @@
 {
-  "verzeFyziky": 7,
+  "verzeFyziky": 8,
   "urovne": {
     "1-01": {
       "reseni": "mistrovska",
-      "naKorunu": 3.8731488708754305
+      "naKorunu": 3.8731488708241164
     },
     "1-02": {
       "reseni": "rozpocet",
-      "naKorunu": 6.540347382045793
+      "naKorunu": 6.542513299032957
     },
     "1-03": {
       "reseni": "mistrovska",
@@ -15,7 +15,7 @@
     },
     "1-04": {
       "reseni": "mistrovska",
-      "naKorunu": 4.186615611929748
+      "naKorunu": 4.186615610986466
     },
     "2-01": {
       "reseni": "pruchod",
@@ -23,11 +23,11 @@
     },
     "2-02": {
       "reseni": "pruchod",
-      "naKorunu": 4.987138281682412
+      "naKorunu": 4.987135958803518
     },
     "2-03": {
       "reseni": "rozpocet",
-      "naKorunu": 2.1317375758653294
+      "naKorunu": 2.131684846441349
     },
     "2-04": {
       "reseni": "pruchod",
@@ -35,83 +35,83 @@
     },
     "3-01": {
       "reseni": "mistrovska",
-      "naKorunu": 4.947213043536023
+      "naKorunu": 4.947071953970046
     },
     "3-02": {
       "reseni": "mistrovska",
-      "naKorunu": 6.784283520486474
+      "naKorunu": 6.585441704601056
     },
     "3-03": {
       "reseni": "mistrovska",
-      "naKorunu": 8.89629608197483
+      "naKorunu": 11.166932593947413
     },
     "3-04": {
       "reseni": "mistrovska",
-      "naKorunu": 7.3525693885199015
+      "naKorunu": 7.354287572069677
     },
     "4-01": {
       "reseni": "mistrovska",
-      "naKorunu": 11.08277954635624
+      "naKorunu": 14.431462945624009
     },
     "4-02": {
       "reseni": "mistrovska",
-      "naKorunu": 6.842953550237513
+      "naKorunu": 6.798476702641252
     },
     "4-03": {
       "reseni": "mistrovska",
-      "naKorunu": 8.411228338233958
+      "naKorunu": 8.412953954382221
     },
     "4-04": {
       "reseni": "mistrovska",
-      "naKorunu": 1.8240324961065206
+      "naKorunu": 1.6261424826280542
     },
     "5-01": {
       "reseni": "pruchod",
-      "naKorunu": 3.2786187189685045
+      "naKorunu": 3.2785642642537867
     },
     "5-02": {
       "reseni": "rozpocet",
-      "naKorunu": 2.3306915353198914
+      "naKorunu": 2.330643877914391
     },
     "5-03": {
       "reseni": "rozpocet",
-      "naKorunu": 1.7793489622604208
+      "naKorunu": 1.7793093646445992
     },
     "5-04": {
       "reseni": "rozpocet",
-      "naKorunu": 3.2812063414262167
+      "naKorunu": 3.2823729234281265
     },
     "6-01": {
       "reseni": "mistrovska",
-      "naKorunu": 11.165222452658435
+      "naKorunu": 11.091268730370338
     },
     "6-02": {
       "reseni": "mistrovska",
-      "naKorunu": 7.018898188292964
+      "naKorunu": 7.018686282956989
     },
     "6-03": {
       "reseni": "mistrovska",
-      "naKorunu": 9.747962302583584
+      "naKorunu": 9.594828590243521
     },
     "6-04": {
       "reseni": "mistrovska",
-      "naKorunu": 4.672585474115714
+      "naKorunu": 5.3697401769441235
     },
     "7-01": {
       "reseni": "mistrovska",
-      "naKorunu": 13.648702598068466
+      "naKorunu": 13.64845002672929
     },
     "7-02": {
       "reseni": "rozpocet",
-      "naKorunu": 4.68470309504511
+      "naKorunu": 4.684828226232256
     },
     "7-03": {
       "reseni": "rozpocet",
-      "naKorunu": 6.163644196926508
+      "naKorunu": 6.163794757388588
     },
     "7-04": {
       "reseni": "pruchod",
-      "naKorunu": 3.2995276712394155
+      "naKorunu": 3.299636066896539
     }
   }
 }

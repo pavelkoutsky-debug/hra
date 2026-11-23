@@ -8,8 +8,11 @@ import { spustPrehled } from "./hra/prehled";
 import { skladProhlizece, Uloziste } from "./hra/uloziste";
 import { spustUroven } from "./hra/uroven";
 import { doplnTexty } from "./ui/dom";
+import { prepnutyJazyk, pripravJazyk } from "./ui/jazyk";
 import { t } from "./ui/slovnik";
 
+// Jazyk musí být známý dřív, než se do stránky doplní první text.
+pripravJazyk();
 doplnTexty();
 try {
   const uloziste = new Uloziste(skladProhlizece());
@@ -17,6 +20,8 @@ try {
   const id = new URLSearchParams(window.location.search).get("uroven");
   // Deník hraní: anonymní záznam toho, co se ve hře děje (viz src/denik/).
   const denik = denikHry();
+  const prepnuto = prepnutyJazyk();
+  if (prepnuto) denik.zapis("ovladani", { co: "jazyk", jazyk: prepnuto });
   const sandboxZAdresy = new URLSearchParams(window.location.search).get("sandbox");
   if (sandboxZAdresy !== null) {
     // Sandbox: úroveň se vyrobí z nastavení, které si hráč uložil. Kde prohlížeč nedá paměť,

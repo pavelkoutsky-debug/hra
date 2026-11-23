@@ -120,7 +120,7 @@ beforeAll(async () => {
   napoj("/api/vazba", "vazba", prijmiVazbu);
   napoj("/api/sprava", "sprava", spravuj);
   prohlizec = await chromium.launch();
-  kontext = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  kontext = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka = await kontext.newPage();
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {
@@ -323,7 +323,7 @@ describe("zpětná vazba", () => {
 
 describe("hráč, který přijde rovnou do úrovně", () => {
   it("vidí upozornění na záznam i po zavření zadání, v paletě; po vypnutí mu hra potvrdí, že nic dalšího neodejde", async () => {
-    const novyHrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const novyHrac = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const okno = await novyHrac.newPage();
     try {
       await okno.goto(`${adresa}?uroven=1-02`);
@@ -367,7 +367,7 @@ describe("hráč, který přijde rovnou do úrovně", () => {
 
 describe("odkaz bez záznamu", () => {
   it("adresa s ?zaznam=vypnout záznam v prohlížeči potichu vypne: neodejde nic, ani zpráva o vypnutí", async () => {
-    const zadavatel = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const zadavatel = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const okno = await zadavatel.newPage();
     try {
       const predtim = zadosti.denik;
@@ -507,7 +507,7 @@ describe("stránka správce", () => {
 
 describe("zkouška, kterou hra nepustí", () => {
   it("most dražší než rozpočet se nezkouší a deník si zapíše proč", async () => {
-    const hrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const hrac = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const puvodni = stranka;
     stranka = await hrac.newPage();
     try {
@@ -538,4 +538,58 @@ describe("zkouška, kterou hra nepustí", () => {
       await hrac.close();
     }
   });
+});
+
+describe("zpětná vazba z pískoviště", () => {
+  it("správce vidí most z pískoviště nakreslený v odhadnutém údolí a odkaz vede do pískoviště", async () => {
+    const hrac = await prohlizec.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const s = await hrac.newPage();
+    try {
+      await s.goto(`${adresa}?sandbox=1`);
+      await s.locator(PLATNO).waitFor();
+      await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      // Mostovka přes výchozí údolí 24 m se vzpěrou do paty svahu.
+      const most = {
+        verze: 4,
+        uroven: "0-01",
+        stycniky: [
+          { id: 0, x: 0, y: 0 },
+          { id: 1, x: 6, y: 0 },
+          { id: 2, x: 12, y: 0 },
+          { id: 3, x: 18, y: 0 },
+          { id: 4, x: 24, y: 0 },
+          { id: 5, x: 3, y: -8 },
+        ],
+        pruty: [
+          { id: 0, a: 0, b: 1, prvek: "mostovka-ocelobeton" },
+          { id: 1, a: 1, b: 2, prvek: "mostovka-ocelobeton" },
+          { id: 2, a: 2, b: 3, prvek: "mostovka-ocelobeton" },
+          { id: 3, a: 3, b: 4, prvek: "mostovka-ocelobeton" },
+          { id: 4, a: 5, b: 1, prvek: "ocel-tezka" },
+        ],
+      };
+      await s.locator('[data-akce="import"]').click();
+      await s.locator("#okno-obsah").fill(JSON.stringify(most));
+      await s.locator('[data-akce="okno-nacist"]').click();
+      expect(await s.locator("body").getAttribute("data-pruty")).toBe("5");
+      await s.locator('#obrazovka-uroven .lista [data-akce="vazba"]').click();
+      const okno = s.locator("#okno-vazba");
+      await okno.waitFor({ state: "visible" });
+      await s.locator("#vazba-text").fill("Pískoviště je fajn, tady je můj most.");
+      await s.locator('[data-akce="vazba-odeslat"]').click();
+      await expect.poll(() => okno.getAttribute("data-odeslano")).toBe("ano");
+
+      await s.goto(`${adresa}sprava.html`);
+      await s.locator("#heslo").fill(HESLO);
+      await s.locator('#prihlaseni button[type="submit"]').click();
+      await s.locator('body[data-sprava="prihlaseno"]').waitFor();
+      await s.locator("#vazby tbody tr", { hasText: "Pískoviště je fajn" }).click();
+      await s.locator("#detail-vazby").waitFor({ state: "visible" });
+      expect(await s.locator("#vazba-most").isVisible()).toBe(true);
+      expect(await s.locator("#vazba-uroven").getAttribute("href")).toBe("/?sandbox&zaznam=vypnout");
+      await s.screenshot({ path: `${SLOZKA}/a4-sprava-most-z-piskoviste.png` });
+    } finally {
+      await hrac.close();
+    }
+  }, 120_000);
 });

@@ -1,5 +1,5 @@
 {
-  "verzeFyziky": 7,
+  "verzeFyziky": 8,
   "otisky": {
     "tram-kloubovy": "c839819f7f635d87",
     "tram-svareny": "2beec9f4193c6f04",
@@ -19,10 +19,10 @@
     "retez": "195e30c574f2987b",
     "pretizeni-drevo": "506a997d5338f14f",
     "pretizeni-ocel": "ad1ee84d7ba0cb53",
-    "pretizeni-zaveseny": "fad2bcd7836d48e3",
+    "pretizeni-zaveseny": "cc8b1c844cd388d8",
     "dlouhy-most": "d7003dfa086abc6c",
     "vlak-brzdi-na-stycich": "1aa95a4cd54fb2f2",
     "sklopny-most": "6eb4922b12e5440d",
-    "zkouska-do-zlomu": "adf7d42757c1e26d"
+    "zkouska-do-zlomu": "43cb3f7d21c45bf9"
   }
 }

@@ -25,7 +25,7 @@ afterAll(async () => {
 it("všechny otisky referenčních mostů vyjdou v prohlížeči stejně jako v Node", async () => {
   const adresa = server.resolvedUrls?.local[0];
   if (!adresa) throw new Error("Náhledový server neoznámil adresu.");
-  const stranka = await prohlizec.newPage({ viewport: { width: 1280, height: 900 } });
+  const stranka = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 900 } });
   const chyby: string[] = [];
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {

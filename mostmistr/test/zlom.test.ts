@@ -2,7 +2,7 @@
 // se dá u prostého nosníku spočítat z hlavy: zlomí se, když moment uprostřed q·L²/8 dosáhne
 // únosnosti průřezu.
 import { describe, expect, it } from "vitest";
-import { KATALOG, MATERIALY } from "../src/data/katalog";
+import { KATALOG, MATERIALY, vlastnostiPrutu } from "../src/data/katalog";
 import type { NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
@@ -12,7 +12,7 @@ import { BehZkousky } from "../src/zkouska/beh";
 import type { Udalost, VysledekZkousky, ZlomZkousky, ZpravaZeZkousky } from "../src/zkouska/protokol";
 import { Kreslic, urovenRegrese } from "../src/zkouska/regrese";
 import { Zkouska } from "../src/zkouska/zkouska";
-import { DOBEH_ZLOMU, NEJDELSI_ZLOM, zatizeniZlomu, ZKOUSKA_DO_ZLOMU } from "../src/zkouska/zlom";
+import { DOBEH_ZLOMU, NEJDELSI_DEJ_ZLOMU, NEJDELSI_ZLOM, zatizeniZlomu, ZKOUSKA_DO_ZLOMU } from "../src/zkouska/zlom";
 import { nactiKampan, nasadaUrovne } from "../urovne/index";
 import { RESENI } from "../urovne/reseni";
 
@@ -104,6 +104,42 @@ describe("zkouška do zlomu", () => {
     expect(Math.abs(rychle.zatizeni / pomalu.zatizeni - 1)).toBeLessThan(0.03);
   });
 
+  it("tvárné porušení: zátěž čeká, než se plastický kloub otevře, takže výsledek je statická mez", () => {
+    // Ocelobetonové pole 6 m z opěry na opěru. Kloub uprostřed vznikne při plastickém momentu
+    // a zlomí se až po natočení; kdyby zátěž mezitím rostla, připsala by mostu podle rychlosti
+    // o 3 až 8 % víc, než unese.
+    const k = new Kreslic();
+    k.prut("mostovka-ocelobeton", [0, 0], [6, 0]);
+    const sirka = 7;
+    const vybaveni = 600;
+    const silnice: Uroven = {
+      ...urovenRegrese({ rozpeti: 6, sirka, vybaveni }),
+      trasy: [{ id: "silnice", druh: "silnice", zacatek: { x: 0, y: 0 }, konec: { x: 6, y: 0 } }],
+      povolenePrvky: ["mostovka-ocelobeton"],
+      jizdniRad: [],
+    };
+    const vlastnosti = vlastnostiPrutu("mostovka-ocelobeton", sirka)!;
+    const staticky = (8 * vlastnosti.unosnost.moment) / 36 - (vlastnosti.hmotnostNaMetr + vybaveni) * TIHOVE_ZRYCHLENI;
+    const pomalu = zlom(silnice, k.navrh(), { narust: 5 }).vysledek.zlom!;
+    const rychle = zlom(silnice, k.navrh(), { narust: 80 }).vysledek.zlom!;
+    expect(pomalu.cas).not.toBeNull();
+    expect(Math.abs(pomalu.zatizeni / staticky - 1)).toBeLessThan(0.01);
+    expect(Math.abs(rychle.zatizeni / staticky - 1)).toBeLessThan(0.01);
+    // Zátěž při zlomu je menší, než kolik by dala čistá kubika času: hodiny zátěže stály.
+    expect(rychle.zatizeni).toBeLessThan(zatizeniZlomu({ narust: 80 }, rychle.cas!));
+
+    // Zkoušku ukončují hodiny zátěže, ne čas děje. Tady zátěž dorůstá k mezi těsně před koncem:
+    // kloub se otevírá přes šedesátou sekundu děje a most se zlomí až po ní. Kdyby děj končil
+    // v čase 60 s, zkouška by o mostě, který se právě láme, řekla, že unesl všechno.
+    const naKonci = zlom(silnice, k.navrh(), { narust: 2.3 });
+    const pozde = naKonci.vysledek.zlom!;
+    expect(pozde.cas!).toBeGreaterThan(NEJDELSI_ZLOM);
+    expect(pozde.cas!).toBeLessThan(NEJDELSI_DEJ_ZLOMU);
+    expect(pozde.nedolozeno).toBe(false);
+    expect(Math.abs(pozde.zatizeni / staticky - 1)).toBeLessThan(0.01);
+    expect(naKonci.udalosti.filter((u) => u.druh === "poruseni").length).toBeGreaterThan(0);
+  });
+
   it("dvakrát širší mostovka unese dvakrát víc na metr délky", () => {
     const uzka = zlom(lavka(), prkno()).vysledek.zlom!;
     const siroka = zlom(lavka({ sirkaMostovky: 2 * SIRKA, hmotnostVybaveni: 2 * VYBAVENI }), prkno()).vysledek.zlom!;
@@ -160,8 +196,10 @@ describe("zkouška do zlomu", () => {
     const pomala = { narust: 0.001 };
     const { vysledek, udalosti, trvani } = zlom(lavka(), prkno(), pomala);
     expect(udalosti.filter((u) => u.druh === "poruseni")).toHaveLength(0);
+    // Nic se trvale nepřetvořilo, hodiny zátěže šly s dějem: zkouška skončila přesně s nimi.
     expect(trvani).toBeGreaterThanOrEqual(NEJDELSI_ZLOM);
-    expect(vysledek.zlom).toMatchObject({ cas: null, prut: -1 });
+    expect(trvani).toBeLessThan(NEJDELSI_ZLOM + 0.01);
+    expect(vysledek.zlom).toMatchObject({ cas: null, prut: -1, nedolozeno: false });
     expect(vysledek.zlom!.zatizeni).toBeCloseTo(zatizeniZlomu(pomala, NEJDELSI_ZLOM), 6);
   });
 
