@@ -67,7 +67,7 @@ Doladění: angličtina, dotykové ovládání a telefon, plynulost přehráván
 - Zkouška do zlomu čeká se zátěží, dokud se otevírá plastický kloub: ocelobetonové pole 6 m dává 451,6 až 451,7 kN/m při zatěžování 4× až 64× rychlejším i pomalejším (ručně 451,8). Zkoušku ukončují hodiny zátěže, ne čas děje.
 - Referenční mosty, mosty, které mají spadnout, i ukázky dopadají v běžných zkouškách stejně (vyhratelnost beze změny); změnily se únosnosti při zkoušce do zlomu (`npm run vyzvy`).
 
-**Ověření:** 1 083 testů jednotek a 221 testů v prohlížeči (Chromium), obojí po zapracování recenzí. Firefox a Safari se dál nezkoušely; skutečný telefon taky ne (jen emulace mobilního zobrazení v Chromiu).
+**Ověření:** 1 082 testů jednotek a 221 testů v prohlížeči (Chromium), obojí po zapracování recenzí. Firefox a Safari se dál nezkoušely; skutečný telefon taky ne (jen emulace mobilního zobrazení v Chromiu).
 
 ### Nezávislé recenze M8 (23. 11. 2026)
 
