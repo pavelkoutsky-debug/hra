@@ -964,9 +964,35 @@ describe("souhrn deníku", () => {
       cenaPruchodu: 50000,
       prvky: {},
       selhani: { "ocel-lehka/vzper": 2, "bez porušení": 1 },
+      hracuSNapovedou: 0,
+      hracuSObrysem: 0,
+      hracuDoZlomu: 0,
+      zkousekDoZlomu: 0,
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
     expect(souhrnDeniku([])).toMatchObject({ hracu: 0, sezeni: 0, urovne: [], chyby: [] });
+  });
+
+  it("počítá nápovědu a zkoušky do zlomu; zkouška do zlomu není zkouška s provozem", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const zlom = (t: number): UdalostDeniku => u(t, "zkouska.konec", "2-03", { pruchod: false, pokus: "zlom", zlom: 850, zlomNaKorunu: 2.1 });
+    const davky = [
+      // Anna si otevřela soupis a pak i obrys; Bob jen soupis, zato dvakrát zkoušel do zlomu.
+      davka([u(0, "uroven.otevrena", "2-03"), u(10, "napoveda", "2-03", { krok: 1 }), u(20, "napoveda", "2-03", { krok: 2 }), konec(30, true, 30)], 0, anna),
+      davka([u(0, "uroven.otevrena", "2-03"), u(5, "napoveda", "2-03", { krok: 1 }), zlom(10), zlom(20), u(25, "napoveda", "2-03", { krok: 7 })], 0, bob),
+    ];
+    const uroven = souhrnDeniku(davky).urovne[0]!;
+    expect(uroven).toMatchObject({ hracuSNapovedou: 2, hracuSObrysem: 1, hracuDoZlomu: 1, zkousekDoZlomu: 2 });
+    // Zkoušky do zlomu se nepočítají mezi zkoušky s provozem ani mezi neúspěchy.
+    expect(uroven).toMatchObject({ zkousek: 1, pruchodu: 1, selhani: {} });
+    // Výtahy jdou sloučit a starší uložený výtah (bez těchto údajů) nic nerozbije.
+    const prvni = vytahDeniku([davky[0]!]);
+    const druhy = vytahDeniku([davky[1]!]);
+    const stary = JSON.parse(JSON.stringify(druhy)) as typeof druhy;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.napoveda, delete z.zlomu;
+    expect(souhrnZVytahu(slucVytahy([prvni, druhy])).urovne[0]).toMatchObject({ hracuSNapovedou: 2, hracuSObrysem: 1, zkousekDoZlomu: 2 });
+    expect(souhrnZVytahu(slucVytahy([prvni, stary])).urovne[0]).toMatchObject({ hracuSNapovedou: 1, hracuSObrysem: 1, zkousekDoZlomu: 0 });
   });
 
   it("výtahy jdou slučovat: deník rozdělený v kterémkoli místě dá stejný souhrn jako celý", () => {

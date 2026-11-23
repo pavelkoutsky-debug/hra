@@ -2605,12 +2605,17 @@ export function spustUroven(
 
     // Další úroveň se nabídne, jakmile je tahle jednou projitá.
     const odkaz = prvek('[data-akce="dalsi"]', HTMLAnchorElement);
+    const vKampani = kampan.some((u) => u.id === uroven.id);
     const dalsi = kampan[kampan.findIndex((u) => u.id === uroven.id) + 1];
     const projita = rekord?.medaile.pruchod === true;
-    odkaz.hidden = !(dalsi && projita && !jePokus && kampan.some((u) => u.id === uroven.id));
+    // Za poslední úrovní kampaně už další není: odkaz vede zpátky na přehled.
+    const posledni = vKampani && dalsi === undefined;
+    odkaz.hidden = !(projita && !jePokus && vKampani);
     odkaz.classList.toggle("tlacitko--hlavni", vysledek.pruchod);
-    if (dalsi) odkaz.href = `?uroven=${dalsi.id}`;
-    odkaz.onclick = () => zapis("ovladani", { co: "dalsi-uroven" });
+    odkaz.textContent = t(posledni ? "vysledek.kampanDokoncena" : "vysledek.dalsi");
+    odkaz.href = dalsi ? `?uroven=${dalsi.id}` : window.location.pathname;
+    odkaz.dataset.posledni = String(posledni);
+    odkaz.onclick = () => zapis("ovladani", { co: posledni ? "kampan-dokoncena" : "dalsi-uroven" });
 
     udaj("otisk").textContent = t("vysledek.otisk", { otisk: vysledek.otisk });
     panelVysledku.hidden = false;

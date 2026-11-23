@@ -473,6 +473,8 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
         bunka(cislo(u.zkousekDoPruchodu, 1), "cislo"),
         bunka(cislo(u.minutDoPruchodu, 1), "cislo"),
         bunka(`${u.medaile.pruchod} / ${u.medaile.rozpocet} / ${u.medaile.mistrovska}`, "cislo"),
+        bunka(`${u.hracuSNapovedou ?? 0} / ${u.hracuSObrysem ?? 0}`, "cislo"),
+        bunka(`${u.hracuDoZlomu ?? 0} / ${u.zkousekDoZlomu ?? 0}`, "cislo"),
         bunka(ceny),
         bunka(vypis(u.prvky)),
         bunka(vypis(u.selhani)),

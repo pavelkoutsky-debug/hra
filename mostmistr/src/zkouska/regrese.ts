@@ -21,6 +21,7 @@ import { sestavSoustavu, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
 import { vytvorTrasu } from "../jadro/trasa";
 import { otiskSimulace } from "./otisk";
+import type { ZlomZkousky } from "./protokol";
 import { sestavMost, type StavbaMostu } from "./stavba";
 import { Zkouska } from "./zkouska";
 
@@ -635,7 +636,9 @@ export interface ScenarZkousky {
   id: string;
   /** Nejdelší délka děje v sekundách; zkouška může skončit dřív. */
   trvani: number;
-  zadani: () => { uroven: Uroven; navrh: NavrhMostu; nasada: number };
+  zadani: () => { uroven: Uroven; navrh: NavrhMostu; nasada: number; zlom?: ZlomZkousky };
+  /** Scénář má skončit zřícením (zkouška do zlomu); jinde se nesmí zlomit nic. */
+  zriceni?: boolean;
 }
 
 /** Kolejiště ze čtyř polí po 6 m a nad ním příhrada z těžké oceli vysoká 5 m. */
@@ -709,17 +712,46 @@ export const SCENARE_ZKOUSEK: readonly ScenarZkousky[] = [
       };
     },
   },
+  {
+    // Zkouška do zlomu: rovnoměrná zátěž mostovky roste s třetí mocninou času, dokud se
+    // neporuší první prut; pak děj tři sekundy dobíhá. Hlídá zátěž, okamžik zlomu a dopad.
+    id: "zkouska-do-zlomu",
+    trvani: 40,
+    zriceni: true,
+    zadani: () => {
+      const k = new Kreslic();
+      for (let x = 0; x < 16; x += 4) k.prut("mostovka-drevo", [x, 0], [x + 4, 0]);
+      k.prut("drevo-tezke", [0, 0], [4, 3]);
+      k.prut("drevo-tezke", [4, 3], [8, 3]);
+      k.prut("drevo-tezke", [8, 3], [12, 3]);
+      k.prut("drevo-tezke", [12, 3], [16, 0]);
+      for (const x of [4, 8, 12]) k.prut("drevo-lehke", [x, 0], [x, 3]);
+      k.prut("drevo-lehke", [4, 3], [8, 0]);
+      k.prut("drevo-lehke", [12, 3], [8, 0]);
+      return {
+        uroven: urovenRegrese({ rozpeti: 16, sirka: 3, vybaveni: 60 }),
+        navrh: k.navrh(),
+        nasada: 3,
+        zlom: { narust: 20 },
+      };
+    },
+  },
 ];
+
+/** Po kolika sekundách děje se scénář se zkouškou ptá, jestli už skončil. */
+const DAVKA_SCENARE = 0.25;
 
 /** Všechny scénáře regresní sady dohromady; tolik otisků má uložený soubor. */
 export const POCET_SCENARU = SCENARE.length + SCENARE_ZKOUSEK.length;
 
 /** Spustí scénář se zkouškou úrovně a vrátí otisk stavu na jejím konci. */
 export function spustScenarZkousky(scenar: ScenarZkousky): VysledekScenare {
-  const { uroven, navrh, nasada } = scenar.zadani();
-  const zkouska = new Zkouska(uroven, navrh, nasada);
+  const { uroven, navrh, nasada, zlom } = scenar.zadani();
+  const zkouska = new Zkouska(uroven, navrh, nasada, undefined, undefined, zlom);
   const { simulace } = zkouska;
-  while (simulace.cas < scenar.trvani && !zkouska.hotovo) simulace.krok();
+  // Krokuje zkouška, ne samotná simulace: jen tak proběhne i to, co zkouška řídí mezi kroky
+  // (zvedání a sklápění mostu, lodě, konec zkoušky do zlomu).
+  while (simulace.cas < scenar.trvani && !zkouska.hotovo) zkouska.pokracuj(DAVKA_SCENARE);
   return {
     id: scenar.id,
     otisk: otiskSimulace(simulace),

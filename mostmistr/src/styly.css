@@ -817,6 +817,15 @@ a.tlacitko {
   color: var(--popisek);
 }
 
+.prehled__postup {
+  margin: 0 0 14px;
+  color: var(--popisek);
+}
+
+.prehled__postup[data-dokonceno="true"] {
+  color: var(--cara-silna);
+}
+
 .karta__vyzvy {
   color: var(--popisek);
 }
