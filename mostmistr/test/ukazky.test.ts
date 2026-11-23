@@ -36,13 +36,13 @@ function prehraj(strana: StranaUkazky): VysledekZkousky {
 describe("ukázky k úrovním", () => {
   it("mají je úrovně, které učí něco nového, a ke každé jsou texty", () => {
     const sUkazkou = kampan.filter((u) => ukazkaUrovne(u) !== null).map((u) => u.id);
-    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "4-01", "4-02", "4-03", "4-04", "5-01", "5-02", "5-03", "5-04"]);
+    expect(sUkazkou).toEqual(["1-01", "2-02", "2-03", "2-04", "3-01", "3-02", "3-03", "3-04", "4-01", "4-02", "4-03", "4-04", "5-01", "5-02", "5-03", "5-04", "6-01", "6-02", "6-03", "6-04"]);
     for (const id of sUkazkou) {
       for (const cast of ["a", "b", "popis"]) expect(jeKlicTextu(`ukazka.${id}.${cast}`), `${id}.${cast}`).toBe(true);
     }
   });
 
-  it("souvislost se skutečností má první úroveň a celá druhá až pátá kapitola", () => {
+  it("souvislost se skutečností má první úroveň a celá druhá až šestá kapitola", () => {
     const sTextem = kampan.filter((u) => jeKlicTextu(`skutecnost.${u.id}`)).map((u) => u.id);
     expect(sTextem).toEqual([
       "1-01",
@@ -62,6 +62,10 @@ describe("ukázky k úrovním", () => {
       "5-02",
       "5-03",
       "5-04",
+      "6-01",
+      "6-02",
+      "6-03",
+      "6-04",
     ]);
   });
 
@@ -89,14 +93,31 @@ describe("ukázky k úrovním", () => {
       const a = prehraj(ukazka.a);
       const b = prehraj(ukazka.b);
 
+      // Ukázka 6-02 je o pohodlí ve voze: oba mosty rychlík unesou, liší se tím, jak se pod ním prohnou.
+      if (uroven.id === "6-02") {
+        it("oba mosty vlak unesou; v mělké příhradě se cestující houpou mnohonásobně víc", () => {
+          for (const strana of [a, b]) expect(strana).toMatchObject({ pruchod: true, spadlo: 0, poruseni: 0, rozpad: false });
+          const melka = a.komfortCestujicich!.zrychleni;
+          const hluboka = b.komfortCestujicich!.zrychleni;
+          // Vlevo víc než dvojnásobek toho, co norma bere jako velmi dobré pohodlí (1 m/s²); vpravo s rezervou pod mezí medaile.
+          expect(melka).toBeGreaterThan(2);
+          expect(hluboka).toBeLessThan(0.8 * uroven.mistrovska!.limit);
+          expect(melka).toBeGreaterThan(6 * hluboka);
+        });
+        it("ukázka netrvá déle než půl minuty", () => {
+          expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(32);
+        });
+        return;
+      }
+
       it("levý most neobstojí, pravý ano", () => {
         expect(a.pruchod).toBe(false);
         expect(b.pruchod).toBe(true);
         expect(a.rozpad || b.rozpad).toBe(false);
       });
 
-      // Ukázky první, třetí a čtvrté kapitoly jsou o pevnosti: vlevo se most zlomí, vpravo zůstane celý.
-      const oPevnosti = ["1-", "3-", "4-"].some((kapitola) => uroven.id.startsWith(kapitola));
+      // Ukázky první, třetí, čtvrté a šesté kapitoly jsou o pevnosti: vlevo se most zlomí, vpravo zůstane celý.
+      const oPevnosti = ["1-", "3-", "4-", "6-"].some((kapitola) => uroven.id.startsWith(kapitola));
       if (oPevnosti) {
         it("rozdíl dělá pevnost: vlevo se most zlomí, vpravo zůstane celý a nikdo nespadne", () => {
           // Zlomí se, složí se v kloubech (mostovka bez podpory), nebo se prověsí tak, že po něm nejde jet: někdo spadne.

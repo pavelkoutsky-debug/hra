@@ -1,9 +1,9 @@
 // Kreslení účastníků provozu jako čárových bokorysů: auta, dodávka, autobus, nákladní vozy,
-// cyklista a chodec.
+// lokomotiva a železniční vozy, cyklista a chodec.
 // Polohy bere ze snímku záznamu (styčníky kol a karoserie), krok chodce z času děje.
 
 import type { Bod } from "../data/geometrie";
-import { CEKA, PREJEL, type PopisUcastnika } from "../zkouska/provoz";
+import { CEKA, type PopisUcastnika } from "../zkouska/provoz";
 import { KADENCE_BEHU } from "../zkouska/vozidla";
 import type { Snimek } from "../zkouska/zaznam";
 import { BARVY } from "./barvy";
@@ -34,7 +34,9 @@ export function nakresliProvoz(
 
   ucastnici.forEach((u, poradi) => {
     const stav = snimek.provoz[poradi];
-    if (stav === undefined || stav === CEKA || stav === PREJEL) return;
+    // Kdo most přejel, jede dál po předmostí a je vidět, dokud nevyjede z obrazu: vlak se tak
+    // za mostem nerozpadá na vozy, které po jednom mizí.
+    if (stav === undefined || stav === CEKA) return;
     const kola = u.kola.map(bod);
     if (kola.some((k) => k === null)) return;
     const naObraz = (b: Bod): Bod => svetNaObraz(kamera, rozmer, b);
@@ -53,6 +55,10 @@ export function nakresliProvoz(
       const karoserie = u.karoserie.map(bod);
       if (karoserie.some((k) => k === null)) return;
       nakresliVuz(ctx, u.druh, kola.map((k) => naObraz(k!)), karoserie.map((k) => naObraz(k!)), m, u.vyska * m);
+    } else if (u.druh === "lokomotiva" || u.druh === "vuz-nakladni" || u.druh === "vuz-prazdny" || u.druh === "vuz-osobni") {
+      const karoserie = u.karoserie.map(bod);
+      if (karoserie.some((k) => k === null)) return;
+      nakresliKolejoveVozidlo(ctx, u.druh, kola.map((k) => naObraz(k!)), karoserie.map((k) => naObraz(k!)), m, u.vyska * m);
     } else if (u.druh === "cyklista") {
       nakresliCyklistu(ctx, kola.map((k) => naObraz(k!)), u.vyska * m, u.smer);
     } else {
@@ -278,6 +284,84 @@ function nakresliVuz(
       cary(ctx, [-1.55, -5, -8.45].map((x): [Bod2, Bod2] => [n(x, 0.1), n(x, 2.55)]));
     }
   }
+  for (const k of kola) kolo(ctx, k, r);
+}
+
+/** Výplň skříní kolejových vozidel: barva pozadí, přes kterou prosvítá konstrukce za vozem. */
+const PRUSVITNA_SKRIN = "rgba(16, 63, 120, 0.5)";
+
+/**
+ * Kolejové vozidlo. Rozměry jsou v metrech vůči prvnímu dvojkolí (dopředu kladně) a vůči
+ * spojnici styčníků skříně, která leží 0,9 m nad osami kol; odpovídají modelům ve `vozidla.ts`.
+ * Skříň se kreslí v soustavě svých styčníků, takže se s nimi naklání; podvozky drží u kol.
+ */
+function nakresliKolejoveVozidlo(
+  ctx: Kontext,
+  druh: "lokomotiva" | "vuz-nakladni" | "vuz-prazdny" | "vuz-osobni",
+  kola: Bod[],
+  karoserie: Bod[],
+  m: number,
+  r: number,
+): void {
+  const predni = karoserie[0]!;
+  const p = ramVozu(predni, predni, karoserie[karoserie.length - 1]!, m);
+  // Skříně jsou poloprůhledné: vlak je delší než most a jinak by po celou dobu průjezdu
+  // zakrýval příhradu, kterou hráč postavil nad kolejí.
+  ctx.save();
+  ctx.fillStyle = PRUSVITNA_SKRIN;
+  // Podvozky: rám mezi dvojkolími, o kus nad osami kol.
+  for (let i = 0; i + 1 < kola.length; i += 2) {
+    const a = kola[i]!;
+    const b = kola[i + 1]!;
+    const q = ramVozu(a, a, b, m);
+    obrys(ctx, [q(0.55, 0.05), q(0.55, 0.3), q(-Math.hypot(b.x - a.x, b.y - a.y) / m - 0.55, 0.3), q(-Math.hypot(b.x - a.x, b.y - a.y) / m - 0.55, 0.05)]);
+  }
+  if (druh === "lokomotiva") {
+    // Skříň se dvěma kabinami, pod ní rám s nárazníky, na střeše sběrač.
+    obrys(ctx, [p(2.6, -0.5), p(2.6, 0.9), p(2.15, 2.25), p(-13.25, 2.25), p(-13.7, 0.9), p(-13.7, -0.5)]);
+    obrys(ctx, [p(2.45, 1), p(2.1, 2.05), p(1.15, 2.05), p(1.15, 1)]);
+    obrys(ctx, [p(-13.55, 1), p(-13.2, 2.05), p(-12.25, 2.05), p(-12.25, 1)]);
+    const zebra: [Bod2, Bod2][] = [
+      [p(2.6, -0.2), p(2.85, -0.2)],
+      [p(-13.7, -0.2), p(-13.95, -0.2)],
+      [p(0.6, 0.4), p(-11.7, 0.4)],
+      // Sběrač stažený na střechu: trolej se na výkresu nekreslí a zdvižený by trčel do příhrady.
+      [p(-3.5, 2.25), p(-2.3, 2.42)],
+      [p(-2.3, 2.42), p(-3.5, 2.58)],
+      [p(-4, 2.58), p(-3, 2.58)],
+    ];
+    for (let x = -0.4; x > -11; x -= 1.3) zebra.push([p(x, 1.1), p(x, 1.9)]);
+    cary(ctx, zebra);
+  } else if (druh === "vuz-osobni") {
+    obrys(ctx, [p(2.2, -0.4), p(2.2, 2.3), p(1.95, 2.6), p(-23.45, 2.6), p(-23.7, 2.3), p(-23.7, -0.4)]);
+    // Pás oken s příčkami a dveře na koncích.
+    const usecky: [Bod2, Bod2][] = [
+      [p(0.4, 1.95), p(-21.9, 1.95)],
+      [p(0.4, 1), p(-21.9, 1)],
+      [p(2.2, -0.15), p(2.45, -0.15)],
+      [p(-23.7, -0.15), p(-23.95, -0.15)],
+    ];
+    for (let x = 0.4; x > -22; x -= 1.86) usecky.push([p(x, 1), p(x, 1.95)]);
+    for (const x of [1.9, 1, -22.5, -23.4]) usecky.push([p(x, -0.3), p(x, 2.1)]);
+    cary(ctx, usecky);
+  } else {
+    // Otevřený nákladní vůz: rám, bočnice se sloupky a u loženého vozu hromada nákladu.
+    obrys(ctx, [p(1.35, -0.4), p(1.35, -0.1), p(-12.15, -0.1), p(-12.15, -0.4)]);
+    obrys(ctx, [p(1.3, -0.1), p(1.3, 1.8), p(-12.1, 1.8), p(-12.1, -0.1)]);
+    const usecky: [Bod2, Bod2][] = [
+      [p(1.35, -0.25), p(1.62, -0.25)],
+      [p(-12.15, -0.25), p(-12.42, -0.25)],
+    ];
+    for (let x = -0.4; x > -11.5; x -= 1.7) usecky.push([p(x, -0.1), p(x, 1.8)]);
+    cary(ctx, usecky);
+    if (druh === "vuz-nakladni") {
+      ctx.beginPath();
+      const hromada: Bod2[] = [p(1, 1.8), p(-0.4, 2.3), p(-3.8, 2.15), p(-6.6, 2.4), p(-9.6, 2.2), p(-11.8, 1.8)];
+      hromada.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
   for (const k of kola) kolo(ctx, k, r);
 }
 

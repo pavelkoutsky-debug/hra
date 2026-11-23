@@ -1,7 +1,7 @@
 // Cena a hmotnost návrhu mostu. Ceny žijí jen v katalogu; uložené mosty je neobsahují,
 // takže přecenění prvku změní cenu všech mostů najednou.
 
-import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, vlastnostiPrutu } from "./katalog";
+import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, neseVybaveni, vlastnostiPrutu } from "./katalog";
 import type { NavrhMostu } from "./navrh";
 import type { Uroven } from "./uroven";
 
@@ -47,7 +47,7 @@ export function hmotnostNavrhu(navrh: NavrhMostu, uroven: Uroven): number {
   navrh.pruty.forEach((p, i) => {
     const vlastnosti = vlastnostiPrutu(p.prvek, uroven.sirkaMostovky);
     if (!vlastnosti) return; // tlumič, pružina a píst se do hmotnosti mostu nepočítají
-    const vybaveni = KATALOG[p.prvek].druh === "mostovka" ? uroven.hmotnostVybaveni : 0;
+    const vybaveni = neseVybaveni(p.prvek) ? uroven.hmotnostVybaveni : 0;
     hmotnost += delky[i]! * (vlastnosti.hmotnostNaMetr + vybaveni);
   });
   for (const s of navrh.stycniky) hmotnost += (s.zavazi ?? 0) + (s.tlumic?.hmota ?? 0);

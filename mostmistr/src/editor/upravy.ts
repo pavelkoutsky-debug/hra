@@ -195,6 +195,49 @@ export function posunStycnik(navrh: NavrhMostu, id: number, kam: Bod): NavrhMost
 }
 
 /**
+ * Spojí prut s jeho zrcadlovým obrazem, když se potkají ve styčníku na ose a nic dalšího do
+ * něj nevede: z pásu dotaženého k ose a jeho obrazu je jeden průběžný prut místo dvou
+ * s kloubem uprostřed (kloub v tlačeném pásu by most složil). Spojuje jen pruty stejného
+ * prvku ležící v přímce, jejichž společná délka se do jednoho prutu vejde, a jen ve
+ * styčnících bez svaru, závaží, tlumiče a zámku, které neleží v bodech `pevne` (kotvy,
+ * základy). `nove` jsou id prutů, které zrcadlení právě přidalo.
+ */
+export function spojNaOse(
+  navrh: NavrhMostu,
+  osa: number,
+  nove: ReadonlySet<number>,
+  pevne: readonly Bod[],
+): NavrhMostu {
+  let vysledek = navrh;
+  for (const stred of navrh.stycniky) {
+    if (stred.x !== osa || stred.svar || stred.zavazi || stred.tlumic || stred.zamek) continue;
+    if (pevne.some((b) => b.x === stred.x && b.y === stred.y)) continue;
+    const pruty = vysledek.pruty.filter((p) => p.a === stred.id || p.b === stred.id);
+    if (pruty.length !== 2) continue;
+    const [prvni, druhy] = pruty as [PrutNavrhu, PrutNavrhu];
+    if (prvni.prvek !== druhy.prvek || nove.has(prvni.id) === nove.has(druhy.id)) continue;
+    const druh = KATALOG[prvni.prvek].druh;
+    if (druh !== "prut" && druh !== "mostovka") continue;
+    const podleId = new Map(vysledek.stycniky.map((s) => [s.id, s]));
+    const a = podleId.get(prvni.a === stred.id ? prvni.b : prvni.a);
+    const b = podleId.get(druhy.a === stred.id ? druhy.b : druhy.a);
+    if (!a || !b || a.x + b.x !== 2 * osa || a.y !== b.y) continue;
+    // V přímce: styčník na ose leží na spojnici vzdálených konců.
+    if ((stred.y - a.y) * (b.x - stred.x) !== (b.y - stred.y) * (stred.x - a.x)) continue;
+    const delka = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+    if (delka > KATALOG[prvni.prvek].nejvetsiDelka + 1e-9 || prutMezi(vysledek, a.id, b.id)) continue;
+    const puvodni = nove.has(prvni.id) ? druhy : prvni;
+    const spojeny: PrutNavrhu = { ...puvodni, a: a.id, b: b.id };
+    vysledek = {
+      ...vysledek,
+      stycniky: vysledek.stycniky.filter((s) => s.id !== stred.id),
+      pruty: [...vysledek.pruty.filter((p) => p.id !== prvni.id && p.id !== druhy.id), spojeny],
+    };
+  }
+  return vysledek;
+}
+
+/**
  * Doplní zrcadlové obrazy prutů podle svislé osy x = `osa`. Bez výběru zrcadlí celý most,
  * jinak jen vybrané pruty. Pruty, jejichž obraz v návrhu už je, nepřidává.
  */

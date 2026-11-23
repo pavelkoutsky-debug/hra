@@ -13,7 +13,15 @@
 import { vyskaNerovnosti, type Nerovnost } from "./nerovnost";
 import type { Zatizeni } from "./simulace";
 import type { Soustava } from "./soustava";
-import { mistoNaPrvku, najdiPrvekTrasy, prestavTrasu, vyskaNaPrvku, vyskaSpojnice, type Trasa } from "./trasa";
+import {
+  mistoNaPrvku,
+  najdiPrvekTrasy,
+  prestavTrasu,
+  vDilatacniSpare,
+  vyskaNaPrvku,
+  vyskaSpojnice,
+  type Trasa,
+} from "./trasa";
 import { pridejSiluNaPrvek } from "./zatizeni";
 
 /** Břemeno jede po pevné zemi před mostem nebo za ním. */
@@ -21,6 +29,8 @@ export const NA_ZEMI = -1;
 /** Břemeno nemá pod sebou nic. */
 export const BEZ_OPORY = -2;
 
+/** Nejvyšší rychlost povrchu mostovky pod břemenem, se kterou tlumič kontaktu počítá, m/s. */
+const NEJVYSSI_RYCHLOST_POVRCHU = 30;
 /**
  * Největší stlačení pružiny kontaktu v metrech. Když je povrch nad styčníkem výš, nejde
  * o dosednutí: styčník je pod utrženým kusem mostovky, který se přes něj jen promítá.
@@ -284,6 +294,11 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
         povrch = vyskaNaPrvku(s, e, x);
         naSpojnici = vyskaSpojnice;
         xi = mistoNaPrvku;
+      } else {
+        // Dilatační spára: kraj mostovky se od předmostí o kousek odsunul. Kolo ji přejede
+        // po předmostí, jako by sahalo až k mostovce.
+        const spara = vDilatacniSpare(s, trasa, x);
+        if (spara !== 0) povrch = naSpojnici = spara < 0 ? trasa.yLevy : trasa.yPravy;
       }
       // Povrch vysoko nad styčníkem není opora, ale kus mostovky, pod kterým břemeno je.
       const stlaceni = uzel >= 0 ? povrch + b.vyskaNad[i]! - s.y[uzel]! : 0;
@@ -310,7 +325,12 @@ export function pridejSilyBremen(s: Soustava, b: Bremena): void {
       // Počítá se ze spojnice styčníků, ne z ohybové čáry: ta závisí na natočení lehkých
       // styčníků mostovky a tlumič by přes ni rozkmital jejich nejrychlejší kmity.
       const minula = spojniceMinula[i]!;
-      const rychlostPovrchu = minula === minula && b.dt > 0 ? (naSpojnici - minula) / b.dt : 0;
+      let rychlostPovrchu = minula === minula && b.dt > 0 ? (naSpojnici - minula) / b.dt : 0;
+      // Když se pod břemenem mezi dvěma kroky ocitne jiný kus mostovky (utržený díl, který se
+      // pod kolo přihoupl), není rozdíl výšek rychlost, ale skok: tlumič by z něj udělal ráz
+      // stovek meganewtonů. Povrch mostu se rychleji než volným pádem z desítek metrů nehýbe.
+      if (rychlostPovrchu > NEJVYSSI_RYCHLOST_POVRCHU) rychlostPovrchu = NEJVYSSI_RYCHLOST_POVRCHU;
+      else if (rychlostPovrchu < -NEJVYSSI_RYCHLOST_POVRCHU) rychlostPovrchu = -NEJVYSSI_RYCHLOST_POVRCHU;
       tlak =
         b.tuhost[i]! * (povrch + b.vyskaNad[i]! - s.y[uzel]!) +
         b.tlumeni[i]! * (rychlostPovrchu - s.vy[uzel]!);

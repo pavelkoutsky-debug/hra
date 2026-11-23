@@ -22,6 +22,7 @@ import { volneStupne } from "../jadro/stupne";
 import { vytvorTrasu } from "../jadro/trasa";
 import { otiskSimulace } from "./otisk";
 import { sestavMost, type StavbaMostu } from "./stavba";
+import { Zkouska } from "./zkouska";
 
 const g = TIHOVE_ZRYCHLENI;
 
@@ -623,6 +624,80 @@ export const SCENARE: readonly Scenar[] = [
     }),
   },
 ];
+
+/**
+ * Scénář, který běží celou zkouškou úrovně (jízdní řád, modely vozidel, nerovnosti, brzdění),
+ * ne jen jádrem s jednoduchými břemeny. Hlídá cesty výpočtu, které ostatní scénáře neznají.
+ */
+export interface ScenarZkousky {
+  id: string;
+  /** Nejdelší délka děje v sekundách; zkouška může skončit dřív. */
+  trvani: number;
+  zadani: () => { uroven: Uroven; navrh: NavrhMostu; nasada: number };
+}
+
+/** Kolejiště ze čtyř polí po 6 m a nad ním příhrada z těžké oceli vysoká 5 m. */
+function prihradaTrate(): NavrhMostu {
+  const k = new Kreslic();
+  for (let x = 0; x < 24; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
+  k.prut("ocel-tezka", [0, 0], [6, 5]);
+  k.prut("ocel-tezka", [6, 5], [12, 5]);
+  k.prut("ocel-tezka", [12, 5], [18, 5]);
+  k.prut("ocel-tezka", [18, 5], [24, 0]);
+  for (const x of [6, 12, 18]) k.prut("ocel-lehka", [x, 0], [x, 5]);
+  k.prut("ocel-lehka", [6, 5], [12, 0]);
+  k.prut("ocel-lehka", [18, 5], [12, 0]);
+  return k.navrh();
+}
+
+export const SCENARE_ZKOUSEK: readonly ScenarZkousky[] = [
+  {
+    // Vlak na koleji se styky: lokomotiva, ložený a osobní vůz (podvozky s dvojím vypružením),
+    // na mostě zabrzdí, postojí a rozjede se.
+    id: "vlak-brzdi-na-stycich",
+    trvani: 14,
+    zadani: () => ({
+      uroven: {
+        ...urovenRegrese({ rozpeti: 24, sirka: 5, vybaveni: 800 }),
+        trasy: [{ id: "kolej", druh: "kolej", zacatek: { x: 0, y: 0 }, konec: { x: 24, y: 0 } }],
+        nerovnost: "B",
+        jizdniRad: [
+          {
+            cas: 0,
+            trasa: "kolej",
+            smer: 1,
+            druh: "lokomotiva",
+            vozy: [
+              { druh: "vuz-nakladni", pocet: 1 },
+              { druh: "vuz-osobni", pocet: 1 },
+            ],
+            brzdeni: { misto: 20, stani: 1, zpomaleni: 2 },
+          },
+        ],
+      },
+      navrh: prihradaTrate(),
+      nasada: 5,
+    }),
+  },
+];
+
+/** Všechny scénáře regresní sady dohromady; tolik otisků má uložený soubor. */
+export const POCET_SCENARU = SCENARE.length + SCENARE_ZKOUSEK.length;
+
+/** Spustí scénář se zkouškou úrovně a vrátí otisk stavu na jejím konci. */
+export function spustScenarZkousky(scenar: ScenarZkousky): VysledekScenare {
+  const { uroven, navrh, nasada } = scenar.zadani();
+  const zkouska = new Zkouska(uroven, navrh, nasada);
+  const { simulace } = zkouska;
+  while (simulace.cas < scenar.trvani && !zkouska.hotovo) simulace.krok();
+  return {
+    id: scenar.id,
+    otisk: otiskSimulace(simulace),
+    kroku: simulace.kroku,
+    poruseni: simulace.udalosti.length,
+    rozpadla: simulace.rozpadla,
+  };
+}
 
 export interface VysledekScenare {
   id: string;

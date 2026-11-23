@@ -1,0 +1,124 @@
+{
+  "verze": 5,
+  "id": "6-03",
+  "nazev": "Uhelný vlak",
+  "vyrez": {
+    "xMin": -14,
+    "yMin": -21,
+    "xMax": 86,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -14,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 6,
+      "y": -10
+    },
+    {
+      "x": 14,
+      "y": -18
+    },
+    {
+      "x": 58,
+      "y": -18
+    },
+    {
+      "x": 66,
+      "y": -10
+    },
+    {
+      "x": 72,
+      "y": 0
+    },
+    {
+      "x": 86,
+      "y": 0
+    }
+  ],
+  "hladina": -16.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 72,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": 24,
+      "y": -18
+    },
+    {
+      "x": 48,
+      "y": -18
+    }
+  ],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "kolej",
+      "druh": "kolej",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 72,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 5,
+  "hmotnostVybaveni": 0,
+  "nerovnost": "B",
+  "rozpocet": 2900000,
+  "inzenyrskyRozpocet": 2460000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.55
+  },
+  "povolenePrvky": [
+    "kolejiste",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "vozy": [
+        {
+          "druh": "vuz-nakladni",
+          "pocet": 10
+        }
+      ],
+      "brzdeni": {
+        "misto": 70,
+        "stani": 3,
+        "zpomaleni": 2.5
+      }
+    }
+  ]
+}

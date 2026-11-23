@@ -2,9 +2,10 @@
 // potřeba prvek nebo postup, který úroveň učí. Přehrávají se v okně se zadáním. Mosty
 // vycházejí z referenčních řešení, ale neukazují nejlevnější ani nejlepší z nich.
 
+import type { Obdelnik } from "../src/data/geometrie";
 import type { NavrhMostu } from "../src/data/navrh";
 import type { PolozkaJizdnihoRadu, Uroven } from "../src/data/uroven";
-import { RESENI } from "./reseni";
+import { RESENI, trat } from "./reseni";
 
 export interface StranaUkazky {
   uroven: Uroven;
@@ -16,6 +17,8 @@ export interface UkazkaUrovne {
   b: StranaUkazky;
   /** Kolikrát rychleji než ve skutečnosti se ukázka přehrává; bez údaje stejně rychle. */
   rychlost?: number;
+  /** Část světa, na kterou se ukázka dívá, když nemá být vidět celý most (detail u dlouhého mostu). */
+  vyrez?: Obdelnik;
 }
 
 /** Stejný most s jinou silou všech tlumičů. */
@@ -172,6 +175,30 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
       const bez = reseni.pady[1]!.navrh;
       return { a: { uroven, navrh: bez }, b: { uroven, navrh: sTlumiciV(bez, [12, 16, 20], 1000, 4.4) }, rychlost: 2 };
     }
+
+    // Stejné kolejiště pod vlakem: lehká příhrada dva a pět metrů vysoká.
+    case "6-01":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
+
+    // Stejná ocel pod rychlíkem: příhrada dva a osm metrů hluboká. Unesou ho obě; liší se tím,
+    // jak se pod ním prohnou a co to udělá s cestujícími. (Mistrovskou dá už šest metrů; ukázka
+    // schválně ukazuje víc, než je potřeba.)
+    case "6-02":
+      return { a: { uroven, navrh: reseni.rozpocet }, b: { uroven, navrh: trat("6-02", 36, -8, "ocel-lehka", "ocel-lehka") } };
+
+    // Stejný viadukt pod brzdícím vlakem: pilíře samotné a se vzpěrami do kolejiště. Ukázka
+    // se dívá na první pilíř zblízka, aby bylo vidět, odkud kam vzpěry vedou.
+    case "6-03":
+      return {
+        a: { uroven, navrh: reseni.pady[3]!.navrh },
+        b: { uroven, navrh: reseni.mistrovska },
+        rychlost: 3,
+        vyrez: { xMin: 6, yMin: -20, xMax: 42, yMax: 7 },
+      };
+
+    // Stejné dvě mostovky: spojené jen svislicemi a spojené i diagonálami.
+    case "6-04":
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
 
     default:
       return null;

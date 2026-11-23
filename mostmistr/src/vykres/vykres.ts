@@ -1,8 +1,9 @@
 import type { Bod } from "../data/geometrie";
-import type { Kotva, Trasa, TypKotvy, Uroven } from "../data/uroven";
+import { vyskaTerenu, type Kotva, type Trasa, type TypKotvy, type Uroven } from "../data/uroven";
 import { delka, vyskovaKota } from "../ui/formaty";
 import { t } from "../ui/slovnik";
 import { BARVY, PISMO, cara } from "./barvy";
+import { nakresliPrazcePredmosti } from "./kolej";
 import { svetNaObraz, viditelnaOblast, type Kamera, type Rozmer } from "./kamera";
 import { krokyRastru, roztecSrafovani } from "./rastr";
 
@@ -296,16 +297,51 @@ function nakresliTrasu(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {
   const levyKraj = svetNaObraz(s.kamera, s.rozmer, { x: vid.xMin - 1, y: trasa.zacatek.y });
   const pravyKraj = svetNaObraz(s.kamera, s.rozmer, { x: vid.xMax + 1, y: trasa.konec.y });
 
-  // Předmostí: hotová vozovka na březích.
+  // Tunel: kde je terén na předmostí vysoko nad niveletou, vede trasa skálou. Tubus má
+  // barvu pozadí, aby v něm bylo vidět, kdo přijíždí, a u mostu končí portálem.
+  const svetlost = 6.5;
+  for (const [okraj, kraj, smer] of [
+    [trasa.zacatek, vid.xMin - 1, -1],
+    [trasa.konec, vid.xMax + 1, 1],
+  ] as const) {
+    if (vyskaTerenu(s.uroven, okraj.x + smer * 2) < okraj.y + 2) continue;
+    const dole = svetNaObraz(s.kamera, s.rozmer, { x: okraj.x, y: okraj.y });
+    const nahore = svetNaObraz(s.kamera, s.rozmer, { x: kraj, y: okraj.y + svetlost });
+    ctx.fillStyle = BARVY.pozadi;
+    ctx.fillRect(Math.min(dole.x, nahore.x), nahore.y, Math.abs(nahore.x - dole.x), dole.y - nahore.y);
+    ctx.beginPath();
+    ctx.moveTo(nahore.x, nahore.y);
+    ctx.lineTo(dole.x, nahore.y);
+    ctx.strokeStyle = cara(0.6);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Portál: silnější svislá hrana u ústí tunelu.
+    ctx.beginPath();
+    ctx.moveTo(dole.x, nahore.y - 0.6 * m);
+    ctx.lineTo(dole.x, nahore.y);
+    ctx.moveTo(dole.x - smer * 0.5 * m, nahore.y - 0.6 * m);
+    ctx.lineTo(dole.x + smer * 0.2 * m, nahore.y - 0.6 * m);
+    ctx.strokeStyle = BARVY.cara;
+    ctx.lineWidth = mezi(0.12 * m, 1.5, 3);
+    ctx.stroke();
+  }
+
+  // Předmostí: hotová vozovka nebo kolej na březích.
+  const tloustka = trasa.druh === "kolej" ? mezi(0.28 * m, 3, 8) : mezi(0.22 * m, 2.5, 6);
   ctx.beginPath();
   ctx.moveTo(levyKraj.x, zacatek.y);
   ctx.lineTo(zacatek.x, zacatek.y);
   ctx.moveTo(konec.x, konec.y);
   ctx.lineTo(pravyKraj.x, konec.y);
   ctx.strokeStyle = BARVY.caraSilna;
-  ctx.lineWidth = mezi(0.22 * m, 2.5, 6);
+  ctx.lineWidth = tloustka;
   ctx.lineCap = "butt";
   ctx.stroke();
+  if (trasa.druh === "kolej" && m >= 4) {
+    // Pražce se měří od konce trasy, takže při posunu pohledu stojí na místě.
+    nakresliPrazcePredmosti(ctx, zacatek, -1, s.rozmer.sirka, m, tloustka);
+    nakresliPrazcePredmosti(ctx, konec, 1, s.rozmer.sirka, m, tloustka);
+  }
 
   // Niveleta: kudy má vést mostovka, kterou hráč postaví.
   ctx.beginPath();
@@ -316,6 +352,15 @@ function nakresliTrasu(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // Kde je tras víc (most o dvou patrech), říká popisek u levého konce, která je která.
+  if (s.uroven.trasy.length > 1 && !s.nahled && m >= 6) {
+    ctx.font = `11px ${PISMO}`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = BARVY.popisek;
+    ctx.fillText(t(`vykres.trasa.${trasa.druh}`), zacatek.x + 8, zacatek.y - tloustka / 2 - 3);
+  }
 }
 
 function nakresliOsu(ctx: Kontext, s: StavVykresu, trasa: Trasa): void {

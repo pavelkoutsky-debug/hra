@@ -9,6 +9,7 @@ import { cislo, delka as zapisDelky } from "../ui/formaty";
 import { BARVY, PISMO, cara } from "./barvy";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
 import { nakresliPruzinu, nakresliTlumic, nakresliZavazi } from "./konstrukce";
+import { nakresliPrazce } from "./kolej";
 import { barvaVyuziti } from "./skala";
 
 export interface StavNavrhu {
@@ -37,8 +38,10 @@ function mezi(v: number, min: number, max: number): number {
 /** Tloušťka čáry prutu podle prvku, v pixelech při měřítku `m` pixelů na metr. */
 export function tloustkaPrutu(prvek: IdPrvku, m: number): number {
   const druh = KATALOG[prvek].druh;
-  // Ocelobetonová mostovka je na výkresu silnější než dřevěná, jako ve skutečnosti.
+  // Ocelobetonová mostovka je na výkresu silnější než dřevěná, jako ve skutečnosti; kolejiště
+  // s vysokými podélníky je mezi nimi.
   if (prvek === "mostovka-ocelobeton") return mezi(0.32 * m, 6.5, 12);
+  if (prvek === "kolejiste") return mezi(0.28 * m, 6, 11);
   if (druh === "mostovka") return mezi(0.22 * m, 4.5, 9);
   // Nosné lano je svazek: na výkresu je znatelně silnější než závěsné.
   if (prvek === "lano-nosne") return 3.2;
@@ -110,6 +113,7 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
         ctx.lineWidth = Math.max(1.2, tloustka * 0.3);
         ctx.stroke();
       }
+      if (p.prvek === "kolejiste") nakresliPrazce(ctx, pa, pb, m, tloustka);
     });
   }
 

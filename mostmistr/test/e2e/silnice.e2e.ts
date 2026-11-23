@@ -167,7 +167,7 @@ describe("linka přes rokli: příhrada pod mostovkou a pohodlí v autobusu", ()
     expect(Number(await stranka.locator('[data-udaj="vysledek-autobus"]').getAttribute("data-zrychleni"))).toBeGreaterThan(0.15);
     // Průchod a rozpočet ano, mistrovská ne; druhý pokus se porovná s prvním.
     expect(await ziskaneMedaile()).toBe(2);
-    expect(await udaj("vysledek-autobus")).toContain("minule 0,13 m/s²");
+    expect(await udaj("vysledek-autobus")).toContain("minule 0,14 m/s²");
   }, 180_000);
 });
 

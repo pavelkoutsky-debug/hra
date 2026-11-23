@@ -16,5 +16,16 @@
  *      nad 6 m/s² z ní zbývá čtvrtina) a ve výsledku se lidé počítají po jednom, ne po řadách
  *      (milník M3b). Mění se kmitání mostů, které se rozhoupaly přes mez; otisky referenčních
  *      mostů se nezměnily.
+ * - 6: vlastní tíha prutů s tuhými konci působí po délce (momenty vetknutí a přesun příčné
+ *      síly, `pridejTihuPrvku`), ne jen ve styčnících; tlumič kontaktu kola nepočítá s rychlostí
+ *      povrchu přes 30 m/s (milník M5). Podporové momenty spojitých nosníků jsou správně
+ *      (dřív o 6 % menší), pruty složené z dílů se pod vlastní tíhou prohnou o pětinu víc.
+ *      Mění se otisky všech referenčních mostů; pořadí medailí úrovní zůstalo.
+ * - 7: opravy po nezávislé kontrole fyziky M5. Mostovka silnice a koleje se dělí vždy aspoň na
+ *      dva díly, takže kolo jede po její ohybové čáře i u krátkého tuhého pole (kolejiště dřív
+ *      vozidlu ukazovalo rovnou tětivu); brzdná a tažná síla nabíhá a doznívá plynule místo
+ *      skokem; přenos tíhy mezi nápravami při brzdění splňuje rovnováhu momentů i u vozidel
+ *      s více než dvěma nápravami. Mění se výsledky úrovní s vlakem a s brzděním; otisky
+ *      dosavadní regresní sady se nezměnily (takový most v ní nebyl), přibyl scénář s vlakem.
  */
-export const VERZE_FYZIKY = 5;
+export const VERZE_FYZIKY = 7;

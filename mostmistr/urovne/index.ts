@@ -20,6 +20,10 @@ import nabrezi from "./5-01.json";
 import mestskyBeh from "./5-02.json";
 import slavnost from "./5-03.json";
 import koncert from "./5-04.json";
+import prvniVlak from "./6-01.json";
+import rychlik from "./6-02.json";
+import uhelnyVlak from "./6-03.json";
+import dvePatra from "./6-04.json";
 
 /** Úrovně kampaně v pořadí, v jakém se hrají. */
 const SOUBORY_KAMPANE: readonly unknown[] = [
@@ -43,6 +47,10 @@ const SOUBORY_KAMPANE: readonly unknown[] = [
   mestskyBeh,
   slavnost,
   koncert,
+  prvniVlak,
+  rychlik,
+  uhelnyVlak,
+  dvePatra,
 ];
 
 /** Soubory úrovní tak, jak leží na disku; `nactiUrovne` je zkontroluje a převede. */

@@ -4,18 +4,18 @@
 import { cenaNavrhu, hmotnostNavrhu } from "../data/cena";
 import type { Bod } from "../data/geometrie";
 import { jeUvnitr } from "../data/geometrie";
-import { CENA_SVARU, CENA_ZAVAZI, KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku, NEJVETSI_KLIDOVY_TAH } from "../data/katalog";
+import { CENA_SVARU, CENA_ZAVAZI, jeKolejove, KATALOG, LADENY_TLUMIC, vlastnostiPrutu, type IdPrvku, NEJVETSI_KLIDOVY_TAH } from "../data/katalog";
 import { ChybaDat } from "../data/kontrola";
-import { navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
+import { mezeryTras, navrhNaText, navrhZTextu, type DruhProblemu, type NavrhMostu } from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
-import type { Uroven } from "../data/uroven";
+import { kdoCestuje, type Uroven } from "../data/uroven";
 import type { Denik } from "../denik/denik";
 import { predOdchodem, stopkyViditelnosti } from "../denik/prohlizec";
 import type { HodnotaDeniku } from "../denik/udalosti";
 import { Editor } from "../editor/editor";
 import { prekazkyZkousky } from "../editor/pravidla";
 import { prazdnyNavrh } from "../editor/upravy";
-import { MEZE_KOMFORTU } from "../jadro/komfort";
+import { MEZ_POHODLI_VE_VOZE, MEZE_KOMFORTU } from "../jadro/komfort";
 import { ZPUSOB_OHYB, ZPUSOB_SMYK, ZPUSOB_TAH, ZPUSOB_TLAK, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { NASLEDEK_KLOUB, NASLEDEK_ODPOJENI } from "../jadro/poruseni";
 import { VERZE_FYZIKY } from "../jadro/verze";
@@ -43,7 +43,7 @@ import type {
   VysledekZkousky,
   ZpravaZeZkousky,
 } from "../zkouska/protokol";
-import { jeVozidlo, lidiVRade, rytmusLidi } from "../zkouska/vozidla";
+import { lidiVRade, rytmusLidi, umiBrzdit } from "../zkouska/vozidla";
 import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from "../zkouska/zaznam";
 import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
@@ -346,13 +346,22 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         if (beh.oznaceny !== null) zvyrazniPrut(ctx, stavba, beh.oznaceny);
         // Pruty mají při zkoušce stejnou tloušťku jako při stavbě.
         const pruty = beh.navrh.pruty;
-        nakresliKonstrukci(ctx, kamera, rozmer, stavba, snimek, 0, (e) => {
-          const prut = pruty[stavba.prut[e]!];
-          return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
-        });
-        // Čísla patří ke konstrukci; auta a chodci je při průjezdu na chvíli zakryjí.
-        if (cisla) nakresliCislaVyuziti(ctx, cislaZeSnimku(stavba, pruty));
+        nakresliKonstrukci(
+          ctx,
+          kamera,
+          rozmer,
+          stavba,
+          snimek,
+          0,
+          (e) => {
+            const prut = pruty[stavba.prut[e]!];
+            return prut ? tloustkaPrutu(prut.prvek, kamera.meritko) : undefined;
+          },
+          (e) => pruty[stavba.prut[e]!]?.prvek === "kolejiste",
+        );
         nakresliProvoz(ctx, kamera, rozmer, beh.ucastnici, snimek);
+        // Čísla využití se kreslí přes vozidla: vlak je delší než most a zakrýval by je celou jízdu.
+        if (cisla) nakresliCislaVyuziti(ctx, cislaZeSnimku(stavba, pruty));
         return;
       }
     } else {
@@ -603,6 +612,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           : pocet > 1
             ? t("rad.vice", { pocet, kdo: nazev })
             : nazev;
+    if (polozka.druh === "lokomotiva") {
+      // Vlak: lokomotiva (nebo víc) a za ní skupiny vozů.
+      const casti = [kdo];
+      for (const skupina of polozka.vozy ?? []) {
+        const vuz = t(`provoz.${skupina.druh}`);
+        casti.push(skupina.pocet > 1 ? t("rad.vice", { pocet: skupina.pocet, kdo: vuz }) : vuz);
+      }
+      kdo = t("provoz.vlak", { slozeni: casti.join(", ") });
+    }
     // Kde se hraje o rezonanci, patří ke každému člověku i frekvence jeho kroku.
     const rytmus = jeClovek(polozka.druh) ? rytmusLidi(polozka.druh, polozka.kadence) : null;
     if (uroven.osaFrekvenci && rytmus) {
@@ -614,7 +632,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     if (polozka.rychlost !== undefined && !jeClovek(polozka.druh)) {
       kdo = t("provoz.rychlost", { kdo, rychlost: cislo(3.6 * polozka.rychlost, 0) });
     }
-    const brzdi = polozka.brzdeni !== undefined && jeVozidlo(polozka.druh);
+    const brzdi = polozka.brzdeni !== undefined && umiBrzdit(polozka.druh);
     const stani = polozka.brzdeni ? cislo(polozka.brzdeni.stani, Number.isInteger(polozka.brzdeni.stani) ? 0 : 1) : "";
     const cas = cislo(polozka.cas, Number.isInteger(polozka.cas) ? 0 : 1);
     if (vetou) {
@@ -2015,6 +2033,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         t("vysledek.shrnuti.cast", { prejelo: vysledek.prejelo, pocet: vysledek.ucastniku, spadlo: vysledek.spadlo }),
       );
     }
+    // Kdo spadl proto, že na trase kus mostovky chybí, se to má dozvědět: jinak výsledek
+    // hlásí pád a žádné porušení.
+    if (!jePokus && !vysledek.rozpad && vysledek.spadlo > 0) {
+      const mezera = mezeryTras(b.navrh, uroven)[0];
+      if (mezera) {
+        const klicMezery = ({ kolej: "vysledek.shrnuti.chybiKolejiste", silnice: "vysledek.shrnuti.chybiMostovka", lavka: "vysledek.shrnuti.chybiLavka" } as const)[mezera.trasa.druh];
+        vety.push(t(klicMezery, { od: cislo(mezera.od, 0), do: cislo(mezera.do, 0) }));
+      }
+    }
     // Most, který zkouškou prošel, klidovou polohu našel (jen ne hned napoprvé); věta by mátla.
     if (vysledek.bezRovnovahy && !vysledek.pruchod) vety.push(t("vysledek.bezRovnovahy"));
     // Most s lany, který už před zkouškou visel hluboko pod výkresem, má nedopnuté napínáky.
@@ -2055,9 +2082,15 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       poleKmitani.dataset.trida = String(komfort.trida);
     }
 
-    // Pohodlí cestujících; řádek je jen tam, kde jel autobus.
+    // Pohodlí cestujících; řádek je jen tam, kde jel autobus nebo osobní vůz.
     const cestujici = vysledek.komfortCestujicich;
-    for (const uzel of panelVysledku.querySelectorAll<HTMLElement>('[data-radek="autobus"]')) uzel.hidden = cestujici === null;
+    // Řádek se jmenuje podle toho, kdo v úrovni cestuje; kde jede autobus i osobní vůz, obecně.
+    const kdo = kdoCestuje(uroven) ?? "autobus";
+    const nazevRadku = ({ autobus: "vysledek.autobus", vlak: "vysledek.vlak", oboji: "vysledek.cestujici" } as const)[kdo];
+    for (const uzel of panelVysledku.querySelectorAll<HTMLElement>('[data-radek="autobus"]')) {
+      uzel.hidden = cestujici === null;
+      if (uzel.tagName === "DT") uzel.textContent = t(nazevRadku);
+    }
     if (cestujici) {
       const poleAutobusu = udaj("vysledek-autobus");
       const skok = document.createElement("button");
@@ -2066,15 +2099,21 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       // Kde o pohodlí v úrovni nejde, je to údaj pro zajímavost a řádek to říká: „nepřijatelné“
       // vedle medailí by jinak vypadalo jako důvod neúspěchu.
       const hodnotiSe = uroven.mistrovska?.druh === "komfort-cestujicich";
+      // Ve vlaku se pohodlí neřadí do tříd pro lávky: norma pro železniční mosty bere jako velmi
+      // dobré pohodlí zrychlení ve voze do 1 m/s² a tím se tu měří.
+      const trida =
+        kdo === "vlak"
+          ? t(cestujici.zrychleni <= MEZ_POHODLI_VE_VOZE ? "komfort.vlak.dobre" : "komfort.vlak.horsi")
+          : t(`komfort.${cestujici.trida}`);
       skok.textContent = t(hodnotiSe ? "vysledek.kmitaniHodnota" : "vysledek.autobus.bezHodnoceni", {
         zrychleni: cislo(cestujici.zrychleni, 2),
-        trida: t(`komfort.${cestujici.trida}`),
+        trida,
         cas: zapisCasu(cestujici.cas),
       });
       skok.addEventListener("click", () => skocNa(cestujici.cas));
       const zapisZrychleni = (hodnota: number): string => `${cislo(hodnota, 2)} m/s²`;
       // Autobus, který na most nedojel nebo jel po mostě už porušeném, se neměří.
-      if (cestujici.zrychleni === 0 && cestujici.cas === 0) poleAutobusu.replaceChildren(t("vysledek.autobus.nemereno"));
+      if (cestujici.zrychleni === 0 && cestujici.cas === 0) poleAutobusu.replaceChildren(t(`${nazevRadku}.nemereno`));
       else {
         poleAutobusu.replaceChildren(
           ...bezNull([skok, rozdil(cestujici.zrychleni, minule?.komfortCestujicich?.zrychleni, zapisZrychleni)]),
@@ -2196,9 +2235,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       return uzel;
     };
     const provoz = uroven.jizdniRad.map((p) => polozka(zapisJizdy(p, true)));
-    // Nerovná vozovka patří k provozu: říká, o kolik víc vozidla most zatíží.
-    if (uroven.nerovnost !== "zadna" && uroven.jizdniRad.some((p) => !jeClovek(p.druh))) {
-      provoz.push(polozka(t(`zadani.vozovka.${uroven.nerovnost}`)));
+    // Nerovná vozovka a kolej se styky patří k provozu: říkají, o kolik víc vozidla most zatíží.
+    if (uroven.nerovnost !== "zadna") {
+      if (uroven.jizdniRad.some((p) => !jeClovek(p.druh) && !jeKolejove(p.druh))) provoz.push(polozka(t(`zadani.vozovka.${uroven.nerovnost}`)));
+      if (uroven.jizdniRad.some((p) => jeKolejove(p.druh))) provoz.push(polozka(t(`zadani.kolej.${uroven.nerovnost}`)));
     }
     udaj("zadani-provoz").replaceChildren(...(provoz.length > 0 ? provoz : [polozka(t("zadani.provoz.zadny"))]));
 

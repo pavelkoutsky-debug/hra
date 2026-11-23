@@ -1,0 +1,145 @@
+{
+  "verze": 5,
+  "id": "6-04",
+  "nazev": "Dvě patra",
+  "vyrez": {
+    "xMin": -12,
+    "yMin": -17,
+    "xMax": 60,
+    "yMax": 21
+  },
+  "teren": [
+    {
+      "x": -12,
+      "y": 9
+    },
+    {
+      "x": 0,
+      "y": 9
+    },
+    {
+      "x": 1,
+      "y": -2
+    },
+    {
+      "x": 6,
+      "y": -14
+    },
+    {
+      "x": 42,
+      "y": -14
+    },
+    {
+      "x": 47,
+      "y": -2
+    },
+    {
+      "x": 48,
+      "y": 9
+    },
+    {
+      "x": 60,
+      "y": 9
+    }
+  ],
+  "hladina": -12,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 48,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 0,
+      "y": 9,
+      "typ": "posuvna"
+    },
+    {
+      "x": 48,
+      "y": 9,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "kolej",
+      "druh": "kolej",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 48,
+        "y": 0
+      }
+    },
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 9
+      },
+      "konec": {
+        "x": 48,
+        "y": 9
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "B",
+  "rozpocet": 2600000,
+  "inzenyrskyRozpocet": 2150000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.55
+  },
+  "povolenePrvky": [
+    "kolejiste",
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "vozy": [
+        {
+          "druh": "vuz-nakladni",
+          "pocet": 4
+        }
+      ]
+    },
+    {
+      "cas": 0.5,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "nakladni",
+      "pocet": 2
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    }
+  ]
+}

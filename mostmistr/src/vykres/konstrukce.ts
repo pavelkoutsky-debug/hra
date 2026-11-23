@@ -15,6 +15,7 @@ import {
   type Topologie,
 } from "../zkouska/zaznam";
 import { BARVY, PISMO } from "./barvy";
+import { nakresliPrazce } from "./kolej";
 import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
 import { barvaVyuziti } from "./skala";
 import { nakresliZnackuPodpory } from "./vykres";
@@ -91,6 +92,8 @@ export function nakresliKonstrukci(
   polomerKola: number,
   /** Tloušťka čáry prvku v pixelech; bez ní (nebo když vrátí undefined) se použije výchozí. */
   tloustkaPrvku?: (prvek: number) => number | undefined,
+  /** Je prvek kolejiště? Kreslí se s pražci. */
+  jeKolej?: (prvek: number) => boolean,
 ): void {
   const m = kamera.meritko;
   const bod = (i: number): { x: number; y: number } =>
@@ -140,6 +143,7 @@ export function nakresliKonstrukci(
         ctx.lineWidth = Math.max(1.2, tloustka * 0.3);
         ctx.stroke();
       }
+      if (cara === CARA_MOSTOVKA && jeKolej?.(e)) nakresliPrazce(ctx, a, b, m, tloustka);
     }
   }
 

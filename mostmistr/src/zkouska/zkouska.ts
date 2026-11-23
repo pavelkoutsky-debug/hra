@@ -19,7 +19,7 @@ import { volneStupne } from "../jadro/stupne";
 import { pridejKontaktSTerenem, vytvorTeren, type Teren } from "../jadro/teren";
 import { vytvorTrasu } from "../jadro/trasa";
 import { otiskSimulace } from "./otisk";
-import { jeClovek, naplanujProvoz, pridejOdporVody, Provoz, type PopisUcastnika } from "./provoz";
+import { jeClovek, naplanujProvoz, PREJEL, pridejOdporVody, Provoz, type PopisUcastnika } from "./provoz";
 import { frekvenceBudice, jeStaly, vyhodnotBudic } from "./budic";
 import type { BudicZkousky, KomfortZkousky, ObalkaPrutu, ReakcePodpory, Udalost, VysledekZkousky } from "./protokol";
 import { sestavMost } from "./stavba";
@@ -70,9 +70,11 @@ export class Zkouska {
   readonly #reakce: ReakcePodpory[];
   /** Měření kmitání mostovky; null v úrovni, kde přes most nejdou lidé. */
   readonly #komfort: MereniKomfortu | null;
-  /** Měření zrychlení karoserií autobusů a čísla účastníků, kteří autobusy jsou. */
-  readonly #komfortCestujicich: MereniKomfortu | null;
-  readonly #autobusy: number[];
+  /**
+   * Měření zrychlení karoserie každého autobusu a skříně každého osobního vozu zvlášť:
+   * číslo účastníka (v poli, aby se dalo předat bez nové alokace) a jeho měření.
+   */
+  readonly #komfortVozu: { kdo: number[]; mereni: MereniKomfortu }[];
   #dalsiSnimek = 0;
   #topologii = 0;
   #poruseni = 0;
@@ -195,15 +197,14 @@ export class Zkouska {
     } else {
       this.#komfort = null;
     }
-    // Pohodlí cestujících se měří na karoseriích autobusů.
-    this.#autobusy = [];
-    const karoserieAutobusu: number[] = [];
+    // Pohodlí cestujících se měří na karoseriích autobusů a na skříních osobních vozů, u každého
+    // vozidla jen po dobu, kdy samo jede po mostě: vůz, který ještě drkotá po stycích před
+    // mostem, o mostě nic neříká.
+    this.#komfortVozu = [];
     this.ucastnici.forEach((u, k) => {
-      if (u.druh !== "autobus") return;
-      this.#autobusy.push(k);
-      karoserieAutobusu.push(...u.karoserie);
+      if ((u.druh !== "autobus" && u.druh !== "vuz-osobni") || u.karoserie.length === 0) return;
+      this.#komfortVozu.push({ kdo: [k], mereni: vytvorMereniKomfortu(s, u.karoserie) });
     });
-    this.#komfortCestujicich = karoserieAutobusu.length > 0 ? vytvorMereniKomfortu(s, karoserieAutobusu) : null;
     const skryte: number[] = [];
     for (let i = stycnikuMostu; i < s.pocetStycniku; i++) skryte.push(i);
     const zavazi: number[] = [];
@@ -413,8 +414,10 @@ export class Zkouska {
       }
 
       // Cestující hodnotí jízdu po mostě, ne po silnici před ním; po zřícení už nehodnotí nic.
-      if (this.#komfortCestujicich && !sim.porusena) {
-        zmerKomfort(s, this.#komfortCestujicich, sim.dt, sim.cas, this.provoz.nekdoNaMoste(s, this.#autobusy));
+      if (!sim.porusena) {
+        for (const vuz of this.#komfortVozu) {
+          zmerKomfort(s, vuz.mereni, sim.dt, sim.cas, this.provoz.nekdoNaMoste(s, vuz.kdo));
+        }
       }
 
       // Průjezdy a pády.
@@ -524,9 +527,19 @@ export class Zkouska {
     const mereni = this.#budic ? null : this.#komfort;
     const komfort: KomfortZkousky | null =
       mereni === null ? null : { zrychleni: mereni.nejvetsi, cas: mereni.cas, trida: tridaKomfortu(mereni.nejvetsi) };
-    const cestujici = this.#komfortCestujicich;
-    const komfortCestujicich: KomfortZkousky | null =
-      cestujici === null ? null : { zrychleni: cestujici.nejvetsi, cas: cestujici.cas, trida: tridaKomfortu(cestujici.nejvetsi) };
+    // Počítá se jen vozidlo, které most přejelo celý; to, které spadlo nebo na most nedojelo,
+    // jízdu po mostě nezměřilo (a pád by se tvářil jako nepohodlí).
+    let komfortCestujicich: KomfortZkousky | null = null;
+    if (this.#komfortVozu.length > 0) {
+      let nejvetsi = 0;
+      let kdy = 0;
+      for (const vuz of this.#komfortVozu) {
+        if (provoz.stavy[vuz.kdo[0]!] !== PREJEL || !(vuz.mereni.nejvetsi > nejvetsi)) continue;
+        nejvetsi = vuz.mereni.nejvetsi;
+        kdy = vuz.mereni.cas;
+      }
+      komfortCestujicich = { zrychleni: nejvetsi, cas: kdy, trida: tridaKomfortu(nejvetsi) };
+    }
     let vysledekBudice: VysledekZkousky["budic"] = null;
     if (this.#budic) {
       const { frekvence, zrychleni } = vyhodnotBudic(this.#budic, this.#krivkaBudice);

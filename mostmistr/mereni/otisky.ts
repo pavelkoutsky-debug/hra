@@ -2,7 +2,7 @@
 // s těmi, které vyšly při vývoji. Je to nástroj pro ověřování, ne součást hry; proto má
 // texty přímo u sebe.
 import { VERZE_FYZIKY } from "../src/jadro/verze";
-import { SCENARE, type VysledekScenare } from "../src/zkouska/regrese";
+import { POCET_SCENARU, type VysledekScenare } from "../src/zkouska/regrese";
 import ulozene from "../src/zkouska/regrese-otisky.json";
 import { cislo } from "../src/ui/formaty";
 import type { ZpravaOtisku } from "./otisky-pracovnik";
@@ -38,7 +38,7 @@ function spust(): void {
   telo.replaceChildren();
   souhrn.textContent = "";
   delete souhrn.dataset.shoda;
-  stav.textContent = `Počítám… 0 / ${SCENARE.length}`;
+  stav.textContent = `Počítám… 0 / ${POCET_SCENARU}`;
   document.body.dataset.stav = "pocita";
 
   const pracovnik = new Worker(new URL("./otisky-pracovnik.ts", import.meta.url), { type: "module" });
@@ -47,12 +47,12 @@ function spust(): void {
     tlacitko.disabled = false;
     kopirovat.disabled = false;
     stav.textContent = "";
-    const nesouhlasi = vysledky.filter((v) => !v.shoda).length + (SCENARE.length - vysledky.length);
+    const nesouhlasi = vysledky.filter((v) => !v.shoda).length + (POCET_SCENARU - vysledky.length);
     souhrn.dataset.shoda = nesouhlasi === 0 ? "ano" : "ne";
     souhrn.textContent =
       nesouhlasi === 0
-        ? `Všech ${SCENARE.length} otisků souhlasí: tento prohlížeč počítá fyziku bitově stejně jako při vývoji.`
-        : `Nesouhlasí ${nesouhlasi} z ${SCENARE.length} otisků. Zkopíruj prosím výsledky tlačítkem nahoře a pošli mi je.`;
+        ? `Všech ${POCET_SCENARU} otisků souhlasí: tento prohlížeč počítá fyziku bitově stejně jako při vývoji.`
+        : `Nesouhlasí ${nesouhlasi} z ${POCET_SCENARU} otisků. Zkopíruj prosím výsledky tlačítkem nahoře a pošli mi je.`;
     document.body.dataset.stav = "hotovo";
   };
   pracovnik.onerror = (udalost) => {
@@ -78,7 +78,7 @@ function spust(): void {
         shoda,
       ),
     );
-    stav.textContent = `Počítám… ${vysledky.length} / ${SCENARE.length}`;
+    stav.textContent = `Počítám… ${vysledky.length} / ${POCET_SCENARU}`;
   };
   pracovnik.postMessage({});
 }

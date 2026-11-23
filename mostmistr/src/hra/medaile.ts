@@ -1,7 +1,7 @@
 // Medaile úrovně na stránce: seznam s podmínkami a krátký zápis značkami.
 
 import type { Medaile } from "../data/ulozeni";
-import type { Uroven } from "../data/uroven";
+import { kdoCestuje, type Uroven } from "../data/uroven";
 import { MEZE_KOMFORTU } from "../jadro/komfort";
 import { cislo, koruny, procenta } from "../ui/formaty";
 import { jeClovek } from "../zkouska/provoz";
@@ -17,6 +17,12 @@ interface RadekMedaile {
 }
 
 /** Medaile, které úroveň uděluje, s podmínkou slovy. */
+const KLIC_CESTUJICICH = {
+  autobus: "medaile.mistrovska.cestujici",
+  vlak: "medaile.mistrovska.cestujiciVlaku",
+  oboji: "medaile.mistrovska.cestujiciObojich",
+} as const;
+
 function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
   // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá.
   const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
@@ -42,7 +48,7 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
           : bonus.druh === "komfort-chodcu"
             ? t("medaile.mistrovska.komfort", { limit: cislo(bonus.limit, 1) })
             : bonus.druh === "komfort-cestujicich"
-              ? t("medaile.mistrovska.cestujici", { limit: cislo(bonus.limit, 2) })
+              ? t(KLIC_CESTUJICICH[kdoCestuje(uroven) ?? "autobus"], { limit: cislo(bonus.limit, 2) })
               : t("medaile.mistrovska.jina"),
       ziskana: medaile.mistrovska,
     });

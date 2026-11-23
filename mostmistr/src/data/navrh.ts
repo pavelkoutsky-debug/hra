@@ -3,7 +3,7 @@ import { jeUvnitr, type Bod, type Obdelnik } from "./geometrie";
 import { ID_PRVKU, KATALOG, LADENY_TLUMIC, NEJMENSI_DELKA, PREDPETI_LANA, type IdPrvku } from "./katalog";
 import { ChybaDat, cislo, jedenZ, jenZnameKlice, logicka, polozky, text, objekt, volitelne } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
-import { vyskaTerenu, type Uroven } from "./uroven";
+import { bodNaTrase, vyskaTerenu, type Trasa, type Uroven } from "./uroven";
 
 export const VERZE_NAVRHU = 3;
 
@@ -178,6 +178,8 @@ export type DruhProblemu =
   | "ladeny-tlumic-mimo-rozsah"
   | "tlumeni-mimo-rozsah"
   | "predpeti-mimo-rozsah"
+  | "kolejiste-mimo-kolej"
+  | "mostovka-na-koleji"
   | "nad-rozpocet";
 
 /** Porušení pravidla úrovně. `stycnik` a `prut` jsou id z návrhu. */
@@ -248,6 +250,13 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (uroven.zakazaneZony.some((z) => useckaProtinaVnitrek(a, b, z))) {
       problemy.push({ druh: "prut-v-zakazane-zone", prut: p.id });
     }
+    // Kolejiště patří jen na kolej a na kolej nepatří nic jiného: vlak po silniční mostovce
+    // nepojede a propadl by jí, aniž by hráč tušil proč.
+    if (polozka.druh === "mostovka") {
+      const poKoleji = uroven.trasy.some((t) => t.druh === "kolej" && bodNaTrase(t, a) && bodNaTrase(t, b));
+      if (p.prvek === "kolejiste" && !poKoleji) problemy.push({ druh: "kolejiste-mimo-kolej", prut: p.id });
+      else if (p.prvek !== "kolejiste" && poKoleji) problemy.push({ druh: "mostovka-na-koleji", prut: p.id });
+    }
     if (polozka.druh === "pilir") {
       // Pilíř je sloup: smí se naklonit, ale ne ležet. Položený by sloužil jako betonový trám
       // několikrát únosnější než mostovka, a to pilíř ve hře být nemá.
@@ -262,6 +271,43 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
   for (const id of pilireMimoZaklad(navrh, uroven)) problemy.push({ druh: "pilir-mimo-zaklad", prut: id });
   if (uroven.rozpocet !== null && cenaNavrhu(navrh) > uroven.rozpocet) problemy.push({ druh: "nad-rozpocet" });
   return problemy;
+}
+
+/** Úsek trasy bez mostovky: od kterého do kterého metru (souřadnice x) na trase nic neleží. */
+export interface MezeraTrasy {
+  trasa: Trasa;
+  od: number;
+  do: number;
+}
+
+/**
+ * Kde na trasách úrovně chybí mostovka: úseky mezi konci trasy, nad kterými neleží žádný
+ * prut mostovky správného druhu (kolejiště na koleji, silniční mostovka jinde). Provoz v nich
+ * nemá po čem jet a spadne; výsledek zkoušky podle toho hráči řekne proč.
+ */
+export function mezeryTras(navrh: NavrhMostu, uroven: Uroven): MezeraTrasy[] {
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  const mezery: MezeraTrasy[] = [];
+  for (const trasa of uroven.trasy) {
+    const kolej = trasa.druh === "kolej";
+    const useky: [number, number][] = [];
+    for (const p of navrh.pruty) {
+      if (KATALOG[p.prvek].druh !== "mostovka" || (p.prvek === "kolejiste") !== kolej) continue;
+      const a = podleId.get(p.a);
+      const b = podleId.get(p.b);
+      if (!a || !b || !bodNaTrase(trasa, a) || !bodNaTrase(trasa, b)) continue;
+      useky.push([Math.min(a.x, b.x), Math.max(a.x, b.x)]);
+    }
+    useky.sort((p, q) => p[0] - q[0]);
+    let pokryto = Math.min(trasa.zacatek.x, trasa.konec.x);
+    const konec = Math.max(trasa.zacatek.x, trasa.konec.x);
+    for (const [od, po] of useky) {
+      if (od > pokryto + 1e-9) mezery.push({ trasa, od: pokryto, do: Math.min(od, konec) });
+      if (po > pokryto) pokryto = po;
+    }
+    if (pokryto < konec - 1e-9) mezery.push({ trasa, od: pokryto, do: konec });
+  }
+  return mezery;
 }
 
 /**
