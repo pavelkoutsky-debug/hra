@@ -6,6 +6,8 @@
   --popisek: #8fb4e6;
   --zvyrazneni: #1d5aa3;
   --varovani: #ffd166;
+  --uspech: #8df0b3;
+  --neuspech: #ff8a7a;
   --pismo: "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
   color-scheme: dark;
 }
@@ -954,37 +956,57 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   color: var(--varovani);
 }
 
-/* Výsledek zkoušky: široký blok nahoře, aby most pod ním zůstal vidět */
+/* Výsledek zkoušky: úzký pruh nahoře (verdikt, věta, medaile, hlavní tlačítka), ať most pod
+   ním zůstane vidět; čísla a podmínky se rozbalí tlačítkem Podrobnosti. */
 
 .vysledek {
   position: absolute;
   top: 10px;
+  left: 10px;
   right: 10px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px 20px;
-  /* Nad popisovým polem v rohu výkresu: dlouhý výsledek by pod ním jinak skončil i s tlačítky. */
+  /* Nad popisovým polem v rohu výkresu: rozbalený výsledek by pod ním jinak skončil i s tlačítky. */
   z-index: 2;
-  width: min(600px, calc(100% - 20px));
+  display: flex;
+  flex-direction: column;
   max-height: calc(100% - 20px);
-  overflow-y: auto;
-  padding: 12px 14px;
   background: rgb(11 47 92 / 0.97);
   border: 1.5px solid var(--cara);
+  border-left-width: 6px;
 }
 
-.vysledek__hlavicka,
-.vysledek__tlacitka {
-  grid-column: 1 / -1;
+.vysledek[data-stav="obstal"] {
+  border-left-color: var(--uspech);
+}
+
+.vysledek[data-stav="neobstal"],
+.vysledek[data-stav="rozpad"] {
+  border-left-color: var(--neuspech);
+}
+
+.vysledek__pruh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  padding: 8px 12px;
+}
+
+.vysledek__verdikt {
+  flex: 1 1 240px;
+  min-width: 0;
 }
 
 .vysledek h2 {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: var(--cara-silna);
   font-size: 16px;
   font-weight: bold;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+.vysledek[data-stav="obstal"] h2 {
+  color: var(--uspech);
 }
 
 .vysledek[data-stav="neobstal"] h2,
@@ -996,8 +1018,101 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   margin: 0;
 }
 
+/* Jedna věta k verdiktu: nejvýš dva řádky, celé shrnutí je v podrobnostech. */
+.vysledek__veta {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--cara);
+  font-size: 12px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Medaile v pruhu: tři značky s názvem, získané svítí. */
+.medaile-pruh {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+
+.medaile-pruh li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: var(--popisek);
+}
+
+.medaile-pruh .medaile__znak {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.medaile-pruh [data-ziskana="true"] {
+  color: var(--varovani);
+}
+
+.medaile-pruh [data-ziskana="true"] .medaile__znak {
+  animation: medaile-ziskana 0.5s ease-out both;
+}
+
+.medaile-pruh [data-ziskana="true"]:nth-child(2) .medaile__znak {
+  animation-delay: 0.15s;
+}
+
+.medaile-pruh [data-ziskana="true"]:nth-child(3) .medaile__znak {
+  animation-delay: 0.3s;
+}
+
+.medaile-pruh [data-ziskana="drive"] {
+  color: var(--cara);
+  opacity: 0.6;
+}
+
+@keyframes medaile-ziskana {
+  from {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .vysledek .medaile {
   margin: 0;
+}
+
+.vysledek__tlacitka {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.vysledek__podrobnosti {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 20px;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgb(207 227 255 / 0.3);
+}
+
+.vysledek[data-sbaleno="ano"] .vysledek__podrobnosti {
+  display: none;
+}
+
+.vysledek__shrnuti,
+.vysledek__prvni,
+.vysledek__tlacitka--dole {
+  grid-column: 1 / -1;
 }
 
 .vysledek__cisla {
@@ -1043,58 +1158,67 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   text-decoration-style: solid;
 }
 
-.vysledek__tlacitka {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.vysledek__otisk {
-  float: right;
-  margin: 4px 0 0 12px;
-  color: var(--popisek);
-  font-size: 10px;
-}
-
-/* Sbalení výsledku: zůstane jen řádek s verdiktem, aby byl vidět most a analýza. */
-.vysledek__sbalit {
-  float: right;
-  margin: -4px -6px 0 10px;
-}
-
-.vysledek[data-sbaleno="ano"] {
-  display: block;
-  width: auto;
-  max-width: calc(100% - 20px);
-  padding: 8px 12px;
-}
-
-.vysledek[data-sbaleno="ano"] > :not(.vysledek__hlavicka),
-.vysledek[data-sbaleno="ano"] .vysledek__hlavicka > :not(h2):not(.vysledek__sbalit) {
-  display: none;
-}
-
-.vysledek[data-sbaleno="ano"] .vysledek__hlavicka {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.vysledek[data-sbaleno="ano"] h2 {
-  margin: 0;
-  white-space: nowrap;
-}
-
-.vysledek[data-sbaleno="ano"] .vysledek__sbalit {
-  order: 1;
-  float: none;
-  margin: 0 -4px 0 0;
-}
-
 @media (max-width: 1000px) {
-  .vysledek {
+  .vysledek__podrobnosti {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Razítko verdiktu v rohu výkresu, nad popisovým polem: jako razítko na skutečném výkresu. */
+.verdikt {
+  position: absolute;
+  right: 34px;
+  bottom: 178px;
+  z-index: 1;
+  margin: 0;
+  padding: 5px 16px 4px;
+  border: 3px double currentcolor;
+  border-radius: 4px;
+  color: var(--neuspech);
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0.92;
+  transform: rotate(-8deg);
+  animation: verdikt-otisk 0.32s cubic-bezier(0.3, 0, 0.7, 1) both;
+}
+
+.verdikt[data-stav="obstal"] {
+  color: var(--uspech);
+}
+
+.verdikt small {
+  display: block;
+  font-size: 10px;
+  font-weight: normal;
+  letter-spacing: 1.5px;
+  text-align: center;
+}
+
+@keyframes verdikt-otisk {
+  from {
+    transform: rotate(-8deg) scale(2.6);
+    opacity: 0;
+  }
+
+  70% {
+    transform: rotate(-8deg) scale(0.94);
+    opacity: 1;
+  }
+
+  to {
+    transform: rotate(-8deg) scale(1);
+    opacity: 0.92;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdikt,
+  .medaile-pruh [data-ziskana="true"] .medaile__znak {
+    animation: none;
   }
 }
 
@@ -1387,12 +1511,14 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: 6px 12px;
   max-width: 1100px;
   margin: 0 0 16px;
-  padding: 8px 12px;
-  border: 1px solid rgb(207 227 255 / 0.6);
+  padding: 6px 10px;
+  border: 1px solid rgb(207 227 255 / 0.35);
   background: rgb(11 47 92 / 0.6);
+  color: var(--popisek);
+  font-size: 12px;
 }
 
 .zaznam span {
@@ -1405,12 +1531,12 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   font-size: 12px;
 }
 
-/* V paletě úrovně: úzký sloupec, text nad tlačítky. */
+/* V paletě úrovně: úzký sloupec pod nástroji, text nad tlačítky. */
 .zaznam--vPalete {
   flex-shrink: 0;
-  margin: 0 0 8px;
+  margin: 10px 0 0;
   padding: 8px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .zaznam--vPalete span {
@@ -1535,6 +1661,10 @@ a.karta__obal:hover {
   font-size: 11px;
 }
 
+.prehled__verze a {
+  color: inherit;
+}
+
 /* Na úzkém okně se schová to, bez čeho se dá hrát. */
 @media (max-width: 1180px) {
   .rozpocet__popis,
@@ -1568,6 +1698,15 @@ a.karta__obal:hover {
 
   .pole {
     display: none;
+  }
+
+  /* Popisové pole tu není: razítko verdiktu sedí níž a je menší. */
+  .verdikt {
+    right: 14px;
+    bottom: 92px;
+    padding: 4px 10px 3px;
+    font-size: 19px;
+    letter-spacing: 3px;
   }
 
   /* Popisové pole tu není, legenda smí přes celý výkres. */
@@ -1732,14 +1871,15 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 .analyza {
   position: absolute;
-  top: 44px;
+  /* Když je nahoře pruh výsledku, obrazovka úrovně posune panel pod něj. */
+  top: var(--vrch-analyzy, 44px);
   left: 10px;
   right: 10px;
   display: flex;
   align-items: flex-start;
   gap: 8px 18px;
   flex-wrap: wrap;
-  max-height: calc(100% - 110px);
+  max-height: calc(100% - 66px - var(--vrch-analyzy, 44px));
   overflow-y: auto;
   padding: 8px 40px 8px 10px;
   background: rgb(11 47 92 / 0.94);
@@ -2347,6 +2487,49 @@ body[data-rezim="stavba"] .uroven .legenda {
   }
 
   /*
+   * Pruh výsledku na telefonu: jen to nejnutnější, ať pod ním zbyde most. Přehrát znovu je
+   * na časové ose, přehrání porušení má krátký popisek a medaile jsou v jednom řádku.
+   */
+  .vysledek__pruh {
+    gap: 6px 12px;
+    padding: 6px 10px;
+  }
+
+  .vysledek__verdikt {
+    flex-basis: 100%;
+  }
+
+  .vysledek__pruh .tlacitko {
+    padding-inline: 9px;
+  }
+
+  .vysledek__pruh [data-akce="prehrat-znovu"] {
+    display: none;
+  }
+
+  .vysledek__pruh [data-akce="prehrat-poruseni"] {
+    font-size: 0;
+  }
+
+  .vysledek__pruh [data-akce="prehrat-poruseni"]::before {
+    content: attr(data-kratce);
+    font-size: 13px;
+  }
+
+  .medaile-pruh {
+    gap: 12px;
+  }
+
+  .medaile-pruh li {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .medaile-pruh .medaile__znak {
+    font-size: 14px;
+  }
+
+  /*
    * Stavba: jízdní řád v jednom řádku (posouvá se prstem), osa frekvencí vedle tlačítka
    * analýzy. Nadpisy tu nejsou; každý řádek navíc bere výšku výkresu.
    */
@@ -2382,7 +2565,7 @@ body[data-rezim="stavba"] .uroven .legenda {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .vysledek {
+  .vysledek__podrobnosti {
     grid-template-columns: minmax(0, 1fr);
   }
 

@@ -468,6 +468,9 @@ describe("záznam porušení", () => {
     await nactiMost(navrhNaText(RESENI["1-03"]!.pady[1]!.navrh));
     await spust();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    // Pruh výsledku příčinu řekne krátce, podrobnosti celou větou s čísly.
+    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+: .+\.$/);
+    await akce("vysledek-sbalit").click();
     const veta = await udaj("vysledek-prvni");
     expect(veta).toMatch(/^Jako první selhal prut \d+ \(.+\): .+ kN při únosnosti \d+,\d kN.*\.$/);
     expect(await akce("prehrat-poruseni").isVisible()).toBe(true);
@@ -482,8 +485,9 @@ describe("záznam porušení", () => {
     expect(await telo("analyza")).toBe("otevrena");
     expect(await telo("vybrany-prut")).toMatch(/^\d+$/);
     expect(await udaj("prut-udaje")).toContain("rozhoduje");
-    // Přehrává se desetinovou rychlostí kolem okamžiku zlomu.
-    expect(await stranka.locator('[data-rychlost="0.1"]').getAttribute("aria-pressed")).toBe("true");
+    // Kolem okamžiku zlomu se čas zpomalí a pohled najede na prut; zvolená rychlost zůstává.
+    await stranka.locator('body[data-zaber="bezi"]').waitFor({ timeout: 20_000 });
+    expect(await stranka.locator('[data-rychlost="1"]').getAttribute("aria-pressed")).toBe("true");
     await stranka.waitForTimeout(1500);
     const cas = Number(await stranka.locator("#cas").inputValue());
     expect(cas).toBeGreaterThan(okamzik - 0.65);

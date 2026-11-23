@@ -30,7 +30,13 @@ export const KLIC_ODEMCENI = "mostmistr.odemceno";
 export const KLIC_CISEL = "mostmistr.cisla";
 /** Volba hráče: hlasitost zvuku. */
 export const KLIC_ZVUKU = "mostmistr.zvuk";
+/** Volba hráče: zpomalený záběr na první porušení při zkoušce. */
+export const KLIC_ZABERU = "mostmistr.zaber";
 /** Nastavení sandboxu: údolí, trasa a provoz. */
+/** Otisky mostů, které úrovní prošly: zkouška do zlomu se do výzvy počítá jen jim. */
+export const KLIC_PROSLYCH = "mostmistr.prosle";
+/** Kolik posledních prošlých mostů si hra na úroveň pamatuje. */
+const NEJVIC_PROSLYCH = 8;
 export const KLIC_SANDBOXU = "mostmistr.sandbox";
 export const KLIC_SANDBOX_NAVSTIVEN = "mostmistr.sandbox.navstiven";
 
@@ -144,6 +150,48 @@ export class Uloziste {
 
   set hlasitost(hlasitost: Hlasitost) {
     this.#pis(KLIC_ZVUKU, hlasitost);
+  }
+
+  /** Zpomalit a přiblížit první porušení při zkoušce? Dokud hráč nezvolí jinak, ano. */
+  get zpomaleniPadu(): boolean {
+    return this.#cti(KLIC_ZABERU) !== "0";
+  }
+
+  set zpomaleniPadu(zapnuto: boolean) {
+    this.#pis(KLIC_ZABERU, zapnuto ? "1" : "0");
+  }
+
+  /**
+   * Prošel most s otiskem `otisk` úrovní `uroven`? Pamatuje se i přes zavření hry: kdo se
+   * k mostu vrátí, nemusí běžnou zkoušku opakovat, aby se mu počítala zkouška do zlomu.
+   */
+  prosel(uroven: string, otisk: string): boolean {
+    return this.#prosle()[uroven]?.includes(otisk) === true;
+  }
+
+  /** Zapamatuje si, že most s otiskem `otisk` úrovní prošel; drží jen několik posledních. */
+  zapisProsly(uroven: string, otisk: string): void {
+    const vse = this.#prosle();
+    const seznam = (vse[uroven] ?? []).filter((o) => o !== otisk);
+    seznam.push(otisk);
+    vse[uroven] = seznam.slice(-NEJVIC_PROSLYCH);
+    this.#pis(KLIC_PROSLYCH, JSON.stringify(vse));
+  }
+
+  #prosle(): Record<string, string[]> {
+    const zapis = this.#cti(KLIC_PROSLYCH);
+    if (zapis === null) return {};
+    try {
+      const data: unknown = JSON.parse(zapis);
+      if (typeof data !== "object" || data === null || Array.isArray(data)) return {};
+      const vysledek: Record<string, string[]> = {};
+      for (const [uroven, seznam] of Object.entries(data)) {
+        if (Array.isArray(seznam)) vysledek[uroven] = seznam.filter((o): o is string => typeof o === "string");
+      }
+      return vysledek;
+    } catch {
+      return {};
+    }
   }
 
   /** Nastavení sandboxu; výchozí, dokud si ho hráč nezmění nebo když uložené nejde přečíst. */

@@ -9,6 +9,7 @@ import type { Uroven } from "../data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { vlastniTvarySoustavy } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
+import { najdiSlozeni } from "./slozeni";
 import { rezonancniKrivka } from "../jadro/odezva";
 import { LANO, sestavSoustavu, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
@@ -79,6 +80,7 @@ const BEZ_MOSTU: RozborMostu = {
   tvary: [],
   krivka: null,
   tahyLan: [],
+  slozeni: null,
 };
 
 /**
@@ -105,7 +107,8 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
   if (navrh.pruty.length === 0) return BEZ_MOSTU;
   const stavba = sestavMost(uroven, navrh);
   const prazdny = vKlidu(stavba.popis);
-  if (!prazdny) return BEZ_MOSTU;
+  // Most bez klidové polohy: aspoň říct, kde a proč se složí.
+  if (!prazdny) return { ...BEZ_MOSTU, slozeni: najdiSlozeni(uroven, navrh) };
   const n = prazdny.stupne.length;
   const vlastni = n > 0 ? vlastniTvarySoustavy(prazdny.s, prazdny.stupne, POCET_FREKVENCI) : null;
   if (n > 0 && !vlastni) return BEZ_MOSTU;
@@ -184,6 +187,7 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
     frekvenceObsazeneho,
     tvary,
     tahyLan: tahyLan(prazdny.s, navrh),
+    slozeni: null,
     krivka: krivkaPrazdneho
       ? {
           od: KRIVKA_OD,

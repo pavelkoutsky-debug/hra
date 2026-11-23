@@ -115,7 +115,7 @@ afterAll(async () => {
 
 describe("přehled kampaně", () => {
   it("má sedmou kapitolu Přístav se čtyřmi úrovněmi", async () => {
-    await stranka.goto(adresa);
+    await stranka.goto(`${adresa}?vyvoj=1`);
     await stranka.locator(".karta").first().waitFor();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
     expect(kapitoly).toHaveLength(7);

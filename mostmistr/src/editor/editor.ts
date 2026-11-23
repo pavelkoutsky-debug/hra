@@ -45,10 +45,11 @@ const DELKA_HISTORIE = 200;
 /** Rozdělaný tah myší. */
 export type Tah =
   /**
-   * Kreslení prutu z bodu `od`; `duvod` říká, proč by nešel položit. `dilu` je počet stejných
-   * dílů, na které se tah rozdělí, když je delší, než prvek dovoluje.
+   * Kreslení prutu z bodu `od`; `duvod` říká, proč by nešel položit. `dilu` je počet dílů,
+   * na které se tah rozdělí, když je delší, než prvek dovoluje, a `deleni` místa nových
+   * styčníků jako podíl délky tahu (u dvou stejných dílů [0,5]).
    */
-  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number }
+  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number; deleni?: number[] }
   /** Posun styčníku. */
   | { druh: "posun"; stycnik: number; od: Bod; k: Bod; duvod: DruhProblemu | null }
   /** Výběr obdélníkem; `od` a `k` jsou nezaokrouhlené body světa. */
@@ -139,29 +140,41 @@ export class Editor {
   }
 
   /**
-   * Tah delší, než prvek dovoluje, rozdělí na nejmenší počet stejných dílů, jejichž konce
-   * padnou na rastr (dvanáct metrů mostovky jsou dva šestimetrové díly). Jen u mostovky a
-   * pilíře, kde řada dílů za sebou dává smysl; u vzpěry by nový kloub uprostřed překvapil.
+   * Tah delší, než prvek dovoluje, rozdělí na nejmenší počet dílů, jejichž konce padnou na
+   * rastr, a to co nejstejnějších: dvanáct metrů mostovky jsou dva šestimetrové díly, pět metrů
+   * čtyřmetrové mostovky díl tří a dvoumetrový (ne pět metrových). Jen u mostovky a pilíře, kde
+   * řada dílů za sebou dává smysl; u vzpěry by nový kloub uprostřed překvapil.
    * Vrací návrh s díly, nebo null, když dělení nejde nebo některý díl porušuje pravidla.
    */
-  #rozdelNaDily(od: Bod, k: Bod): { navrh: NavrhMostu; dilu: number } | null {
+  #rozdelNaDily(od: Bod, k: Bod): { navrh: NavrhMostu; dilu: number; deleni: number[] } | null {
     const polozka = KATALOG[this.prvek];
     if (polozka.druh !== "mostovka" && polozka.druh !== "pilir") return null;
     const dx = k.x - od.x;
     const dy = k.y - od.y;
     const delka = Math.hypot(dx, dy);
-    for (let dilu = Math.max(2, Math.ceil(delka / polozka.nejvetsiDelka - 1e-9)); dilu <= 40; dilu++) {
-      if (dx % dilu !== 0 || dy % dilu !== 0) continue;
-      let navrh = this.#navrh;
-      for (let i = 0; i < dilu; i++) {
-        const a = { x: od.x + (dx / dilu) * i, y: od.y + (dy / dilu) * i };
-        const b = { x: od.x + (dx / dilu) * (i + 1), y: od.y + (dy / dilu) * (i + 1) };
-        if (duvodProtiPrutu(navrh, this.uroven, a, b, this.prvek)) return null;
-        navrh = pridejPrut(navrh, a, b, this.prvek);
-      }
-      return { navrh, dilu };
+    // Nejkratší díl, jehož konce leží na rastru: tah má takových kroků tolik, kolik je
+    // největší společný dělitel jeho průmětů.
+    let kroku = Math.abs(dx);
+    for (let zbytek = Math.abs(dy); zbytek !== 0; ) [kroku, zbytek] = [zbytek, kroku % zbytek];
+    if (!(kroku >= 1) || !Number.isInteger(kroku)) return null;
+    const nejvicKroku = Math.floor(polozka.nejvetsiDelka / (delka / kroku) + 1e-9);
+    if (nejvicKroku < 1) return null;
+    const dilu = Math.ceil(kroku / nejvicKroku);
+    if (dilu < 2 || dilu > 40) return null;
+    let navrh = this.#navrh;
+    const deleni: number[] = [];
+    let hotovo = 0;
+    for (let i = 0; i < dilu; i++) {
+      // Delší díly napřed: 5 kroků na dva díly jsou 3 + 2.
+      const dil = Math.floor(kroku / dilu) + (i < kroku % dilu ? 1 : 0);
+      const a = { x: od.x + (dx / kroku) * hotovo, y: od.y + (dy / kroku) * hotovo };
+      hotovo += dil;
+      const b = { x: od.x + (dx / kroku) * hotovo, y: od.y + (dy / kroku) * hotovo };
+      if (duvodProtiPrutu(navrh, this.uroven, a, b, this.prvek)) return null;
+      navrh = pridejPrut(navrh, a, b, this.prvek);
+      if (i < dilu - 1) deleni.push(hotovo / kroku);
     }
-    return null;
+    return { navrh, dilu, deleni };
   }
 
   /** Z výběru vyřadí to, co v návrhu už není. */
@@ -266,12 +279,14 @@ export class Editor {
       tah.k = naRastr(bod);
       tah.duvod = duvodProtiPrutu(this.#navrh, this.uroven, tah.od, tah.k, this.prvek);
       delete tah.dilu;
+      delete tah.deleni;
       // Dlouhý tah mostovky nebo pilíře se rozdělí na díly; odmítne se, jen když to nejde.
       if (tah.duvod === "prut-dlouhy") {
         const dily = this.#rozdelNaDily(tah.od, tah.k);
         if (dily) {
           tah.duvod = null;
           tah.dilu = dily.dilu;
+          tah.deleni = dily.deleni;
         }
       }
     } else if (tah.druh === "posun") {

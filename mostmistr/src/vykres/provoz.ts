@@ -12,12 +12,17 @@ import { svetNaObraz, type Kamera, type Rozmer } from "./kamera";
 type Kontext = CanvasRenderingContext2D;
 
 /** Nakreslí všechny účastníky, kteří právě jedou nebo leží spadlí. */
+/** Za jak dlouho se člověk, který spadl z mostu, převrátí naležato, v sekundách děje. */
+const DOBA_PREVRACENI = 0.7;
+
 export function nakresliProvoz(
   ctx: Kontext,
   kamera: Kamera,
   rozmer: Rozmer,
   ucastnici: readonly PopisUcastnika[],
   snimek: Snimek,
+  /** Čas pádu každého účastníka (undefined, kdo nespadl): kdo padá, převrací se. */
+  pady: readonly (number | undefined)[] = [],
 ): void {
   ctx.save();
   ctx.lineCap = "round";
@@ -83,8 +88,18 @@ export function nakresliProvoz(
       for (let i = lidi - 1; i >= 0; i--) {
         ctx.globalAlpha = i === 0 ? 1 : 0.45;
         const misto: Bod = { x: teziste.x - u.smer * 0.24 * i * m, y: teziste.y - 0.05 * i * m };
+        // Kdo spadl, nezůstane stát vzpřímeně na dně: během pádu se převrátí a zůstane ležet.
+        const pad = pady[poradi];
+        const preklopeni = pad === undefined ? 0 : Math.min(1, Math.max(0, (snimek.cas - pad) / DOBA_PREVRACENI));
+        if (preklopeni > 0) {
+          ctx.save();
+          ctx.translate(misto.x, misto.y);
+          ctx.rotate(u.smer * preklopeni * 0.47 * Math.PI);
+          ctx.translate(-misto.x, -misto.y);
+        }
         if (vyskok >= 0) nakresliSkokana(ctx, misto, u.vyska * m, u.smer, vyskok);
-        else postava(ctx, misto, u.vyska * m, u.smer, faze);
+        else postava(ctx, misto, u.vyska * m, u.smer, preklopeni > 0 ? 0 : faze);
+        if (preklopeni > 0) ctx.restore();
       }
       ctx.globalAlpha = 1;
     }

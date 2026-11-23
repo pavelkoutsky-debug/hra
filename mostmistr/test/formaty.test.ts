@@ -105,3 +105,28 @@ describe("čísla anglicky", () => {
     expect(datum(new Date(2026, 10, 3))).toBe("3 Nov 2026");
   });
 });
+
+describe("rozdíl proti minulému pokusu", () => {
+  it("počítá se ze zobrazených hodnot, ne z přesných", async () => {
+    const { procenta, koruny, zobrazenyRozdil } = await import("../src/ui/formaty");
+    // 42,6 % a 44,4 % se píšou 43 % a 44 %: rozdíl je 1 %, ne zaokrouhlených 1,8 %.
+    expect(procenta(0.426)).toBe(procenta(0.43));
+    expect(procenta(0.444)).toBe(procenta(0.44));
+    expect(zobrazenyRozdil(0.444, 0.426, procenta)).toBe(`+${procenta(0.01)}`);
+    expect(zobrazenyRozdil(0.426, 0.444, procenta)).toBe(`−${procenta(0.01)}`);
+    expect(zobrazenyRozdil(0.58, 0.09, procenta)).toBe(`+${procenta(0.49)}`);
+    expect(koruny(1)).toContain("1");
+  });
+
+  it("hodnoty, které vypadají stejně, rozdíl nemají", async () => {
+    const { procenta, koruny, zobrazenyRozdil } = await import("../src/ui/formaty");
+    expect(zobrazenyRozdil(0.431, 0.434, procenta)).toBeNull();
+    expect(zobrazenyRozdil(30000.2, 30000.4, koruny)).toBeNull();
+  });
+
+  it("koruny se odčítají po korunách", async () => {
+    const { koruny, zobrazenyRozdil } = await import("../src/ui/formaty");
+    expect(zobrazenyRozdil(31095, 30733, koruny)).toBe(`+${koruny(362)}`);
+    expect(zobrazenyRozdil(30733, 31095, koruny)).toBe(`−${koruny(362)}`);
+  });
+});

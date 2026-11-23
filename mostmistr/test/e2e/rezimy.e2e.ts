@@ -50,6 +50,8 @@ async function spust(): Promise<void> {
 async function naKonec(): Promise<string> {
   await akce("na-konec").click();
   await stranka.locator(".vysledek").waitFor({ state: "visible" });
+  // Výzvy a čísla, která tyhle testy čtou, jsou v podrobnostech výsledku.
+  if ((await stranka.locator(".vysledek").getAttribute("data-sbaleno")) === "ano") await akce("vysledek-sbalit").click();
   return udaj("vysledek-nadpis");
 }
 

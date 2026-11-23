@@ -92,6 +92,12 @@ async function casDeje(): Promise<number> {
   return Number(nalez[1]!.replace(",", "."));
 }
 
+/** Rozbalí podrobnosti výsledku (čísla, podmínky medailí, hlášení chyby), pokud jsou sbalené. */
+async function rozbalVysledek(): Promise<void> {
+  const panel = stranka.locator(".vysledek");
+  if ((await panel.getAttribute("data-sbaleno")) === "ano") await stranka.locator('[data-akce="vysledek-sbalit"]').click();
+}
+
 beforeAll(async () => {
   mkdirSync(SLOZKA, { recursive: true });
   server = await preview({ preview: { port: 4192, strictPort: false, host: "127.0.0.1" }, logLevel: "silent" });
@@ -199,7 +205,8 @@ describe("stavba myší", () => {
   it("samotná mostovka s kloubem uprostřed zkouškou neprojde", async () => {
     const { nadpis } = await vyzkousej();
     expect(nadpis).toBe("MOST NEOBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toContain("nemá pod vlastní tíhou klidovou polohu");
+    expect(await udaj("vysledek-shrnuti")).toContain("označený styčník mostovky nic nedrží");
+    expect(await udaj("vysledek-veta")).toContain("Složil se vlastní vahou");
     expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="true"]').count()).toBe(0);
     await nastavCas(1.2);
     await stranka.screenshot({ path: `${SLOZKA}/22-pad-mostovky.png` });
@@ -339,6 +346,7 @@ describe("zkouška a vyhodnocení", () => {
   });
 
   it("odkaz na největší využití skočí na časové ose do toho okamžiku", async () => {
+    await rozbalVysledek();
     await stranka.locator('[data-udaj="vysledek-vyuziti"] button').click();
     const zapis = await udaj("cas");
     expect(zapis).toMatch(/^\d+,\d s \/ \d+,\d s$/);
@@ -346,6 +354,7 @@ describe("zkouška a vyhodnocení", () => {
   });
 
   it("diagnostika jde zkopírovat a obsahuje most i výsledek", async () => {
+    await rozbalVysledek();
     await akce("diagnostika").click();
     const text = await stranka.locator("#okno-obsah").inputValue();
     expect(text).toContain("Úroveň: 1-01 Lávka přes potok");

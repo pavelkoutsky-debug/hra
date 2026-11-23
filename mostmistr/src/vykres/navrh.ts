@@ -324,16 +324,21 @@ function nakresliTah(
   ctx.stroke();
   // Dlouhý tah, který se rozdělí na díly: kroužky tam, kde vzniknou styčníky.
   const dilu = tah.druh === "prut" ? (tah.dilu ?? 1) : 1;
-  for (let i = 1; i < dilu; i++) {
+  const deleni = tah.druh === "prut" && tah.deleni ? tah.deleni : Array.from({ length: dilu - 1 }, (_, i) => (i + 1) / dilu);
+  for (const podil of deleni) {
     ctx.beginPath();
-    ctx.arc(a.x + ((b.x - a.x) * i) / dilu, a.y + ((b.y - a.y) * i) / dilu, 3.5, 0, 2 * Math.PI);
+    ctx.arc(a.x + (b.x - a.x) * podil, a.y + (b.y - a.y) * podil, 3.5, 0, 2 * Math.PI);
     ctx.stroke();
   }
 
   // Délka taženého prutu vedle jeho středu.
   if (tah.druh === "prut") {
     const metry = Math.hypot(tah.k.x - od.x, tah.k.y - od.y);
-    const text = dilu > 1 ? `${dilu} × ${zapisDelky(metry / dilu)}` : zapisDelky(metry);
+    // Stejné díly „2 × 4 m“, nestejné vypsané za sebou „3 m + 2 m“.
+    const hranice = [0, ...deleni, 1];
+    const delky = hranice.slice(1).map((h, i) => metry * (h - hranice[i]!));
+    const stejne = delky.every((d) => Math.abs(d - delky[0]!) < 1e-6);
+    const text = dilu <= 1 ? zapisDelky(metry) : stejne ? `${dilu} × ${zapisDelky(metry / dilu)}` : delky.map(zapisDelky).join(" + ");
     ctx.font = `12px ${PISMO}`;
     const sirka = ctx.measureText(text).width + 10;
     const x = (a.x + b.x) / 2 + 12;

@@ -7,6 +7,7 @@ import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import type { PopisUcastnika } from "./provoz";
 import type { Snimek, Topologie } from "./zaznam";
+import type { Slozeni } from "./slozeni";
 
 /** Vše, co určuje průběh zkoušky. Stejný vstup dává stejný výsledek. */
 export interface VstupZkousky {
@@ -76,6 +77,11 @@ export interface RozborMostu {
    * které visí povolené, a null u prutu, který lano není.
    */
   tahyLan: (number | null)[];
+  /**
+   * Kde a proč se skládá most bez klidové polohy (viz `slozeni.ts`); null u mostu, který ji má,
+   * a když se místo určit nedá.
+   */
+  slozeni: Slozeni | null;
 }
 
 /** Výsledek automatického dopnutí lan. */
@@ -290,6 +296,8 @@ export type ZpravaZeZkousky =
       /** Krok výpočtu v sekundách. */
       dt: number;
       ucastnici: PopisUcastnika[];
+      /** Most neměl pod vlastní tíhou klidovou polohu: skládá se od začátku děje. */
+      bezRovnovahy: boolean;
     }
   | { typ: "zaznam"; snimky: Snimek[]; topologie: Topologie[]; udalosti: Udalost[] }
   | { typ: "konec"; vysledek: VysledekZkousky }

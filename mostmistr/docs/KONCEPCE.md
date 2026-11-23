@@ -375,14 +375,24 @@ Rozdíl ceny, největšího využití a největšího zrychlení proti předchoz
 - Vlastní frekvence prázdného a obsazeného mostu, animované tvary kmitání, rezonanční křivka.
 - Grafy: průhyb uprostřed rozpětí, zrychlení mostovky, využití vybraného prutu.
 
-**Záznam porušení**
+**Záznam porušení a zpomalený záběr**
 
-Po pádu hra skočí na první porušení, přehraje ho zpomaleně, označí prut, který selhal první, a řekne proč: například „Prut 14: vzpěr, tlak 412 kN při únosnosti 380 kN“.
+Po pádu hra označí prut, který selhal první, a řekne proč: například „Prut 14: vzpěr, tlak 412 kN při únosnosti 380 kN“. Tlačítkem si hráč porušení přehraje znovu.
+
+*(M10, na přání zadavatele.)* Už při prvním přehrání zkoušky se kolem prvního porušení čas sám zpomalí na desetinu a pohled najede na místo, které povolilo; po zlomu se čas i pohled plynule vrátí a zbytek pádu hráč vidí vcelku. Záběr jde vypnout tlačítkem na časové ose (volba se pamatuje), přeskočit klávesou Esc nebo kliknutím a nespustí se, když si hráč čas posouvá sám. Kdo má v systému omezené animace, tomu se zpomalí jen čas a pohled zůstane stát. K pádu patří i drobné efekty: trosky v místě zlomu, šplouchnutí toho, co dopadlo do vody, a lidé, kteří se při pádu převrátí.
+
+**Kontrola stability při stavbě** *(M10)*
+
+Most, který by se složil vlastní vahou dřív, než na něj kdokoli vjede, je nejčastější chyba začátečníka. Hra ho pozná už při stavbě: jakmile mostovka vede od břehu k břehu, označí na výkresu styčník, ve kterém se most složí, a připíše důvod (styčník mostovky nic nedrží; chybí trojúhelník; prut drží jen za jeden konec; most drží jen jedna podpora). Stejné místo a důvod pak řekne výsledek zkoušky i s radou, co s tím, a míří na ně zpomalený záběr.
+
+**Výsledek zkoušky** *(M10)*
+
+Výsledek je úzký pruh nahoře nad výkresem, aby most zůstal vidět: verdikt, jedna věta, tři medaile a hlavní tlačítko (po výhře Další úroveň, po prohře Upravit most). Do rohu výkresu nad popisové pole padne razítko SCHVÁLENO nebo ZAMÍTNUTO. Čísla, podmínky medailí, výzvy a hlášení chyby jsou v podrobnostech na rozkliknutí.
 
 **Pro testování**
 
-- Tlačítko „kopírovat diagnostiku“: verze hry, úroveň, návrh mostu a výsledek zkoušky jako text, který mi pošleš.
-- Ladicí nabídka: odemknout vše, skočit na úroveň.
+- Tlačítko „Nahlásit chybu“ v podrobnostech výsledku: verze hry, úroveň, návrh mostu a výsledek zkoušky jako text, který mi pošleš.
+- Odemknutí všech úrovní je v přehledu kampaně jen s `?vyvoj=1` v adrese.
 
 ---
 
@@ -520,8 +530,17 @@ Každý milník končí pull requestem a verzí, kterou si můžeš zahrát na N
 | **M7 Režimy** | Odemykání, medaile, úplný sandbox, výzvy včetně zkoušky do zlomu, nápověda | Test projde kampaň od první do poslední úrovně s referenčními řešeními |
 | **M8 Doladění** | Výkon, dotykové ovládání, angličtina | Největší úroveň drží 60 snímků za sekundu, všechny texty jsou ve slovníku v obou jazycích |
 | **M9 Zvuk načisto** | Zvuky z M3z jsou pracovní. Po dokončení všech ostatních milníků se předělají pomocí ElevenLabs, včetně zvuků pro prvky a provoz z pozdějších kapitol (vlak, těžká vozidla, písty). *(Rozhodnutí zadavatele z 22. 11. 2026.)* **Nedělá se:** 23. 11. 2026 zadavatel rozhodl nechat zvuky, jak jsou. | Zadavatel zvuky poslechl a schválil; testy z M3z (správný okamžik, sílení s využitím, ztlumení, ticho bez gesta) dál procházejí |
+| **M10 Pád a výsledek** | Zpomalený záběr na první porušení s přiblížením (jde vypnout a přeskočit), šplouchnutí a trosky; kontrola stability už při stavbě a srozumitelná věta, kde a proč se most složil; výsledek jako pruh mimo most s razítkem SCHVÁLENO/ZAMÍTNUTO a čísly na rozkliknutí; úklid vývojářských položek; drobné chyby z recenze. *(Návrhy 1, 2, 5, 12 a 16 recenze.)* | Test v prohlížeči: záběr najede na místo porušení a vrátí se, jde vypnout; nestabilní most má značku při stavbě a ve výsledku větu s radou; pruh výsledku nezakryje mostovku |
+| **M11 Kmitání a nápověda** | Osa frekvencí se všemi tvary a harmonickými, které rozhodují, frekvence holého mostu pro ladění tlumiče, stejné číslo z Brnknutí, Budiče i osy, zvětšený pohyb při zkoušce; třístupňová nápověda (princip, materiál, obrys) a nápověda k medailím; čitelnost (štítky jen u nejvytíženějších prutů, rady podle nástroje, paleta na výšku okna). *(Návrhy 3, 6 a 11.)* | Most naladěný podle osy projde tam, kde osa nevaruje; tlumič naladěný podle hry kmitání sníží; test projde všechny tři stupně nápovědy |
+| **M12 Obtížnost a medaile** | Přestavěné medaile (mistrovská chce rezervu i rozpočet, rozpočtová jen bez povoleného prutu, zlato výzev nad most autora), kratší zadání s ukázkou a slovníčkem, vedený první krok, přeladěná kapitola 1 a vynucené lekce (těžký trám v 1-03, dopnutí lan v 4-03), odemykání po kapitolách, těžké varianty údolí a zkouškové úrovně bez návodu, zrychlení hluchých časů dlouhých zkoušek. *(Návrhy 4, 7, 8, 9, 10, 15 a 20.)* | Test vyhratelnosti projde s novými pravidly medailí; most bez lekce úrovní neprojde; zadání první úrovně má do 60 slov nad „Více“ |
+| **M13 Sdílení mostu** | Odkaz, který most otevře v jeho úrovni, obrázek výkresu ke stažení a výzva „překonej mou cenu“. *(Návrh 13.)* | Odkaz vyrobený hrou otevře v čistém prohlížeči stejný most se stejným otiskem zkoušky |
+| **M14 Finále kampaně** | Závěrečná kapitola, která kombinuje mechaniky (zavěšený železniční most, lávka na lanech s tlumičem, zvedací most s vlakem), a zakončení kampaně: list se souhrnem a galerií postavených mostů. *(Návrh 14.)* | Úrovně projdou testem vyhratelnosti; po poslední úrovni se ukáže souhrn s mosty hráče |
+| **M15 Dílna a Havarijní komise** | Pískoviště jako dílna (víc uložených mostů s náhledem, hotová údolí na jeden klik, písty a lodě, volitelný cíl, sdílení scénáře) a nový režim Havarijní komise: cizí most, který spadl, se má opravit nejvýš třemi změnami. *(Návrhy 17 a 18.)* | Každý případ komise jde vyřešit referenční opravou a původní most v něm spadne; dílna uloží a načte víc mostů |
+| **M16 Žebříčky a denní rozbor** | Žebříčky tří měřítek na úroveň s ověřením výsledku na serveru podle otisku; automatický rozbor zpětné vazby a deníku hraní jednou za 24 hodin s návrhy dalších verzí. *(Návrh 19 a přání zadavatele z 23. 11. 2026.)* | Podvržený výsledek server odmítne; rozbor za poslední den vznikne bez zásahu člověka a zadavatel ho najde na stránce správce |
 
 Tuhé spoje a plasticitu umí jádro od M1b, hráči se zpřístupní v M4b.
+
+Milníky M10 až M16 přibyly po nezávislé recenzi hry z 23. 11. 2026 (`docs/RECENZE.md`): zadavatel nechal zařadit všechna její doporučení a přidal dvě vlastní zadání (zpomalený záběr na první porušení, který jde vypnout, a denní automatický rozbor hraní).
 
 ---
 

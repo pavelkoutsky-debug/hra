@@ -19,19 +19,19 @@
         <button type="button" class="tlacitko" data-akce="jazyk"></button>
         <a class="tlacitko" href="?sandbox=1" data-akce="otevrit-sandbox" data-text="prehled.sandbox" data-popis="prehled.sandbox.popis"></a>
         <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
-        <a class="tlacitko" href="/zkusebna.html" data-text="lista.zkusebna"></a>
       </header>
       <main class="prehled">
         <p class="prehled__hlaseni" data-udaj="prehled-hlaseni" role="alert" hidden></p>
+        <p class="prehled__postup" data-udaj="prehled-postup"></p>
+        <p class="prehled__dokonceno" data-udaj="prehled-dokonceno" role="status" hidden></p>
         <div class="zaznam" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
-        <p class="prehled__postup" data-udaj="prehled-postup"></p>
-        <p class="prehled__dokonceno" data-udaj="prehled-dokonceno" role="status" hidden></p>
         <div class="prehled__kapitoly"></div>
-        <label class="prehled__volba">
+        <!-- Odemknutí všech úrovní je pomůcka pro zkoušení hry: ukáže se jen s ?vyvoj=1 v adrese. -->
+        <label class="prehled__volba" data-jen-vyvoj hidden>
           <input type="checkbox" id="odemknout-vse" />
           <span data-text="prehled.odemknout"></span>
         </label>
@@ -39,7 +39,10 @@
           <input type="checkbox" id="zaznam-hrani" />
           <span data-text="denik.volba"></span>
         </label>
-        <p class="prehled__verze" data-udaj="prehled-verze"></p>
+        <p class="prehled__verze">
+          <span data-udaj="prehled-verze"></span>
+          · <a href="/zkusebna.html" data-text="lista.zkusebna" data-popis="lista.zkusebna.popis"></a>
+        </p>
       </main>
     </div>
 
@@ -81,11 +84,6 @@
 
       <div class="uroven">
         <aside class="paleta">
-          <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
-            <span data-text="denik.upozorneni"></span>
-            <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
-            <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
-          </div>
           <!-- Zadání, nápověda a nastavení pískoviště jsou nahoře: na dlouhé paletě by jinak byly pod okrajem okna. -->
           <div class="paleta__dvojice paleta__uvod">
             <button type="button" class="paleta__tlacitko" data-akce="zadani" data-popis="paleta.zadaniOkno.popis">
@@ -233,6 +231,12 @@
           <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
             <span data-text="vazba.tlacitko"></span>
           </button>
+          <!-- Upozornění o záznamu hraní je až pod nástroji: hráč ho uvidí, ale nezabírá mu místo na stavbu. -->
+          <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
+            <span data-text="denik.upozorneni"></span>
+            <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
+            <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
+          </div>
         </aside>
 
         <main class="vykres">
@@ -298,46 +302,56 @@
             <p class="analyza__popis" data-udaj="analyza-prazdna" data-text="analyza.prazdna" hidden></p>
           </section>
 
-          <section class="vysledek" hidden>
-            <div class="vysledek__hlavicka">
-              <button type="button" class="tlacitko tlacitko--znak vysledek__sbalit" data-akce="vysledek-sbalit" aria-expanded="true"></button>
-              <span class="vysledek__otisk" data-udaj="otisk"></span>
-              <h2 data-udaj="vysledek-nadpis"></h2>
-              <p data-udaj="vysledek-shrnuti"></p>
+          <section class="vysledek" data-sbaleno="ano" hidden>
+            <div class="vysledek__pruh">
+              <div class="vysledek__verdikt">
+                <h2 data-udaj="vysledek-nadpis"></h2>
+                <p class="vysledek__veta" data-udaj="vysledek-veta"></p>
+              </div>
+              <ul class="medaile-pruh" data-udaj="vysledek-medaile-pruh" data-jen-kampan></ul>
+              <div class="vysledek__tlacitka">
+                <a class="tlacitko tlacitko--hlavni" data-akce="dalsi" data-text="vysledek.dalsi" hidden></a>
+                <button type="button" class="tlacitko" data-akce="upravit" data-text="vysledek.upravit"></button>
+                <button type="button" class="tlacitko" data-akce="prehrat-poruseni" data-text="vysledek.prehratPoruseni" data-kratce-text="vysledek.prehratPoruseni.kratce" data-popis="vysledek.prehratPoruseni.popis" hidden></button>
+                <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
+                <button type="button" class="tlacitko vysledek__sbalit" data-akce="vysledek-sbalit" aria-expanded="false"></button>
+              </div>
             </div>
-            <ul class="medaile" data-udaj="vysledek-medaile" data-jen-kampan></ul>
-            <div class="vysledek__vyzvy" data-cast="vyzvy" hidden>
-              <h3 data-text="vyzvy.nadpis"></h3>
-              <ul class="vyzvy" data-udaj="vysledek-vyzvy"></ul>
-            </div>
-            <dl class="vysledek__cisla">
-              <dt data-text="vysledek.cena"></dt>
-              <dd data-udaj="vysledek-cena"></dd>
-              <dt data-text="vysledek.vyuziti"></dt>
-              <dd data-udaj="vysledek-vyuziti"></dd>
-              <dt data-text="vysledek.kmitani" data-radek="kmitani"></dt>
-              <dd data-udaj="vysledek-kmitani" data-radek="kmitani"></dd>
-              <dt data-text="vysledek.autobus" data-radek="autobus"></dt>
-              <dd data-udaj="vysledek-autobus" data-radek="autobus"></dd>
-              <dt data-text="vysledek.pohyb" data-radek="pohyb"></dt>
-              <dd data-udaj="vysledek-pohyb" data-radek="pohyb"></dd>
-              <dt data-text="vysledek.pist" data-radek="pist"></dt>
-              <dd data-udaj="vysledek-pist" data-radek="pist"></dd>
-              <dt data-text="vysledek.dosednuti" data-radek="dosednuti"></dt>
-              <dd data-udaj="vysledek-dosednuti" data-radek="dosednuti"></dd>
-              <dt data-text="vysledek.poruseni"></dt>
-              <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
-            </dl>
-            <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
-            <div class="vysledek__tlacitka">
-              <a class="tlacitko tlacitko--hlavni" data-akce="dalsi" data-text="vysledek.dalsi" hidden></a>
-              <button type="button" class="tlacitko" data-akce="upravit" data-text="vysledek.upravit"></button>
-              <button type="button" class="tlacitko" data-akce="prehrat-poruseni" data-text="vysledek.prehratPoruseni" hidden></button>
-              <button type="button" class="tlacitko" data-akce="prehrat-znovu" data-text="vysledek.prehratZnovu"></button>
-              <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika"></button>
-              <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.zVysledku"></button>
+            <div class="vysledek__podrobnosti">
+              <p class="vysledek__shrnuti" data-udaj="vysledek-shrnuti"></p>
+              <ul class="medaile" data-udaj="vysledek-medaile" data-jen-kampan></ul>
+              <div class="vysledek__vyzvy" data-cast="vyzvy" hidden>
+                <h3 data-text="vyzvy.nadpis"></h3>
+                <ul class="vyzvy" data-udaj="vysledek-vyzvy"></ul>
+              </div>
+              <dl class="vysledek__cisla">
+                <dt data-text="vysledek.cena"></dt>
+                <dd data-udaj="vysledek-cena"></dd>
+                <dt data-text="vysledek.vyuziti"></dt>
+                <dd data-udaj="vysledek-vyuziti"></dd>
+                <dt data-text="vysledek.kmitani" data-radek="kmitani"></dt>
+                <dd data-udaj="vysledek-kmitani" data-radek="kmitani"></dd>
+                <dt data-text="vysledek.autobus" data-radek="autobus"></dt>
+                <dd data-udaj="vysledek-autobus" data-radek="autobus"></dd>
+                <dt data-text="vysledek.pohyb" data-radek="pohyb"></dt>
+                <dd data-udaj="vysledek-pohyb" data-radek="pohyb"></dd>
+                <dt data-text="vysledek.pist" data-radek="pist"></dt>
+                <dd data-udaj="vysledek-pist" data-radek="pist"></dd>
+                <dt data-text="vysledek.dosednuti" data-radek="dosednuti"></dt>
+                <dd data-udaj="vysledek-dosednuti" data-radek="dosednuti"></dd>
+                <dt data-text="vysledek.poruseni"></dt>
+                <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
+              </dl>
+              <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
+              <div class="vysledek__tlacitka vysledek__tlacitka--dole">
+                <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika" data-popis="vysledek.diagnostika.popis"></button>
+                <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.zVysledku"></button>
+              </div>
+              <!-- Otisk zkoušky patří do hlášení chyby, ne hráči na oči; zůstává tu pro testy. -->
+              <span data-udaj="otisk" hidden></span>
             </div>
           </section>
+          <p class="verdikt" data-udaj="verdikt" aria-hidden="true" hidden></p>
 
           <dl class="pole">
             <div class="pole__bunka pole__bunka--siroka">
@@ -365,6 +379,11 @@
               <dd data-udaj="meritko"></dd>
             </div>
             <div class="pole__bunka">
+              <dt data-text="pole.prutu"></dt>
+              <dd data-udaj="prutu"></dd>
+            </div>
+            <!-- Verze fyziky hráče nezajímá; údaj tu zůstává pro hlášení chyb a pro testy. -->
+            <div class="pole__bunka" hidden>
               <dt data-text="pole.fyzika"></dt>
               <dd data-udaj="fyzika">&hellip;</dd>
             </div>
@@ -408,6 +427,9 @@
             <button type="button" class="tlacitko" data-rychlost="1">1×</button>
             <button type="button" class="tlacitko" data-rychlost="4">4×</button>
           </span>
+          <button type="button" class="tlacitko" data-akce="zaber" data-popis="zkouska.zaber.popis" data-jen="zkouska" aria-pressed="true">
+            <span data-text="zkouska.zaber"></span>
+          </button>
           <div class="osa__drah" data-jen="zkouska">
             <span class="osa__spocitano"></span>
             <span class="osa__znacky"></span>

@@ -182,6 +182,10 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
     );
   };
 
+  // Odemknutí všech úrovní je pomůcka pro zkoušení hry: nabízí se jen s ?vyvoj=1 v adrese.
+  // Kdo ji už má zapnutou, vidí ji taky, ať ji může zase vypnout.
+  const proVyvoj = new URLSearchParams(window.location.search).get("vyvoj") === "1" || uloziste.odemcenoVse;
+  for (const uzel of document.querySelectorAll<HTMLElement>("[data-jen-vyvoj]")) uzel.hidden = !proVyvoj;
   volba.checked = uloziste.odemcenoVse;
   volba.addEventListener("change", () => {
     uloziste.odemcenoVse = volba.checked;

@@ -77,9 +77,10 @@ describe("výkres", () => {
     expect(await stranka.locator('[data-udaj="chyba"]').isHidden()).toBe(true);
   });
 
-  it("popisové pole ukazuje verzi hry a otisk sestavení", async () => {
-    const verze = await udaj("verze");
-    expect(verze).toMatch(new RegExp(`^${verzeBaliku.replaceAll(".", "\\.")} · ([0-9a-f]{7}|lokalni)$`));
+  it("popisové pole ukazuje verzi hry; otisk sestavení je jen v bublině", async () => {
+    expect(await udaj("verze")).toBe(verzeBaliku);
+    const bublina = await stranka.locator('[data-udaj="verze"]').getAttribute("title");
+    expect(bublina).toMatch(new RegExp(`^${verzeBaliku.replaceAll(".", "\\.")} · ([0-9a-f]{7}|lokalni)$`));
   });
 
   it("pracovní vlákno se simulací odpoví verzí fyziky", async () => {
