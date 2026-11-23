@@ -57,6 +57,7 @@ Doladění: angličtina, dotykové ovládání a telefon, plynulost přehráván
 - Časová osa: ukazatel u značky ukáže bublinu s časem a popisem (výjezd, porušení prutu, pád, zvedání mostu, loď).
 - Zadání: medaile jsou nahoře v pravém sloupci (byly pod okrajem okna).
 - Chyba importu mostu ukazuje v angličtině místo v zápisu (věty kontroly dat jsou jen česky).
+- Stránka správce nakreslí i most z pískoviště: údolí odhadne z mostu (rozpětí podle mostovky, hloubka podle nejnižšího styčníku), protože nastavení hráče deník nenese; odkaz vede do pískoviště.
 
 **Fyzika (verze 8)**, podle nezávislé kontroly výpočtů M7:
 
