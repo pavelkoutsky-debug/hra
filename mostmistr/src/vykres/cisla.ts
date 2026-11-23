@@ -13,6 +13,12 @@ export interface CisloVyuziti {
   a: Bod;
   b: Bod;
   vyuziti: number;
+  /**
+   * Podle čeho se pruty vybírají a řadí, když se číslo mění v čase (přehrávání zkoušky):
+   * největší využití prutu za celou zkoušku. Bez něj rozhoduje `vyuziti`. Výběr pak mezi
+   * snímky nepřeskakuje z prutu na prut.
+   */
+  vaha?: number;
 }
 
 /** Pod touto délkou prutu na obrazovce se číslo nekreslí; nevešlo by se. */
@@ -42,10 +48,11 @@ function prekryva(a: Obdelnik, b: Obdelnik): boolean {
 /** Nakreslí čísla využití. Kontext musí mít jako jednotku CSS pixel. */
 export function nakresliCislaVyuziti(ctx: CanvasRenderingContext2D, polozky: readonly CisloVyuziti[]): void {
   const serazene = polozky
-    .map((p) => ({ ...p, vyuziti: Math.abs(p.vyuziti) }))
-    .filter((p) => p.vyuziti >= NEJMENSI_VYUZITI && Math.hypot(p.b.x - p.a.x, p.b.y - p.a.y) >= NEJKRATSI_PRUT)
-    .sort((p, q) => q.vyuziti - p.vyuziti)
-    .filter((p, poradi) => poradi < NEJVIC_CISEL || p.vyuziti >= VZDY_OD);
+    .map((p) => ({ ...p, vyuziti: Math.abs(p.vyuziti), vaha: Math.abs(p.vaha ?? p.vyuziti) }))
+    .filter((p) => Math.hypot(p.b.x - p.a.x, p.b.y - p.a.y) >= NEJKRATSI_PRUT)
+    .sort((p, q) => q.vaha - p.vaha)
+    .filter((p, poradi) => poradi < NEJVIC_CISEL || p.vyuziti >= VZDY_OD)
+    .filter((p) => p.vyuziti >= NEJMENSI_VYUZITI);
 
   ctx.save();
   ctx.font = `10px ${PISMO}`;

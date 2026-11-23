@@ -11,13 +11,13 @@ import { vlastniTvarySoustavy } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
 import { ROZSAH_FREKVENCI } from "./kmitani";
 import { najdiSlozeni } from "./slozeni";
-import { rezonancniKrivka } from "../jadro/odezva";
+import { rezonancniKrivka, zakladOdezvy, zmenenyZaklad } from "../jadro/odezva";
 import { LANO, sestavSoustavu, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
+import { mostovkaTrasy, mostSLidmi, odhadniKmitani, POCET_TVARU_ODHADU, type MostSLidmi, type OdhadKmitani } from "./odhad";
 import { jeClovek } from "./provoz";
 import type { RozborMostu } from "./protokol";
 import { sestavMost, type StavbaMostu } from "./stavba";
-import { hmotnostUcastnika, lidiVRade, modelUcastnika } from "./vozidla";
 
 /** Kolik nejnižších vlastních frekvencí a tvarů rozbor vrací. */
 export const POCET_FREKVENCI = 3;
@@ -27,6 +27,11 @@ export const KRIVKA_DO = ROZSAH_FREKVENCI;
 export const KROK_KRIVKY = 0.025;
 /** Poměrný útlum konstrukce, když ho nejde odvodit z materiálů. */
 const VYCHOZI_UTLUM = 0.01;
+/**
+ * Kolikrát tužší a kolikrát těžší most se zkouší, když se hledá, co by kmitání zmenšilo:
+ * o třetinu (úprava průřezů, pár závaží) a dvojnásobně (jiná konstrukce, hodně závaží).
+ */
+export const ZMENY_PRO_RADU = [1.3, 2] as const;
 
 /** Frekvence, ve kterých se rezonanční křivka počítá, Hz. */
 export function frekvenceKrivky(): number[] {
@@ -40,25 +45,6 @@ function vKlidu(popis: PopisSoustavy): { s: Soustava; stupne: Int32Array } | nul
   const stupne = volneStupne(s);
   if (!najdiKlid(s, stupne, TIHOVE_ZRYCHLENI)) return null;
   return { s, stupne };
-}
-
-/**
- * Hmotnost největší skupiny lidí z jízdního řádu, která se na most vejde najednou, v kg.
- * Skupina delší než most se počítá jen tou částí, která na něm zrovna je.
- */
-function hmotnostLidiNaMoste(uroven: Uroven, delkaMostu: number): number {
-  let nejvic = 0;
-  for (const polozka of uroven.jizdniRad) {
-    if (!jeClovek(polozka.druh)) continue;
-    const model = modelUcastnika(polozka.druh, polozka.kadence);
-    if (!model) continue;
-    const lidi = polozka.pocet ?? 1;
-    // Útvar, dav a průvod jdou v řadách přes šířku mostovky; ostatní po jednom za sebou.
-    const vRade = lidiVRade(polozka.druh, uroven.sirkaMostovky);
-    const vejdeSe = (Math.floor(delkaMostu / model.rozestup) + 1) * vRade;
-    nejvic = Math.max(nejvic, Math.min(lidi, vejdeSe) * hmotnostUcastnika(model));
-  }
-  return nejvic;
 }
 
 /** Styčníky jádra, které patří mostovce (včetně skrytých dělicích). */
@@ -79,6 +65,9 @@ const BEZ_MOSTU: RozborMostu = {
   frekvence: [],
   frekvenceObsazeneho: [],
   bezTlumicu: null,
+  odhad: null,
+  odhadBezTlumicu: null,
+  smer: null,
   tvary: [],
   krivka: null,
   tahyLan: [],
@@ -87,21 +76,56 @@ const BEZ_MOSTU: RozborMostu = {
   volny: null,
 };
 
-/** Nejnižší vlastní frekvence soustavy podle `popis` v Hz; prázdné pole, když klidovou polohu nemá. */
-function vlastniFrekvence(popis: PopisSoustavy): number[] {
-  const klid = vKlidu(popis);
-  if (!klid || klid.stupne.length === 0) return [];
-  const vlastni = vlastniTvarySoustavy(klid.s, klid.stupne, POCET_FREKVENCI);
-  if (!vlastni) return [];
-  return Array.from(vlastni.omega, (omega) => omega / (2 * Math.PI)).filter((f) => Number.isFinite(f) && f > 0);
+/** Poměrný útlum konstrukce: průměr přes její prvky, stejně jako ve zkoušce. */
+function utlumStavby(stavba: StavbaMostu): number {
+  if (stavba.utlumPrvku.length === 0) return VYCHOZI_UTLUM;
+  let utlum = 0;
+  for (const u of stavba.utlumPrvku) utlum += u / stavba.utlumPrvku.length;
+  return utlum;
 }
 
-/** Přidá do popisu soustavy hmotu `hmota` (kg) rozdělenou rovnoměrně do styčníků `mista`. */
-function pridejHmotu(popis: PopisSoustavy, mista: readonly number[], hmota: number): void {
-  for (const i of mista) {
-    const st = popis.stycniky[i]!;
-    st.hmota = (st.hmota ?? 0) + hmota / mista.length;
+/** Co rozbor ví o mostě s lidmi: odhad kmitání a most, na kterém stojí největší skupina. */
+interface LideNaMoste {
+  odhad: OdhadKmitani | null;
+  sLidmi: MostSLidmi | null;
+  /** Vlastní frekvence prázdného mostu, Hz. */
+  prazdny: number[];
+  smer: RozborMostu["smer"];
+}
+
+/**
+ * Spočítá, jak se most `stavba` v klidové poloze `klid` chová pod lidmi úrovně. `sRadou` přidá
+ * i otázku, jestli by pomohl tužší nebo těžší most. Null, když se odezva nedá spočítat.
+ */
+function lideNaMoste(
+  uroven: Uroven,
+  stavba: StavbaMostu,
+  klid: { s: Soustava; stupne: Int32Array },
+  utlum: number,
+  sRadou: boolean,
+): LideNaMoste | null {
+  const { stycniky, xs } = mostovkaTrasy(stavba, 0);
+  if (stycniky.length < 2) return null;
+  const zaklad = zakladOdezvy(klid.s, klid.stupne, stycniky, utlum, POCET_TVARU_ODHADU);
+  if (!zaklad) return null;
+  const odhad = odhadniKmitani(uroven, zaklad, xs);
+  let smer: LideNaMoste["smer"] = null;
+  if (sRadou && odhad && odhad.zrychleni > 0) {
+    // Obměny mostu se zkoušejí jen se skupinou, která most rozkmitá nejvíc.
+    const nejhorsi = odhad.skupiny.reduce((a, b) => (b.zrychleni > a.zrychleni ? b : a));
+    const pomer = (tuhost: number, hmota: number): number =>
+      (odhadniKmitani(uroven, zmenenyZaklad(zaklad, tuhost, hmota), xs, nejhorsi.polozka)?.zrychleni ?? nejhorsi.zrychleni) / nejhorsi.zrychleni;
+    smer = {
+      tuzsi: [pomer(ZMENY_PRO_RADU[0], 1), pomer(ZMENY_PRO_RADU[1], 1)],
+      tezsi: [pomer(1, ZMENY_PRO_RADU[0]), pomer(1, ZMENY_PRO_RADU[1])],
+    };
   }
+  return {
+    odhad,
+    sLidmi: mostSLidmi(uroven, zaklad, xs, frekvenceKrivky(), POCET_FREKVENCI),
+    prazdny: Array.from(zaklad.omega.subarray(0, POCET_FREKVENCI), (omega) => omega / (2 * Math.PI)).filter((f) => Number.isFinite(f) && f > 0),
+    smer,
+  };
 }
 
 /**
@@ -139,7 +163,8 @@ function pruvesMostovky(s: Soustava, stavba: StavbaMostu, mostovka: readonly num
       kde = i;
     }
   }
-  return kde < 0 ? null : { metru: nejvic, stycnik: kde };
+  if (kde < 0) return null;
+  return { metru: nejvic, stycnik: kde, nad: s.y[kde]! > stavba.popis.stycniky[kde]!.y };
 }
 
 /** Rozbor mostu z návrhu. Vyhodí chybu, když se most nedá sestavit. */
@@ -185,41 +210,25 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
     }
   }
 
-  // Poměrný útlum konstrukce: průměr přes její prvky, stejně jako ve zkoušce.
-  let utlum = VYCHOZI_UTLUM;
-  if (stavba.utlumPrvku.length > 0) {
-    utlum = 0;
-    for (const u of stavba.utlumPrvku) utlum += u / stavba.utlumPrvku.length;
-  }
+  const utlum = utlumStavby(stavba);
   const mostovka = stycnikyMostovky(stavba);
   const frekvenceBuzeni = frekvenceKrivky();
   const krivkaPrazdneho = uroven.rezonancniKrivka
     ? rezonancniKrivka(prazdny.s, prazdny.stupne, mostovka, frekvenceBuzeni, utlum)
     : null;
 
-  // Obsazený most: hmota lidí rozdělená rovnoměrně do styčníků mostovky.
-  const trasa = uroven.trasy[0];
-  const lide = trasa ? hmotnostLidiNaMoste(uroven, trasa.konec.x - trasa.zacatek.x) : 0;
-  let frekvenceObsazeneho: number[] = [];
-  let krivkaObsazeneho: Float64Array | null = null;
-  if (lide > 0 && mostovka.length > 0) {
-    const sLidmi = sestavMost(uroven, navrh);
-    pridejHmotu(sLidmi.popis, mostovka, lide);
-    const obsazeny = vKlidu(sLidmi.popis);
-    const vlastniObsazeneho = obsazeny ? vlastniTvarySoustavy(obsazeny.s, obsazeny.stupne, POCET_FREKVENCI) : null;
-    if (obsazeny && vlastniObsazeneho) {
-      frekvenceObsazeneho = Array.from(vlastniObsazeneho.omega, (omega) => omega / (2 * Math.PI)).filter(
-        (f) => Number.isFinite(f) && f > 0,
-      );
-      if (uroven.rezonancniKrivka) {
-        krivkaObsazeneho = rezonancniKrivka(obsazeny.s, obsazeny.stupne, mostovka, frekvenceBuzeni, utlum);
-      }
-    }
-  }
+  // Most s lidmi: těla jako hmoty na pružinách v místech, kde skupina stojí (viz `odhad.ts`).
+  const lideVUrovni = uroven.jizdniRad.some((p) => jeClovek(p.druh));
+  const sLidmi = lideVUrovni && (uroven.osaFrekvenci || uroven.rezonancniKrivka);
+  const maTlumice = stavba.tlumice.length > 0;
+  const lide = sLidmi ? lideNaMoste(uroven, stavba, prazdny, utlum, !maTlumice) : null;
+  const frekvenceObsazeneho = lide?.sLidmi?.frekvence.slice(0, frekvence.length) ?? [];
+  const krivkaObsazeneho = uroven.rezonancniKrivka ? (lide?.sLidmi?.krivka ?? null) : null;
 
-  // Most bez laděných tlumičů: na jeho frekvenci s lidmi se tlumič ladí.
+  // Most bez laděných tlumičů: ten ukazuje osa frekvencí a z něj se pozná, co tlumič má krotit.
   let bezTlumicu: RozborMostu["bezTlumicu"] = null;
-  if (stavba.tlumice.length > 0) {
+  let odhadBezTlumicu: OdhadKmitani | null = null;
+  if (maTlumice && sLidmi) {
     const holy: NavrhMostu = {
       ...navrh,
       stycniky: navrh.stycniky.map((st) => {
@@ -227,10 +236,13 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
         return zbytek;
       }),
     };
-    const holyPrazdny = sestavMost(uroven, holy);
-    const holyObsazeny = sestavMost(uroven, holy);
-    if (lide > 0 && mostovka.length > 0) pridejHmotu(holyObsazeny.popis, stycnikyMostovky(holyObsazeny), lide);
-    bezTlumicu = { prazdny: vlastniFrekvence(holyPrazdny.popis), obsazeny: vlastniFrekvence(holyObsazeny.popis) };
+    const holaStavba = sestavMost(uroven, holy);
+    const holyKlid = vKlidu(holaStavba.popis);
+    const holyLide = holyKlid ? lideNaMoste(uroven, holaStavba, holyKlid, utlumStavby(holaStavba), false) : null;
+    if (holyLide) {
+      bezTlumicu = { prazdny: holyLide.prazdny, obsazeny: holyLide.sLidmi?.frekvence.slice(0, holyLide.prazdny.length) ?? [] };
+      odhadBezTlumicu = holyLide.odhad;
+    }
   }
 
   return {
@@ -238,6 +250,9 @@ export function rozeberMost(uroven: Uroven, navrh: NavrhMostu): RozborMostu {
     frekvence,
     frekvenceObsazeneho,
     bezTlumicu,
+    odhad: lide?.odhad ?? null,
+    odhadBezTlumicu,
+    smer: lide?.smer ?? null,
     tvary,
     tahyLan: tahyLan(prazdny.s, navrh),
     pruves: pruvesMostovky(prazdny.s, stavba, mostovka),

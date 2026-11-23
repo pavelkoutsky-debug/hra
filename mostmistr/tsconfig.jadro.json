@@ -4,5 +4,5 @@
     "lib": ["ES2022"],
     "types": []
   },
-  "include": ["src/jadro", "src/zkouska/protokol.ts", "src/zkouska/beh.ts", "src/data", "urovne", "mereni/prurezy.ts", "mereni/mosty.ts", "mereni/vykon.ts", "src/zkouska/zaznam.ts", "src/zkouska/efekty.ts", "src/zkouska/slozeni.ts", "src/zkouska/kmitani.ts", "src/zkouska/stavba.ts", "src/zkouska/regrese.ts", "src/zkusebna/pripady.ts", "src/zkusebna/beh.ts", "src/zvuk/deje.ts"]
+  "include": ["src/jadro", "src/zkouska/protokol.ts", "src/zkouska/beh.ts", "src/data", "urovne", "mereni/prurezy.ts", "mereni/mosty.ts", "mereni/vykon.ts", "src/zkouska/zaznam.ts", "src/zkouska/efekty.ts", "src/zkouska/slozeni.ts", "src/zkouska/kmitani.ts", "src/zkouska/odhad.ts", "src/zkouska/stavba.ts", "src/zkouska/regrese.ts", "src/zkusebna/pripady.ts", "src/zkusebna/beh.ts", "src/zvuk/deje.ts"]
 }

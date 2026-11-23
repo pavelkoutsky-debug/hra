@@ -139,7 +139,7 @@ interface PlanUcastnika extends PopisUcastnika {
 }
 
 /** Řada lidí nebo jedno vozidlo ze skupiny v jízdním řádu. */
-interface Rada {
+export interface Rada {
   /** Model řady; lidé vedle sebe jsou v něm už sloučení. */
   model: ModelUcastnika;
   /** Jak daleko za čelem skupiny řada jde, m. */
@@ -203,7 +203,7 @@ function modelPolozky(polozka: Uroven["jizdniRad"][number]): ModelUcastnika | nu
 }
 
 /** Rozloží položku jízdního řádu na řady: kdo jde vedle koho, jak daleko za sebou a v jakém rytmu. */
-function radySkupiny(polozka: Uroven["jizdniRad"][number], uroven: Uroven, nahodne: () => number): Rada[] | null {
+export function radySkupiny(polozka: Uroven["jizdniRad"][number], uroven: Uroven, nahodne: () => number): Rada[] | null {
   const jeden = modelPolozky(polozka);
   if (!jeden) return null;
   const lidi = polozka.pocet ?? 1;

@@ -1299,6 +1299,11 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   scrollbar-width: thin;
 }
 
+.osa__polozky[data-pretika="true"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
 .osa .lista__skupina {
   flex: none;
 }
@@ -2206,6 +2211,18 @@ body[data-rezim="stavba"] .uroven .legenda {
   opacity: 0.55;
 }
 
+/* Vlastní frekvence za koncem osy: šipka doprava u pravého okraje. */
+.frekvence__mimo {
+  position: absolute;
+  top: 17px;
+  width: 0;
+  height: 0;
+  margin-left: -9px;
+  border: 5px solid transparent;
+  border-right: 0;
+  border-left: 9px solid var(--cara-silna);
+}
+
 /* Druhá a další vlastní frekvence: menší trojúhelník. */
 .frekvence__most--dalsi {
   margin-left: -4px;
@@ -2224,8 +2241,17 @@ body[data-rezim="stavba"] .uroven .legenda {
   transform: rotate(45deg);
 }
 
-.osa__frekvence[data-stav="shoda"] .frekvence__most {
-  border-bottom-color: var(--varovani);
+/* Složka kroku, která most podle odhadu rozkmitá nejvíc: v barvě stavu odhadu. */
+.osa__frekvence[data-stav="u-meze"] .frekvence__krok--hlavni,
+.osa__frekvence[data-stav="nad-mezi"] .frekvence__krok--hlavni {
+  top: 0;
+  height: 14px;
+  border-left: 3px solid var(--varovani);
+  margin-left: -1px;
+}
+
+.osa__frekvence[data-stav="nad-mezi"] .frekvence__krok--hlavni {
+  border-left-color: var(--neuspech);
 }
 
 /* Věta k ose smí mít dva řádky: jízdní řád vedle ní nesmí zmizet. */
@@ -2245,12 +2271,35 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 @media (min-width: 1500px) {
   .frekvence__popis {
-    max-width: 420px;
+    max-width: 480px;
   }
 }
 
-.osa__frekvence[data-stav="shoda"] .frekvence__popis {
+/*
+ * V užším okně se věta k ose (odhad kmitání, kdo ho působí a co pomůže) nevejde vedle nadpisů:
+ * nadpisy lišty ustoupí, jízdní řád i osa se poznají samy.
+ */
+@media (max-width: 1500px) {
+  .uroven .osa__rad .osa__nadpis,
+  .uroven .osa__frekvence .osa__nadpis {
+    display: none;
+  }
+
+  .frekvence__popis {
+    max-width: 440px;
+  }
+}
+
+.osa__frekvence[data-stav="u-meze"] .frekvence__popis {
   color: var(--varovani);
+}
+
+.osa__frekvence[data-stav="nad-mezi"] .frekvence__popis {
+  color: var(--neuspech);
+}
+
+.osa__frekvence[data-stav="klid"][data-zkouska] .frekvence__popis {
+  color: var(--uspech);
 }
 
 .legenda__kmitani:empty {
@@ -2556,8 +2605,11 @@ body[data-rezim="stavba"] .uroven .legenda {
     min-width: 0;
   }
 
+  /* Věta k ose (odhad, kdo ho působí, rada) se v úzkém okně neořezává: dostane celý řádek. */
   .uroven .frekvence__popis {
-    flex: 1 1 200px;
+    display: block;
+    flex: 1 1 100%;
+    max-width: none;
     overflow: visible;
     white-space: normal;
   }

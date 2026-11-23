@@ -2,6 +2,7 @@
 // Stejné zprávy tečou ve hře přes Web Worker a v testech přímo v Node, takže každou
 // zkoušku lze spustit bez prohlížeče a přehrát přesně znovu.
 
+import type { OdhadKmitani } from "./odhad";
 import type { NavrhMostu } from "../data/navrh";
 import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
@@ -58,16 +59,31 @@ export interface RozborMostu {
   /** Nejnižší vlastní frekvence prázdného mostu v Hz, vzestupně. */
   frekvence: number[];
   /**
-   * Totéž s největší skupinou lidí z jízdního řádu rozestavenou po mostovce. Lidé přidávají
-   * hmotu, takže frekvence klesnou; prázdné pole v úrovni bez lidí.
+   * Na jaké frekvenci týž tvar nejvíc odpovídá, když na mostě uprostřed stojí největší skupina
+   * lidí z jízdního řádu (Hz, ve stejném pořadí jako `frekvence`). Tělo člověka je hmota na
+   * pružině: most pod jejím kmitočtem (kolem 3 Hz) lidé zpomalí, most nad ním mírně zrychlí.
+   * Prázdné pole v úrovni bez lidí.
    */
   frekvenceObsazeneho: number[];
   /**
-   * Vlastní frekvence mostu bez laděných tlumičů, prázdného a obsazeného lidmi (Hz, vzestupně).
-   * Na frekvenci obsazeného mostu se tlumič ladí: `frekvence` a `frekvenceObsazeneho` už tlumiče
-   * obsahují a rezonanci, kterou mají krotit, ukazují rozštěpenou. Null u mostu bez tlumičů.
+   * Vlastní frekvence mostu bez laděných tlumičů, prázdného a obsazeného lidmi (Hz). Osa
+   * frekvencí ukazuje tenhle most a tlumiče zvlášť: `frekvence` a `frekvenceObsazeneho` už
+   * tlumiče obsahují a rezonanci, kterou mají krotit, ukazují rozštěpenou. Null u mostu bez tlumičů.
    */
   bezTlumicu: { prazdny: number[]; obsazeny: number[] } | null;
+  /**
+   * Odhad kmitání mostu pod lidmi úrovně (viz `odhad.ts`): ustálená odezva mostu, na kterém
+   * skupiny z jízdního řádu stojí a budí ho krokem. Null v úrovni bez lidí a bez osy frekvencí.
+   */
+  odhad: OdhadKmitani | null;
+  /** Tentýž odhad pro most bez laděných tlumičů; null u mostu, který žádný nemá. */
+  odhadBezTlumicu: OdhadKmitani | null;
+  /**
+   * Co by s odhadem (pro skupinu, která most rozkmitá nejvíc) udělal tužší a těžší most: poměr
+   * k dnešnímu odhadu pro každou ze změn `ZMENY_PRO_RADU` (pod 1 by kmital míň). Null bez
+   * odhadu a u mostu s laděným tlumičem.
+   */
+  smer: { tuzsi: [number, number]; tezsi: [number, number] } | null;
   /**
    * Tvary kmitání prázdného mostu ke každé frekvenci z `frekvence`: posuny styčníků návrhu
    * (dx0, dy0, dx1, dy1, …) v pořadí, v jakém jsou v návrhu. Největší posun má velikost 1.
@@ -84,11 +100,12 @@ export interface RozborMostu {
    */
   tahyLan: (number | null)[];
   /**
-   * Průvěs mostovky pod vlastní tíhou: o kolik metrů se styčník mostovky nejvíc liší od výkresu
-   * a který to je (pořadí v návrhu). U mostu s lany prozradí nedopnuté napínáky. Null, když
-   * most nemá klidovou polohu nebo mostovku.
+   * Průvěs mostovky pod vlastní tíhou: o kolik metrů se styčník mostovky nejvíc liší od výkresu,
+   * který to je (pořadí v návrhu) a jestli leží nad výkresem (přetažená lana), ne pod ním.
+   * U mostu s lany prozradí špatně nastavené napínáky. Null, když most nemá klidovou polohu
+   * nebo mostovku.
    */
-  pruves: { metru: number; stycnik: number } | null;
+  pruves: { metru: number; stycnik: number; nad: boolean } | null;
   /**
    * Kde a proč se skládá most bez klidové polohy (viz `slozeni.ts`); null u mostu, který ji má,
    * a když se místo určit nedá.

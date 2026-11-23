@@ -88,3 +88,8 @@ export function zobrazenyRozdil(nove: number, stare: number, zapis: (hodnota: nu
   if (dilku === 0 || zapis(nove) === zapis(stare)) return null;
   return `${dilku > 0 ? "+" : "−"}${zapis(Math.abs(dilku) / nasobek)}`;
 }
+
+/** Text s velkým prvním písmenem: věta složená z kusů slovníku, které začínají malým. */
+export function velkymPismenem(text: string): string {
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}

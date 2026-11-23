@@ -167,3 +167,135 @@ export function rezonancniKrivka(
   }
   return krivka;
 }
+
+/** Vlastní tvary soustavy a jejich tlumení, připravené k výpočtu ustálené odezvy v daných místech. */
+export interface ZakladOdezvy {
+  /** Úhlové vlastní frekvence tvarů. */
+  omega: Float64Array;
+  /** Tlumení v souřadnicích tvarů, m × m po řádcích. */
+  tlumeni: Float64Array;
+  /** Svislá výchylka každého místa v každém tvaru, p × m po řádcích; místo držené svisle má nuly. */
+  fi: Float64Array;
+  /** Místa (styčníky soustavy) v pořadí řádků `fi`. */
+  mista: number[];
+  /** Poměrný útlum konstrukce, který je v `tlumeni` na úhlopříčce (2·útlum·ω každého tvaru). */
+  utlum: number;
+}
+
+/**
+ * Připraví výpočet ustálené odezvy soustavy v její aktuální (klidové) poloze ve styčnících
+ * `mista`. Vrací null, když soustava nemá volné stupně nebo se tvary nepodaří najít.
+ */
+export function zakladOdezvy(
+  s: Soustava,
+  stupne: Int32Array,
+  mista: readonly number[],
+  utlum: number,
+  pocetTvaru = POCET_TVARU,
+): ZakladOdezvy | null {
+  const n = stupne.length;
+  if (n === 0) return null;
+  const vlastni = vlastniTvarySoustavy(s, stupne, Math.min(pocetTvaru, n));
+  if (!vlastni) return null;
+  const { omega, tvary } = vlastni;
+  const m = omega.length;
+  const poradi = new Int32Array(3 * s.pocetStycniku).fill(-1);
+  for (let k = 0; k < n; k++) poradi[stupne[k]!] = k;
+  const fi = new Float64Array(mista.length * m);
+  mista.forEach((stycnik, j) => {
+    const k = poradi[3 * stycnik + 1]!;
+    if (k < 0) return;
+    for (let i = 0; i < m; i++) fi[j * m + i] = tvary[i * n + k]!;
+  });
+  return { omega, tlumeni: tlumeniTvaru(s, stupne, omega, tvary, utlum), fi, mista: [...mista], utlum };
+}
+
+/**
+ * Základ odezvy téže soustavy, kdyby byla `tuhost`-krát tužší a `hmota`-krát těžší (všude
+ * stejně). Tvary kmitání se tím nemění, jen jejich frekvence a váha; tlumiče zůstávají, jaké jsou.
+ * Slouží k otázce „pomohl by tužší, nebo těžší most?“ bez nového hledání tvarů.
+ */
+export function zmenenyZaklad(z: ZakladOdezvy, tuhost: number, hmota: number): ZakladOdezvy {
+  const m = z.omega.length;
+  const pomer = Math.sqrt(tuhost / hmota);
+  const omega = z.omega.map((w) => w * pomer);
+  // Tvary jsou normované hmotou: v těžší soustavě jsou √hmota-krát menší.
+  const fi = z.fi.map((f) => f / Math.sqrt(hmota));
+  const tlumeni = new Float64Array(m * m);
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < m; j++) {
+      // Tlumiče jako prvky: stejné síly, jen promítnuté do menších tvarů.
+      const prvky = z.tlumeni[i * m + j]! - (i === j ? 2 * z.utlum * z.omega[i]! : 0);
+      tlumeni[i * m + j] = prvky / hmota + (i === j ? 2 * z.utlum * omega[i]! : 0);
+    }
+  }
+  return { omega, tlumeni, fi, mista: z.mista, utlum: z.utlum };
+}
+
+/**
+ * Poddajnost soustavy na frekvenci `frekvence` (Hz): komplexní svislá výchylka místa j při
+ * svislé harmonické síle 1 N v místě k, jako matice p × p po řádcích (reálná a imaginární část).
+ *
+ * `tuhostRe` a `tuhostIm` je dynamická tuhost (N/m) toho, co je v každém místě k soustavě
+ * připojeno navíc a co na výchylku místa odpovídá silou: odpružená hmota, třeba tělo člověka.
+ * Tak jde počítat most s lidmi, aniž by se kvůli nim znovu hledaly vlastní tvary.
+ */
+export function poddajnost(
+  z: ZakladOdezvy,
+  frekvence: number,
+  tuhostRe?: ArrayLike<number>,
+  tuhostIm?: ArrayLike<number>,
+): { re: Float64Array; im: Float64Array } | null {
+  const m = z.omega.length;
+  const p = z.mista.length;
+  const w = 2 * Math.PI * frekvence;
+  const dvoj = 2 * m;
+  const A = new Float64Array(dvoj * dvoj);
+  const B = new Float64Array(dvoj * p);
+  for (let i = 0; i < m; i++) {
+    const re = z.omega[i]! * z.omega[i]! - w * w;
+    A[i * dvoj + i] = re;
+    A[(m + i) * dvoj + m + i] = re;
+    for (let j = 0; j < m; j++) {
+      const im = w * z.tlumeni[i * m + j]!;
+      A[i * dvoj + m + j] = -im;
+      A[(m + i) * dvoj + j] = im;
+    }
+    for (let k = 0; k < p; k++) B[i * p + k] = z.fi[k * m + i]!;
+  }
+  if (tuhostRe || tuhostIm) {
+    for (let k = 0; k < p; k++) {
+      const zr = tuhostRe?.[k] ?? 0;
+      const zi = tuhostIm?.[k] ?? 0;
+      if (zr === 0 && zi === 0) continue;
+      for (let i = 0; i < m; i++) {
+        const fiI = z.fi[k * m + i]!;
+        if (fiI === 0) continue;
+        for (let j = 0; j < m; j++) {
+          const d = fiI * z.fi[k * m + j]!;
+          A[i * dvoj + j] = A[i * dvoj + j]! + zr * d;
+          A[(m + i) * dvoj + m + j] = A[(m + i) * dvoj + m + j]! + zr * d;
+          A[i * dvoj + m + j] = A[i * dvoj + m + j]! - zi * d;
+          A[(m + i) * dvoj + j] = A[(m + i) * dvoj + j]! + zi * d;
+        }
+      }
+    }
+  }
+  if (!vyres(A, B, dvoj, p)) return null;
+  const re = new Float64Array(p * p);
+  const im = new Float64Array(p * p);
+  for (let j = 0; j < p; j++) {
+    for (let k = 0; k < p; k++) {
+      let r = 0;
+      let q = 0;
+      for (let i = 0; i < m; i++) {
+        const fiJ = z.fi[j * m + i]!;
+        r += fiJ * B[i * p + k]!;
+        q += fiJ * B[(m + i) * p + k]!;
+      }
+      re[j * p + k] = r;
+      im[j * p + k] = q;
+    }
+  }
+  return { re, im };
+}

@@ -151,7 +151,14 @@ describe("dav", () => {
     const u = uroven([polozka]);
     const rozbor = rozeberMost(u, tuhyMost());
     expect(rozbor.stabilni).toBe(true);
-    expect(rozbor.frekvenceObsazeneho[0]!).toBeLessThan(rozbor.frekvence[0]!);
+    // Lidé nejsou mrtvá váha: tělo je hmota na pružině s kmitočtem kolem 3 Hz. Tuhý most, který
+    // kmitá rychleji, proto s lidmi nezpomalí, ale o něco zrychlí (těla ho podpírají jako pružiny).
+    expect(rozbor.frekvence[0]!).toBeGreaterThan(4);
+    expect(rozbor.frekvenceObsazeneho[0]!).toBeGreaterThan(rozbor.frekvence[0]!);
+    expect(rozbor.frekvenceObsazeneho[0]!).toBeLessThan(1.15 * rozbor.frekvence[0]!);
+    // A rozbor k nim má odhad kmitání.
+    expect(rozbor.odhad).not.toBeNull();
+    expect(rozbor.odhad!.skupiny[0]).toMatchObject({ druh: "dav", polozka: 0 });
   }, 60_000);
 });
 

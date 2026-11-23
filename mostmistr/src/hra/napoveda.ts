@@ -148,7 +148,9 @@ export function pripojNapovedu(reseni: Readonly<Record<MostNapovedy, NavrhMostu>
     const krok = kroky[vybrany];
     const rysy = rysyMostu(reseni[vybrany], uroven);
     udaj("napoveda-uvod").textContent = t(`napoveda.uvod.${vybrany}`);
-    udaj("napoveda-princip").textContent = vetaOPrincipu(rysy);
+    // Most pro medaili často nese stejně jako ten pro průchod: řekne se to, ať hráč nehledá rozdíl ve větě.
+    const stejny = vybrany !== "pruchod" && principMostu(rysy).join("|") === principMostu(rysyMostu(reseni.pruchod, uroven)).join("|");
+    udaj("napoveda-princip").textContent = stejny ? `${vetaOPrincipu(rysy)} ${t("napoveda.princip.stejny")}` : vetaOPrincipu(rysy);
     okno.dataset.soustava = rysy.soustava;
     for (const cast of okno.querySelectorAll<HTMLElement>("[data-krok]")) cast.hidden = Number(cast.dataset.krok) > krok;
     if (krok >= 2) {

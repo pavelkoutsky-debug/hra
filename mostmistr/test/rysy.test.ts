@@ -11,55 +11,53 @@ import { RESENI } from "../urovne/reseni";
 const kampan = nactiKampan();
 const MOSTY = ["pruchod", "rozpocet", "mistrovska"] as const;
 
-/** Čím nese most, který úrovní projde. Když se referenční most změní, patří sem nová hodnota. */
-const SOUSTAVY: Record<string, NosnaSoustava> = {
-  "1-01": "trojuhelnik-nad",
-  "1-02": "prihrada-nad",
-  "1-03": "prihrada-nad",
-  "1-04": "prihrada-pod",
-  "2-01": "prihrada-nad",
-  "2-02": "prihrada-nad",
-  "2-03": "prihrada-nad",
-  "2-04": "prihrada-nad",
-  "3-01": "prihrada-nad",
-  "3-02": "prihrada-nad",
-  "3-03": "prihrada-nad",
-  "3-04": "prihrada-nad",
-  "4-01": "prihrada-nad",
-  "4-02": "nosnik",
-  "4-03": "zaveseny",
-  "4-04": "visuty",
-  "5-01": "prihrada-nad",
-  "5-02": "prihrada-nad",
-  "5-03": "prihrada-nad",
-  "5-04": "prihrada-nad",
-  "6-01": "prihrada-nad",
-  "6-02": "prihrada-pod",
-  "6-03": "prihrada-pod",
-  "6-04": "mezi-patry",
-  "7-01": "zvedaci",
-  "7-02": "zvedaci",
-  "7-03": "zvedaci",
-  "7-04": "zvedaci",
+/**
+ * Čím nesou mosty autora: ten, který projde, most pro medaili za rozpočet a mistrovský.
+ * Když se referenční most změní, patří sem nová hodnota (a s ní se změní věta i skica v nápovědě).
+ */
+const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSoustava]> = {
+  "1-01": ["trojuhelnik-nad", "trojuhelnik-nad", "trojuhelnik-pod"],
+  "1-02": ["prihrada-nad", "vzpery", "prihrada-obe"],
+  "1-03": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "1-04": ["vzpery", "vzpery", "vzpery"],
+  "2-01": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "2-02": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "2-03": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "2-04": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "3-01": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "3-02": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "3-03": ["prihrada-nad", "prihrada-pod", "prihrada-pod"],
+  "3-04": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "4-01": ["prihrada-nad", "prihrada-pod", "prihrada-pod"],
+  "4-02": ["nosnik", "nosnik", "nosnik"],
+  "4-03": ["zaveseny", "zaveseny", "zaveseny"],
+  "4-04": ["visuty", "visuty", "visuty"],
+  "5-01": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "5-02": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "5-03": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "5-04": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "6-01": ["prihrada-nad", "prihrada-nad", "prihrada-nad"],
+  "6-02": ["prihrada-pod", "prihrada-pod", "prihrada-pod"],
+  "6-03": ["prihrada-pod", "prihrada-pod", "prihrada-pod"],
+  "6-04": ["mezi-patry", "mezi-patry", "mezi-patry"],
+  "7-01": ["zvedaci", "zvedaci", "zvedaci"],
+  "7-02": ["zvedaci", "zvedaci", "zvedaci"],
+  "7-03": ["zvedaci", "zvedaci", "zvedaci"],
+  "7-04": ["zvedaci", "zvedaci", "zvedaci"],
 };
 
 describe("rysy referenčních mostů", () => {
-  it("každá úroveň má most, který projde, a ten nese tak, jak říká tabulka", () => {
+  it("každý most autora nese tak, jak říká tabulka", () => {
     expect(Object.keys(SOUSTAVY).sort()).toEqual(kampan.map((u) => u.id).sort());
     for (const uroven of kampan) {
-      expect(rysyMostu(RESENI[uroven.id]!.pruchod, uroven).soustava, uroven.id).toBe(SOUSTAVY[uroven.id]);
+      MOSTY.forEach((most, i) => {
+        expect(rysyMostu(RESENI[uroven.id]![most], uroven).soustava, `${uroven.id} ${most}`).toBe(SOUSTAVY[uroven.id]![i]);
+      });
     }
   });
 
   it("mosty pro medaile se od průchodu liší tam, kde se liší jejich stavba", () => {
     const u = (id: string) => kampan.find((x) => x.id === id)!;
-    // 1-01: mistrovský most má trojúhelník pod mostovkou, ne nad ní.
-    expect(rysyMostu(RESENI["1-01"]!.mistrovska, u("1-01")).soustava).toBe("trojuhelnik-pod");
-    // 1-02: do rozpočtu se vejdou jen dvě vzpěry zdola; mistrovský má pruty na obou stranách.
-    expect(rysyMostu(RESENI["1-02"]!.rozpocet, u("1-02")).soustava).toBe("trojuhelnik-pod");
-    expect(rysyMostu(RESENI["1-02"]!.mistrovska, u("1-02")).soustava).toBe("prihrada-obe");
-    // 3-03: úsporný most má příhradu pod mostovkou.
-    expect(rysyMostu(RESENI["3-03"]!.rozpocet, u("3-03")).soustava).toBe("prihrada-pod");
     // 2-04: mistrovský most má navíc viskózní tlumiče.
     expect(rysyMostu(RESENI["2-04"]!.pruchod, u("2-04")).viskozniTlumice).toBe(false);
     expect(rysyMostu(RESENI["2-04"]!.mistrovska, u("2-04")).viskozniTlumice).toBe(true);
@@ -68,18 +66,45 @@ describe("rysy referenčních mostů", () => {
     expect(rysyMostu(RESENI["7-02"]!.mistrovska, u("7-02")).ztuzeni).toBe(true);
   });
 
-  it("přídavky se poznají: pilíře, svary, závaží, laděný tlumič, zámek a počet křídel", () => {
+  it("vzpěry do kotev pod mostovkou nejsou příhrada s dolním pásem", () => {
+    const u = (id: string) => kampan.find((x) => x.id === id)!;
+    // 1-04: vzpěradla opřená o svahy; most pro průchod má navíc věšadlo nad mostovkou.
+    expect(principMostu(rysyMostu(RESENI["1-04"]!.pruchod, u("1-04")))).toEqual(["vzpery", "vesadlo.navic"]);
+    expect(principMostu(rysyMostu(RESENI["1-04"]!.rozpocet, u("1-04")))).toEqual(["vzpery"]);
+    // 3-04: příhrada nad mostovkou a k tomu nohy na skálu uprostřed údolí. Most, který má
+    // spadnout, protože je nemá, dostane jinou větu.
+    expect(principMostu(rysyMostu(RESENI["3-04"]!.pruchod, u("3-04")))).toEqual(["prihrada-nad", "vzpery.navic"]);
+    const bezPodpery = RESENI["3-04"]!.pady.find((p) => p.nazev.includes("bez pilíře"))!.navrh;
+    expect(principMostu(rysyMostu(bezPodpery, u("3-04")))).toEqual(["prihrada-nad"]);
+    // 3-03 a 6-02: příhrada pod mostovkou bez kotev pod ní zůstává příhradou.
+    expect(rysyMostu(RESENI["3-03"]!.rozpocet, u("3-03")).soustava).toBe("prihrada-pod");
+    expect(rysyMostu(RESENI["6-02"]!.pruchod, u("6-02")).soustava).toBe("prihrada-pod");
+  });
+
+  it("přídavky se poznají: pilíře, svary, závaží, laděný tlumič, zámek, počet křídel a pylonů", () => {
     const rysy = (id: string) => rysyMostu(RESENI[id]!.pruchod, kampan.find((x) => x.id === id)!);
     expect(rysy("4-01")).toMatchObject({ pilire: true, svary: false });
     // Pylony lanového mostu a pilíře spojitého nosníku nejsou „pilíře pod příhradou“.
-    expect(rysy("4-02")).toMatchObject({ pilire: false, svary: true });
-    expect(rysy("4-03").pilire).toBe(false);
-    expect(rysy("4-04").pilire).toBe(false);
-    expect(rysy("2-03")).toMatchObject({ zavazi: true, ladeneTlumice: false });
+    expect(rysy("4-02")).toMatchObject({ pilire: false, svary: true, svaryMeziPodporami: true });
+    // Zavěšený most 4-03 má jediný pylon (úroveň má jediný základ), visutý 4-04 dva.
+    expect(rysy("4-03")).toMatchObject({ pilire: false, pylonu: 1 });
+    expect(rysy("4-04")).toMatchObject({ pilire: false, pylonu: 2 });
+    expect(rysy("2-03")).toMatchObject({ zavazi: true, ladeneTlumice: false, pylonu: 0 });
     expect(rysy("5-02")).toMatchObject({ zavazi: false, ladeneTlumice: true });
     expect(rysy("7-01")).toMatchObject({ kridel: 1, zamek: true });
     expect(rysy("7-02")).toMatchObject({ kridel: 2, zamek: true });
-    expect(rysy("1-01")).toMatchObject({ kridel: 0, zamek: false, pilire: false, svary: false, zavazi: false, ladeneTlumice: false, viskozniTlumice: false, ztuzeni: false });
+    expect(rysy("1-01")).toMatchObject({
+      kridel: 0,
+      zamek: false,
+      pilire: false,
+      svary: false,
+      zavazi: false,
+      ladeneTlumice: false,
+      viskozniTlumice: false,
+      ztuzeni: false,
+      vzperyNavic: false,
+      vesadloNavic: false,
+    });
   });
 
   it("holá mostovka a pár prutů se nepočítají za příhradu", () => {
@@ -121,7 +146,7 @@ describe("věta o principu", () => {
     expect(principMostu(rysy("2-04", "mistrovska"))).toEqual(["prihrada-nad", "viskozni"]);
   });
 
-  it("laděný tlumič referenčních mostů je opravdu naladěný na most s lidmi, jak věta tvrdí", () => {
+  it("laděný tlumič referenčních mostů je opravdu naladěný na rytmus, který most rozkmitá, jak věta tvrdí", () => {
     let mostu = 0;
     for (const uroven of kampan) {
       for (const most of MOSTY) {
@@ -129,11 +154,12 @@ describe("věta o principu", () => {
         const tlumice = navrh.stycniky.flatMap((s) => (s.tlumic ? [s.tlumic.frekvence] : []));
         if (tlumice.length === 0) continue;
         mostu += 1;
-        const holy = rozeberMost(uroven, navrh).bezTlumicu;
-        expect(holy, `${uroven.id} ${most}`).not.toBeNull();
-        const cil = holy!.obsazeny[0] ?? holy!.prazdny[0]!;
-        // Aspoň jeden tlumič leží do desetiny od frekvence mostu s lidmi bez tlumičů.
-        expect(Math.min(...tlumice.map((f) => Math.abs(f - cil) / cil)), `${uroven.id} ${most}`).toBeLessThan(0.1);
+        // Cíl ladění, který hra ukazuje: nejsilnější složka kroku skupiny, která most bez tlumičů
+        // rozkmitá nejvíc.
+        const odhad = rozeberMost(uroven, navrh).odhadBezTlumicu;
+        expect(odhad, `${uroven.id} ${most}`).not.toBeNull();
+        const cil = odhad!.skupiny.reduce((a, b) => (b.zrychleni > a.zrychleni ? b : a)).slozky[0]!.frekvence;
+        expect(Math.min(...tlumice.map((f) => Math.abs(f - cil) / cil)), `${uroven.id} ${most}`).toBeLessThan(0.05);
       }
     }
     expect(mostu).toBeGreaterThanOrEqual(9);

@@ -41,49 +41,102 @@ Poslední aktualizace: 23. 11. 2026
 
 ## M11 — výsledek
 
-Kmitání a nápověda: návrhy 3, 6 a 11 z `docs/RECENZE.md` a věci, které recenze M10 odložily sem. Verze hry 0.16.0; fyzika se nezměnila (verze 8, otisky regresní sady stejné). Přibyly údaje ve výsledku zkoušky a v rozboru, zkouška sama počítá stejně.
+Kmitání a nápověda: návrhy 3, 6 a 11 z `docs/RECENZE.md` a věci, které recenze M10 odložily sem. Verze hry 0.16.0; fyzika se nezměnila (verze 8, otisky regresní sady stejné). Přibyly údaje ve výsledku zkoušky a v rozboru, zkouška sama počítá stejně. Popis níž je stav po zapracování tří nezávislých recenzí; co recenze našly a co se kvůli nim změnilo, je v „Nezávislé recenze M11“.
 
-**Proč nástroje kmitání neříkaly totéž co zkouška** (problém 2 recenze). Síla kroku má složky na rytmu kroku, na jeho dvojnásobku a trojnásobku; osa ukazovala jen krok, dvojnásobek a jedinou vlastní frekvenci a končila na 6 Hz. Most s tlumičem ukazovala i s tlumičem, takže číslo „s lidmi“ nebylo to, na které se tlumič ladí. Brnknutí počítalo obraty pohybu a u mostu s více tvary vracelo číslo, které žádnou vlastní frekvencí nebylo (odtud „Brnknutí 4,23 Hz“ vedle „osa 2,07 Hz“).
+**Proč nástroje kmitání neříkaly totéž co zkouška** (problém 2 recenze hry). Síla kroku má složky na rytmu kroku, na jeho dvojnásobku a trojnásobku; osa ukazovala jen krok, dvojnásobek a jedinou vlastní frekvenci a končila na 6 Hz. Most s tlumičem ukazovala i s tlumičem. Brnknutí počítalo obraty pohybu a u mostu s více tvary vracelo číslo, které žádnou vlastní frekvencí nebylo. A hlavně: rozbor počítal lidi jako tuhou váhu rozloženou po mostovce, kdežto zkouška je vede jako těla na pružinách (2,85 Hz, útlum 30 %). Lávka 2,66 Hz měla podle rozboru s lidmi 2,48 Hz, ve zkoušce rezonuje s 24 lidmi na 2,15 Hz; lávka 4,93 Hz měla mít 4,59 Hz a má 5,10 Hz. S tím číslem počítala osa, příčina kmitání i cíl ladění tlumiče.
 
-**Co se zkoušelo a nevyšlo: předpověď zrychlení při stavbě.** Lineární odhad ustáleného kmitání (rezonanční křivka × síla složek × počet lidí) jsem porovnal se zkouškou na 37 referenčních mostech kapitol 2 a 5: poměr odhadu ke zkoušce vyšel od 0,4 do 7,8. Lidé most sami tlumí, skupina po něm jde a rezonance se nestihne rozvinout, vyšší tvary útvar v taktu nebudí naplno. Číslo, které se od zkoušky liší osminásobně, by bylo další nástroj, který „neříká totéž“; hra proto zrychlení při stavbě nepředpovídá. Místo toho osa ukazuje, kde rezonance hrozí, a zkouška pak přesně řekne, co most rozhoupalo.
+**Odhad kmitání při stavbě** (`src/zkouska/odhad.ts`, `poddajnost` v `src/jadro/odezva.ts`). První pokus o předpověď (rezonanční křivka mostu s lidmi jako tuhou hmotou × síla × počet lidí) vyšel na 0,4 až 7,8násobek zkoušky a první verze milníku proto žádné číslo neukazovala. Kontrola výpočtů našla příčinu: nebyla to linearita, ale model lidí. Odhad teď počítá ustálenou odezvu mostu, na kterém skupina z jízdního řádu stojí v řadách tak, jak ji vede zkouška: těla jsou dynamická tuhost připojená ke styčníkům mostovky (most se kvůli nim nepočítá znovu), síla kroku působí v místech řad, lidé v taktu se sčítají s fází, volně jdoucí po výkonech s činitelem špičky podle šířky pásma kadencí a doby přechodu, skupina se zkouší v osmi místech své cesty mostem. Dvě opravy jsou změřené, ne odvozené: běžci předají kmitajícímu mostu o 15 % menší sílu (část kroku jsou ve vzduchu) a skákání začíná naráz (přechodový děj přidá 15 %).
 
-**Osa frekvencí** (`src/zkouska/kmitani.ts`, `obnovOsuFrekvenci`).
+| Úroveň (mosty) | Odhad / zkouška | Verdikt souhlasí |
+|---|---|---|
+| 2-01 chodci a běžec (7) | 0,66 – 1,07 | 7 ze 7 |
+| 2-02 běžci v taktu (19 + 64 profilů příhrad) | 0,84 – 1,22 | 13 z 19, 54 z 64; všechny omyly do 12 % od meze |
+| 2-03 pochod (8) | 0,97 – 1,00 (1,37 nad 4 m/s²) | 8 z 8 |
+| 2-04 přehlídka (20 + 81 profilů) | 0,88 – 1,03 (do 1,37 nad 3,4 m/s²) | 20 z 20, 81 z 81 |
+| 5-01 dav (7) | 0,84 – 1,20 | 7 ze 7 |
+| 5-02 běžecký závod (29) | 0,85 – 1,14 | 28 z 29 |
+| 5-03 průvod s kapelou (17) | 0,79 – 1,32 | 14 ze 17 |
+| 5-04 skákající dav (15) | 0,89 – 1,05 | 15 z 15 |
 
-- Značky všech složek kroku každé skupiny lidí: krok plnou čarou, dvojnásobek čárkovaně, trojnásobek tečkovaně; silné složky (běh, skákání, aspoň půl váhy člověka) výrazně. Bublina říká, kdo tak jde, o jaký násobek jde a jak je složka silná.
-- Všechny tři spočítané vlastní frekvence mostu, prázdného i obsazeného (dřív jen první obsazená). Osa i rezonanční křivka sahají na celý hertz za nejvyšší složku kroku v úrovni (6 až 8 Hz); výš lidé most nebudí. Svislé měřítko křivky se řídí špičkami v rozsahu osy, ne náběhem ke špičce, která leží až za ní.
-- Věta u osy vybírá nejzávažnější dvojici složka–vlastní frekvence (síla složky dělená odstupem): „dvojnásobek kroku 3,0 Hz je u vlastní frekvence“ (do 8 %, žlutě) nebo u silné složky „…je jen 13 % od vlastní frekvence“ (do 20 %, bez žluté). Dalších shod je v závorce počet a všechny jsou v bublině.
-- Most s laděným tlumičem: trojúhelníky jsou most bez tlumiče, tlumič je kosočtverec. Věta řekne, jestli je tlumič naladěný na vlastní frekvenci, u které leží krok („tlumič je na ni naladěný“, bez žluté), nebo jinam (žlutě).
-- Mosty hráčů z recenze (2-02 na 5,09 a 7,32 Hz, osa tehdy mlčela) by teď dostaly upozornění na dvojnásobek běhu. Test `test/kmitani.test.ts` hlídá, že každý referenční most, který propadne jen na kmitání, má na ose varování nebo upozornění.
+Nad 2,5 m/s² lidé ve zkoušce ztrácejí krok a lineární odhad vychází výš; verdikt to nemění. Stará osa pro srovnání: v 2-04 mlčela u 26 z 26 mostů, které na kmitání propadly. Odhad trvá 30 až 200 ms a běží v pomocném vlákně s rozborem.
 
-**Ladění tlumiče.** Rozbor vrací i vlastní frekvence mostu bez laděných tlumičů (`RozborMostu.bezTlumicu`). Nastavení tlumiče říká „Most s lidmi kmitá bez tlumičů na 2,48 Hz. Na tu frekvenci tlumič lad.“ a tlačítko „Naladit na most“ ji nastaví. Test: tlumič naladěný podle hry tlumí líp než naladěný na číslo soustavy s tlumičem (případ 5-02 z recenze).
+**Osa frekvencí** (`obnovOsuFrekvenci`).
 
-**Brnknutí a budič.** Brnknutí čte frekvenci ze spektra výchylky brnknutého styčníku (120 vzorků za sekundu po celé 4 s pokusu). Výsledek brnknutí i přelaďování budičem připíše, kolikátá vlastní frekvence z rozboru to je; u mostu s tlumičem řekne, že jde o tvar soustavy s tlumičem a že osa ukazuje most bez něj. Totéž říká poznámka u tvarů kmitání v Analýze. Stálý rytmus budiče jde nastavit po celé ose.
+- Značky všech složek kroku každé skupiny lidí: krok plnou čarou, dvojnásobek čárkovaně, trojnásobek tečkovaně; silné složky (běh, skákání) výrazně. Bublina říká, kdo tak jde, o jaký násobek jde a jak je složka silná.
+- Všechny tři spočítané vlastní frekvence mostu, prázdného (plný trojúhelník) i s lidmi (průsvitný; z modelu s těly). Osa i rezonanční křivka sahají na celý hertz za nejvyšší složku kroku v úrovni (6 až 8 Hz); první vlastní frekvenci za koncem osy zastupuje šipka u okraje.
+- Věta u osy je odhad proti mezi úrovně: „odhad kmitání 1,7 m/s² (mez 2,5): nejvíc pochodující útvar, trojnásobek kroku 1,7 Hz“, žlutě „…2,1 m/s², u meze 2,5 (rozhodne zkouška)…“ mezi 75 a 125 % meze, červeně „…5,7 m/s², mez je 2,5: pochodující útvar, krok 2,3 Hz. Pomohl by tužší nebo výrazně těžší most.“ nad tím. Složka, o které je řeč, je na ose zvýrazněná. V bublině je odhad pro každou skupinu z jízdního řádu, frekvence mostu, rada, podmínka mistrovské medaile a věta, že rozhoduje zkouška.
+- Rada říká směr, který rozbor spočítal: odhad pro most 1,3× a 2× tužší a těžší (v souřadnicích vlastních tvarů, bez nového výpočtu). Poradí, co odhad sníží aspoň o pětinu, a k tomu jen prostředky, které úroveň má (závaží, laděný tlumič, tlumič do kotvy). U mostu 2-02 nad rytmem běhu tak radí „tužší“, kdežto dřívější „těžší nebo tužší“ by těžším mostem kmitání zhoršilo.
+- Po zkoušce téhož návrhu osa ukazuje naměřenou hodnotu („Zkouška: kmitání 4,15 m/s², mez 2,5: pochodující útvar, krok 2,3 Hz…“); po úpravě mostu zase odhad.
+- V okně užším než 1500 px ustoupily nadpisy lišty („Jízdní řád“, „Frekvence“), aby se věta vešla; jízdní řád, který se nevejde, má pravý okraj do ztracena.
+
+**Ladění tlumiče.** Tlumič se ladí na rytmus, který most bez tlumičů rozkmitá nejvíc (nejsilnější složka kroku z `RozborMostu.odhadBezTlumicu`): „Most nejvíc rozkmitá běžecký závod, krok kolem 2,6 Hz: 2,60 Hz. Na ten rytmus tlumič lad.“ a tlačítko „Naladit na rytmus“. Budicí frekvence je daná lidmi a tlumič pomáhá nejvíc na frekvenci, na kterou je naladěný: na devíti referenčních mostech s tlumičem je ladění na rytmus stejně dobré nebo lepší než ladění autora i než ladění na vlastní frekvenci mostu s lidmi (5-02: 1,33 proti 1,42 m/s²), a Den Hartogovo ladění je v osmi případech z devíti horší. Nový tlumič se zavěsí rovnou naladěný. Tlačítko řekne, proč zrovna nejde (tlumič je naladěný; cíl je mimo rozsah 0,8 až 6 Hz). Jak moc tlumič pomáhá, ukazuje odhad („Tlumič snižuje odhad kmitání z 3,6 na 1,3 m/s².“); lehký tlumič nechá odhad vysoko, i když je naladěný. Zadání 5-02 a 5-03, ukázka 5-03 a věta nápovědy teď učí ladit na rytmus.
+
+**Brnknutí a budič.** Brnknutí čte frekvenci ze spektra výchylky brnknutého styčníku a sleduje most šest kmitů jeho první vlastní frekvence (4 až 16 s; visutý most 4-04 kmitá na 0,35 Hz). Most, který se do klidu vrátí bez překmitu (viskózní tlumiče 2-04), frekvenci nemá a hra napíše, že se nerozkmital. Výsledek brnknutí i přelaďování budičem připíše, kolikátá vlastní frekvence z rozboru to je; u mostu s tlumičem řekne, že jde o tvar soustavy s tlumičem a že osa ukazuje most bez něj; u frekvence za koncem osy to, že ji tam zastupuje šipka. Stálý rytmus budiče jde nastavit po celé ose.
 
 **Zkouška: kmitání je vidět a má příčinu.**
 
-- Svislý pohyb celého mostu se při přehrávání kreslí zvětšený (2× až 200×; největší průhyb vypadá zhruba jako 2 % rozpětí). Popisek „pohyb 50×“ v legendě je vypínač a volba se pamatuje. Zvětšuje se jen v úrovních s osou frekvencí, u mostu, který zůstal celý a nezvedá se; násobek je znám, až když je zkouška spočítaná, a nabíhá plynule. Lidé jdou s mostovkou, šipka budiče se svým styčníkem a kliknutí na prut počítá s nakreslenými polohami.
-- Zkouška si pamatuje, kdy kmitání poprvé přesáhlo mez úrovně a ve kterém styčníku bylo největší (`KomfortZkousky.prekroceno`, `stycnik`). Při přehrávání to hra v tu chvíli řekne („Kmitání přesáhlo 2,5 m/s²: takhle most lidem nevyhoví“) a výsledek ukáže tři sekundy děje poté, ne až na konci osy (2-04: ve 44. sekundě místo v 78.).
-- Výsledek jmenuje příčinu: v pruhu „Kmitání 4,78 m/s² na 6,0 Hz: pochodující útvar, dvojnásobek rytmu 3,0 Hz“, v podrobnostech celá věta, nejbližší vlastní frekvence mostu a rada (jen co úroveň dovoluje: závaží, tlumič). Frekvence se čte ze záznamu (`frekvenceKmitani`: čtyři sekundy kolem okamžiku největšího zrychlení). U všech deseti referenčních mostů, které mají na kmitání propadnout, určí správnou složku (krok, dvojnásobek, trojnásobek).
-- Řádek kmitání v podrobnostech říká frekvenci i u mostu, který prošel.
+- Svislý pohyb celého mostu se při přehrávání kreslí zvětšený proti klidové poloze (2× až 200×; největší průhyb mostu vypadá zhruba jako 2 % rozpětí; u brnknutí je klidem střed kmitání, ne vychýlený začátek). Zvětšení určuje most; závaží laděného tlumiče ho jen omezí, aby nakreslené nevjelo do mostovky. Popisek „pohyb 50×“ v legendě je vypínač, volba se pamatuje a bublina říká, co je vidět teď.
+- Zkouška si pamatuje, kdy kmitání poprvé přesáhlo mez úrovně a ve kterém styčníku bylo největší (`KomfortZkousky.prekroceno`, `stycnik`). Při přehrávání to hra v tu chvíli řekne a výsledek ukáže tři sekundy děje poté, ne až na konci osy (2-04: ve 44. sekundě místo v 78.).
+- Výsledek jmenuje příčinu: v pruhu „Kmitání 4,78 m/s² (mez 2,5). Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz.“, v podrobnostech celá věta, jestli se rytmus trefuje do vlastní frekvence mostu, a stejná rada jako u osy. Příčina se čte ze záznamu (`pricinaKmitani`): pro každý rytmus se sečte, kolik kmitání nesou jeho násobky, a jmenuje se ten, který nese aspoň polovinu. Čte se ve chvíli, kdy most mez překročil; když pak kmital nejvíc pod jinou skupinou (2-04: mez překročí útvar 2,0 Hz, nejvíc kmitá pod útvarem 2,3 Hz), řekne výsledek obojí.
+- Řádek kmitání v podrobnostech říká frekvenci i u mostu, který prošel. Deník hraní zapisuje ke zkoušce i odhad, který hra při stavbě ukazovala (`kmitaniOdhad`).
 
 **Nápověda po krocích** (`src/hra/napoveda.ts`, `src/data/rysy.ts`, `src/vykres/skica.ts`).
 
 - Tři kroky: princip (věta a skica), materiál (soupis a cena), obrys na výkresu. Hra po třech nezdarech nabízí nápovědu se slovy, že nejdřív prozradí jen princip.
-- Věta o principu i skica se skládají z rysů mostu autora: jedenáct nosných soustav (pár prutů nad nebo pod mostovkou, příhrada nad, pod nebo na obou stranách, příhrada mezi dvěma patry, nosník na pilířích, zavěšený, visutý, zvedací, jen mostovka) a přídavky (pilíře, svary, závaží, laděný a viskózní tlumič, zámek, ztužení křídel). Nic se nepíše ručně; `test/rysy.test.ts` hlídá soustavu každého referenčního mostu, texty v obou jazycích a to, že tlumič referenčních mostů je opravdu naladěný na most s lidmi, jak věta tvrdí.
-- Nápověda k medailím: most pro medaili za rozpočet a most pro mistrovskou mají vlastní tři kroky. Odemknou se, až hráč úrovní projde; do té doby jsou tlačítka zašedlá a pod nimi je věta proč.
+- Věta o principu i skica se skládají z rysů mostu autora: dvanáct nosných soustav (pár prutů nad nebo pod mostovkou, příhrada nad, pod nebo na obou stranách, vzpěry opřené o kotvy ve svazích, příhrada mezi dvěma patry, nosník na pilířích, zavěšený, visutý, zvedací, jen mostovka) a přídavky (pilíře, svary, závaží, laděný a viskózní tlumič, zámek, ztužení křídel, vzpěry nebo věšadlo navíc). Skica kreslí tolik pylonů, kolik most má, a svary tam, kde jsou. `test/rysy.test.ts` hlídá soustavu všech tří mostů každé úrovně, texty v obou jazycích a to, že tlumič referenčních mostů je naladěný na rytmus, jak věta tvrdí.
+- Nápověda k medailím: most pro medaili za rozpočet a most pro mistrovskou mají vlastní tři kroky; když nesou stejně jako most pro průchod, věta to řekne. Odemknou se, až hráč úrovní projde.
 - Deník: `krok` drží starý význam (1 nápověda otevřená, 2 obrys), nově i `stupen` (1 až 3) a `most`.
 
 **Čitelnost** (návrh 11 a odložené věci z M10).
 
-- Čísla využití: u mostu z mnoha prutů jen šestnáct nejvíc namáhaných a každý prut nad 80 %.
-- Paleta: nástroje jsou nahoře ve dvou sloupcích (dřív až pod prvky a pokusy), výňatek ze zadání má pět řádků a odkaz „celé zadání…“, v okně nižším než 960 px nemají karty prvků ukázku tloušťky. Paleta úrovně 4-04 na výšce 900 px měla 1 862 px obsahu; kolik má teď, je v „Nezávislé recenze M11“.
-- Řádek rad pod výkresem se mění podle nástroje a výběru; s vybranými pruty říká, že číslice mění jejich prvek a Shift+klik přidává do výběru.
+- Čísla využití: u mostu z mnoha prutů jen šestnáct nejvíc namáhaných a každý prut nad 80 %; při přehrávání se vybírají podle obálky celé zkoušky, takže nepřeskakují z prutu na prut.
+- Paleta: nástroje jsou nahoře ve dvou sloupcích, výňatek ze zadání má pět řádků a odkaz „celé zadání…“, v okně nižším než 960 px nemají karty prvků ukázku tloušťky.
+- Řádek rad pod výkresem se mění podle nástroje a výběru; závaží a laděný tlumič mají vlastní řádek (kliknutí přidá, neodebírá).
+- Závaží: nové začíná na hmotnosti nastavené naposledy, tlačítka − a + jdou držet a se Shiftem krokují po 500 kg (tři závaží po 2 000 kg referenčního mostu 2-03: dřív 57 kliknutí, teď sedm).
 - Údaje o vybraných prutech dole v paletě: prvek, délka, cena, u jediného prutu i největší využití z poslední zkoušky.
-- Most s lany, jehož mostovka pod vlastní tíhou visí víc než 10 cm pod výkresem, má při stavbě značku „Mostovka tu visí 812 mm pod výkresem · už vlastní vahou: dopni lana (N)“.
-- Po zkoušce, při které se něco porušilo, ukazuje stavba i řádek „největší využití“ obálku z doby, kdy byl most celý (`VysledekZkousky.obalkaDoPoruseni`): dřív po návratu ke stavbě svítila červeně půlka mostu od toho, co se dělo při pádu.
-- Lišta úrovně: do 1500 px šířky v ní není název hry, takže se vejde celý název úrovně (celý je i v bublině); popisek „inž.“ má 11 px; jízdní řád má vedle osy frekvencí zaručenou šířku a věta u osy se láme na dva řádky.
+- Most s lany, jehož mostovka se pod vlastní tíhou liší od výkresu o víc než 10 cm, má při stavbě značku; říká, jestli mostovka visí pod výkresem, nebo ji přetažená lana zvedla nad něj.
+- Po zkoušce, při které se něco porušilo, ukazuje stavba i řádek „největší využití“ obálku z doby, kdy byl most celý (`VysledekZkousky.obalkaDoPoruseni`). Most, který povolí v prvních milisekundách, v ní má pruty přetížené už vlastní vahou se skutečným využitím (3-03 „metr vysoká příhrada“: pět prutů nad 100 %, nejvíc 160 %; dřív jeden na 100 % a ostatní 65 až 98 %).
+- Lišta úrovně: do 1500 px šířky v ní není název hry, takže se vejde celý název úrovně; popisek „inž.“ má 11 px.
 
-**Testy.** Jednotkové: `test/kmitani.test.ts` (složky kroku, frekvence z průběhu a ze záznamu, příčina, shody, kritéria milníku), `test/rysy.test.ts`, doplněné `test/cisla.test.ts`. V prohlížeči: `test/e2e/kmitani.e2e.ts` a upravené testy nápovědy a osy.
+**Testy.** Jednotkové: `test/odhad.test.ts` (poddajnost s těly, činitel špičky, posun frekvence lidmi, odhad proti zkoušce na všech referenčních mostech s lidmi a na profilech z kontroly výpočtů, rada a cíl ladění), `test/kmitani.test.ts` (složky kroku, frekvence z průběhu a ze záznamu, příčina podle rytmů, brnknutí přetlumeného a visutého mostu, obálka, zvětšení), `test/rysy.test.ts`, doplněné `test/cisla.test.ts`. V prohlížeči: `test/e2e/kmitani.e2e.ts` a upravené testy osy, tlumiče, závaží a nápovědy.
+
+### Nezávislé recenze M11 (23. 11. 2026)
+
+Tři recenzenti bez znalosti toho, jak milník vznikal: revize kódu, hraní v prohlížeči (hráč) a kontrola výpočtů (dynamika konstrukcí). Zprávy našly dva vážné okruhy se společnou příčinou a milník se kvůli nim z velké části přepsal.
+
+**Vážné nálezy a co se změnilo.**
+
+- **Osa mlčela a most propadl; osa varovala a most prošel** (hráč, kód, výpočty). V 2-04 propadlo 26 z 26 mostů, u kterých osa nevarovala; žlutou mělo 9 z 15 referenčních mostů, které projdou. Příčina: „frekvence s lidmi“ z rozboru neodpovídala zkoušce (lidé jako tuhá hmota) a závažnost shody neznala počet lidí ani to, jestli jdou v taktu. **Zapracováno:** model lidí v rozboru je stejný jako ve zkoušce a osa ukazuje odhad kmitání proti mezi (viz výše). Tvrzení „rytmus je u vlastní frekvence“ a prahy 8 a 20 % jsou pryč.
+- **Rada vedla špatným směrem** („těžší nebo tužší most“ tam, kde těžší kmitání zhorší; „vyšší konstrukce“ tam, kde výš stavět nejde). **Zapracováno:** rada vychází z odhadu pro tužší a těžší most a nabízí jen prostředky úrovně.
+- **Naladěný, ale lehký nebo špatně umístěný tlumič: osa klidná, most propadl.** **Zapracováno:** stav „tlumič je naladěný“ je pryč; odhad počítá s tlumičem, jaký je.
+- **Zdůvodnění „lineární odhad nejde“ bylo chybné** (výpočty): se správným modelem lidí vychází 0,47 až 1,22násobek zkoušky. **Zapracováno** a dotaženo pro dav, závod, průvod a skákání, které kontrola nezkoušela.
+
+**Střední nálezy.**
+
+- Výsledek jmenoval příčinu, která teprve přijde (číslo z pozdější špičky, výsledek 3 s po prvním překročení). **Zapracováno:** příčina z chvíle překročení, pozdější rytmus zvlášť.
+- Příčina byla jediná frekvence (2-02: „9,1 Hz“ bez rytmu, ač 90 % kmitání nesl běh) a v úrovni s více rytmy se připsala nejbližší složce bez ohledu na sílu. **Zapracováno:** energie násobků každého rytmu.
+- Brnknutí na přetlumeném mostě hlásilo 0,25 Hz; na lanových mostech čtyři sekundy nestačily. **Zapracováno** (překmit, vrchol uvnitř pásma, délka podle mostu).
+- Brnknutí se zvětšeným pohybem se kreslilo proti vychýlenému začátku (konce mostu vyboulené nahoru). **Zapracováno.**
+- „Naladit na most“ ladilo hůř než autor a mistrovskému mostu 5-03 vzalo medaili. **Zapracováno:** ladění na rytmus.
+- Obálka do prvního porušení podceňovala u mostu, který povolí hned; prut povolený ve stejném kroku neměl 100 %; první povolený měl nulovou veličinu a únosnost. **Zapracováno.**
+- Kliknutí na prut při přehrávání po pádu: věta říkala jeden čas, přehrávání skočilo jinam. **Zapracováno** (věta i skok z celé obálky).
+- Nápověda, krok Princip, neodpovídala mostu autora u 1-04, 3-04, 2-04 mistrovské, 4-02, 4-03. **Zapracováno** (vzpěry, pylony, svary, přídavky navíc).
+- Závaží: řádek rad tvrdil „přidá, nebo odebere“, nastavování bylo po stovkách kliknutí. **Zapracováno.**
+
+**Drobnosti zapracované:** průvěs bez znaménka; text brnknutí o trojúhelníku za koncem osy; čísla využití přeskakující při přehrávání; tlačítko ladění povolené mimo rozsah tlumiče a zašedlé bez vysvětlení; mrtvý klíč slovníku a zastaralé komentáře; háčky kmitání po návratu ke stavbě; bublina vypínače zvětšení stejná v obou stavech; „(+1)“ u věty osy; „běžci“ v zadání proti „pochodující útvar“ u osy (útvar s kadencí běhu se jmenuje „běžci v taktu“); velká písmena v anglickém soupisu nápovědy; věta v pruhu výsledku má bublinu s celým zněním; zvětšení pohybu určovalo závaží tlumiče (mostovka byla vidět na 27 až 48 % zamýšleného průhybu).
+
+**Nezapracováno a proč.**
+
+- **Rezonanční křivka: „nejvyšší špička“ může ležet daleko od kroků** a určuje měřítko. Křivka zůstává surový fyzikální pohled; co z ní pro most plyne, říká odhad vedle osy. Křivka s lidmi je teď nižší a jinde než dřív (těla tlumí), takže obraz je věrnější, ale popisek pořád jmenuje nejvyšší špičku v rozsahu osy.
+- **Legenda značek osy pro dotyk** (plná, čárkovaná, tečkovaná čára; který trojúhelník je „s lidmi“): vysvětlení je jen v bublinách. Na telefonu chybí; do M12 s přehledem pojmů.
+- **Paleta 4-04 v okně 1280 × 720 a pískoviště v 1440 × 900 se posouvají.** Obsah se nevejde ani po zhuštění; paleta se posouvá kolečkem a tažením. Zůstává.
+- **Popisky závaží v obrysu nápovědy 2-03 se překrývají; na telefonu se v 5-02 překrývají popisky zakázané zóny, hladiny a tlumiče.** Drobnosti kreslení, do M12.
+- **Hlášení o prutu delším, než prvek dovoluje, zůstává svítit po dalším úspěšném kroku.** Nezkoumal jsem; do M12.
+- **Zvětšený pohyb zvětšuje jen svislou složku** (vodorovný pohyb je 2 až 19 % svislého). Popisek mluví o svislém pohybu; zůstává.
+- **Síla běhu na ose** (1,571 a 0,667 váhy) je o necelá 2 % větší, než jakou zkouška po oříznutí záporné síly předává, a třetí a čtvrtý násobek běhu (3 % váhy) osa nemá. Odhad s tím počítá činitelem 0,85; značky se nemění.
+- **`rysy.ts`: `kridel` je počet pístů.** U referenčních mostů je to totéž; věta by se spletla jen u mostu s křídlem bez pístu, a ten v nápovědě není.
+- **Hlášení o kmitání na pomalém zařízení** (domněnka recenze kódu: když výpočet doběhne až po okamžiku překročení + 3 s děje, hlášení se nezobrazí): nezkoušeno ani recenzentem, ani mnou.
+- **Nezkoušeno recenzenty ani mnou:** Firefox, Safari, skutečný telefon; budič a zvětšení v pískovišti.
 
 ## M10 — výsledek
 

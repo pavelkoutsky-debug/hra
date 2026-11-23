@@ -100,13 +100,24 @@ afterAll(async () => {
 });
 
 describe("osa frekvencí", () => {
-  it("ukazuje krok i jeho násobky a varuje, když dvojnásobek běhu leží u vlastní frekvence", async () => {
+  it("ukazuje krok i jeho násobky a odhad kmitání: kolik, kdo ho působí a co by pomohlo", async () => {
     await otevri("2-02");
     await nactiMost(pad("2-02", "dvojnásobku"));
-    expect(await osa().getAttribute("data-stav")).toBe("shoda");
-    expect(await osa().getAttribute("data-shoda")).toBe("2;3;1");
-    expect(await udaj("frekvence-popis")).toMatch(/^dvojnásobek kroku 3,0 Hz je u vlastní frekvence( \(\+\d\))?$/);
-    // Značky: krok, dvojnásobek a trojnásobek; běh je silný; most má trojúhelník prázdný i obsazený.
+    // Dvoumetrovou příhradu trefí dvojnásobek kroku běžců: odhad je vysoko nad mezí.
+    expect(await osa().getAttribute("data-stav")).toBe("nad-mezi");
+    expect(await osa().getAttribute("data-hlavni")).toBe("utvar;2;3");
+    expect(Number(await osa().getAttribute("data-odhad"))).toBeGreaterThan(1.25 * 2.5);
+    expect(await osa().getAttribute("data-zkouska")).toBeNull();
+    const titulek = bezMezer((await stranka.locator('[data-udaj="frekvence-popis"]').getAttribute("title")) ?? "");
+    expect(titulek).toMatch(/^Most sám kmitá na 6,\d\d Hz/);
+    expect(titulek).toMatch(/Běžci v taktu \(4\), krok 3,0 Hz: odhad \d,\d m\/s²/);
+    expect(titulek).toContain("O mostě rozhoduje zkouška.");
+    expect(titulek).toContain("Mistrovská medaile:");
+    // Celá věta je v bublině; na liště je vidět aspoň její začátek (dva řádky).
+    expect(bezMezer(await stranka.locator('[data-udaj="frekvence-popis"]').evaluate((uzel) => uzel.textContent ?? ""))).toMatch(
+      /^Odhad kmitání \d,\d m\/s², mez je 2,5: běžci v taktu, dvojnásobek kroku 3,0 Hz\. Pomohl by [^.]+ most\.$/,
+    );
+    // Značky: krok, dvojnásobek a trojnásobek; běh je silný; most má trojúhelník prázdný i s lidmi.
     const znacky = osa().locator(".frekvence__znacky");
     expect(await znacky.locator('.frekvence__krok[data-nasobek="1"]').count()).toBe(2);
     expect(await znacky.locator(".frekvence__krok--dvojnasobek").count()).toBe(2);
@@ -114,9 +125,12 @@ describe("osa frekvencí", () => {
     expect(await znacky.locator(".frekvence__krok--silna").count()).toBe(2);
     expect(await znacky.locator(".frekvence__most:not(.frekvence__most--obsazeny)").count()).toBeGreaterThanOrEqual(1);
     expect(await znacky.locator(".frekvence__most--obsazeny").count()).toBeGreaterThanOrEqual(1);
+    // Složka, o které věta mluví, je na ose zvýrazněná.
+    expect(await znacky.locator(".frekvence__krok--hlavni").count()).toBe(1);
+    expect(await znacky.locator(".frekvence__krok--hlavni").getAttribute("data-slozka")).toBe("utvar;3;2");
     // Bublina značky říká, kdo tak jde a jak silně.
     expect(bezMezer((await znacky.locator(".frekvence__krok--dvojnasobek.frekvence__krok--silna").getAttribute("title")) ?? "")).toBe(
-      "pochodující útvar: dvojnásobek kroku 3,0 Hz (6,0 Hz), síla 67 % váhy člověka",
+      "běžci v taktu: dvojnásobek kroku 3,0 Hz (6,0 Hz), síla 67 % váhy člověka",
     );
     // Osa sahá za nejvyšší složku kroku (6 Hz), ne dál než je třeba.
     expect(await znacky.locator(".frekvence__dilek span").last().innerText()).toBe("7");
@@ -124,22 +138,29 @@ describe("osa frekvencí", () => {
     const rad = (await stranka.locator(".osa__rad").boundingBox())!;
     expect(rad.width).toBeGreaterThanOrEqual(190);
     expect(await stranka.locator(".osa__polozka").first().isVisible()).toBe(true);
-    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k1-osa-shoda.png` });
+    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k1-osa-nad-mezi.png` });
   });
 
-  it("silný běh kus od vlastní frekvence dostane upozornění bez žluté", async () => {
+  it("most těsně u meze dostane žlutou a upozornění, že rozhodne zkouška", async () => {
     await nactiMost(RESENI["2-02"]!.pruchod);
-    expect(await osa().getAttribute("data-stav")).toBe("blizko");
-    expect(bezMezer(await udaj("frekvence-popis"))).toMatch(/^dvojnásobek kroku 3,0 Hz je jen 1\d % od vlastní frekvence( \(\+\d\))?$/);
-    expect(await stranka.locator('[data-udaj="frekvence-popis"]').getAttribute("title")).toContain("Rozhodne zkouška");
-    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k2-osa-blizko.png` });
+    expect(await osa().getAttribute("data-stav")).toBe("u-meze");
+    const odhad = Number(await osa().getAttribute("data-odhad"));
+    expect(odhad).toBeGreaterThan(0.75 * 2.5);
+    expect(odhad).toBeLessThan(1.25 * 2.5);
+    expect(bezMezer(await stranka.locator('[data-udaj="frekvence-popis"]').evaluate((uzel) => uzel.textContent ?? ""))).toMatch(
+      /^Odhad kmitání \d,\d m\/s², u meze 2,5 \(rozhodne zkouška\): běžci v taktu, dvojnásobek kroku 3,0 Hz\./,
+    );
+    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k2-osa-u-meze.png` });
   });
 
-  it("most daleko od všech rytmů varování nemá", async () => {
+  it("klidný most má odhad hluboko pod mezí a žádnou radu", async () => {
     await nactiMost(RESENI["2-02"]!.mistrovska);
-    expect(await osa().getAttribute("data-stav")).toBe("");
-    expect(await osa().getAttribute("data-shoda")).toBeNull();
-    expect(await udaj("frekvence-popis")).toMatch(/^most \d,\d\d Hz, s lidmi \d,\d\d Hz$/);
+    expect(await osa().getAttribute("data-stav")).toBe("klid");
+    expect(Number(await osa().getAttribute("data-odhad"))).toBeLessThan(1);
+    expect(bezMezer(await udaj("frekvence-popis"))).toMatch(/^odhad kmitání 0,\d\d m\/s² \(mez 2,5\): nejvíc běžci v taktu, (dvojnásobek kroku|krok) 3,0 Hz$/);
+    // První vlastní frekvence leží za koncem osy: šipka u pravého okraje.
+    expect(await osa().locator(".frekvence__mimo").count()).toBe(1);
+    expect(bezMezer((await osa().locator(".frekvence__mimo").getAttribute("title")) ?? "")).toMatch(/^1\. vlastní frekvence mostu je 7,\d\d Hz, za koncem osy \(7 Hz\)$/);
   });
 });
 
@@ -165,17 +186,19 @@ describe("kmitání při zkoušce", () => {
     expect(await telo("kmitani-rytmus")).toBe("utvar;2;3");
     expect(Number(await telo("kmitani-frekvence"))).toBeGreaterThan(5.8);
     expect(Number(await telo("kmitani-frekvence"))).toBeLessThan(6.2);
-    expect(await telo("pricina")).toMatch(/^Kmitání \d,\d\d m\/s² na 6,0 Hz: pochodující útvar, dvojnásobek rytmu 3,0 Hz\.$/);
-    expect(await udaj("vysledek-veta")).toMatch(/^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² na 6,0 Hz: pochodující útvar, dvojnásobek rytmu 3,0 Hz\.$/);
+    expect(bezMezer((await telo("pricina")) ?? "")).toMatch(/^Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\.$/);
+    expect(bezMezer(await stranka.locator('[data-udaj="vysledek-veta"]').evaluate((uzel) => uzel.textContent ?? ""))).toMatch(
+      /^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\.$/,
+    );
     await rozbalVysledek();
-    const shrnuti = await udaj("vysledek-shrnuti");
-    expect(shrnuti).toContain("Most kmital na 6,0 Hz. Na té frekvenci ho budí pochodující útvar: dvojnásobek rytmu 3,0 Hz.");
-    expect(shrnuti).toMatch(/1\. vlastní frekvence mostu \(6,\d\d Hz, s lidmi 6,\d\d Hz\) je hned vedle\./);
-    expect(shrnuti).toContain("Dostaň vlastní frekvenci mostu dál od 6,0 Hz");
-    // Úroveň 2-02 závaží ani tlumič nenabízí: rada o nich mlčí.
-    expect(shrnuti).not.toContain("Závaží");
-    expect(shrnuti).not.toContain("tlumič");
-    expect(await udaj("vysledek-kmitani")).toContain("nejvíc na 6,0 Hz (pochodující útvar, dvojnásobek rytmu 3,0 Hz)");
+    const shrnuti = bezMezer(await udaj("vysledek-shrnuti"));
+    expect(shrnuti).toContain("Most rozkmital krok lidí: běžci v taktu, dvojnásobek kroku 3,0 Hz (tedy 6,0 Hz).");
+    expect(shrnuti).toMatch(/Trefuje se do 1\. vlastní frekvence mostu \(6,\d\d Hz(, s lidmi 6,\d\d Hz)?\)\./);
+    // Rada říká směr, který rozbor spočítal, a nic, co úroveň nenabízí (závaží, tlumič).
+    expect(shrnuti).toMatch(/Pomohl by [^.]+ most\./);
+    expect(shrnuti.toLowerCase()).not.toContain("závaží");
+    expect(shrnuti.toLowerCase()).not.toContain("tlumič");
+    expect(await udaj("vysledek-kmitani")).toContain("nejvíc na 6,0 Hz (běžci v taktu, dvojnásobek kroku 3,0 Hz)");
     await stranka.screenshot({ path: `${SLOZKA}/k4-kmitani-podrobnosti.png` });
   });
 
@@ -207,6 +230,21 @@ describe("kmitání při zkoušce", () => {
     expect(await tlacitko.isVisible()).toBe(false);
   });
 
+  it("po zkoušce osa u téhož mostu ukáže, co zkouška naměřila; po úpravě mostu zase odhad", async () => {
+    expect(await osa().getAttribute("data-stav")).toBe("nad-mezi");
+    const zmereno = Number(await osa().getAttribute("data-zkouska"));
+    expect(zmereno).toBeGreaterThan(2.5);
+    expect(bezMezer(await stranka.locator('[data-udaj="frekvence-popis"]').evaluate((uzel) => uzel.textContent ?? ""))).toMatch(
+      /^Zkouška: kmitání \d,\d\d m\/s², mez 2,5: běžci v taktu, dvojnásobek kroku 3,0 Hz\./,
+    );
+    expect(bezMezer((await stranka.locator('[data-udaj="frekvence-popis"]').getAttribute("title")) ?? "")).toMatch(/Zkouška tohoto mostu naměřila \d,\d\d m\/s²; odhad byl \d,\d\./);
+    await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k5b-osa-po-zkousce.png` });
+    // Úprava mostu (zrcadlení souměrného mostu nic nezmění, ale je to nový návrh): platí zase odhad.
+    await nactiMost(pad("2-02", "rytmu běhu"));
+    expect(await osa().getAttribute("data-zkouska")).toBeNull();
+    expect(await osa().getAttribute("data-hlavni")).toBe("utvar;1;3");
+  });
+
   it("most, který projde, hlášení o mezi nedostane, ale frekvenci kmitání v podrobnostech má", async () => {
     await otevri("2-03");
     await nactiMost(RESENI["2-03"]!.pruchod);
@@ -215,7 +253,7 @@ describe("kmitání při zkoušce", () => {
     expect(await naKonec()).toBe("MOST OBSTÁL");
     expect(await telo("kmitani-nad-mez")).toBeNull();
     await rozbalVysledek();
-    expect(await udaj("vysledek-kmitani")).toContain("nejvíc na 2,3 Hz (pochodující útvar, rytmus 2,3 Hz)");
+    expect(await udaj("vysledek-kmitani")).toContain("nejvíc na 2,3 Hz (pochodující útvar, krok 2,3 Hz)");
     expect(Number(await telo("zvetseni"))).toBeGreaterThan(1);
     await akce("upravit").click();
   });
@@ -233,44 +271,72 @@ describe("kmitání při zkoušce", () => {
     expect(await vyuziti.getAttribute("data-do-poruseni")).toBe("true");
     expect(await vyuziti.innerText()).toContain("než most poprvé povolil");
     expect(bezMezer(await vyuziti.innerText())).toMatch(/^1\d\d % · prut \d+/);
-    await akce("upravit").click();
+  });
+
+  it("kliknutí na prut při přehrávání po pádu: věta mluví o okamžiku, do kterého přehrávání skočí", async () => {
+    // Na začátku děje stojí most celý, takže prut leží tam, kde je nakreslený.
+    await stranka.locator("#cas").evaluate((tahlo) => {
+      (tahlo as HTMLInputElement).value = "0";
+      tahlo.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await stranka.evaluate(() => new Promise<void>((hotovo) => requestAnimationFrame(() => requestAnimationFrame(() => hotovo()))));
+    await klikni(2, 0);
+    const veta = bezMezer(await udaj("hlaseni"));
+    expect(veta).toMatch(/^Prut 1: největší využití \d+ % \([^)]+\) v čase \d+,\d s$/);
+    const vCase = Number(veta.match(/v čase (\d+),(\d) s$/)!.slice(1).join("."));
+    // Největší namáhání přišlo až při pádu; věta i skok berou totéž číslo z celé zkoušky.
+    expect(Math.abs((await cas()) - vCase)).toBeLessThan(0.11);
+    await stranka.keyboard.press("Escape");
+    if ((await telo("rezim")) === "zkouska") await stranka.keyboard.press("Escape");
+    expect(await telo("rezim")).toBe("stavba");
   });
 });
 
 describe("laděný tlumič", () => {
-  it("osa ukazuje most bez tlumiče a tlumič zvlášť; naladěný tlumič varování krotí", async () => {
+  it("osa ukazuje most bez tlumiče a tlumič zvlášť; odhad říká, jak moc tlumič pomáhá", async () => {
     await otevri("5-02");
     await nactiMost(RESENI["5-02"]!.pruchod);
-    expect(await osa().getAttribute("data-stav")).toBe("tlumeno");
-    expect(await udaj("frekvence-popis")).toBe("krok 2,6 Hz je u vlastní frekvence; tlumič je na ni naladěný");
+    expect(await osa().getAttribute("data-stav")).toBe("klid");
+    expect(bezMezer(await udaj("frekvence-popis"))).toMatch(/^odhad kmitání 1,\d m\/s² \(mez 2,5\): nejvíc běžecký závod, krok kolem 2,6 Hz$/);
     expect(await osa().locator(".frekvence__tlumic").count()).toBe(1);
     expect(bezMezer((await osa().locator(".frekvence__tlumic").getAttribute("title")) ?? "")).toContain("laděný tlumič: 2,50 Hz");
+    const titulek = bezMezer((await stranka.locator('[data-udaj="frekvence-popis"]').getAttribute("title")) ?? "");
+    expect(titulek).toMatch(/Tlumič snižuje odhad kmitání z 3,\d na 1,\d m\/s²\./);
+    // Most bez tlumiče: prázdný 2,7 Hz, s běžci o dost níž (těla nejsou mrtvá váha).
+    expect(titulek).toMatch(/^Most sám kmitá na 2,7\d Hz; když na něm stojí lidé, odpovídá nejvíc na 2,[12]\d Hz\./);
     await stranka.locator(".osa").screenshot({ path: `${SLOZKA}/k6-osa-tlumic.png` });
   });
 
-  it("nastavení tlumiče říká, na jakou frekvenci ladit, a tlačítkem ji nastaví", async () => {
+  it("nastavení tlumiče říká, na jaký rytmus ladit, a tlačítkem ho nastaví", async () => {
     const tlumic = RESENI["5-02"]!.pruchod.stycniky.find((s) => s.tlumic)!;
+    const odhadAutora = Number(await osa().getAttribute("data-odhad"));
     await stranka.keyboard.press("v");
     await klikni(tlumic.x, tlumic.y);
     await stranka.locator('[data-nastaveni="ladeny"]').waitFor({ state: "visible" });
-    const cil = Number(await telo("cil-ladeni"));
-    expect(cil).toBeGreaterThan(2.3);
-    expect(cil).toBeLessThan(2.6);
-    expect(bezMezer(await udaj("ladeny-cil"))).toMatch(/^Most s lidmi kmitá bez tlumičů na 2,\d\d Hz\. Na tu frekvenci tlumič lad\.$/);
-    // Referenční most je naladěný: není co ladit.
-    expect(await akce("ladeny-naladit").isDisabled()).toBe(true);
-    // Rozladění o 0,2 Hz: osa varuje a tlačítko nabízí cestu zpět.
-    for (let i = 0; i < 4; i++) await akce("ladeny-frekvence-plus").click();
-    expect(await udaj("ladeny-frekvence")).toBe("2,70 Hz");
-    await expect.poll(() => osa().getAttribute("data-stav"), { timeout: 10_000 }).toBe("shoda");
-    expect(await udaj("frekvence-popis")).toBe("krok 2,6 Hz je u vlastní frekvence; tlumič je naladěný jinam");
-    // Cíl ladění se rozladěním tlumiče nemění: je to most bez tlumičů.
-    expect(Number(await telo("cil-ladeni"))).toBeCloseTo(cil, 3);
+    // Cíl je rytmus běžců: tlumič pomáhá nejvíc na frekvenci, na kterou je naladěný.
+    expect(Number(await telo("cil-ladeni"))).toBeCloseTo(2.6, 3);
+    expect(bezMezer(await udaj("ladeny-cil"))).toBe("Most nejvíc rozkmitá běžecký závod, krok kolem 2,6 Hz: 2,60 Hz. Na ten rytmus tlumič lad.");
+    // Referenční most je naladěný o dva kroky vedle (2,50 Hz): tlačítko nabízí doladění.
     expect(await akce("ladeny-naladit").isDisabled()).toBe(false);
     await akce("ladeny-naladit").click();
-    expect(await udaj("ladeny-frekvence")).toBe("2,50 Hz");
-    await expect.poll(() => osa().getAttribute("data-stav"), { timeout: 10_000 }).toBe("tlumeno");
+    expect(await udaj("ladeny-frekvence")).toBe("2,60 Hz");
     expect(await akce("ladeny-naladit").isDisabled()).toBe(true);
+    expect(await akce("ladeny-naladit").getAttribute("title")).toBe("Tlumič je na tu frekvenci naladěný.");
+    await expect.poll(async () => Number(await osa().getAttribute("data-odhad")), { timeout: 10_000 }).toBeLessThan(odhadAutora);
+    const odhadNaladeny = Number(await osa().getAttribute("data-odhad"));
+    // Rozladění o 0,4 Hz: odhad vyskočí a osa řekne, kam tlumič patří.
+    for (let i = 0; i < 8; i++) await akce("ladeny-frekvence-plus").click();
+    expect(await udaj("ladeny-frekvence")).toBe("3,00 Hz");
+    await expect.poll(async () => Number(await osa().getAttribute("data-odhad")), { timeout: 10_000 }).toBeGreaterThan(1.3 * odhadNaladeny);
+    expect(bezMezer((await stranka.locator('[data-udaj="frekvence-popis"]').getAttribute("title")) ?? "")).toContain(
+      "Tlumič je naladěný na 3,00 Hz; na 2,60 Hz by pomohl víc.",
+    );
+    // Cíl ladění se rozladěním tlumiče nemění: je to most bez tlumičů a rytmus lidí.
+    expect(Number(await telo("cil-ladeni"))).toBeCloseTo(2.6, 3);
+    expect(await akce("ladeny-naladit").isDisabled()).toBe(false);
+    await akce("ladeny-naladit").click();
+    expect(await udaj("ladeny-frekvence")).toBe("2,60 Hz");
+    await expect.poll(async () => Number(await osa().getAttribute("data-odhad")), { timeout: 10_000 }).toBeCloseTo(odhadNaladeny, 2);
     await stranka.screenshot({ path: `${SLOZKA}/k7-ladeni-tlumice.png` });
     await stranka.keyboard.press("Escape");
   });
@@ -293,7 +359,7 @@ describe("laděný tlumič", () => {
     // Změřená frekvence je jedna z vlastních frekvencí soustavy z rozboru, ne číslo mezi nimi.
     expect(Number(await telo("pokus-tvar"))).toBeGreaterThanOrEqual(1);
     expect(bezMezer(await udaj("vysledek-shrnuti"))).toMatch(
-      /^Most kmitá na \d,\d\d Hz\. To je \d\. tvar kmitání mostu s laděným tlumičem \(\d,\d\d Hz\)\. Osa frekvencí ukazuje most bez tlumiče \(2,\d\d Hz\): na ten se tlumič ladí\.$/,
+      /^Most kmitá na \d,\d\d Hz\. To je \d\. tvar kmitání mostu s laděným tlumičem \(\d,\d\d Hz\)\. Osa frekvencí ukazuje most bez tlumiče \(2,\d\d Hz\) a tlumič zvlášť\.$/,
     );
     await akce("upravit").click();
     await stranka.keyboard.press("b");

@@ -182,19 +182,24 @@ describe("rezonanční křivka mostu", () => {
 
   it("laděný tlumič rozdělí rezonanční špičku na dvě mnohem nižší", () => {
     const bez = rozeberMost(sKrivkou, lavka);
-    const f0 = bez.frekvenceObsazeneho[0]!;
-    const puvodni = vrcholy(bez.krivka!.obsazeny!, 1.5, 4);
+    // Prázdný most: tlumič naladěný na jeho vlastní frekvenci, závaží kolem pěti procent kmitající hmoty.
+    const f0 = bez.frekvence[0]!;
+    const puvodni = vrcholy(bez.krivka!.prazdny, 1.5, 4);
     expect(puvodni).toHaveLength(1);
-    // Tlumič naladěný na frekvenci obsazeného mostu, závaží kolem pěti procent kmitající hmoty.
     const s = rozeberMost(sKrivkou, sTlumicem(600, Math.round(f0 * 20) / 20));
-    const rozdelene = vrcholy(s.krivka!.obsazeny!, 1.5, 4);
+    const rozdelene = vrcholy(s.krivka!.prazdny, 1.5, 4);
     expect(rozdelene).toHaveLength(2);
     expect(rozdelene[0]!.f).toBeLessThan(puvodni[0]!.f);
     expect(rozdelene[1]!.f).toBeGreaterThan(puvodni[0]!.f);
     for (const vrchol of rozdelene) expect(vrchol.hodnota).toBeLessThan(0.4 * puvodni[0]!.hodnota);
     // Kde byla špička, je teď mezi oběma novými sedlo.
-    const naPuvodni = s.krivka!.obsazeny![Math.round((puvodni[0]!.f - KRIVKA_OD) / KROK_KRIVKY)]!;
+    const naPuvodni = s.krivka!.prazdny[Math.round((puvodni[0]!.f - KRIVKA_OD) / KROK_KRIVKY)]!;
     expect(naPuvodni).toBeLessThan(0.2 * puvodni[0]!.hodnota);
+    // S lidmi je špička už bez tlumiče nižší (těla tlumí); tlumič naladěný na most s lidmi ji srazí dál.
+    const sLidmi = Math.max(...bez.krivka!.obsazeny!.slice(40, 140));
+    expect(sLidmi).toBeLessThan(puvodni[0]!.hodnota);
+    const naladeny = rozeberMost(sKrivkou, sTlumicem(600, Math.round(bez.frekvenceObsazeneho[0]! * 20) / 20));
+    expect(Math.max(...naladeny.krivka!.obsazeny!.slice(40, 140))).toBeLessThan(0.9 * sLidmi);
   });
 
   it("viskózní tlumiče do kotev špičku sníží, ale nerozdělí", () => {
@@ -202,11 +207,13 @@ describe("rezonanční křivka mostu", () => {
     const reseni = RESENI["2-04"]!;
     const bez = rozeberMost(prehlidka, reseni.pady.find((p) => p.nazev === "nízká příhrada bez tlumičů")!.navrh);
     const s = rozeberMost(prehlidka, reseni.mistrovska);
-    const vrcholBez = Math.max(...vrcholy(bez.krivka!.obsazeny!, 1.5, 4).map((v) => v.hodnota));
-    const vrcholyS = vrcholy(s.krivka!.obsazeny!, 1.5, 4);
-    expect(vrcholyS.length).toBeLessThanOrEqual(1);
-    const nejvicS = Math.max(...s.krivka!.obsazeny!.slice(40, 140));
-    expect(nejvicS).toBeLessThan(0.6 * vrcholBez);
+    // Prázdný most: tlumiče jeho špičku srazí pod polovinu a žádnou druhou nepřidají.
+    const vrcholBez = Math.max(...vrcholy(bez.krivka!.prazdny, 1.5, 4).map((v) => v.hodnota));
+    expect(vrcholy(s.krivka!.prazdny, 1.5, 4).length).toBeLessThanOrEqual(1);
+    expect(Math.max(...s.krivka!.prazdny.slice(40, 140))).toBeLessThan(0.5 * vrcholBez);
+    // S lidmi (ti tlumí taky, a hodně) je rozdíl menší, ale je.
+    const sLidmiBez = Math.max(...bez.krivka!.obsazeny!.slice(40, 140));
+    expect(Math.max(...s.krivka!.obsazeny!.slice(40, 140))).toBeLessThan(0.9 * sLidmiBez);
   });
 
   it("tvary kmitání: první je půlvlna s největší výchylkou uprostřed, druhý má uprostřed uzel", () => {

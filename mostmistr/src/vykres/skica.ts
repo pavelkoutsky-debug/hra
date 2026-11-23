@@ -57,7 +57,7 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
   const rozpeti = x1 - x0;
   /** Výška mostovky: uprostřed, u soustav nad mostovkou níž a pod ní výš. */
   const nahore = ["trojuhelnik-nad", "prihrada-nad", "zaveseny", "visuty"].includes(rysy.soustava);
-  const dole = ["trojuhelnik-pod", "prihrada-pod", "nosnik", "zvedaci"].includes(rysy.soustava);
+  const dole = ["trojuhelnik-pod", "prihrada-pod", "vzpery", "nosnik", "zvedaci"].includes(rysy.soustava);
   const y = vyska * (nahore ? 0.66 : dole ? 0.4 : 0.52);
   const dno = vyska - 6;
   const h = Math.min(vyska * 0.34, rozpeti * 0.16);
@@ -109,6 +109,20 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
         [x1 - rozpeti / 3, y],
       ]);
       break;
+    case "vzpery":
+      // Vzpěradlo: z každého svahu dvě vzpěry do mostovky, bez dolního pásu.
+      for (const [stena, smer] of [
+        [x0, 1],
+        [x1, -1],
+      ] as const) {
+        for (const podil of [0.22, 0.42]) {
+          lomena(ctx, [
+            [stena, y + h * 1.4],
+            [stena + smer * rozpeti * podil, y],
+          ]);
+        }
+      }
+      break;
     case "prihrada-nad":
       prihrada(ctx, x0, x1, y, h, poli);
       break;
@@ -137,9 +151,12 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
       break;
     }
     case "zaveseny": {
-      for (const pylon of [x0 + rozpeti * 0.3, x1 - rozpeti * 0.3]) {
+      // Jeden pylon uprostřed, nebo dva ve třetinách: podle mostu.
+      const pylony = rysy.pylonu <= 1 ? [(x0 + x1) / 2] : [x0 + rozpeti * 0.3, x1 - rozpeti * 0.3];
+      const dosah = rysy.pylonu <= 1 ? [0.16, 0.3, 0.44] : [0.1, 0.19, 0.28];
+      for (const pylon of pylony) {
         const vrchol = y - h * 1.5;
-        for (const podil of [0.1, 0.19, 0.28]) {
+        for (const podil of dosah) {
           lomena(ctx, [
             [pylon - rozpeti * podil, y],
             [pylon, vrchol],
@@ -231,11 +248,40 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
     for (const podil of [1 / 3, 2 / 3]) pilir(ctx, x0 + rozpeti * podil, y, dno);
   }
 
-  // Svary: plné čtverečky ve styčnících mostovky.
+  // Svary: plné čtverečky ve styčnících mostovky, nad pilíři, nebo mezi nimi (podle mostu).
   if (rysy.svary && rysy.soustava !== "zvedaci") {
     ctx.fillStyle = BARVY.caraSilna;
-    const mista = rysy.soustava === "nosnik" ? [0.25, 0.5, 0.75] : [1 / 3, 2 / 3];
-    for (const podil of mista) ctx.fillRect(x0 + rozpeti * podil - 3.5, y - 3.5, 7, 7);
+    const nadPiliri = rysy.soustava === "nosnik" ? [0.25, 0.5, 0.75] : [1 / 3, 2 / 3];
+    const mezi = rysy.soustava === "nosnik" ? [0.125, 0.375, 0.625, 0.875] : [1 / 6, 0.5, 5 / 6];
+    for (const podil of rysy.svaryMeziPodporami ? mezi : nadPiliri) ctx.fillRect(x0 + rozpeti * podil - 3.5, y - 3.5, 7, 7);
+  }
+
+  // Vzpěry navíc: ze skály uprostřed údolí do mostovky.
+  if (rysy.vzperyNavic) {
+    ctx.strokeStyle = BARVY.cara;
+    ctx.lineWidth = 1.5;
+    const stred = (x0 + x1) / 2;
+    lomena(ctx, [
+      [stred - rozpeti * 0.12, y],
+      [stred, dno - 4],
+      [stred + rozpeti * 0.12, y],
+    ]);
+  }
+
+  // Věšadlo navíc: malý trojúhelník nad středem mostovky.
+  if (rysy.vesadloNavic) {
+    ctx.strokeStyle = BARVY.cara;
+    ctx.lineWidth = 1.5;
+    const stred = (x0 + x1) / 2;
+    lomena(ctx, [
+      [stred - rozpeti * 0.14, y],
+      [stred, y - h * 0.9],
+      [stred + rozpeti * 0.14, y],
+    ]);
+    lomena(ctx, [
+      [stred, y - h * 0.9],
+      [stred, y],
+    ]);
   }
 
   // Závaží: plné obdélníky pod mostovkou.
@@ -257,18 +303,23 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
     ctx.fillRect(x - 7, y + 23, 14, 9);
   }
 
-  // Viskózní tlumiče: krátké šikmé válce u břehů.
+  // Viskózní tlumiče: krátké válce pod mostovkou, dole ukotvené.
   if (rysy.viskozniTlumice) {
-    ctx.strokeStyle = BARVY.voda;
-    ctx.lineWidth = 3;
-    lomena(ctx, [
-      [x0, y + h * 0.9],
-      [x0 + rozpeti * 0.1, y],
-    ]);
-    lomena(ctx, [
-      [x1, y + h * 0.9],
-      [x1 - rozpeti * 0.1, y],
-    ]);
+    for (const podil of [0.25, 0.75]) {
+      const x = x0 + rozpeti * podil;
+      ctx.strokeStyle = BARVY.voda;
+      ctx.lineWidth = 3;
+      lomena(ctx, [
+        [x, y + 2],
+        [x, y + h * 0.9],
+      ]);
+      ctx.strokeStyle = cara(0.7);
+      ctx.lineWidth = 1;
+      lomena(ctx, [
+        [x - 6, y + h * 0.9 + 2],
+        [x + 6, y + h * 0.9 + 2],
+      ]);
+    }
   }
 
   // Zámek zvedacího mostu: kroužek na volném konci křídla po sklopení.

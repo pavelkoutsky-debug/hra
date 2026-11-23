@@ -1,5 +1,5 @@
 // Kmitání čitelně pro hráče: složky síly kroku, frekvence kmitání ze záznamu, příčina
-// kmitání, shody rytmů s vlastními frekvencemi mostu a nové údaje výsledku zkoušky.
+// kmitání a nové údaje výsledku zkoušky. Odhad kmitání při stavbě má vlastní test (`odhad`).
 import { describe, expect, it } from "vitest";
 import type { NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
@@ -7,21 +7,20 @@ import { MEZE_KOMFORTU } from "../src/jadro/komfort";
 import {
   dominantniFrekvence,
   frekvenceKmitani,
-  hlavniShoda,
+  frekvenceVolnehoKmitani,
   mostProHrace,
   nejblizsiTvar,
   nejvyssiSlozka,
-  PASMO_BLIZKO,
-  PASMO_SHODY,
   pricinaKmitani,
   ROZSAH_FREKVENCI,
-  shodyRytmu,
   SILNA_SLOZKA,
   slozkyKroku,
+  zesileniPasma,
   type SlozkaKroku,
 } from "../src/zkouska/kmitani";
 import { KRIVKA_DO, POCET_FREKVENCI, rozeberMost } from "../src/zkouska/rozbor";
-import { prazdnySnimek, Zaznam, type Topologie } from "../src/zkouska/zaznam";
+import { nejvetsiPohybZavazi, nejvetsiVychylka, stredniPolohy, zvetsiPohyb } from "../src/vykres/zvetseni";
+import { prazdnySnimek, STYCNIK_ZAVAZI, Zaznam, type Topologie } from "../src/zkouska/zaznam";
 import { Zkouska } from "../src/zkouska/zkouska";
 import { nactiKampan, nasadaUrovne } from "../urovne/index";
 import { RESENI } from "../urovne/reseni";
@@ -117,6 +116,38 @@ describe("frekvence kmitání z průběhu", () => {
     expect(dominantniFrekvence(casy, y, true)).toBeCloseTo(6, 1);
   });
 
+  it("volné kmitání: most, který se vrátí do klidu bez překmitu, frekvenci nemá", () => {
+    // Přetlumený most po brnknutí: návrat bez kmitu. Ve spektru po něm zbude jen stopa zpracování.
+    const navrat = prubeh((t) => 3 - 0.002 * Math.exp(-1.2 * t), 6, 120);
+    expect(frekvenceVolnehoKmitani(navrat.casy, navrat.y, 0.3, 25)).toBeNull();
+    // Tlumené kmitání, i pomalé jako u visutého mostu, se pozná.
+    const lavka = prubeh((t) => 3 - 0.002 * Math.exp(-0.3 * t) * Math.cos(2 * Math.PI * 2.66 * t), 4, 120);
+    expect(frekvenceVolnehoKmitani(lavka.casy, lavka.y, 0.3, 25)).toBeCloseTo(2.66, 1);
+    const visuty = prubeh((t) => 3 - 0.05 * Math.exp(-0.05 * t) * Math.cos(2 * Math.PI * 0.36 * t), 16, 120);
+    expect(frekvenceVolnehoKmitani(visuty.casy, visuty.y, 0.3, 25)).toBeCloseTo(0.36, 1);
+    // Styčník, který se nepohnul (podepřený), taky nic.
+    const klid = prubeh(() => 3, 4, 120);
+    expect(frekvenceVolnehoKmitani(klid.casy, klid.y, 0.3, 25)).toBeNull();
+  });
+
+  it("vrchol musí ležet uvnitř pásma: složka pod pásmem frekvenci nemá", () => {
+    // Houpání pomalejší než pásmo komfortu (0,2 Hz) v něm vrchol nemá.
+    const pomale = prubeh((t) => 0.05 * Math.sin(2 * Math.PI * 0.2 * t), 8);
+    expect(dominantniFrekvence(pomale.casy, pomale.y, true)).toBeNull();
+    // Výsledek nikdy neleží mimo pásmo, ve kterém se hledalo.
+    const uOkraje = prubeh((t) => 0.004 * Math.sin(2 * Math.PI * 0.52 * t), 8);
+    const f = dominantniFrekvence(uOkraje.casy, uOkraje.y, false);
+    expect(f).not.toBeNull();
+    expect(f!).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("zrychlení se váží pásmem komfortu: největší váhu má kolem 2 Hz, k okrajům klesá", () => {
+    expect(zesileniPasma(2.2)).toBeGreaterThan(0.94);
+    expect(zesileniPasma(0.5)).toBeCloseTo(Math.SQRT1_2, 2);
+    expect(zesileniPasma(10)).toBeCloseTo(Math.SQRT1_2, 2);
+    expect(zesileniPasma(6)).toBeCloseTo(0.855, 2);
+  });
+
   it("z krátkého, prázdného nebo nehybného průběhu nic nevyčte", () => {
     expect(dominantniFrekvence([0, 0.1], [0, 1], false)).toBeNull();
     const kratky = prubeh((t) => Math.sin(20 * t), 0.5);
@@ -166,17 +197,63 @@ describe("příčina kmitání", () => {
     sila,
     pasmo: 2 * nasobek * rozptyl,
   });
-  const beh = [slozka("utvar", 3, 1, 1.57), slozka("utvar", 3, 2, 0.67), slozka("chodec", 1.9, 3, 0.1)];
+  const beh = [slozka("utvar", 3, 1, 1.57), slozka("utvar", 3, 2, 0.67), slozka("chodec", 1.9, 1, 0.35), slozka("chodec", 1.9, 2, 0.1), slozka("chodec", 1.9, 3, 0.1)];
+  const stavba: Topologie = {
+    stycniku: 2,
+    prvekA: Int32Array.of(0),
+    prvekB: Int32Array.of(1),
+    prut: Int32Array.of(0),
+    cara: Uint8Array.of(0),
+    klouby: Uint8Array.of(0),
+    podpory: Uint8Array.of(0, 0),
+    znacky: Uint8Array.of(0, 0),
+  };
+  /** Záznam, ve kterém styčník 1 kmitá součtem složek [frekvence Hz, zrychlení m/s²]. */
+  const kmitajici = (slozkyPohybu: (cas: number) => readonly (readonly [number, number])[], trvani = 10): Zaznam => {
+    const zaznam = new Zaznam();
+    zaznam.pridejTopologii(stavba);
+    for (let i = 0; i <= trvani * 60; i++) {
+      const cas = i / 60;
+      let y = 0;
+      for (const [f, a] of slozkyPohybu(cas)) y += (a / (2 * Math.PI * f) ** 2) * Math.sin(2 * Math.PI * f * cas + f);
+      zaznam.pridej({ ...prazdnySnimek(), cas, topologie: 0, polohy: Float32Array.of(0, 0, 4, y) });
+    }
+    return zaznam;
+  };
 
-  it("přiřadí změřené frekvenci nejbližší složku kroku; daleko od všech žádnou", () => {
-    expect(pricinaKmitani(6.04, beh, null).slozka).toMatchObject({ druh: "utvar", nasobek: 2 });
-    expect(pricinaKmitani(5.72, beh, null).slozka).toMatchObject({ druh: "chodec", nasobek: 3 });
-    expect(pricinaKmitani(3.1, beh, null).slozka).toMatchObject({ nasobek: 1 });
-    expect(pricinaKmitani(4.5, beh, null).slozka).toBeNull();
-    // Dav nejde jedním rytmem: jeho pásmo se počítá celé.
-    const dav = [slozka("dav", 1.7, 1, 0.28, 0.15)];
-    expect(pricinaKmitani(1.95, dav, null).slozka).toMatchObject({ druh: "dav" });
-    expect(pricinaKmitani(2.3, dav, null).slozka).toBeNull();
+  it("jmenuje rytmus, jehož násobky nesou většinu kmitání, i když největší složka je jinde", () => {
+    // Běh 3 Hz: na 3, 6 a 9 Hz. Největší jednotlivá složka je 9 Hz (za koncem toho, co osa zná),
+    // ale krok s dvojnásobkem dohromady nesou víc.
+    const zaznam = kmitajici(() => [[3, 1.6], [6, 1.5], [9, 1.7]]);
+    const pricina = pricinaKmitani(zaznam, 1, 6, beh)!;
+    expect(pricina.rytmus).toMatchObject({ druh: "utvar", rytmus: 3 });
+    expect(pricina.rytmus!.podil).toBeGreaterThan(0.5);
+    // Z násobků toho rytmu je po zvážení pásmem komfortu nejsilnější krok sám.
+    expect(pricina.rytmus!.nasobek).toBe(1);
+    expect(pricina.rytmus!.frekvence).toBe(3);
+    // Změřená frekvence je ta nejsilnější, ať patří komukoli.
+    expect(pricina.frekvence).toBeGreaterThan(2.5);
+  });
+
+  it("most, který kmitá po svém, rytmus nedostane; dav se pozná v celém svém pásmu", () => {
+    const poSvem = pricinaKmitani(kmitajici(() => [[4.5, 2]]), 1, 6, beh)!;
+    expect(poSvem.rytmus).toBeNull();
+    expect(poSvem.frekvence).toBeCloseTo(4.5, 1);
+    const dav = [slozka("dav", 1.7, 1, 0.28, 0.15), slozka("dav", 1.7, 2, 0.1, 0.15)];
+    expect(pricinaKmitani(kmitajici(() => [[1.95, 1]]), 1, 6, dav)!.rytmus).toMatchObject({ druh: "dav", rytmus: 1.7, nasobek: 1 });
+    // Pásmo dvojnásobku kroku davu sahá do 4,2 Hz; za ním už dav není.
+    expect(pricinaKmitani(kmitajici(() => [[5.5, 1]]), 1, 6, dav)!.rytmus).toBeNull();
+    // Styčník, který se nehýbe, a záznam, který nestačí, příčinu nemají.
+    expect(pricinaKmitani(kmitajici(() => [[3, 1]]), 0, 6, beh)).toBeNull();
+    expect(pricinaKmitani(new Zaznam(), 1, 6, beh)).toBeNull();
+  });
+
+  it("příčina patří k okamžiku: dva útvary po sobě se nespletou", () => {
+    const prehlidka = [slozka("utvar", 2, 1, 0.39), slozka("utvar", 2, 3, 0.1), slozka("utvar", 2.3, 1, 0.5), slozka("utvar", 2.3, 3, 0.1)];
+    // Do 10. sekundy jde útvar 2,0 Hz, pak útvar 2,3 Hz a most kmitá víc.
+    const zaznam = kmitajici((cas) => (cas < 10 ? [[2, 2.6]] : [[2.3, 4.1]]), 20);
+    expect(pricinaKmitani(zaznam, 1, 8, prehlidka)!.rytmus).toMatchObject({ rytmus: 2 });
+    expect(pricinaKmitani(zaznam, 1, 16, prehlidka)!.rytmus).toMatchObject({ rytmus: 2.3 });
   });
 
   it("vlastní frekvenci mostu hledá v rozmezí mezi obsazeným a prázdným mostem", () => {
@@ -199,46 +276,6 @@ describe("příčina kmitání", () => {
   });
 });
 
-describe("shody rytmů s vlastními frekvencemi", () => {
-  const u = uroven("2-02");
-  const slozky = slozkyKroku(u);
-
-  it("silný běh kus od vlastní frekvence má přednost před slabým trojnásobkem kroku přímo u ní", () => {
-    // Referenční most 2-02: 5,30 Hz (s lidmi 5,23). Trojnásobek kroku chodce 5,7 Hz je do 8 %,
-    // dvojnásobek běhu 6,0 Hz o 13 %, ale je skoro sedmkrát silnější.
-    const vyber = hlavniShoda(shodyRytmu(slozky, { frekvence: [5.3], frekvenceObsazeneho: [5.23] }));
-    expect(vyber.hlavni).toMatchObject({ poradi: 1, slozka: { druh: "utvar", nasobek: 2 } });
-    expect(vyber.uVlastni).toBe(false);
-    expect(vyber.hlavni!.odstup).toBeGreaterThan(PASMO_SHODY);
-    expect(vyber.hlavni!.odstup).toBeLessThan(PASMO_BLIZKO);
-    expect(vyber.vsechny).toHaveLength(2);
-  });
-
-  it("složka mezi obsazeným a prázdným mostem má nulový odstup a je „u“ vlastní frekvence", () => {
-    const vyber = hlavniShoda(shodyRytmu(slozky, { frekvence: [6.22], frekvenceObsazeneho: [6.13] }));
-    expect(vyber.hlavni).toMatchObject({ slozka: { druh: "utvar", nasobek: 2 } });
-    expect(vyber.uVlastni).toBe(true);
-    const uvnitr = shodyRytmu([{ druh: "utvar", rytmus: 2, nasobek: 1, frekvence: 2, sila: 0.4, pasmo: 0 }], { frekvence: [2.17], frekvenceObsazeneho: [1.96] });
-    expect(uvnitr[0]!.odstup).toBe(0);
-  });
-
-  it("most daleko od všech rytmů žádnou shodu nemá; slabá složka dál než 8 % za řeč nestojí", () => {
-    expect(hlavniShoda(shodyRytmu(slozky, { frekvence: [9.2], frekvenceObsazeneho: [9.0] })).hlavni).toBeNull();
-    // 2-03: krok 2,3 Hz (0,50 váhy, není „silný“) a most na 1,99 Hz: 16 % daleko.
-    const pochod = slozkyKroku(uroven("2-03"));
-    const vyber = hlavniShoda(shodyRytmu(pochod, { frekvence: [1.99], frekvenceObsazeneho: [1.92] }));
-    expect(vyber.hlavni).toBeNull();
-    expect(vyber.uVlastni).toBe(false);
-  });
-
-  it("shodu najde i u druhé vlastní frekvence", () => {
-    const pochod = slozkyKroku(uroven("2-03"));
-    const vyber = hlavniShoda(shodyRytmu(pochod, { frekvence: [1.99, 7.0], frekvenceObsazeneho: [1.92, 6.8] }));
-    expect(vyber.hlavni).toMatchObject({ poradi: 2, slozka: { nasobek: 3 } });
-    expect(vyber.uVlastni).toBe(true);
-  });
-});
-
 describe("zkouška: kde, kdy a na jaké frekvenci most kmital", () => {
   it("most, který kmitá na dvojnásobku běhu, se pozná ze záznamu", () => {
     const u = uroven("2-02");
@@ -254,21 +291,33 @@ describe("zkouška: kde, kdy a na jaké frekvenci most kmital", () => {
     expect(komfort.stycnik).toBeGreaterThanOrEqual(0);
     const f = frekvenceKmitani(zaznam, komfort.stycnik, komfort.cas)!;
     expect(f).toBeCloseTo(6, 0);
-    const pricina = pricinaKmitani(f, slozkyKroku(u), mostProHrace(rozeberMost(u, navrh)));
-    expect(pricina.slozka).toMatchObject({ druh: "utvar", nasobek: 2, rytmus: 3 });
-    expect(pricina.tvar).toMatchObject({ poradi: 1 });
+    const pricina = pricinaKmitani(zaznam, komfort.stycnik, komfort.cas, slozkyKroku(u))!;
+    expect(pricina.rytmus).toMatchObject({ druh: "utvar", nasobek: 2, rytmus: 3 });
+    expect(nejblizsiTvar(pricina.rytmus!.frekvence, mostProHrace(rozeberMost(u, navrh)))).toMatchObject({ poradi: 1 });
   });
 
   it("most, který kmitá na trojnásobku kroku, taky; a ten, který projde, mez nepřekročí", () => {
     const u = uroven("2-04");
     const navrh = pad("2-04", "trojnásobku");
     const { vysledek, zaznam } = zkousej(u, navrh);
-    const f = frekvenceKmitani(zaznam, vysledek.komfort!.stycnik, vysledek.komfort!.cas)!;
-    expect(pricinaKmitani(f, slozkyKroku(u), null).slozka).toMatchObject({ nasobek: 3 });
+    expect(pricinaKmitani(zaznam, vysledek.komfort!.stycnik, vysledek.komfort!.cas, slozkyKroku(u))!.rytmus).toMatchObject({ nasobek: 3 });
     const dobry = zkousej(uroven("2-03"), RESENI["2-03"]!.pruchod).vysledek;
     expect(dobry.pruchod).toBe(true);
     expect(dobry.komfort!.prekroceno).toBeNull();
     expect(dobry.komfort!.zrychleni).toBeLessThanOrEqual(MEZE_KOMFORTU[2]);
+  }, 60_000);
+
+  it("přehlídka: mez překročí útvar 2,0 Hz, nejvíc pak most kmitá pod útvarem 2,3 Hz", () => {
+    // Nález kontroly výpočtů: výsledek přišel 3 s po prvním překročení meze, ale jmenoval
+    // rytmus, který na most vstoupil až o deset sekund později.
+    const u = uroven("2-04");
+    const { vysledek, zaznam } = zkousej(u, pad("2-04", "bez tlumičů"));
+    const komfort = vysledek.komfort!;
+    expect(komfort.prekroceno).not.toBeNull();
+    expect(komfort.cas - komfort.prekroceno!).toBeGreaterThan(10);
+    const slozky = slozkyKroku(u);
+    expect(pricinaKmitani(zaznam, komfort.stycnik, komfort.prekroceno! + 2, slozky)!.rytmus).toMatchObject({ rytmus: 2, nasobek: 1 });
+    expect(pricinaKmitani(zaznam, komfort.stycnik, komfort.cas, slozky)!.rytmus).toMatchObject({ rytmus: 2.3, nasobek: 1 });
   }, 60_000);
 
   it("úroveň s přísnější mezí hlásí překročení už na ní", () => {
@@ -295,6 +344,23 @@ describe("brnknutí a rozbor mluví o týchž frekvencích", () => {
     expect(nejblizsiTvar(f, { frekvence: rozbor.frekvence, frekvenceObsazeneho: [] }, 0.06)).not.toBeNull();
   });
 
+  it("přetlumený most se po brnknutí nerozkmitá: frekvenci nemá, ne nesmyslné číslo z okraje pásma", () => {
+    // Mistrovský most 2-04 má viskózní tlumiče do kotev; dřív hra hlásila „most kmitá na 0,25 Hz“.
+    const u = uroven("2-04");
+    const navrh = RESENI["2-04"]!.mistrovska;
+    const stred = navrh.stycniky.findIndex((s) => s.x === 16 && s.y === 0);
+    expect(stred).toBeGreaterThanOrEqual(0);
+    const { vysledek } = zkousej(u, navrh, { stycnik: stred, sila: 3000 });
+    expect(vysledek.brnknuti!.frekvence).toBeNull();
+    // Visutý most kmitá pomalu: brnknutí se sleduje déle a jeho frekvenci najde.
+    const visuty = RESENI["4-04"]!.pruchod;
+    const uprostred = visuty.stycniky.findIndex((s) => s.x === 36 && s.y === 0);
+    expect(uprostred).toBeGreaterThanOrEqual(0);
+    const pomaly = zkousej(uroven("4-04"), visuty, { stycnik: uprostred, sila: 20000 }).vysledek;
+    expect(pomaly.trvani).toBeGreaterThan(10);
+    expect(nejblizsiTvar(pomaly.brnknuti!.frekvence!, { frekvence: rozeberMost(uroven("4-04"), visuty).frekvence, frekvenceObsazeneho: [] }, 0.06)).not.toBeNull();
+  });
+
   it("rozbor vrací i frekvence mostu bez tlumičů: prázdný kmitá rychleji než s lidmi a tlumič frekvenci rozdělí", () => {
     const u = uroven("5-02");
     const rozbor = rozeberMost(u, RESENI["5-02"]!.pruchod);
@@ -317,15 +383,20 @@ describe("brnknutí a rozbor mluví o týchž frekvencích", () => {
     expect(tuhy.pruves).not.toBeNull();
     expect(tuhy.pruves!.metru).toBeGreaterThan(0);
     expect(tuhy.pruves!.metru).toBeLessThan(0.03);
+    expect(tuhy.pruves!.nad).toBe(false);
     // Visutý most s dopnutými lany drží tvar; s povolenými napínáky visí hluboko.
     const visuty = RESENI["4-04"]!.pruchod;
     expect(rozeberMost(uroven("4-04"), visuty).pruves!.metru).toBeLessThan(0.1);
     const povoleny: NavrhMostu = { ...visuty, pruty: visuty.pruty.map(({ predpeti: _p, ...p }) => p) };
     const rozbor = rozeberMost(uroven("4-04"), povoleny);
-    if (rozbor.stabilni) {
-      expect(rozbor.pruves!.metru).toBeGreaterThan(0.1);
-      expect(rozbor.pruves!.stycnik).toBeLessThan(povoleny.stycniky.length);
-    }
+    expect(rozbor.stabilni).toBe(true);
+    expect(rozbor.pruves!.metru).toBeGreaterThan(0.1);
+    expect(rozbor.pruves!.nad).toBe(false);
+    expect(rozbor.pruves!.stycnik).toBeLessThan(povoleny.stycniky.length);
+    // Přetažená lana mostovku zvednou nad výkres: hra to má říct jinak než „visí pod“.
+    const pretazeny: NavrhMostu = { ...visuty, pruty: visuty.pruty.map((p) => (p.predpeti === undefined ? p : { ...p, predpeti: p.predpeti * 1.03 })) };
+    const nahoru = rozeberMost(uroven("4-04"), pretazeny);
+    if (nahoru.stabilni && nahoru.pruves && nahoru.pruves.metru > 0.05) expect(nahoru.pruves.nad).toBe(true);
   });
 });
 
@@ -345,52 +416,84 @@ describe("obálka do prvního porušení", () => {
   });
 });
 
-describe("kritérium M11: osa frekvencí a ladění tlumiče říkají totéž co zkouška", () => {
-  it("každý referenční most, který propadne jen na kmitání, má na ose varování nebo upozornění", () => {
-    let mostu = 0;
-    for (const u of kampan) {
-      const slozky = slozkyKroku(u);
-      if (slozky.length === 0 || !u.osaFrekvenci) continue;
-      for (const { nazev, navrh } of RESENI[u.id]!.pady) {
-        const rozbor = rozeberMost(u, navrh);
-        if (!rozbor.stabilni) continue;
-        const { vysledek } = zkousej(u, navrh);
-        const naKmitani = vysledek.komfort !== null && vysledek.komfort.prekroceno !== null && vysledek.poruseni === 0 && vysledek.spadlo === 0;
-        if (!naKmitani) continue;
-        mostu += 1;
-        const vyber = hlavniShoda(shodyRytmu(slozky, mostProHrace(rozbor)));
-        expect(vyber.hlavni, `${u.id} ${nazev}`).not.toBeNull();
-      }
-    }
-    expect(mostu).toBeGreaterThanOrEqual(9);
-  }, 180_000);
-
-  it("mosty hráčů z recenze (2-02 na 5,09 a 7,32 Hz, osa tehdy mlčela) by teď upozornění dostaly", () => {
-    const slozky = slozkyKroku(uroven("2-02"));
-    for (const [prazdny, obsazeny] of [
-      [5.09, 5.02],
-      [7.32, 7.2],
-    ] as const) {
-      const vyber = hlavniShoda(shodyRytmu(slozky, { frekvence: [prazdny], frekvenceObsazeneho: [obsazeny] }));
-      expect(vyber.hlavni, `${prazdny} Hz`).toMatchObject({ slozka: { druh: "utvar", nasobek: 2 } });
-      expect(vyber.uVlastni).toBe(false);
-    }
+describe("obálka do prvního porušení u mostu, který povolí hned", () => {
+  it("pruty přetížené už vlastní vahou mají v obálce své skutečné využití, ne zlomek", () => {
+    // Využití v simulaci nabíhá od nuly; most, který povolí v prvních milisekundách, by jinak
+    // ukázal jediný prut na 100 % a ostatní hluboko pod tím (nález kontroly výpočtů).
+    const { vysledek } = zkousej(uroven("3-03"), pad("3-03", "metr vysoká"));
+    const pred = vysledek.obalkaDoPoruseni!;
+    expect(pred.filter((o) => o.vyuziti >= 1).length).toBeGreaterThanOrEqual(5);
+    expect(Math.max(...pred.map((o) => o.vyuziti))).toBeGreaterThan(1.5);
+    // Každý prut s využitím má i veličinu a únosnost, ze kterých se počítá (ne nuly).
+    for (const o of pred) if (o.vyuziti >= 1) expect(Math.abs(o.unosnost)).toBeGreaterThan(0);
   });
 
-  it("tlumič naladěný na most bez tlumičů (cíl, který hra ukazuje) tlumí líp než naladěný na číslo soustavy s tlumičem", () => {
+  it("zvětšený pohyb brnknutého mostu se měří od středu kmitání, ne od vychýleného začátku", () => {
+    // Styčník 1 začíná 20 mm pod klidem a doznívá kolem y = 0; styčník 0 je podpora.
+    const snimky = Array.from({ length: 241 }, (_, i) => {
+      const cas = i / 60;
+      return Float32Array.of(0, 0, 4, -0.02 * Math.exp(-0.4 * cas) * Math.cos(2 * Math.PI * 2 * cas));
+    });
+    const klid = stredniPolohy(snimky);
+    expect(Math.abs(klid[3]!)).toBeLessThan(0.002);
+    expect(klid[1]).toBe(0);
+    const stavba: Topologie = {
+      stycniku: 2,
+      prvekA: Int32Array.of(0),
+      prvekB: Int32Array.of(1),
+      prut: Int32Array.of(0),
+      cara: Uint8Array.of(0),
+      klouby: Uint8Array.of(0),
+      podpory: Uint8Array.of(1, 0),
+      znacky: Uint8Array.of(0, 0),
+    };
+    // Po dokmitání je zvětšený most skoro tam, kde opravdu je; proti začátku by byl o 14 cm výš.
+    const konec = snimky.at(-1)!;
+    const zvetseny = zvetsiPohyb(stavba, klid, konec, 10, new Float32Array(4));
+    expect(Math.abs(zvetseny[3]! - konec[3]!)).toBeLessThan(0.06);
+    const protiZacatku = zvetsiPohyb(stavba, snimky[0]!, konec, 10, new Float32Array(4));
+    expect(protiZacatku[3]! - konec[3]!).toBeGreaterThan(0.12);
+    expect(nejvetsiVychylka(stavba, klid, snimky[0]!)).toBeCloseTo(0.02, 2);
+  });
+
+  it("závaží laděného tlumiče neurčuje zvětšení pohybu, jen ho omezí", () => {
+    // Styčník 1 je most (hýbe se o 10 mm), styčník 2 závaží tlumiče pod ním (o 40 mm).
+    const stavba: Topologie = {
+      stycniku: 3,
+      prvekA: Int32Array.of(0, 1),
+      prvekB: Int32Array.of(1, 2),
+      prut: Int32Array.of(0, -1),
+      cara: Uint8Array.of(0, 0),
+      klouby: Uint8Array.of(0, 0),
+      podpory: Uint8Array.of(1, 0, 0),
+      znacky: Uint8Array.of(0, 0, STYCNIK_ZAVAZI),
+    };
+    const klid = Float32Array.of(0, 0, 4, 0, 4, -1);
+    const ted = Float32Array.of(0, 0, 4, -0.01, 4, -1.04);
+    expect(nejvetsiVychylka(stavba, klid, ted)).toBeCloseTo(0.01, 6);
+    expect(nejvetsiPohybZavazi(stavba, klid, ted)).toBeCloseTo(0.03, 6);
+  });
+});
+
+describe("ladění tlumiče", () => {
+  it("tlumič naladěný na rytmus běžců (cíl, který hra ukazuje) tlumí aspoň tak dobře jako ladění autora a líp než na číslo soustavy", () => {
     const u = uroven("5-02");
     const navrh = RESENI["5-02"]!.pruchod;
     const rozbor = rozeberMost(u, navrh);
-    const cil = rozbor.bezTlumicu!.obsazeny[0]!;
+    // Cíl: nejsilnější složka kroku, která most bez tlumičů rozkmitá nejvíc.
+    const cil = rozbor.odhadBezTlumicu!.skupiny[0]!.slozky[0]!.frekvence;
+    expect(cil).toBeCloseTo(2.6, 6);
     const naKrok = (f: number): number => Math.round(f / 0.05) * 0.05;
     const preladeny = (f: number): NavrhMostu => ({
       ...navrh,
       stycniky: navrh.stycniky.map((s) => (s.tlumic ? { ...s, tlumic: { ...s.tlumic, frekvence: naKrok(f) } } : s)),
     });
     const podleHry = zkousej(u, preladeny(cil)).vysledek;
+    const podleAutora = zkousej(u, navrh).vysledek;
     // Recenze: hráč ladil na frekvenci „s lidmi“ z osy, která tehdy tlumič už obsahovala.
     const podleSoustavy = zkousej(u, preladeny(rozbor.frekvenceObsazeneho[0]!)).vysledek;
     expect(podleHry.pruchod).toBe(true);
+    expect(podleHry.komfort!.zrychleni).toBeLessThanOrEqual(podleAutora.komfort!.zrychleni + 1e-9);
     expect(podleHry.komfort!.zrychleni).toBeLessThan(podleSoustavy.komfort!.zrychleni);
     // A bez tlumiče most neprojde vůbec.
     const bez = zkousej(u, { ...navrh, stycniky: navrh.stycniky.map(({ tlumic: _t, ...s }) => s) }).vysledek;
