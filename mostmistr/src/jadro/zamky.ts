@@ -8,7 +8,9 @@
 //
 // Na začátku jsou zámky zamčené přesně (podporou nebo společným styčníkem), takže výchozí
 // rovnováha mostu je stejná jako u mostu bez zámků. Znovu zamčený zámek mezi křídly drží
-// tuhá pružina s tlumičem; zámek na opěře dostane podporu zpátky tam, kde konec dosedl.
+// tuhá pružina s tlumičem: zapadne v poloze, ve které konce právě jsou, a pak je kuželový
+// čep během zlomku sekundy stáhne k sobě. Zámek na opěře dostane podporu zpátky tam, kde
+// konec dosedl.
 //
 // Počítá se jen sčítáním, násobením a dělením.
 
@@ -24,6 +26,10 @@ export const ZAMEK_ZAPADLY = 2;
 
 /** Jak daleko od sebe smějí být konce (nebo konec a opěra), aby zámek zapadl, m. */
 export const VULE_ZAMKU = 0.05;
+/** Jak rychle se konce smějí vůči sobě (nebo konec vůči opěře) hýbat, aby zámek zapadl, m/s. */
+export const RYCHLOST_ZAMKNUTI = 0.2;
+/** Jak rychle čep zámku mezi křídly stahuje konce k sobě, m/s. */
+const RYCHLOST_DOTAZENI = 0.1;
 /** Do jaké vzdálenosti od opěry ve vodorovném směru konec na dosedací plochu dosedne, m. */
 const SIRKA_DOSEDNUTI = 0.5;
 
@@ -58,6 +64,12 @@ export interface Zamky {
    */
   utlum: number;
   tlumeni: Float64Array;
+  /**
+   * O kolik jsou konce zámku mezi křídly ještě od sebe, než je čep dotáhne (m): poloha
+   * druhého konce minus poloha prvního, při které čep nic nepřenáší.
+   */
+  odsazeniX: Float64Array;
+  odsazeniY: Float64Array;
   /** Největší síla, kterou dosedací plocha nebo čep od posledního vynulování přenesly, N. */
   nejvetsiSila: Float64Array;
 }
@@ -76,6 +88,8 @@ export function vytvorZamky(s: Soustava, popisy: readonly PopisZamku[], tuhost: 
     tuhost,
     utlum,
     tlumeni: new Float64Array(n),
+    odsazeniX: new Float64Array(n),
+    odsazeniY: new Float64Array(n),
     nejvetsiSila: new Float64Array(n),
   };
 }
@@ -110,7 +124,9 @@ export function odemkniZamky(s: Soustava, z: Zamky): number {
 
 /**
  * Zkusí zamknout odemčené zámky: zapadne ten, jehož konce jsou u sebe (nebo konec u opěry)
- * blíž než `VULE_ZAMKU`. Mění stavbu soustavy jako `odemkniZamky`. Vrací, kolik jich zapadlo.
+ * blíž než `VULE_ZAMKU` a vůči sobě se skoro nehýbou (`RYCHLOST_ZAMKNUTI`); konec, který se
+ * po dosednutí ještě houpe, zámek nechytí. Mění stavbu soustavy jako `odemkniZamky`. Vrací,
+ * kolik jich zapadlo.
  */
 export function zamkniZamky(s: Soustava, z: Zamky): number {
   let zapadlo = 0;
@@ -121,14 +137,19 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
     const dx = j >= 0 ? s.x[j]! - s.x[i]! : z.x0[k]! - s.x[i]!;
     const dy = j >= 0 ? s.y[j]! - s.y[i]! : z.y0[k]! - s.y[i]!;
     if (dx * dx + dy * dy > VULE_ZAMKU * VULE_ZAMKU) continue;
+    const dvx = j >= 0 ? s.vx[j]! - s.vx[i]! : s.vx[i]!;
+    const dvy = j >= 0 ? s.vy[j]! - s.vy[i]! : s.vy[i]!;
+    if (dvx * dvx + dvy * dvy > RYCHLOST_ZAMKNUTI * RYCHLOST_ZAMKNUTI) continue;
     if (j < 0) {
       // Podpora se vrátí tam, kde konec leží; zadržené posuny se zastaví.
       s.podpora[i] = s.podpora[i]! | z.podpora[k]!;
       if ((z.podpora[k]! & 1) !== 0) s.vx[i] = 0;
       if ((z.podpora[k]! & 2) !== 0) s.vy[i] = 0;
     } else {
-      // Čep tlumí podle hmoty obou konců, které drží u sebe.
+      // Čep tlumí podle hmoty obou konců, které drží u sebe; zapadne bez rázu tam, kde konce jsou.
       z.tlumeni[k] = tlumeniPodleHmoty(z, s.invHmotaY[i]! + s.invHmotaY[j]!);
+      z.odsazeniX[k] = dx;
+      z.odsazeniY[k] = dy;
     }
     z.stav[k] = ZAMEK_ZAPADLY;
     zapadlo += 1;
@@ -140,6 +161,25 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
 /** Součinitel tlumení pro daný poměrný útlum: 2·ζ·√(k·m), kde 1/m je `invHmota`. */
 function tlumeniPodleHmoty(z: Zamky, invHmota: number): number {
   return invHmota > 0 ? 2 * z.utlum * Math.sqrt(z.tuhost / invHmota) : 0;
+}
+
+/**
+ * Posune dotahování zámků o krok `dt`: čep zapadlého zámku mezi křídly stahuje konce k sobě.
+ * Volá se jednou na začátku každého kroku simulace.
+ */
+export function posunZamky(z: Zamky, dt: number): void {
+  const krok = RYCHLOST_DOTAZENI * dt;
+  for (let k = 0; k < z.pocet; k++) {
+    if (z.stav[k] !== ZAMEK_ZAPADLY || z.druhy[k]! < 0) continue;
+    z.odsazeniX[k] = kNule(z.odsazeniX[k]!, krok);
+    z.odsazeniY[k] = kNule(z.odsazeniY[k]!, krok);
+  }
+}
+
+function kNule(hodnota: number, krok: number): number {
+  if (hodnota > krok) return hodnota - krok;
+  if (hodnota < -krok) return hodnota + krok;
+  return 0;
 }
 
 /** Jsou všechny zámky zamčené (původně, nebo znovu po sklopení)? */
@@ -170,8 +210,8 @@ export function pridejSilyZamku(s: Soustava, z: Zamky): void {
       s.fy[i] = s.fy[i]! + sila;
       if (sila > z.nejvetsiSila[k]!) z.nejvetsiSila[k] = sila;
     } else if (z.stav[k] === ZAMEK_ZAPADLY) {
-      const fx = tuhost * (s.x[j]! - s.x[i]!) + tlumeni * (s.vx[j]! - s.vx[i]!);
-      const fy = tuhost * (s.y[j]! - s.y[i]!) + tlumeni * (s.vy[j]! - s.vy[i]!);
+      const fx = tuhost * (s.x[j]! - s.x[i]! - z.odsazeniX[k]!) + tlumeni * (s.vx[j]! - s.vx[i]!);
+      const fy = tuhost * (s.y[j]! - s.y[i]! - z.odsazeniY[k]!) + tlumeni * (s.vy[j]! - s.vy[i]!);
       s.fx[i] = s.fx[i]! + fx;
       s.fy[i] = s.fy[i]! + fy;
       s.fx[j] = s.fx[j]! - fx;

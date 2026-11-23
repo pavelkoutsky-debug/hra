@@ -8,6 +8,7 @@ import { popisPruziny, prepoctiHmoty, sestavSoustavu, type PopisSoustavy, type S
 import { volneStupne } from "../src/jadro/stupne";
 import {
   odemkniZamky,
+  posunZamky,
   pridavnaFrekvenceZamku,
   pridejSilyZamku,
   vytvorZamky,
@@ -37,6 +38,7 @@ function postav(popis: PopisSoustavy, pistyPrvky: number[], zamkyPopis: PopisZam
   const pisty = vytvorPisty(
     pistyPrvky.map((prvek) => ({ prvek, zasunuty: s.klidovaDelka[prvek]!, vysunuty: s.klidovaDelka[prvek]! + ZDVIH })),
     rychlost,
+    1000,
     400_000,
   );
   const zamky = vytvorZamky(s, zamkyPopis, 200e6, 0.3);
@@ -45,7 +47,10 @@ function postav(popis: PopisSoustavy, pistyPrvky: number[], zamkyPopis: PopisZam
     utlum: 0.02,
     zatizeni: {
       pridejSily: (soustava) => pridejSilyZamku(soustava, zamky),
-      posun: (soustava, _cas, dt) => posunPisty(soustava, pisty, dt),
+      posun: (soustava, _cas, dt) => {
+        posunPisty(soustava, pisty, dt);
+        posunZamky(zamky, dt);
+      },
       pridavnaFrekvence: (soustava) => pridavnaFrekvenceZamku(soustava, zamky),
     },
   });
@@ -189,10 +194,25 @@ describe("zámek mezi křídly", () => {
     expect(pistyVCili(s, pisty)).toBe(true);
     expect(Math.abs(s.x[pravy]! - s.x[2]!)).toBeLessThan(0.03);
     expect(Math.abs(s.y[pravy]! - s.y[2]!)).toBeLessThan(0.03);
-    expect(zamkniZamky(s, zamky)).toBe(1);
+    // Volné konce křídel se po zastavení pístů ještě houpou; zámek zapadne, až se uklidní.
+    let zapadl = 0;
+    let kmitalo = 0;
+    while (zapadl === 0 && sim.cas < 60) {
+      sim.krok();
+      zapadl = zamkniZamky(s, zamky);
+      if (zapadl === 0) kmitalo += 1;
+    }
+    expect(zapadl).toBe(1);
+    void kmitalo;
     sim.poZmeneStavby();
     expect(zamky.stav[0]).toBe(ZAMEK_ZAPADLY);
-    bez(most, 18);
+    // Čep zapadne bez rázu a konce k sobě teprve stahuje: hned po zapadnutí přenáší jen
+    // tlumič, a to zlomek toho, co by dala pružina napnutá o celou vůli zámku (10 MN).
+    expect(zamky.nejvetsiSila[0]!).toBeLessThan(50_000);
+    const zamceno = sim.cas;
+    bez(most, zamceno + 4);
+    expect(zamky.odsazeniX[0]).toBe(0);
+    expect(zamky.odsazeniY[0]).toBe(0);
     // Čep drží konce u sebe na zlomek milimetru a most se vrátil do původní výšky.
     expect(Math.abs(s.y[pravy]! - s.y[2]!)).toBeLessThan(0.001);
     expect(s.y[2]!).toBeCloseTo(klid, 2);
@@ -201,7 +221,7 @@ describe("zámek mezi křídly", () => {
     s.hmotaNavic[2] = s.hmotaNavic[2]! + 1000;
     prepoctiHmoty(s);
     sim.poZmeneStavby();
-    bez(most, 24);
+    bez(most, zamceno + 10);
     const pokles = klid - s.y[2]!;
     expect(pokles).toBeGreaterThan(0.0005);
     expect(klid - s.y[pravy]!).toBeGreaterThan(0.8 * pokles);

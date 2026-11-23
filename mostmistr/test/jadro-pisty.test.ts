@@ -33,11 +33,16 @@ function kridlo(): Soustava {
   });
 }
 
-function spust(nejvetsiSila: number): { sim: Simulace; s: Soustava; pisty: Pisty } {
+function spust(nejvetsiSila: number, zrychleni = 1000): { sim: Simulace; s: Soustava; pisty: Pisty } {
   const s = kridlo();
   const stupne = volneStupne(s);
   expect(najdiRovnovahu(s, stupne, new Float64Array(stupne.length), g)).toBeGreaterThanOrEqual(0);
-  const pisty = vytvorPisty([{ prvek: 2, zasunuty: s.klidovaDelka[2]!, vysunuty: s.klidovaDelka[2]! + ZDVIH }], 0.25, nejvetsiSila);
+  const pisty = vytvorPisty(
+    [{ prvek: 2, zasunuty: s.klidovaDelka[2]!, vysunuty: s.klidovaDelka[2]! + ZDVIH }],
+    0.25,
+    zrychleni,
+    nejvetsiSila,
+  );
   const sim = new Simulace(s, {
     tiha: g,
     utlum: 0.02,
@@ -115,6 +120,29 @@ describe("píst", () => {
     // Síla v pístu nepřekročí jeho největší sílu (až na tlumič, který za pohybu přidá málo).
     expect(-s.osovaSila[2]!).toBeLessThan(1.05 * 60_000);
     expect(sim.rozpadla).toBe(false);
+  });
+
+  it("rozjíždí se a dojíždí plynule: s konečným zrychlením trvá zdvih déle a konec křídla se pak houpe méně", () => {
+    const houpani = (zrychleni: number): { doba: number; rozkmit: number } => {
+      const { sim, s, pisty } = spust(200_000, zrychleni);
+      pisty.vysunout = true;
+      while (!pistyVCili(s, pisty) && sim.cas < 20) sim.krok();
+      const doba = sim.cas;
+      let nejvic = 0;
+      while (sim.cas < doba + 1) {
+        sim.krok();
+        nejvic = Math.max(nejvic, Math.abs(s.vy[2]!));
+      }
+      return { doba, rozkmit: nejvic };
+    };
+    const skokem = houpani(1000);
+    const plynule = houpani(0.25);
+    // Zdvih 1,2 m rychlostí 0,25 m/s: skokem 4,8 s; s rozjezdem a dojezdem po 1 s o sekundu déle.
+    expect(skokem.doba).toBeGreaterThan(4.79);
+    expect(skokem.doba).toBeLessThan(4.82);
+    expect(plynule.doba).toBeGreaterThan(5.7);
+    expect(plynule.doba).toBeLessThan(5.83);
+    expect(plynule.rozkmit).toBeLessThan(0.5 * skokem.rozkmit);
   });
 
   it("píst slabší, než kolik váží křídlo, ho neudrží ani v klidu: křídlo klesá", () => {

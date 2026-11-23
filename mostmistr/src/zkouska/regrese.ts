@@ -83,6 +83,8 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     budic: true,
     nejhorsiKomfort: 3,
     jizdniRad: [],
+    pohyb: null,
+    lode: [],
   };
 }
 

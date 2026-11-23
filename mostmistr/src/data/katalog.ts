@@ -353,8 +353,51 @@ export const KATALOG: Readonly<Record<IdPrvku, PolozkaKatalogu>> = {
     tlumeni: { nejmensi: 5000, nejvetsi: 200000, vychozi: 50000 },
   },
   pruzina: { druh: "pruzina", nejvetsiDelka: 6, hotovo: true, cena: { zaKus: 8000 } },
-  pist: { druh: "pist", nejvetsiDelka: 8, hotovo: false, cena: { zaKus: 60000 } },
+  // Hydraulický válec pohyblivých mostů; vlastnosti má v `PIST`.
+  pist: { druh: "pist", nejvetsiDelka: 8, hotovo: true, cena: { zaKus: 60000 } },
 };
+
+/**
+ * Píst: hydraulický válec, který zvedá a sklápí pohyblivý most. Hráč ho kreslí v poloze,
+ * jakou má při sklopeném mostě, a nastaví zdvih: o kolik metrů se při zvedání prodlouží
+ * (kladný zdvih) nebo zkrátí (záporný).
+ *
+ * Válec o vrtání 280 mm má plochu pístu 0,0616 m²; při tlaku oleje 25 MPa tlačí silou
+ * 1 500 kN. Olej je stlačitelný (objemový modul asi 1,5 GPa), takže se válec chová jako
+ * pružina o tuhosti modul × plocha / délka sloupce oleje.
+ */
+export const PIST = {
+  /** Největší síla v tlaku i v tahu, N. Víc válec nevyvine a víc ani neudrží: přetlakový ventil povolí. */
+  nejvetsiSila: 1_500_000,
+  /** Tuhost válce krát jeho délka, N (objemový modul oleje × plocha pístu). */
+  tuhostKratDelka: 92e6,
+  /** Tlumení pohybu pístu ve válci, N·s/m. */
+  tlumeni: 100e3,
+  /** Hmotnost válce na metr délky, kg/m. */
+  hmotnostNaMetr: 200,
+  /** Rychlost vysouvání a zasouvání, m/s, a zrychlení při rozjezdu a dojezdu, m/s². */
+  rychlost: 0.4,
+  zrychleni: 0.4,
+  /** Zdvih smí být nejvýš tento podíl nakreslené délky pístu. */
+  nejvetsiPodilZdvihu: 0.5,
+  /** Krok nastavení zdvihu a zdvih nově nakresleného pístu, m. */
+  krokZdvihu: 0.25,
+  vychoziZdvih: 1,
+} as const;
+
+/** Největší zdvih (v obou směrech) pístu nakresleného v délce `delka`, zaokrouhlený dolů na krok. */
+export function nejvetsiZdvih(delka: number): number {
+  return Math.floor((PIST.nejvetsiPodilZdvihu * delka) / PIST.krokZdvihu + 1e-9) * PIST.krokZdvihu;
+}
+
+/** Dělicí zámek pohyblivého mostu: cena za kus, tuhost dosedací plochy a čepu, poměrný útlum. */
+export const ZAMEK = {
+  cena: 25000,
+  /** Tuhost dosedací plochy a čepu zámku, N/m. */
+  tuhost: 200e6,
+  /** Poměrný útlum dosednutí (pryžové nárazníky, tření čepu). */
+  utlum: 0.3,
+} as const;
 
 /**
  * Nese prvek vybavení mostovky z úrovně (zábradlí, vozovkové vrstvy)? Silniční mostovka a

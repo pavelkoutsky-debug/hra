@@ -1,7 +1,8 @@
 // Písty: hydraulické válce, které zvedají a sklápějí pohyblivý most.
 //
 // Píst je osový prvek (pružina s tlumičem), jehož klidovou délku řídí zkouška: na povel se
-// rovnoměrnou rychlostí vysouvá k délce „vysunuto“ nebo zasouvá k délce „zasunuto“. Olej ve
+// vysouvá k délce „vysunuto“ nebo zasouvá k délce „zasunuto“. Rozjíždí se a dojíždí se stálým
+// zrychlením, mezi tím jede stálou rychlostí. Olej ve
 // válci je skoro nestlačitelný, proto je píst tuhý; tlačit a táhnout ale umí jen silou, na
 // jakou je stavěný. Když by musel víc (most je těžší, než píst uzvedne, nebo na zvednutý
 // most něco dosedne), přetlakový ventil povolí: píst se zastaví nebo ustupuje a drží právě
@@ -27,15 +28,24 @@ export interface Pisty {
   vysunuty: Float64Array;
   /** Kam písty právě míří: true vysunout, false zasunout. Mění ho řízení zkoušky. */
   vysunout: boolean;
-  /** Rychlost, jakou se mění délka pístu, m/s. */
+  /** Největší rychlost, jakou se mění délka pístu, m/s. */
   rychlost: number;
+  /** Zrychlení při rozjezdu a zpomalení při dojezdu, m/s². */
+  zrychleni: number;
+  /** Okamžitá rychlost změny délky každého pístu, m/s (kladná při vysouvání). */
+  okamzita: Float64Array;
   /** Největší síla, kterou píst tlačí nebo táhne, N. */
   nejvetsiSila: number;
   /** U každého pístu: 1, když ho v posledním kroku zastavil přetlakový ventil. */
   pretizen: Uint8Array;
 }
 
-export function vytvorPisty(popisy: readonly PopisPistu[], rychlost: number, nejvetsiSila: number): Pisty {
+export function vytvorPisty(
+  popisy: readonly PopisPistu[],
+  rychlost: number,
+  zrychleni: number,
+  nejvetsiSila: number,
+): Pisty {
   return {
     pocet: popisy.length,
     prvek: Int32Array.from(popisy, (p) => p.prvek),
@@ -43,6 +53,8 @@ export function vytvorPisty(popisy: readonly PopisPistu[], rychlost: number, nej
     vysunuty: Float64Array.from(popisy, (p) => p.vysunuty),
     vysunout: false,
     rychlost,
+    zrychleni,
+    okamzita: new Float64Array(popisy.length),
     nejvetsiSila,
     pretizen: new Uint8Array(popisy.length),
   };
@@ -54,17 +66,36 @@ export function vytvorPisty(popisy: readonly PopisPistu[], rychlost: number, nej
  * Volá se jednou na začátku každého kroku simulace.
  */
 export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
-  const zmena = p.rychlost * dt;
+  const zmenaRychlosti = p.zrychleni * dt;
   for (let i = 0; i < p.pocet; i++) {
     const e = p.prvek[i]!;
     const cil = p.vysunout ? p.vysunuty[i]! : p.zasunuty[i]!;
     let klidova = s.klidovaDelka[e]!;
-    if (klidova < cil) {
-      klidova += zmena;
-      if (klidova > cil) klidova = cil;
-    } else if (klidova > cil) {
-      klidova -= zmena;
-      if (klidova < cil) klidova = cil;
+    let rychlost = p.okamzita[i]!;
+    const zbyva = cil - klidova;
+    if (zbyva === 0 && rychlost === 0) {
+      // Píst stojí v cíli.
+    } else {
+      // Rychlost, jakou smí píst k cíli nejvýš jet, aby před ním stihl zastavit: v² = 2·a·s.
+      const vzdalenost = zbyva < 0 ? -zbyva : zbyva;
+      let zadana = Math.sqrt(2 * p.zrychleni * vzdalenost);
+      if (zadana > p.rychlost) zadana = p.rychlost;
+      if (zbyva < 0) zadana = -zadana;
+      if (rychlost < zadana) {
+        rychlost += zmenaRychlosti;
+        if (rychlost > zadana) rychlost = zadana;
+      } else if (rychlost > zadana) {
+        rychlost -= zmenaRychlosti;
+        if (rychlost < zadana) rychlost = zadana;
+      }
+      const posun = rychlost * dt;
+      // Poslední krok do cíle: píst v něm zastaví přesně.
+      if ((zbyva > 0 && posun >= zbyva) || (zbyva < 0 && posun <= zbyva)) {
+        klidova = cil;
+        rychlost = 0;
+      } else {
+        klidova += posun;
+      }
     }
     // Síla v prvku je tuhost × (délka − klidová délka): kladná táhne, záporná tlačí.
     const a = s.prvekA[e]!;
@@ -81,7 +112,10 @@ export function posunPisty(s: Soustava, p: Pisty, dt: number): void {
       klidova = delka - vule;
       pretizen = 1;
     }
+    // Píst, který ventil zastavil, se rozjíždí znovu od nuly.
+    if (pretizen === 1) rychlost = 0;
     p.pretizen[i] = pretizen;
+    p.okamzita[i] = rychlost;
     s.klidovaDelka[e] = klidova;
   }
 }
