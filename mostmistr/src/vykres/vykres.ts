@@ -75,11 +75,39 @@ export function nakresliVrsekVykresu(ctx: Kontext, s: StavVykresu): void {
   }
   for (const kotva of s.uroven.kotvy) nakresliKotvu(ctx, s, kotva);
   if (s.uroven.pohyb && !s.nahled) nakresliPopiskyKotev(ctx, s);
+  if (!s.nahled) nakresliPopiskyVyhrazenychKotev(ctx, s);
 
   nakresliOkrajVykresu(ctx, s);
   if (!s.nahled) nakresliPopiskyRastru(ctx, s.kamera, s.rozmer);
   if (s.kurzor) nakresliKurzor(ctx, s, s.kurzor);
   ctx.restore();
+}
+
+/**
+ * Kotva vyhrazená tlumiči vypadá jako každá jiná, ale vzpěru nepřijme: popisek to říká dřív,
+ * než to hráč zkusí. Stojí na straně břehu, kde nepřekáží stavbě.
+ */
+function nakresliPopiskyVyhrazenychKotev(ctx: Kontext, s: StavVykresu): void {
+  const m = s.kamera.meritko;
+  const hlavni = s.uroven.trasy[0];
+  if (m < 12 || !hlavni) return;
+  const stred = (hlavni.zacatek.x + hlavni.konec.x) / 2;
+  ctx.font = `10px ${PISMO}`;
+  ctx.textBaseline = "middle";
+  for (const kotva of s.uroven.kotvy) {
+    if (kotva.jen !== "tlumic") continue;
+    const text = t("vykres.kotvaTlumic");
+    const p = svetNaObraz(s.kamera, s.rozmer, kotva);
+    const vlevo = kotva.x <= stred;
+    const odstup = mezi(0.55 * m, 9, 22) + 8;
+    const sirka = ctx.measureText(text).width;
+    const x = vlevo ? p.x - odstup : p.x + odstup;
+    ctx.fillStyle = BARVY.pozadi;
+    ctx.fillRect((vlevo ? x - sirka : x) - 3, p.y - 7, sirka + 6, 14);
+    ctx.textAlign = vlevo ? "right" : "left";
+    ctx.fillStyle = BARVY.popisek;
+    ctx.fillText(text, x, p.y);
+  }
 }
 
 /**

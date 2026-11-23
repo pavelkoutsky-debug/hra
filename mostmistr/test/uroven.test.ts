@@ -264,4 +264,17 @@ describe("verze formátu úrovně", () => {
       "uroven.jizdniRad[0].brzdeni.zpomaleni",
     );
   });
+
+  it("verze 6 se převede beze změny; od verze 7 smí být kotva vyhrazená tlumiči", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const zaklad: Record<string, any> = { ...platna(), verze: 6, nejvetsiZavazi: 0, osaFrekvenci: false, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false, nejhorsiKomfort: 3, nerovnost: "zadna", pohyb: null, lode: [] };
+    const sesta = nactiUroven(zaklad);
+    expect(sesta.verze).toBe(VERZE_UROVNE);
+    expect(sesta.kotvy.every((k) => k.jen === undefined)).toBe(true);
+    const kotvy = (zaklad.kotvy as { x: number; y: number; typ: string }[]).map((k, i) => (i === 0 ? { ...k, jen: "tlumic" } : k));
+    const sedma = nactiUroven({ ...zaklad, verze: 7, kotvy });
+    expect(sedma.kotvy[0]!.jen).toBe("tlumic");
+    expect(sedma.kotvy[1]!.jen).toBeUndefined();
+    ocekavejChybu({ ...zaklad, verze: 7, kotvy: kotvy.map((k, i) => (i === 0 ? { ...k, jen: "pilir" } : k)) }, "uroven.kotvy[0].jen");
+  });
 });

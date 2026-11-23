@@ -46,78 +46,123 @@ Obtížnost a medaile: návrhy 4, 7, 8, 9, 10 a 20 z `docs/RECENZE.md`. Verze hr
 
 **Medaile jdou po schodech** (problém 4 recenze: „levně a zároveň bezpečně“ hra nikdy nechtěla). Rozpočtová je průchod s mostem do inženýrského rozpočtu, na kterém se při zkoušce **nic neporušilo**; mistrovská je rozpočtová **a k ní** bonus úrovně. Dřív stačil bonus sám, takže šla mistrovská koupit drahým mostem a bývala ze tří nejlehčí; rozpočtovou dostal i most, kterému v čase 0 povolil prut. Podmínky v zadání, ve výsledku i v nápovědě to říkají slovy („rozpočtová medaile a k ní žádný prut využitý nad 30 %“). Limit bonusu se píše beze ztráty (0,25 m/s² se dřív ukazovalo jako 0,3).
 
-**Všech 28 úrovní je přeladěných** na nová pravidla. Čtyři nezávislí agenti hledali pro každou úroveň nastavení a mosty tak, aby most pro mistrovskou stál nejvýš inženýrský rozpočet a bonus plnil aspoň s pětiprocentní rezervou, most pro rozpočtovou se do rozpočtu vešel těsně (nad 90 %) a bonus minul aspoň o 15 %, a most pro průchod mistrovskou neměl; `test/vyhratelnost.test.ts` to hlídá. Z původních 28 mostů pro mistrovskou jich nová pravidla splnily čtyři. Co se změnilo:
+**Všech 28 úrovní je přeladěných** na nová pravidla. Čtyři nezávislí agenti hledali pro každou úroveň nastavení a mosty tak, aby most pro mistrovskou stál nejvýš inženýrský rozpočet (po recenzích je rozpočet 2,5 až 3 % nad ním, aby medaili neztratil most, který se liší jedním styčníkem) a bonus plnil aspoň s pětiprocentní rezervou, most pro rozpočtovou se do rozpočtu vešel těsně (nad 90 %) a bonus minul aspoň o 15 %, a most pro průchod mistrovskou neměl; `test/vyhratelnost.test.ts` to hlídá. Z původních 28 mostů pro mistrovskou jich nová pravidla splnily čtyři. Co se změnilo:
 
 | Úroveň | Inženýrský rozpočet | Limit bonusu | Úroveň sama |
 |---|---|---|---|
 | 1-01 | 33 500 → 32 500 | 9 % → 30 % | provoz: dvě výpravy proti sobě, 36 lidí |
 | 1-02 | 40 000 → 44 000 | 8 % → 30 % | provoz: 62 chodců a 5 cyklistů |
-| 1-03 | 80 000 → 100 000 | 25 % → 30 % | provoz: po autu dodávka 3,5 t; pod mostovkou se nestaví |
-| 1-04 | 125 000 → 133 000 | 20 % → 65 % | provoz: dvě auta, proti nim dodávka, dva cyklisté |
-| 2-01 | 270 000 | 0,5 m/s² | |
-| 2-02 | 335 000 → 340 000 | 1,0 m/s² | |
-| 2-03 | 420 000 → 430 000 | 1,2 m/s² | |
-| 2-04 | 390 000 | 1,2 m/s² | |
-| 3-01 | 490 000 → 505 000 | 40 % → 50 % | |
-| 3-02 | 960 000 | 52 % → 55 % | |
-| 3-03 | 630 000 → 650 000 | 0,15 → 0,20 m/s² | |
+| 1-03 | 80 000 → 102 000 | 25 % → 30 % | provoz: po autu dodávka 3,5 t; pod mostovkou se nestaví |
+| 1-04 | 125 000 → 119 500 | 20 % → 55 % | provoz: dvě auta, proti nim dodávka, dva cyklisté |
+| 2-01 | 270 000 → 275 000 | 0,5 m/s² | |
+| 2-02 | 335 000 → 347 000 | 1,0 m/s² | |
+| 2-03 | 420 000 → 441 000 | 1,2 m/s² | |
+| 2-04 | 390 000 → 400 000 | 1,2 m/s² | do kotev ve svazích jde jen tlumič |
+| 3-01 | 490 000 → 517 000 | 40 % → 50 % | |
+| 3-02 | 960 000 → 983 000 | 52 % → 55 % | |
+| 3-03 | 630 000 → 663 000 | 0,15 → 0,20 m/s² | |
 | 3-04 | 1 270 000 | 45 % | |
-| 4-01 | 1 330 000 | 32 % → 35 % | |
-| 4-02 | 1 000 000 | 60 % → 65 % | |
-| 4-03 | 1 480 000 | 35 % → 60 % | základ o jedno pole vlevo (x = 24) |
-| 4-04 | 2 100 000 | 57 % → 60 % | |
-| 5-01 | 740 000 | 0,25 m/s² | |
-| 5-02 | 415 000 | 1,0 m/s² | |
-| 5-03 | 465 000 → 475 000 | 0,9 → 1,0 m/s² | |
-| 5-04 | 600 000 | 1,6 → 1,7 m/s² | |
-| 6-01 | 800 000 → 835 000 | 50 % → 60 % | |
-| 6-02 | 940 000 | 0,30 → 0,50 m/s² | |
-| 6-03 | 2 460 000 | 55 % | |
-| 6-04 | 2 150 000 → 2 200 000 | 55 % → 65 % | |
-| 7-01 | 403 000 | 250 kN | |
-| 7-02 | 780 000 → 785 000 | 12 % → 15 % | |
-| 7-03 | 512 000 | 630 kN | |
+| 4-01 | 1 330 000 → 1 365 000 | 32 % → 35 % | |
+| 4-02 | 1 000 000 | 60 % → 65 % | pod vozovkou se mimo pilíře nestaví |
+| 4-03 | 1 480 000 → 1 505 000 | 35 % → 60 % | základ o jedno pole vlevo (x = 24) |
+| 4-04 | 2 100 000 → 2 120 000 | 57 % → 60 % | |
+| 5-01 | 740 000 → 759 000 | 0,25 m/s² | |
+| 5-02 | 415 000 → 426 000 | 1,0 m/s² | |
+| 5-03 | 465 000 → 486 000 | 0,9 → 1,0 m/s² | |
+| 5-04 | 600 000 → 606 000 | 1,6 → 1,7 m/s² | |
+| 6-01 | 800 000 → 850 000 | 50 % → 60 % | |
+| 6-02 | 940 000 → 960 000 | 0,30 → 0,50 m/s² | |
+| 6-03 | 2 460 000 → 2 510 000 | 55 % | |
+| 6-04 | 2 150 000 → 2 255 000 | 55 % → 65 % | |
+| 7-01 | 403 000 → 412 000 | 250 kN | |
+| 7-02 | 780 000 → 799 000 | 12 % → 15 % | |
+| 7-03 | 512 000 → 525 000 | 630 kN | |
 | 7-04 | 1 050 000 | 25 % | |
 
 Limity se většinou povolily: dřívější (9 %, 32 %, 57 %) byly nastavené na most, který se do inženýrského rozpočtu nevešel. Nové mosty pro mistrovskou jsou skoro všude úspornější tvar, ne silnější prvek: lávky se svislicí jen nad každým druhým styčníkem (`lehkaLavka`), trojúhelníková příhrada bez svislic (6-01), tři dolní styčníky místo šesti polí (6-02), vzpěra do pásu sousední příhrady (6-03), náběhy k pilíři (3-04), rozpěry vzpěr (4-01, 1-04), větší průvěs nosného lana (4-04), píst uchycený dál od čepu (7-04).
 
 **První kapitola a lekce** (návrh 9). Mosty pro průchod první kapitoly mají využití 30 %, 69 %, 77 % a 81 % (dřív 11 %, 22 %, 67 % a 56 %); barevná škála už není bledá. V 1-01 má most, který hráč postaví nejspíš (věšadlo vysoké dva metry), 30 %; cílových 40 až 70 % dá až nejnižší věšadlo (48 %). Šlo to jen těžším provozem: lehký trám je na osmimetrovou lávku pro pár chodců několikrát silnější, než je potřeba.
 
-- **1-03 (těžký trám):** po osobním autě jede dodávka a pod mostovkou se stavět nesmí. Všechny tři referenční mosty těžký trám mají a bez něj se zlomí; ze 104 zkoušených příhrad se čtyřmetrovými poli neprošla žádná s lehkými krajními šikminami. **Vynucené to není úplně:** hustá příhrada jen z lehkého trámu s dvoumetrovými poli projde (84 266 Kč, 79 %) a je nejlevnějším mostem úrovně; mistrovskou medaili bez těžkého trámu nedostal žádný ze zkoušených mostů. Provozem to zavřít nejde (kratší prut je stejná lekce jinak).
+- **1-03 (vzpěr):** po osobním autě jede dodávka a pod mostovkou se stavět nesmí. Lekce je vzpěr dlouhého tlačeného prutu a vedou z ní tři cesty: zkrátit pruty, postavit příhradu vyšší, nebo vzít těžký trám. Všechny tři mosty pro medaile těžký trám mají a bez něj se zlomí; ze 104 zkoušených příhrad se čtyřmetrovými poli neprošla žádná s lehkými krajními šikminami. **Těžký trám vynucený není:** hustá metr vysoká příhrada jen z lehkého trámu s dvoumetrovými poli projde (83 953 Kč, 78 %) a je nejlevnějším mostem úrovně; mistrovskou medaili (využití do 30 %) bez těžkého trámu nedostal žádný ze zkoušených mostů (nejlíp 39 %). Provozem to zavřít nejde (kratší prut je stejná lekce jinak), a tak zadání neslibuje, že lehké trámy nestačí: říká, že se dlouhý tlačený trám vzepře. Hustá příhrada je mezi mosty autora pro výzvy (viz níže).
+- **1-04 (vzpěradla):** mosty pro rozpočtovou a mistrovskou jsou z rodiny, kterou při hraní M12 postavil recenzent napoprvé a která byla levnější i bezpečnější než všechny dosavadní mosty autora: krátká lomená vzpěra z kotvy do sousedního styčníku mostovky a nízké věšadlo pod prostředním polem. Rozpočtová má šestimetrové sloupy vcelku (113 493 Kč, 68 %), mistrovská je má rozdělené rozpěrou (116 255 Kč, 48 % při limitu 55 %).
 - **4-03 (dopnutí lan):** se základem uprostřed údolí dopnutí nerozhodovalo o ničem: vějíř lan nad kloubovou mostovkou je staticky určitý a napínák měnil jen výšku mostovky o pár centimetrů (využití 0,427 bez dopnutí proti 0,405 s ním). Těžší provoz, rozpočet ani svary to nezměnily. Úroveň má proto základ o jedno pole vlevo: most je nesouměrný (24 a 36 m), delší pole táhne hlavu pylonu k sobě a nedotažené kotevní lano nechá pylon ohnout a zlomit. Most pro průchod i pro rozpočtovou bez dopnutí neprojdou, most pro mistrovskou projde, ale bonus ztratí. **Vynucené to není pro každý most:** s pylonem od 16 m výš nebo se dvěma kotevními lany nedopnutý most projde.
 - **1-02:** kdo využije kotvy ve svazích dobře (dvě krátké vzpěry), má všechny tři medaile najednou; je to zároveň nejlevnější most úrovně a lepší se do rozpočtu nevejde (prošlo se všech 112 mostů ze vzpěr do 47 000 Kč). **7-02** je na tom stejně (nejlevnější most má píst nejdál od čepu a nejmenší ohyb).
-- **5-02** jde projít bez laděného tlumiče velmi lehkou příhradou těsně pod mezí kmitání (2,45 z 2,5 m/s²); mistrovskou bez tlumiče nedostal žádný zkoušený most. Zůstává.
+- **Kapitola 5** jde bez laděného tlumiče projít a v 5-04 tak jde i mistrovská (kontrola obtížnosti: strojově nalezené příhrady, 5-02 s kmitáním 1,26 m/s², 5-04 mistrovská za 99,4 % rozpočtu). Zůstává, důvody jsou v oddíle „Nezávislé recenze M12“.
 
-**Zlato výzev nad most autora** (`urovne/hubnuti.ts`, `urovne/sampioni.json`, `npm run sampioni`). Zlato ceny a hmotnosti se měří podle „šampiona“: referenčního mostu, ze kterého stroj ubral, co šlo, aniž přestal projít bez porušeného prutu (slabší prvky, zbytečné pruty a celé styčníky, svary, závaží, kratší pruty posunutím styčníku; začíná ze všech tří referenčních mostů a kde úroveň dovoluje svary, i ze svařené mostovky). Zlato je kousek nad šampionem, stříbro most autora, bronz jako dřív. Do ceny a hmotnosti se počítá jen most, na kterém se nic neporušilo, a výsledek to řekne. **Mez:** hledání jen ubírá a posouvá, nový tvar nevymyslí; kde most autora už štíhlý je, zůstává zlato na něm.
+**Zlato výzev nad most autora** (`urovne/hubnuti.ts`, `urovne/sampioni.json`, `npm run sampioni`). Zlato ceny a hmotnosti se měří podle „šampiona“: mostu autora, ze kterého stroj ubral, co šlo, aniž most přestal být neporušený (slabší prvky, zbytečné pruty a celé styčníky, svary, závaží, kratší pruty posunutím styčníku; začíná ze všech mostů autora a kde úroveň dovoluje svary, i ze svařené mostovky). Zlato je kousek nad šampionem, stříbro most autora, bronz jako dřív. Do ceny a hmotnosti se počítá jen neporušený most a výsledek to řekne. **Mez:** hledání jen ubírá a posouvá, nový tvar nevymyslí. Kde někdo najde levnější neporušený most jiného tvaru, přidá se mezi mosty autora jako další most pro výzvy (`ReseniUrovne.vyzvy`); zatím jsou dva, oba z recenze obtížnosti: hustá nízká příhrada jen z lehkého trámu v 1-03 (83 953 Kč proti 94 073 Kč) a křídla ze tří dílců v 7-04 (992 000 Kč proti 998 000 Kč).
 
-Co hledání našlo (všech 28 úrovní, `urovne/sampioni.json`): šampion je proti nejlevnějšímu mostu autora levnější o 0 až 20 % (medián 4 %) a proti nejlehčímu lehčí o 0 až 15 %. Zlato je kvůli rezervě nad šampionem (10 % jeho nosné konstrukce) přísnější než most autora jen tam, kde šampion ubral hodně:
+Co hledání našlo (všech 28 úrovní, `urovne/sampioni.json`; po recenzích hledáno znovu s přísnějším „obstojí“: žádný prut přes 100 %, most má klidovou polohu): šampion je proti nejlevnějšímu mostu autora levnější o 0 až 20 % (medián 2,5 %) a proti nejlehčímu lehčí o 0 až 15 %. Zlato je kvůli rezervě nad šampionem (10 % jeho nosné konstrukce) přísnější než most autora jen tam, kde šampion ubral hodně:
 
 | Úroveň | Nejlevnější most autora | Šampion | Zlato ceny | | Nejlehčí most autora | Šampion | Zlato hmotnosti |
 |---|---|---|---|---|---|---|---|
-| 1-04 | 127 200 Kč | 115 472 Kč | 122 000 Kč | | 5 158 kg | 5 099 kg | most autora |
 | 2-03 | 417 932 Kč | 378 993 Kč | 409 000 Kč | | 17 453 kg | 14 864 kg | 15 900 kg |
 | 3-03 | 619 302 Kč | 592 450 Kč | 616 000 Kč | | 134 265 kg | 133 533 kg | most autora |
 | 3-04 | 1 234 005 Kč | 1 156 932 Kč | 1 220 000 Kč | | 222 641 kg | 220 541 kg | most autora |
 | 5-01 | 718 500 Kč | 640 496 Kč | 693 000 Kč | | 24 024 kg | 21 899 kg | 23 400 kg |
 | 5-04 | 589 440 Kč | 468 902 Kč | 508 000 Kč | | 17 756 kg | 15 015 kg | 16 100 kg |
-| 6-02 | 899 763 Kč | 856 722 Kč | 885 000 Kč | | 28 981 kg | 27 808 kg | 28 600 kg |
-| 6-03 | 2 359 502 Kč | 2 007 859 Kč | 2 100 000 Kč | | 238 506 kg | 227 180 kg | most autora |
+| 6-03 | 2 359 502 Kč | 2 185 154 Kč | 2 290 000 Kč | | 238 506 kg | 234 533 kg | most autora |
 
-V ostatních dvaceti úrovních (cena) a čtyřiadvaceti (hmotnost) zůstává zlato na mostě autora. Větší díl zpřísnění proti stavu před M12 tak nese přeladění referenčních mostů samo: recenzní „o 26 % lepší než most autora“ v 1-01 dnes nejde, nejlevnější most autora (věšadlo vysoké metr, 31 095 Kč) je zároveň šampion. Šampioni jsou mosty na hraně: využití kolem 100 %, lávky s kmitáním 2,1 až 2,5 m/s² (mez 2,5), vlak v 6-02 s 15 m/s² ve voze. Mistrovskou žádný z nich nemá, kromě 1-02 a 7-02, kde je šampionem sám most pro mistrovskou. Šampion 5-04 stojí 78 % inženýrského rozpočtu a 6-03 82 %: rozpočtová medaile je v těch úrovních volnější, než říká most autora (rozpočet tam drží nahoře most pro mistrovskou, který bonus levněji nesplní).
+V ostatních dvaadvaceti úrovních (cena) a pětadvaceti (hmotnost) zůstává zlato na mostě autora. Větší díl zpřísnění proti stavu před M12 tak nese přeladění referenčních mostů samo: recenzní „o 26 % lepší než most autora“ v 1-01 dnes nejde, nejlevnější most autora (věšadlo vysoké metr, 31 095 Kč) je zároveň šampion. Šampioni jsou mosty na hraně: využití až 100 % (3-03, 6-01, 6-03), lávky s kmitáním 2,1 až 2,5 m/s² (mez 2,5), vlak v 6-02 s 2,7 m/s² ve voze. Mistrovskou mají čtyři z 56: oba v 1-02 a šampion ceny v 7-02 (tam je šampionem sám most pro mistrovskou) a šampion hmotnosti v 2-04 (nejlehčí most autora je most pro mistrovskou a ubrat z něj nešlo). Šampion 5-04 stojí 77 % inženýrského rozpočtu a 6-03 87 %: rozpočtová medaile je v těch úrovních volnější, než říká most autora (rozpočet tam drží nahoře most pro mistrovskou, který bonus levněji nesplní).
 
-Při hledání se most zahazuje, jakmile se něco poruší nebo kmitání pod lidmi přesáhne mez úrovně (`Zkouska.kmitaniNadMezi`); první verze se ptala na okamžité kmitání mostovky a v 1-03 tak zahodila všechny mosty, protože prázdnou mostovku rozkmitá dodávka (do výsledku se počítá jen kmitání, když na mostě jdou lidé).
+Při hledání se most zahazuje, jakmile se něco poruší nebo kmitání pod lidmi přesáhne mez úrovně (`Zkouska.kmitaniNadMezi`); první verze se ptala na okamžité kmitání mostovky a v 1-03 tak zahodila všechny mosty, protože prázdnou mostovku rozkmitá dodávka (do výsledku se počítá jen kmitání, když na mostě jdou lidé). Každý uložený šampion nese otisk mostu, ze kterého vznikl; po změně toho mostu se nepoužije a test řekne, že se má hledat znovu. Celé hledání trvá na čtyřech jádrech asi 55 minut (nejdéle 4-04, 5-04 a 6-03); `MM_UROVNE` ho omezí na změněné úrovně.
 
-**Klidné úseky zkoušky se přehrávají rychleji** (návrh 20; `klidneUseky` v `src/hra/rezie.ts`). Prázdný most 8×, klidný 3×, jen u zkoušek dlouhých aspoň 25 s; krátká zkouška se zrychlí jen tam, kde na mostě nikdo není. Klid je, když žádný prut není nad 70 % využití, most se skoro nehýbe a kmitání je pod polovinou meze úrovně nebo pod 60 % špičky téže zkoušky. První pravidlo (jen polovina meze) nejdelším zkouškám nepomohlo: most s lidmi kmitá nad polovinou meze skoro pořád (změřeno: 2-04 za 75 s ze 78 s, 5-01 beze změny). Se špičkou téže zkoušky se mosty pro průchod přehrají takhle: 2-04 za 41 s místo 78 s, 5-01 za 48 s místo 83 s, 5-03 za 34 s místo 49 s, 5-04 za 27 s místo 51 s; mosty daleko od meze ještě rychleji (2-04 a 5-01 kolem 30 s). Chvíle, kdy most kmitá nejvíc, zůstávají ve zvolené rychlosti. Vypínač je v legendě a volba se pamatuje.
+**Klidné úseky zkoušky se přehrávají rychleji** (návrh 20; `klidneUseky` a `klidneUsekyZkousky` v `src/hra/rezie.ts`). Prázdný most 8×, klidný 3×. Stupeň „klid“ (někdo jde, ale most je daleko od mezí) platí jen pro zkoušky dlouhé aspoň 45 s: půlminutová zkouška, po které jdou lidé celou dobu, by se přehrála skoro celá zrychleně a hráč by svůj most pod provozem neviděl. Klid je, když žádný prut není nad 70 % využití, most se skoro nehýbe a kmitání pod lidmi je pod polovinou meze úrovně nebo pod 60 % špičky téže zkoušky, nikdy ale nad 80 % meze. Zvolenou rychlostí vždycky zůstává průjezd lodi, brzdění vozidla na mostě, dvě sekundy kolem největšího využití prutu a kolem největšího kmitání, všechno od první nehody dál a chvíle, kdy kmitání překročí mez. Kdo si přehrávání zpomalil pod 1×, tomu se nezrychluje nic. Doby přehrání mostů pro průchod: 2-04 za 42 s místo 78 s, 5-01 za 56 s místo 83 s, 5-03 za 34 s místo 49 s, 5-04 za 28 s místo 51 s, vždy ve dvou až třech dlouhých úsecích; kratší zkoušky (1-02, kapitola 2 kromě 2-04, 6-03) se zrychlují jen na prázdném mostě. Vypínač je v legendě, volba se pamatuje, a když se právě přehrává zrychleně, přepínač se rozsvítí.
 
-**Krátká zadání a slovníček** (návrh 7). Zadání úrovně jsou dvě věty; vysvětlení mechanik a souvislost se skutečností jsou pod „Více o úloze“, seznam prvků a výzvy jsou sbalené. Okno zadání 4-04 má 219 slov místo 456 a vejde se na obrazovku 1280 × 720. Slovníček má 19 pojmů (pás, vzpěr, využití, kloub, svar, plastický kloub, vlastní frekvence, rezonance…); první výskyt pojmu v zadání, v nápovědě a ve větách výsledku je tečkovaně podtržený a kliknutím se vysvětlí v bublině, celý slovníček je pod odkazem v paletě. Úrovně 1-02 až 2-01 mají ukázku.
+**Krátká zadání a slovníček** (návrh 7). Zadání úrovně jsou dvě věty; vysvětlení mechanik a souvislost se skutečností jsou pod „Více o úloze“, seznam prvků a výzvy jsou sbalené. Okno zadání 4-04 má 219 slov místo 456 a vejde se na obrazovku 1280 × 720. Slovníček má 22 pojmů (mostovka, prut, styčník, pás, vzpěr, využití, kloub, svar, plastický kloub, kmitání, vlastní frekvence, rezonance…); první výskyt pojmu v zadání, v nápovědě a ve větách výsledku je tečkovaně podtržený a kliknutím se vysvětlí v bublině, celý slovníček je pod odkazem v paletě. Úrovně 1-02 až 2-01 mají ukázku.
 
 **Vedený první krok** (návrh 8): v první úrovni, dokud ji hráč neprošel, ukazuje výkres ducha dalšího dílu mostovky („Začni tady: táhni mostovku odsud sem“) a popisky pevné a posuvné podpory.
 
+**Uložený postup má verzi 4.** Staré uložení se převede: mistrovská medaile zůstane jen tam, kde má hráč i rozpočtovou, rekordy výzev začínají od nuly (úrovně jsou jiné) a přehled to jednou oznámí.
+
 **Odemykání po kapitolách** (návrh 10): uvnitř kapitoly po jedné úrovni, další kapitola po dvou projitých úrovních té předchozí. Zásek v 4-04 už nezavře lávky a vlaky.
 
-**Drobnosti z dřívějších recenzí:** závaží přidané do styčníku na podpoře a brnknutí nahoru nebo bez tahu hra komentuje, místo aby mlčela. Osa frekvencí má tlačítko „?“ s legendou značek (na dotykové obrazovce se k bublině nad osou jinak nedalo dostat). Popisky závaží a tlumičů v obrysu nápovědy, které by se překryly, se skládají nad sebe (2-03 má tři závaží vedle sebe). Hlášení o odmítnutém tahu (příliš dlouhý prut) zmizí, jakmile se další krok povede. Táhlo času má při zkoušce v okně do 1400 px vlastní řádek: vedle tlačítek přehrávání na něj při 1280 px zbývalo 80 px a značky dějů splývaly. Legenda při zkoušce u okamžitého kmitání řekne, když se nepočítá („nikdo nejde, nepočítá se“): v 1-03 mostovku nejvíc rozhoupe dodávka, která jede až po chodcích, a legenda ukazovala 4,8 m/s² u mostu, kterému výsledek přiznal 0,2.
+**Drobnosti z dřívějších recenzí:** závaží přidané do styčníku na podpoře a brnknutí nahoru nebo bez tahu hra komentuje, místo aby mlčela. Osa frekvencí má tlačítko „?“ s legendou značek (na dotykové obrazovce se k bublině nad osou jinak nedalo dostat). Popisky závaží a tlumičů v obrysu nápovědy, které by se překryly, se skládají nad sebe (2-03 má tři závaží vedle sebe). Hlášení o odmítnutém tahu (příliš dlouhý prut) zmizí, jakmile se další krok povede. Táhlo času má při zkoušce v okně do 1400 px víc místa (lišta přehrávání je bez nadpisu rychlostí a má užší mezery): při 1280 px na něj zbývalo 80 px a značky dějů splývaly. Vlastní řádek pro táhlo se neosvědčil: plátno při spuštění zkoušky změnilo výšku, pohled poskočil a záběr na most, který se složí hned, se zrušil (chytily to testy pádu). Legenda při zkoušce u okamžitého kmitání řekne, když se nepočítá („nikdo nejde, nepočítá se“): v 1-03 mostovku nejvíc rozhoupe dodávka, která jede až po chodcích, a legenda ukazovala 4,8 m/s² u mostu, kterému výsledek přiznal 0,2.
 
-**Co zbývá z M12:** těžké varianty údolí a zkouškové úrovně bez návodu (návrh 15) a příčiny v kapitole 7 („pravé křídlo nemá píst“).
+**Co zbývá z M12:** těžké varianty údolí a zkouškové úrovně bez návodu (návrh 15) a příčiny v kapitole 7 („pravé křídlo nemá píst“). Co recenze našly a co z toho zůstalo, je v oddíle „Nezávislé recenze M12“.
+
+### Nezávislé recenze M12 (23. 11. 2026)
+
+Tři recenzenti bez znalosti toho, jak milník vznikal: revize kódu, hraní v prohlížeči (nováček; stolní okno, telefon, angličtina) a kontrola obtížnosti a výpočtů (22 950 zkoušených mostů). Všichni tři pracovali na commitu `1334ed3`; opravy vznikaly souběžně a jsou v tomtéž pull requestu.
+
+**Zásadní nálezy a co se změnilo.**
+
+- **Po dohrání zkoušky se neukázal výsledek** (všichni tři; 2-04 v šesti ze sedmi pokusů, podle stejné podmínky i 2-03). Zrychlený klidný úsek vracel čas na svůj konec, sedm milisekund před koncem děje, a přehrávání se tam zastavilo bez pruhu výsledku. **Opraveno:** čas se na konec úseku vrací jen za běhu přehrávání; test v prohlížeči nechá 2-04 doběhnout samu při 4× a čeká na výsledek.
+- **Lekce 2-04 šla obejít celá, včetně mistrovské medaile** (obtížnost): ocelové vzpěry z kotev připravených pro tlumiče, 87 % inženýrského rozpočtu, kmitání třetina limitu, bez jediného tlumiče. **Opraveno:** kotva úrovně smí být vyhrazená (`jen: "tlumic"`, formát úrovně 7); jiný prut do ní návrh odmítne („Tahle kotva je připravená jen pro tlumič“) a výkres ji popisuje.
+- **4-02 „Bez jediné vzpěry“ šla postavit ze vzpěr a bez svarů** (obtížnost): zakázaná zóna byla jen nad vozovkou. **Opraveno:** pod vozovkou smějí stát jen pilíře (zakázané zóny mezi svislicemi tří základů), zadání to říká.
+- **Ocelový sloup na pahýlu pilíře** (obtížnost; 4-01 o 13 % pod zlatem ceny a 27 % pod zlatem hmotnosti): pilíř stojí 15 000 Kč/m, ocel 4 500 Kč/m a do základu stačil metr pilíře. **Opraveno pravidlem návrhu:** na hlavě pilíře, která není styčníkem mostovky, smí být jen lano (`pilir-pahyl`); pylony zavěšených mostů a vzpěry z dříku pilíře zůstávají.
+- **Most opřený o dno údolí prošel se všemi medailemi** (obtížnost; 1-01 za 89 % rozpočtu, v prohlížeči razítko SCHVÁLENO). Když zkouška nenajde klidovou polohu, zapíná dotyk s terénem, a most, který si na dno lehl, pak provoz unesl. Výsledek navíc závisel na pořadí kreslení prutů. **Opraveno:** most, který při zkoušce leží na terénu déle než čtvrt sekundy, neprojde („Most nemá vlastní oporu“).
+- **Zrychlení klidných úseků zrychlovalo to, kvůli čemu se hráč dívá** (hráč, kód): celá 1-02 i s chodci, největší kmitání v 2-01, devět přepnutí rychlosti v 5-01, pády lidí a vozů po první poruše, brzdění vlaku, a kdo si zvolil ⅒×, dostal v klidu trojnásobek. **Přepsáno** (viz „Klidné úseky“ výše): stupeň „klid“ jen u zkoušek od 45 s, s hysterezí, nikdy kolem špičky kmitání a využití, kolem brzdění a po první nehodě, a nikdy při zvolené rychlosti pod 1×.
+
+**Střední nálezy.**
+
+- **Rozpočtovou medaili dostal most s plastickým kloubem** a šampioni výzev takoví byli (čtyři s využitím 103 až 160 %, čtyři bez klidové polohy). **Opraveno:** medaile, rekordy výzev i šampioni chtějí „neporušený“ most (nic nepovolilo, nic nesjelo z podpory, žádný prut přes 100 %); výsledek to řekne větou a podmínka medaile také. Šampioni se hledali znovu a musí mít klidovou polohu.
+- **Uložený postup odporoval novým pravidlům** (kód): mistrovská bez rozpočtové, rekordy z jiných úrovní. **Opraveno:** uložení verze 4; při převodu zůstane mistrovská jen s rozpočtovou, rekordy výzev se vynulují a přehled to jednou oznámí.
+- **Mistrovská medaile na ostří rozpočtu** (obtížnost): most autora stál přes 99 % inženýrského rozpočtu v 19 úrovních (5-02: vůle 18 Kč) a posun jednoho styčníku o metr ji ve třech úrovních neudržel. **Opraveno:** inženýrský rozpočet 22 úrovní je 2,5 až 3 % nad mostem pro mistrovskou (tabulka výše). Důsledek: v 1-03, 2-02, 5-02, 5-04 a 7-01 se do něj vejde i most pro průchod a má rozpočtovou.
+- **Ukázka v zadání předváděla most pro mistrovskou** (kód, hráč; v 1-02 stačilo ukázku opsat a hráč měl všechny tři medaile a dvě zlata napoprvé). **Opraveno:** ukázky stavějí na mostě pro průchod (1-02 na mostě pro rozpočtovou, 3-02 na jeho kopii z lehké oceli); test hlídá, že most z ukázky mistrovskou nemá. Výjimka je 7-03, viz níže.
+- **1-04 napoprvé všechny medaile a zlato „o 7 % lepší než most autora“** (hráč). Recenzentův tvar (krátká lomená vzpěra do sousedního styčníku a nízké věšadlo) byl lepší než všechny mosty autora. **Opraveno:** mosty pro rozpočtovou a mistrovskou jsou z této rodiny, inženýrský rozpočet 119 500 Kč, limit bonusu 55 %.
+- **1-03: zadání tvrdilo „lehké trámy už nestačí“, a stačí** (hráč, obtížnost). Hustá nízká příhrada jen z lehkého trámu je nejlevnější most úrovně. **Opraveno v textu:** lekce je vzpěr dlouhého tlačeného prutu a tři cesty z něj (zkrátit, zvýšit příhradu, těžký trám); recenzentův most je mezi mosty autora pro výzvy, takže zlato už volnější není.
+- **Zlato výzev volnější než známý most** (obtížnost; 1-03 o 11,5 %, 7-04 o 0,6 %, po zavření obejití lekcí už ne 2-04, 4-01 a 4-02): hledání šampionů jen ubírá, nový tvar nevymyslí. **Opraveno:** úroveň smí mít další mosty pro výzvy (`ReseniUrovne.vyzvy`), ze kterých hledání vychází stejně jako z mostů pro medaile; první dva jsou z této recenze.
+- **Šampion jako seznam úprav mohl tiše znamenat jiný most** (kód): po změně referenčního mostu se úpravy použily bez chyby na most jiný. **Opraveno:** šampion nese otisk mostu, ze kterého vznikl; když nesedí, zlato je most autora a test řekne, že se má hledat znovu.
+- **4-03 bez dopnutí: pruh výsledku radil podepřít pylon**, věta o lanech byla až v podrobnostech (hráč). **Opraveno:** nedopnutá lana jsou první větou pruhu i hlášení při záběru.
+- **Slovníček** (kód, hráč): anglicky označil „turnbuckle“ jako vzpěr, na telefonu nešel zavřít (tlačítko na konci dvou tisíc pixelů), chyběly „prut“, „styčník“ a „kmitání“, bublina ležela mimo modální okno. **Opraveno:** vzory hlídají hranice slov, zavírací tlačítko drží nahoře a okno zavře i klepnutí vedle, pojmů je 22, bublina má `aria-expanded` a `aria-describedby`.
+- **Legenda osy frekvencí tvrdila rezonanci podle polohy na ose** (kód), proti pravidlu z M11. **Opraveno v textu**; kde prohlížeč neumí popover, vypíše se legenda do hlášení.
+- **Testy neslibovaly to, co hlídají** (kód): chyběl test porušeného mostu, který projde, a doběhnutí zkoušky v klidném úseku. **Doplněno** (porušený most 4-03, most opřený o terén, obejití lekcí 2-04 a 4-01, převod uložení, hranice slov slovníčku, klidné úseky s událostmi).
+
+**Drobnosti zapracované:** podmínka průchodu v 1-01 až 1-03 mluví i o kmitání, které kód hlídá; kmitání 0,504 se u limitu 0,5 nepíše „0,50“; háček `data-cekani` po zastavení přehrávání; vedený první krok nepřekresluje výkres při omezeném pohybu a není žlutý (žlutá je varování); popisky podpor leží pod značkami; deník hraní dostává kliknutí na pojem, otevření slovníčku, „?“ osy a „Více o úloze“; cíle pro prst 44 px (rozbalovací řádky zadání, „?“ osy, odkaz na slovníček); legenda neříká „nikdo nejde“, když jedou cyklisté („nikdo nejde pěšky“); „Z čeho stavíš“ počítá i přídavky; tažení z prázdného místa řekne, odkud most roste; texty „Jarní voda sahá až pod mostovku“ (1-03), „šedesát chodců“ (1-02), osa frekvencí u dopnutí lan (4-03), poměr k normě v 6-02 („dvakrát klidnější“) a začátky textů „Více o úloze“; komentáře v kódu.
+
+**Nezapracováno a proč.**
+
+- **Kapitola 5 jde bez laděného tlumiče** (obtížnost): 5-04 mistrovská za 99,4 % rozpočtu, 5-02 a 5-03 rozpočtová. Mosty jsou strojové tvary z tisíců náhodných sestupů (nesouměrné příhrady na hraně únosnosti); člověk k nim nedojde dřív než k tlumiči a pravidlo, které by je zakázalo, by zakázalo i poctivé mosty. Zvýšením inženýrského rozpočtu se 5-04 ještě pootevřela (606 000 Kč). Zůstává; vrátím se k tomu, až deník hraní ukáže, jak hráči kapitolu 5 opravdu stavějí (M16).
+- **Rozpočtová medaile jde bez dopnutí v 4-03 (97 %) a bez vzpěr v 6-03 (93 %)**; mistrovskou tak recenzent nenašel. Lekce je vynucená u mistrovské, zůstává.
+- **Most pro mistrovskou je zároveň nejlevnější most úrovně** v 1-01, 1-02, 7-01, 7-02 a 7-03 (v 7-04 už ne, viz další mosty pro výzvy). V kapitole 7 dává mostovka a píst málo volnosti: do rozpočtu 7-01 se vejde jediné rozkreslení. Zůstává do M12c a M14, které kapitolu 7 otevírají znovu.
+- **Ukázka 7-03 dál staví na mostě pro mistrovskou.** Ukázka říká „stejné křídlo, stejná hluboká kotva, jen větší zdvih“; most pro průchod má kotvu mělkou a věta by s ním neplatila. Je to jediná výjimka a test ukázek ji jmenuje.
+- **Bronz výzvy o cenu může vyjít nad rozpočet úrovně**, když je rozpočet do 2 % nad mostem autora (obtížnost; na náhodných základech, v žádné skutečné úrovni). Test kampaně hlídá, že bronz je pod rozpočtem; funkce sama se nemění.
+- **Stupně výzvy o cenu a inženýrský rozpočet nejsou seřazené stejně** (hráč; 1-01: stříbro do 32 800 Kč, medaile do 32 500 Kč). Jsou to dvě měřítka s jiným základem (most autora proti rozpočtu úrovně); sjednotit je znamená jedno z nich zrušit. Zůstává.
+- **Skok na největší využití ukáže 79 %, výsledek říká 81 %** (hráč): přehrávání má snímky po třicetině sekundy, výsledek obálku ze všech kroků fyziky. Zůstává.
+- **Táhlo času má v okně 1280 px kolem 165 px** (dřív 80 px). Vlastní řádek se neosvědčil (viz výše); víc místa by chtělo přestavět lištu přehrávání.
+- **Telefon:** značky dějů na časové ose sahají k číslicím času a výchozí pohled 1-01 má 17 px na metr rastru (domněnka recenzenta, že je to pro prst málo; měřeno jen skriptem). Bez skutečného telefonu neumím posoudit; zůstává.
+- **Do zlomu v 1-01:** „největší využití 100 % · prut 1“ vedle „jako první povolil prut 2“ (oba ve stejném kroku). Obě věty jsou pravdivé; sjednotit je by chtělo pravidlo pro shodu, drobnost.
+- **Nezkoušeno recenzenty ani mnou:** Firefox, Safari, skutečný telefon. Recenzent obtížnosti neprohledával 4-04 a 5-01 a kapitoly 3 a 6 jen náhodným sestupem z mostů autora.
 
 ## M11 — výsledek
 

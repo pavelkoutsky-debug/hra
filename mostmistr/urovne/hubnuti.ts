@@ -19,6 +19,22 @@ import type { Uroven } from "../src/data/uroven";
 export type Meritko = "cena" | "hmotnost";
 
 /**
+ * Otisk mostu, ze kterého šampion vznikl (styčníky a pruty se vším nastavením). Seznam úprav
+ * jmenuje pruty a styčníky čísly: po změně referenčního mostu by se dal použít i na jiný most
+ * a potichu z něj udělat jiného „šampiona“. Podle otisku se pozná, že úpravy patří jinam.
+ */
+export function otiskMostu(navrh: NavrhMostu): string {
+  const text = JSON.stringify({ stycniky: navrh.stycniky, pruty: navrh.pruty });
+  // FNV-1a, 32 bitů: nejde o bezpečnost, jen o to poznat změnu.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/**
  * Jedna úprava mostu. Pruty a styčníky se jmenují svým `id` z návrhu, takže seznam úprav
  * platí, i když se pořadí v návrhu změní.
  */

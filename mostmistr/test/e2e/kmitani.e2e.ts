@@ -517,7 +517,7 @@ describe("nápověda po krocích", () => {
     expect(await udaj("napoveda-princip")).toBe("Mostovku podpírá pár prutů zdola: tvoří s ní trojúhelník a ten se neprohne.");
     expect(await stranka.locator("#okno-napoveda").getAttribute("data-soustava")).toBe("trojuhelnik-pod");
     await akce("napoveda-dalsi").click();
-    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč a splní podmínku mistrovské medaile: rozpočtová medaile a k ní žádný prut využitý nad \d+ %\.$/);
+    expect(bezMezer(await udaj("napoveda-cena"))).toMatch(/^Stojí [\d ]+ Kč a splní podmínku mistrovské medaile: rozpočtová medaile a k ní žádný prut využitý nad 30 %\.$/);
     // Most pro medaili za rozpočet má vlastní kroky: začíná principem.
     await medaile.nth(1).click();
     expect(await telo("napoveda")).toBe("princip");

@@ -1,5 +1,6 @@
-// Milník M12 v bezhlavém prohlížeči: klidné úseky zkoušky se přehrávají rychleji, medaile jdou
-// po schodech a most s porušeným prutem se nepočítá do rozpočtové medaile ani do výzev.
+// Milník M12 v bezhlavém prohlížeči: klidné úseky zkoušky se přehrávají rychleji, vedený
+// první krok, krátké zadání se slovníčkem, medaile po schodech a zlato výzev nad mostem autora.
+// (Most s porušeným prutem, který projde jen s medailí za průchod, hlídá `test/vyhratelnost.test.ts`.)
 import { mkdirSync } from "node:fs";
 import { chromium, type Browser, type Page } from "playwright";
 import { preview, type PreviewServer } from "vite";
@@ -149,6 +150,27 @@ describe("klidné úseky zkoušky", () => {
     await naKonec();
     await akce("upravit").click();
   });
+
+  it("zkouška s klidným koncem doběhne sama až k výsledku", async () => {
+    // Poslední lidé odešli a most doznívá: klidný úsek sahá do konce záznamu. Zrychlené
+    // přehrávání se kdysi vracelo na jeho konec (pár milisekund před koncem děje), zastavilo
+    // se tam a výsledek neukázalo, dokud hráč nestiskl Přehrát znovu.
+    await otevri("2-04");
+    await nactiMost(RESENI["2-04"]!.pruchod);
+    await pust();
+    await dopocitej();
+    await stranka.locator('[data-rychlost="4"]').click();
+    // Bez tlačítka Na konec: přehrávání musí dojít k výsledku samo (78 s děje, klidné úseky 8×).
+    await stranka.locator(".vysledek").waitFor({ state: "visible", timeout: 60_000 });
+    expect(await udaj("vysledek-nadpis")).toBe("MOST OBSTÁL");
+    await rozbalVysledek();
+    // Most pro průchod je nad inženýrským rozpočtem: jen medaile za průchod.
+    expect(await medaile()).toBe("true,false,false");
+    // Zastavené přehrávání nic nezrychluje.
+    expect(await telo("cekani")).toBe("ne");
+    await stranka.locator('[data-rychlost="1"]').click();
+    await akce("upravit").click();
+  }, 240_000);
 });
 
 describe("vedený první krok", () => {
@@ -257,10 +279,15 @@ describe("krátké zadání a slovníček pojmů", () => {
     // Celý slovníček.
     await akce("pojmy").click();
     expect(await stranka.locator("#okno-pojmy[open]").count()).toBe(1);
-    expect(await stranka.locator("#okno-pojmy dt").count()).toBe(19);
+    expect(await stranka.locator("#okno-pojmy dt").count()).toBe(22);
     expect(await stranka.locator("#okno-pojmy dt").allInnerTexts()).toContain("Vzpěr");
     await stranka.locator('#okno-pojmy button[value="zavrit"]').click();
     expect(await stranka.locator("#okno-pojmy[open]").count()).toBe(0);
+    // Kliknutí vedle okna (na ztmavené pozadí) slovníček zavře také.
+    await akce("pojmy").click();
+    expect(await stranka.locator("#okno-pojmy[open]").count()).toBe(1);
+    await stranka.mouse.click(8, 8);
+    await expect.poll(() => stranka.locator("#okno-pojmy[open]").count()).toBe(0);
   });
 });
 

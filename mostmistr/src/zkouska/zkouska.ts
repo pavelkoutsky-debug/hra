@@ -54,6 +54,11 @@ import { plastickeKlouby, topologieSoustavy, type PopisKresleni, type Snimek, ty
 export const SNIMKU_ZA_SEKUNDU = 60;
 /** Jak dlouho děj pokračuje poté, co poslední účastník dojel nebo dopadl, v sekundách. */
 const DOBEH = 1.5;
+/**
+ * Jak dlouho (s) se smí most bez klidové polohy dotýkat terénu, než se to počítá za opření:
+ * volný prut, který o svah jen škrtne, mostem o zem opřeným není.
+ */
+const OPRENI_O_TEREN = 0.25;
 /** Nejdéle tolik sekund se čeká, než ti, kdo spadli, dopadnou na zem nebo do vody. */
 const NEJDELSI_PAD = 5;
 /** Délka zkoušky bez provozu: most jen stojí pod vlastní tíhou. */
@@ -165,6 +170,9 @@ export class Zkouska {
    * číslo účastníka (v poli, aby se dalo předat bez nové alokace) a jeho měření.
    */
   readonly #komfortVozu: { kdo: number[]; mereni: MereniKomfortu }[];
+  /** Kolika styčníky se most v posledním kroku dotýkal terénu a jak dlouho se o něj opíral celý, s. */
+  #dotykuMostu = 0;
+  #oprenoSekund = 0;
   #dalsiSnimek = 0;
   #topologii = 0;
   #poruseni = 0;
@@ -511,7 +519,7 @@ export class Zkouska {
         }
         if (this.simulace?.porusena || this.bezRovnovahy) {
           // Styčníky vzniklé rozlomením prutů jsou až za styčníky provozu.
-          pridejKontaktSTerenem(s, teren, 0, stycnikuMostu);
+          this.#dotykuMostu = pridejKontaktSTerenem(s, teren, 0, stycnikuMostu);
           pridejKontaktSTerenem(s, teren, this.#prvniTroska, s.pocetStycniku);
           if (hladina !== null) {
             pridejOdporVody(s, hladina, 0, stycnikuMostu);
@@ -521,6 +529,9 @@ export class Zkouska {
         void cas;
       },
       posun: (s, cas, dt) => {
+        // Most bez klidové polohy, který se celý (nic na něm nepovolilo) opírá o terén.
+        if (this.#dotykuMostu > 0 && this.bezRovnovahy && !this.simulace?.porusena) this.#oprenoSekund += dt;
+        this.#dotykuMostu = 0;
         provoz.posun(s, cas);
         this.#posunBudic(cas);
         const pisty = this.#pisty;
@@ -1027,6 +1038,10 @@ export class Zkouska {
     const pohybVPoradku = (pohyb === null || (pohyb.zamceno && !pohyb.preklopeno)) && lode.proplulo === lode.celkem;
     // Most, který nevede až na předmostí, není hotový, i kdyby kola mezeru přeskočila.
     const mezera = ucastniku > 0 && mezeryTras(this.#navrh, uroven).length > 0;
+    // Most, který nemá vlastní oporu, propadne se a zůstane ležet na terénu, neobstál, i kdyby
+    // po něm všichni přešli: opírat se smí jen o kotvy a podpory. (Dotyk s terénem je jinak
+    // určený troskám; most bez klidové polohy ho má od začátku děje, protože se skládá.)
+    const opreno = this.#oprenoSekund > OPRENI_O_TEREN;
     const pruchod =
       !rozpad &&
       spadlo === 0 &&
@@ -1034,7 +1049,8 @@ export class Zkouska {
       (ucastniku > 0 || cely) &&
       snesitelny &&
       pohybVPoradku &&
-      !mezera;
+      !mezera &&
+      !opreno;
     const bonus = uroven.mistrovska;
     // Brnknutí je pokus, ne zkouška: medaile se neudělují. Frekvence je ta, na které se styčník
     // vychyloval nejvíc. Počítat obraty pohybu nestačí: kde kmitá víc tvarů najednou (most
@@ -1066,7 +1082,11 @@ export class Zkouska {
     // se nic neporušilo (most, který někde povolil a lidé přesto přešli, levný není, jen měl
     // štěstí); mistrovská je rozpočtová a k ní bonus úrovně. Mistrovskou tak nejde koupit
     // drahým mostem.
-    const rozpoctova = zkouska && pruchod && poruseni === 0 && uroven.inzenyrskyRozpocet !== null && cena <= uroven.inzenyrskyRozpocet;
+    // „Nic se neporušilo“: žádný prut nepovolil, žádný konec nesjel z podpory a žádný prut
+    // nebyl využitý nad 100 % (tvárná ocel se pak trvale přetváří, aniž by vznikla událost
+    // porušení: plastický kloub nebo protažený prut; takový most celý není).
+    const neporuseny = poruseni === 0 && this.simulace.sjeti.length === 0 && nejvetsiVyuziti <= 1 + 1e-9;
+    const rozpoctova = zkouska && pruchod && neporuseny && uroven.inzenyrskyRozpocet !== null && cena <= uroven.inzenyrskyRozpocet;
     const medaile: Medaile = {
       pruchod: pruchod && zkouska,
       rozpocet: rozpoctova,
@@ -1102,6 +1122,8 @@ export class Zkouska {
       obalkaDoPoruseni: this.#obalkaDoPoruseni?.map((o) => ({ ...o })) ?? null,
       reakce: this.#reakce.map((r) => ({ ...r })),
       bezRovnovahy: this.bezRovnovahy,
+      opreno,
+      neporuseny,
       pruvesVKlidu: this.pruvesVKlidu,
       rozpad,
       trvani: this.simulace.cas,

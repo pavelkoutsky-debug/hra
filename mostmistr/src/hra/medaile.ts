@@ -44,12 +44,13 @@ export function podminkaMistrovske(uroven: Uroven): string | null {
 }
 
 function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
-  // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá.
+  // Kde jdou přes most lidé, patří k průchodu i to, že se pod nimi most nerozkmitá. Platí to
+  // i v úrovních bez osy frekvencí (první kapitola): zkouška mez hlídá všude, kde lidé jdou,
+  // a podmínka nesmí mlčet o něčem, kvůli čemu most neprojde.
   const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
-  const pruchod =
-    lide && uroven.osaFrekvenci
-      ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) })
-      : t("medaile.pruchod.podminka");
+  const pruchod = lide
+    ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) })
+    : t("medaile.pruchod.podminka");
   const seznam: RadekMedaile[] = [{ nazev: "medaile.pruchod", podminka: pruchod, ziskana: medaile.pruchod }];
   if (uroven.inzenyrskyRozpocet !== null) {
     seznam.push({

@@ -156,7 +156,7 @@ describe("přehled kampaně", () => {
     expect(await stranka.locator('[data-udaj="zadani-stavba"]').isVisible()).toBe(false);
     expect(await obsah("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
     expect(await stranka.locator('[data-udaj="zadani-medaile"] li').count()).toBe(3);
-    expect(await udaj("zadani-medaile")).toContain("průchod s mostem do 32\u202f500\u00a0Kč, na kterém se nic neporušilo");
+    expect(await udaj("zadani-medaile")).toContain("průchod s mostem do 32\u202f500\u00a0Kč, na kterém nic nepovolilo ani se trvale neohnulo");
     // Ukázka: mostovka sama spadne, s trojúhelníkem obstojí. Obě strany se doopravdy spočítají.
     const ukazka = stranka.locator('[data-udaj="ukazka"]');
     await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 30_000 });
@@ -210,6 +210,8 @@ describe("stavba myší", () => {
   it("z volného místa kreslit nejde: most roste jen z kotev a styčníků", async () => {
     await tahni([2, 3], [5, 3]);
     expect(await pocetPrutu()).toBe(2);
+    // Tah z volného místa je výběr rámečkem; kdo má v ruce prvek a nic nevybral, dozví se, odkud se kreslí.
+    expect(await udaj("hlaseni")).toContain("Most roste jen z kotev a ze styčníků");
   });
 
   it("samotná mostovka s kloubem uprostřed zkouškou neprojde", async () => {
@@ -450,6 +452,9 @@ describe("další úrovně kapitoly", () => {
     await nastavCas(14.2);
     await stranka.screenshot({ path: `${SLOZKA}/28-auto-na-moste.png` });
     await nastavCas(16.8);
+    // Dodávka mostovku rozhoupe víc než chodec před ní, ale do výsledku se kmitání počítá,
+    // jen když po mostě někdo jde: legenda to u okamžité hodnoty řekne.
+    await expect.poll(() => udaj("kmitani")).toMatch(/^kmitání \d,\d\d m\/s² \(nikdo nejde pěšky, nepočítá se\)$/);
     await stranka.screenshot({ path: `${SLOZKA}/29-dodavka-na-moste.png` });
     await akce("na-konec").click();
     await stranka.locator(".vysledek").waitFor({ state: "visible" });

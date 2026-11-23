@@ -397,6 +397,56 @@ describe("dotykové ovládání výkresu", () => {
     await telefon.close();
   }, 200_000);
 
+  it("telefon: části zadání, slovníček a legenda osy jsou na prst a slovníček jde zavřít bez rolování", async () => {
+    const telefon = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+    const s = await telefon.newPage();
+    s.on("pageerror", (chyba) => chyby.push(chyba.message));
+    await s.goto(`${adresa}?uroven=2-01&zaznam=vypnout`);
+    await s.locator(PLATNO).waitFor();
+    expect(await s.evaluate(() => window.matchMedia("(pointer: coarse)").matches)).toBe(true);
+    const vyska = async (vyber: string): Promise<number> => (await s.locator(vyber).first().boundingBox())!.height;
+    const naObrazovce = async (vyber: string): Promise<boolean> => {
+      const o = await s.locator(vyber).first().boundingBox();
+      return o !== null && o.x >= 0 && o.y >= 0 && o.x + o.width <= 390.5 && o.y + o.height <= 844.5;
+    };
+    // Zadání: sbalené části se rozbalují řádkem vysokým aspoň na prst.
+    expect(await vyska("#okno-zadani details.okno__vice > summary")).toBeGreaterThanOrEqual(44);
+    // Pojem v zadání (tady v popisku ukázky: „prutů“): ťuknutí ukáže bublinu celou na obrazovce.
+    await s.locator('#okno-zadani [data-udaj="ukazka-popis"] .pojem').first().tap();
+    await s.locator("#pojem-bublina:popover-open").waitFor();
+    expect(await naObrazovce("#pojem-bublina")).toBe(true);
+    await s.keyboard.press("Escape");
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+    // Odkazy pod zadáním v paletě a otazník osy frekvencí.
+    for (const akce of ["zadani-cele", "pojmy"]) {
+      await s.locator(`[data-akce="${akce}"]`).scrollIntoViewIfNeeded();
+      expect(await vyska(`[data-akce="${akce}"]`), akce).toBeGreaterThanOrEqual(44);
+    }
+    const otaznik = (await s.locator('[data-akce="osa-legenda"]').boundingBox())!;
+    expect(Math.min(otaznik.width, otaznik.height)).toBeGreaterThanOrEqual(44);
+    await s.locator('[data-akce="osa-legenda"]').tap();
+    await s.locator("#pojem-bublina:popover-open").waitFor();
+    expect(await s.locator('[data-udaj="pojem-text"]').innerText()).toContain("Plná čára: rytmus kroku lidí.");
+    expect(await naObrazovce("#pojem-bublina")).toBe(true);
+    await s.keyboard.press("Escape");
+    // Celý slovníček je delší než obrazovka: Zavřít drží dole na očích a zavře i ťuknutí vedle okna.
+    await s.locator('[data-akce="pojmy"]').tap();
+    await s.locator("#okno-pojmy[open]").waitFor();
+    expect(await s.locator("#okno-pojmy dt").count()).toBe(22);
+    expect(await naObrazovce('#okno-pojmy button[value="zavrit"]')).toBe(true);
+    await s.screenshot({ path: `${SLOZKA}/telefon-slovnicek.png` });
+    await s.locator('#okno-pojmy button[value="zavrit"]').tap();
+    expect(await s.locator("#okno-pojmy[open]").count()).toBe(0);
+    await s.locator('[data-akce="pojmy"]').tap();
+    await s.locator("#okno-pojmy[open]").waitFor();
+    const okno = (await s.locator("#okno-pojmy").boundingBox())!;
+    // Vedle okna je ztmavené pozadí: nahoře nebo dole, kde okno není.
+    await s.touchscreen.tap(195, okno.y > 20 ? okno.y / 2 : okno.y + okno.height + (844 - okno.y - okno.height) / 2);
+    await expect.poll(() => s.locator("#okno-pojmy[open]").count()).toBe(0);
+    expect(await s.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+    await telefon.close();
+  }, 120_000);
+
   it("v okně širokém 1000 px se do lišty vejdou všechna tlačítka a táhlo času neuteče", async () => {
     const uzke = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1000, height: 700 }, deviceScaleFactor: 1 });
     const s = await uzke.newPage();

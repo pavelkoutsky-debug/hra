@@ -1,6 +1,6 @@
 // Uložený postup v paměti prohlížeče: čtení, zápis a odolnost proti poškozeným datům.
 import { describe, expect, it } from "vitest";
-import { ulozeniNaText, ulozeniZTextu } from "../src/data/ulozeni";
+import { ulozeniNaText, ulozeniZTextu, VERZE_ULOZENI, verzeZapisuUlozeni } from "../src/data/ulozeni";
 import { Kreslic } from "../src/zkouska/regrese";
 import { ID_SANDBOXU, sandboxNaText, vychoziSandbox } from "../src/data/sandbox";
 import {
@@ -12,6 +12,7 @@ import {
   KLIC_ZABERU,
   KLIC_ULOZENI,
   KLIC_ZVUKU,
+  OZNAMENI_M12,
   Uloziste,
   type Sklad,
 } from "../src/hra/uloziste";
@@ -186,6 +187,53 @@ describe("úložiště postupu", () => {
     // Mosty úrovní kampaně s tím nemají nic společného.
     expect(druhe.navrh("1-01")).toEqual(most());
     expect(sklad.getItem(KLIC_SANDBOXU)).toBe(sandboxNaText(vychoziSandbox()));
+  });
+});
+
+describe("postup uložený před M12", () => {
+  const STARY = JSON.stringify({
+    verze: 3,
+    navrhy: {},
+    rekordy: {
+      "1-01": { verzeFyziky: 8, medaile: { pruchod: true, rozpocet: false, mistrovska: true }, nejlepsiCena: 23000, nejlepsiHmotnost: 700, nejlepsiZlom: 3.9, verzeZlomu: 8 },
+    },
+  });
+
+  it("převede se jednou: zapíše se v novém formátu, zapomene prošlé mosty a nechá hráči oznámení", () => {
+    const sklad = new SkladVPameti();
+    sklad.data.set(KLIC_ULOZENI, STARY);
+    sklad.data.set(KLIC_PROSLYCH, '{"1-01":["8:stary:1"]}');
+    const prvni = new Uloziste(sklad);
+    expect(prvni.poskozeno).toBe(false);
+    // Mistrovská bez rozpočtové podle nových pravidel neexistuje; cena je z jiné úrovně.
+    expect(prvni.rekord("1-01")).toMatchObject({ medaile: { pruchod: true, rozpocet: false, mistrovska: false }, nejlepsiCena: null, nejlepsiZlom: null });
+    expect(prvni.prosel("1-01", "8:stary:1")).toBe(false);
+    expect(prvni.oznameni).toBe(OZNAMENI_M12);
+    expect(verzeZapisuUlozeni(sklad.data.get(KLIC_ULOZENI)!)).toBe(VERZE_ULOZENI);
+
+    // Most, který projde po převodu, se pamatuje i přes další načtení: převod se neopakuje.
+    prvni.zapisProsly("1-01", "8:novy:1");
+    const druhe = new Uloziste(sklad);
+    expect(druhe.prosel("1-01", "8:novy:1")).toBe(true);
+    // Oznámení čeká, dokud ho přehled neukáže, a pak už se nevrací.
+    expect(druhe.oznameni).toBe(OZNAMENI_M12);
+    druhe.odlozOznameni();
+    expect(druhe.oznameni).toBeNull();
+    expect(new Uloziste(sklad).oznameni).toBeNull();
+  });
+
+  it("hráč bez rekordů oznámení nedostane a nový postup se nepřevádí", () => {
+    const prazdny = new SkladVPameti();
+    prazdny.data.set(KLIC_ULOZENI, JSON.stringify({ verze: 3, navrhy: {}, rekordy: {} }));
+    expect(new Uloziste(prazdny).oznameni).toBeNull();
+    const novy = new SkladVPameti();
+    const uloziste = new Uloziste(novy);
+    uloziste.zapocitej("1-01", PRUCHOD, 33133, 8, 950);
+    uloziste.zapisProsly("1-01", "8:a:1");
+    const znovu = new Uloziste(novy);
+    expect(znovu.oznameni).toBeNull();
+    expect(znovu.prosel("1-01", "8:a:1")).toBe(true);
+    expect(znovu.rekord("1-01")!.nejlepsiCena).toBe(33133);
   });
 });
 

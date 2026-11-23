@@ -54,8 +54,9 @@ export function nakresliVedeni(ctx: CanvasRenderingContext2D, kamera: Kamera, ro
   ctx.moveTo(od.x, od.y);
   ctx.lineTo(po.x, po.y);
   ctx.stroke();
-  ctx.strokeStyle = BARVY.varovani;
-  ctx.fillStyle = BARVY.varovani;
+  // Bíle, ne žlutě: žlutá je na výkresu vyhrazená varování a tohle je pokyn.
+  ctx.strokeStyle = BARVY.caraSilna;
+  ctx.fillStyle = BARVY.caraSilna;
   ctx.lineWidth = 3;
   ctx.setLineDash([8, 6]);
   ctx.beginPath();
@@ -82,7 +83,7 @@ export function nakresliVedeni(ctx: CanvasRenderingContext2D, kamera: Kamera, ro
   }
   ctx.font = `bold 12px ${PISMO}`;
   ctx.textBaseline = "middle";
-  stitek(ctx, v.popis, vystredeny(ctx, v.popis, (od.x + po.x) / 2, rozmer), Math.min(od.y, po.y) - 24, BARVY.varovani);
+  stitek(ctx, v.popis, vystredeny(ctx, v.popis, (od.x + po.x) / 2, rozmer), Math.min(od.y, po.y) - 24, BARVY.caraSilna);
   // Popisky podpor: levá doleva, pravá doprava, ať si nepřekážejí. Celé texty jen tehdy,
   // když se na plátno vejdou všechny; jinak krátké.
   ctx.font = `11px ${PISMO}`;
@@ -93,7 +94,8 @@ export function nakresliVedeni(ctx: CanvasRenderingContext2D, kamera: Kamera, ro
       const text = cele ? podpora.text : podpora.kratce;
       const sirka = ctx.measureText(text).width + 6;
       const vlevo = podpora.vlevo ? p.x + PRESAH - sirka : p.x - PRESAH;
-      return { vlevo, vpravo: vlevo + sirka, text, y: p.y + 38 };
+      // Pod značkou podpory i s jejími válečky a šrafou, ne přes ně.
+      return { vlevo, vpravo: vlevo + sirka, text, y: p.y + 52 };
     });
   const vejdouSe = (stitky: { vlevo: number; vpravo: number }[]): boolean =>
     stitky.every((a, i) => a.vlevo >= 2 && a.vpravo <= rozmer.sirka - 2 && stitky.every((b, j) => j <= i || a.vpravo + 6 <= b.vlevo || b.vpravo + 6 <= a.vlevo));

@@ -913,6 +913,19 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
   width: min(640px, calc(100vw - 24px));
 }
 
+/*
+ * Slovníček je delší než obrazovka telefonu: tlačítko Zavřít drží u spodního okraje okna,
+ * ať se k němu nemusí rolovat přes všechny pojmy.
+ */
+.okno--pojmy .okno__tlacitka {
+  position: sticky;
+  bottom: -16px;
+  margin: 0 -18px -16px;
+  padding: 10px 18px 14px;
+  background: var(--lista);
+  border-top: 1px solid rgb(207 227 255 / 0.3);
+}
+
 .pojmy {
   margin: 0 0 14px;
 }
@@ -923,8 +936,12 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
   font-weight: bold;
 }
 
+/* Pojem, ze kterého hráč do slovníčku přišel. Žlutá je vyhrazená varování. */
 .pojmy dt.pojmy__vybrany {
-  color: var(--varovani);
+  padding: 1px 6px;
+  margin-left: -6px;
+  background: var(--zvyrazneni);
+  outline: 1px solid var(--cara-silna);
 }
 
 .pojmy dd {
@@ -1908,6 +1925,21 @@ body[data-rezim="stavba"] .uroven .legenda {
   color: var(--cara-silna);
 }
 
+/*
+ * Právě teď se přehrává zrychleně (klidný úsek): přepínač to dá najevo, protože tlačítka
+ * rychlosti dál ukazují rychlost, kterou zvolil hráč.
+ */
+body[data-cekani="3"] .legenda__prepinac[data-akce="hlucho"],
+body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"] {
+  background: var(--cara-silna);
+  color: var(--lista);
+}
+
+body[data-cekani="3"] .legenda__prepinac[data-akce="hlucho"]::after,
+body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
+  content: " ▸▸";
+}
+
 .legenda__prepinac kbd {
   padding: 0 3px;
   border: 1px solid rgb(207 227 255 / 0.5);
@@ -2653,16 +2685,18 @@ body[data-rezim="stavba"] .uroven .legenda {
 
 /*
  * Při zkoušce je na liště přehrávání tolik tlačítek, že táhlu času zbývalo při šířce 1280 px
- * kolem 80 px a značky dějů na něm splývaly. V užším okně proto táhlo dostane vlastní řádek.
+ * kolem 80 px a značky dějů na něm splývaly. V užším okně proto ustoupí nadpis rychlostí
+ * (tlačítka „¼×“ mluví sama) a mezery se zúží; táhlo má pak přes dvojnásobek. Druhý řádek
+ * lišta nedostane: plátno by při spuštění zkoušky změnilo výšku, pohled by poskočil a záběr
+ * na most, který se složí hned, by se tím zrušil.
  */
 @media (max-width: 1400px) {
   body[data-rezim="zkouska"] .uroven .osa {
-    flex-wrap: wrap;
-    row-gap: 6px;
+    column-gap: 8px;
   }
 
-  body[data-rezim="zkouska"] .uroven .osa__drah {
-    flex: 1 1 420px;
+  body[data-rezim="zkouska"] .uroven .osa > .osa__nadpis {
+    display: none;
   }
 }
 
@@ -2956,11 +2990,21 @@ body[data-rezim="stavba"] .uroven .legenda {
     padding-inline: 8px;
   }
 
-  /* Otazník osy frekvencí a pojmy v textu: dost velké na prst. */
+  /* Otazník osy frekvencí, odkazy pod zadáním, „Více o úloze“ a pojmy v textu: dost velké na prst. */
   .osa__otaznik {
-    width: 36px;
-    height: 36px;
-    font-size: 15px;
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .paleta__odkaz {
+    min-height: 44px;
+    padding-inline: 6px;
+  }
+
+  /* Výplní, ne změnou zobrazení: řádek si má nechat trojúhelník, který říká, že jde rozbalit. */
+  .okno__vice > summary {
+    padding-block: 16px;
   }
 
   .pojem {

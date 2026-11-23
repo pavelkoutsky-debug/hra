@@ -551,14 +551,15 @@ describe("nálezy nezávislých recenzí M4b", () => {
 
   it("lano vybrané kliknutím přepsat jde a napínák si přitom nechá stejnou délku", () => {
     const e = new Editor(visuta, prazdnyNavrh(visuta.id));
-    nakresli(e, "pilir", [-4, 0], [-4, 12]);
-    nakresli(e, "lano", [-4, 12], [6, 12]);
+    // Lano z opěry, ne z hlavy pilíře: na té smí být jen lano a změnu na ocel by návrh odmítl
+    // (další test).
+    nakresli(e, "lano", [0, 0], [6, 8]);
     e.zmenPredpeti(25);
     const pred = e.navrh.pruty.find((p) => p.prvek === "lano")!;
     const zkraceni = zkraceniLana("lano", 10, pred.predpeti!);
     expect(zkraceni).toBeGreaterThan(0.02);
     // Kliknutí na lano je výslovný výběr: volba prvku ho změní.
-    klikni(e, 1, 12);
+    klikni(e, 3, 4);
     expect(e.zrcadliJenVyber).toBe(true);
     expect(e.zvolPrvek("lano-nosne")).toBe(true);
     const po = e.navrh.pruty.find((p) => p.prvek === "lano-nosne")!;
@@ -567,6 +568,16 @@ describe("nálezy nezávislých recenzí M4b", () => {
     // Lano změněné na ocel napínák ztrácí.
     expect(e.zvolPrvek("ocel-lehka")).toBe(true);
     expect(e.navrh.pruty.find((p) => p.id === pred.id)!.predpeti).toBeUndefined();
+  });
+
+  it("lano z hlavy pilíře na ocel změnit nejde: na hlavě pilíře pod lany smí být jen lano", () => {
+    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    nakresli(e, "pilir", [-4, 0], [-4, 12]);
+    nakresli(e, "lano", [-4, 12], [6, 12]);
+    klikni(e, 1, 12);
+    expect(e.zvolPrvek("ocel-lehka")).toBe(false);
+    expect(e.posledniDuvod).toBe("pilir-pahyl");
+    expect(e.navrh.pruty.map((p) => p.prvek)).toEqual(["pilir", "lano"]);
   });
 
   it("u různě nastavených lan ukáže napínák oba krajní stavy", () => {

@@ -490,7 +490,7 @@ describe("nápověda", () => {
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
     await akce("napoveda-dalsi").click();
     expect(await udaj("napoveda-cena")).toBe(
-      "Stojí 427 932 Kč, takže se vejde i do medaile za rozpočet (do 430 000 Kč). Mistrovskou medaili ani zlato ve výzvách ti nezaručí.",
+      "Stojí 427 932 Kč, takže se vejde i do medaile za rozpočet (do 441 000 Kč). Mistrovskou medaili ani zlato ve výzvách ti nezaručí.",
     );
     await stranka.keyboard.press("Escape");
   });

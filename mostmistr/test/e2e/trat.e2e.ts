@@ -171,7 +171,7 @@ describe("první vlak: kolejiště", () => {
     await stranka.screenshot({ path: `${SLOZKA}/t3-vlak-na-moste.png` });
     expect(await naKonec()).toBe("MOST OBSTÁL");
     expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(4\)\.$/);
-    // Průchod a rozpočet (826 731 Kč se vejde do 835 000 Kč a nic se neporušilo); na mistrovskou je využití 68 % moc.
+    // Průchod a rozpočet (826 731 Kč se vejde do 850 000 Kč a nic se neporušilo); na mistrovskou je využití 68 % moc.
     expect(await medaile()).toEqual(["true", "true", "false"]);
     await stranka.screenshot({ path: `${SLOZKA}/t4-vysledek-prvni-vlak.png` });
   }, 240_000);

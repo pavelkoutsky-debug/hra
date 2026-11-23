@@ -36,6 +36,7 @@ const CS = {
   "vykres.hladina": "hladina {vyska}",
   "vykres.kotvaCep": "čep křídla",
   "vykres.kotvaPist": "kotva pro píst",
+  "vykres.kotvaTlumic": "kotva pro tlumič",
   "vykres.kotvaPist.melka": "mělká kotva pro píst",
   "vykres.kotvaPist.hluboka": "hluboká kotva pro píst",
   "vykres.zakazanaZona": "zakázaná zóna",
@@ -55,6 +56,12 @@ const CS = {
   "pojem.kotva.text": "Pevný bod ve svahu nebo ve zdi, o který se smí opřít prut, lano nebo píst. Jinde se pod terénem stavět nedá.",
   "pojem.rozpeti": "Rozpětí",
   "pojem.rozpeti.text": "Vzdálenost mezi podporami. Síly v mostě s ním rostou rychle: dvakrát delší pole namáhá pruty zhruba čtyřikrát víc.",
+  "pojem.prut": "Prut",
+  "pojem.prut.text": "Jeden kus konstrukce mezi dvěma styčníky: díl mostovky, trám, ocelový profil, lano. Prut nese tah nebo tlak a ve svaru i ohyb; každý prvek má svou cenu a největší délku.",
+  "pojem.stycnik": "Styčník",
+  "pojem.stycnik.text": "Místo, kde se pruty stýkají; na výkresu kroužek. Dokud ho nesvaříš, je to kloub. Most roste jen z kotev a ze styčníků, které už má.",
+  "pojem.kmitani": "Kmitání",
+  "pojem.kmitani.text": "Jak prudce se mostovka pod lidmi houpe nahoru a dolů, v m/s². Nad 2,5 m/s² se po mostě nedá jít a most neobstojí. Počítá se, jen když po mostě někdo jde pěšky.",
   "pojem.kloub": "Kloub",
   "pojem.kloub.text": "Styčník, ve kterém se pruty mohou vůči sobě volně natáčet. Kloub je každý styčník, dokud ho nesvaříš; proto z prutů drží tvar jen trojúhelník.",
   "pojem.prihrada": "Příhrada",
@@ -249,6 +256,7 @@ const CS = {
   "rada.vzper": "Byl stlačený a vybočil do strany: na ten tlak je moc dlouhý a štíhlý. Zkrať ho dalším styčníkem, dej silnější prvek, nebo udělej příhradu vyšší, ať v něm síla klesne.",
   "rada.tlak": "Byl stlačený víc, než snese. Dej silnější prvek, nebo sílu rozlož do víc prutů.",
   "rada.tah": "Byl natažený víc, než snese. Dej silnější prvek, nebo sílu rozlož do víc prutů.",
+  "rada.nedopnuto": "Lana nejsou dopnutá: mostovka visela už před zkouškou {mm} mm pod výkresem. Zkus Dopnout lana (N).",
   "rada.ohyb": "Prohnul se víc, než snese. Podepři ho uprostřed dalším styčníkem, nebo dej silnější prvek.",
   "rada.smyk": "U konce ho přestřihla příčná síla. Dej silnější prvek, nebo ho podepři blíž k zatížení.",
   "stavba.porucha.nadpis": "Tady to povolilo první",
@@ -257,6 +265,7 @@ const CS = {
   "vysledek.shrnuti.vsichni.vozidla": "Přejeli všichni ({pocet}).",
   "frekvence.slozeni": "most se složí – viz značka na výkresu",
   "vysledek.kratce.slozeni": "Složil se vlastní vahou: {duvod}.",
+  "vysledek.kratce.nedopnuto": "Lana nejsou dopnutá: zkus Dopnout lana (N).",
   "vysledek.kratce.prvni": "Jako první povolil prut {prut} (označený na výkresu): {zpusob}.",
   "vysledek.prehratPoruseni.popis": "Přehraje první porušení znovu, zpomaleně a zblízka",
   "vysledek.prehratPoruseni.kratce": "Zpomaleně",
@@ -551,14 +560,14 @@ const CS = {
   "frekvence.popis.mistrovska": "Mistrovská medaile: {podminka}.",
   "frekvence.legenda.popis": "Co značky na ose znamenají",
   "frekvence.legenda.nadpis": "Značky na ose frekvencí",
-  "frekvence.legenda": "Plná čára: rytmus kroku lidí.\nČárkovaná a tečkovaná čára: dvojnásobek a trojnásobek kroku, slabší složky téhož kroku.\nSvětlý pruh: pásmo kroků skupiny, která nejde jedním rytmem.\nPlný trojúhelník: vlastní frekvence mostu; menší jsou druhá a další.\nBledý trojúhelník: most, když na něm stojí lidé.\nKosočtverec: laděný tlumič.\nČára nad trojúhelníkem znamená rezonanci.",
+  "frekvence.legenda": "Plná čára: rytmus kroku lidí.\nČárkovaná a tečkovaná čára: dvojnásobek a trojnásobek kroku, slabší složky téhož kroku.\nSvětlý pruh: pásmo kroků skupiny, která nejde jedním rytmem.\nPlný trojúhelník: vlastní frekvence mostu; menší jsou druhá a další.\nBledý trojúhelník: most, když na něm stojí lidé.\nKosočtverec: laděný tlumič.\nJak moc most pod kterým rytmem kmitá, říká odhad vedle osy; rozhoduje zkouška.",
   "frekvence.znacka.most": "{poradi}. vlastní frekvence mostu: {f} Hz",
   "frekvence.znacka.obsazeny": "{poradi}. vlastní frekvence mostu, když na něm stojí lidé: {f} Hz",
   "frekvence.znacka.tlumic": "laděný tlumič: {f} Hz. Ladí se na rytmus, který most rozkmitá.",
   "frekvence.znacka.mimo": "1. vlastní frekvence mostu je {f} Hz, za koncem osy ({konec} Hz)",
   "frekvence.znacka.slozka": "{kdo}: {slozka} ({f} Hz), síla {sila} váhy člověka",
   "legenda.kmitani": "kmitání {zrychleni} m/s²",
-  "legenda.kmitani.prazdny": "kmitání {zrychleni} m/s² (nikdo nejde, nepočítá se)",
+  "legenda.kmitani.prazdny": "kmitání {zrychleni} m/s² (nikdo nejde pěšky, nepočítá se)",
   "legenda.kmitani.popis": "Okamžité zrychlení mostovky, podle kterého se hodnotí pohodlí chodců; počítá se, jen když po mostě někdo jde",
   "vysledek.kmitani": "Kmitání mostovky",
   "vysledek.kmitaniHodnota": "{zrychleni} m/s² · {trida} · v čase {cas}",
@@ -731,7 +740,7 @@ const CS = {
     "londýnská lávka Millennium Bridge se v červnu 2000 pod davem rozhoupala tak, že ji pár dní po otevření zavřeli. Kmitala do stran, ne nahoru a dolů, ale lék byl stejný: 37 viskózních tlumičů a k nim 52 laděných závaží. Od února 2002 je klidná.",
   "ukazka.zrychleni": "Děj je {nasobek}× zrychlený.",
   "ukazka.3-01.a": "Metr vysoká příhrada",
-  "ukazka.3-01.b": "Tři metry vysoká příhrada",
+  "ukazka.3-01.b": "Čtyři metry vysoká příhrada",
   "ukazka.3-01.popis": "Mostovka váží sto tun, autobus osmnáct. Čím je příhrada nižší, tím větší síly má v pásech. Metr vysoká neunese ani mostovku a zlomí se dřív, než na most kdo vjede.",
   "ukazka.3-02.a": "Horní pás z lehkého profilu",
   "ukazka.3-02.b": "Horní pás z těžkého profilu",
@@ -772,7 +781,7 @@ const CS = {
   "skutecnost.4-04":
     "největší rozpětí na světě mají visuté mosty. Rekord drží most 1915 Çanakkale přes Dardanely, otevřený v březnu 2022: mezi pylony měří 2 023 metrů. Předtím ho čtyřiadvacet let držel japonský Akaši Kaikjó s 1 991 metry. Závěsy visutých mostů se vyrábějí každý na jinou délku, přesně podle oblouku, do kterého se nosné lano prověsí.",
   "ukazka.5-01.a": "Dva metry vysoká příhrada",
-  "ukazka.5-01.b": "Tři metry vysoká příhrada",
+  "ukazka.5-01.b": "Čtyři metry vysoká příhrada",
   "ukazka.5-01.popis": "Oba mosty jsou prázdné mimo rytmus chůze. Sto dvacet lidí ale váží skoro deset tun a v kolenou pruží: nižší most s nimi zpomalí a sjede přímo do pásma kroků, vyšší a tužší zůstane nad ním.",
   "ukazka.5-02.a": "Bez tlumiče",
   "ukazka.5-02.b": "S laděným tlumičem",
@@ -818,7 +827,7 @@ const CS = {
   "skutecnost.6-01":
     "nejstarší železniční most v Praze je Negrelliho viadukt. První pravidelný vlak po něm přejel 1. června 1850. Měří přes 1 100 metrů a až do roku 1910 byl nejdelším mostem v Evropě. Je kamenný a po opravě z let 2017 až 2020 po něm vlaky jezdí dál.",
   "skutecnost.6-02":
-    "mosty pro rychlé vlaky se navrhují hlavně na tuhost. Evropská norma omezuje jejich průhyb tak, aby svislé zrychlení ve voze nepřekročilo asi 1 m/s²; tomu říká velmi dobré pohodlí. Mistrovská medaile tu chce jízdu třikrát klidnější. Mostovka se štěrkovým ložem navíc nesmí kmitat se zrychlením nad 3,5 m/s², jinak se štěrk pod pražci začne rozpadat.",
+    "mosty pro rychlé vlaky se navrhují hlavně na tuhost. Evropská norma omezuje jejich průhyb tak, aby svislé zrychlení ve voze nepřekročilo asi 1 m/s²; tomu říká velmi dobré pohodlí. Mistrovská medaile tu chce jízdu dvakrát klidnější. Mostovka se štěrkovým ložem navíc nesmí kmitat se zrychlením nad 3,5 m/s², jinak se štěrk pod pražci začne rozpadat.",
   "skutecnost.6-03":
     "most přes záliv Firth of Forth ve Skotsku otevřeli 4. března 1890. Měří dva a půl kilometru a jeho dvě hlavní pole mají každé přes 500 metrů. Navrhli ho po zřícení mostu přes řeku Tay v roce 1879 a úřady žádaly, aby byl tuhý a unesl nejtěžší nákladní vlaky. Proto je tak mohutný; vlaky po něm jezdí dodnes.",
   "skutecnost.6-04":
@@ -864,6 +873,7 @@ const CS = {
   "prvek.pist": "Hydraulický píst",
 
   // Proč něco nejde nakreslit nebo zkoušet
+  "stavba.zPrazdna": "Most roste jen z kotev a ze styčníků, které už má: prut začni tažením z některého z nich. Tahem z volného místa se vybírá.",
   "duvod.jina-uroven": "Tento most patří k jiné úrovni.",
   "duvod.stycnik-mimo-vyrez": "Mimo výkres se stavět nedá.",
   "duvod.stycnik-v-zakazane-zone": "Zakázanou zónou most vést nesmí.",
@@ -879,6 +889,8 @@ const CS = {
   "duvod.pilir-mimo-zaklad": "Pilíř musí stát na základu vyznačeném ve výkresu, nebo na jiném pilíři.",
   "duvod.pilir-sikmy": "Pilíř je sloup: smí se naklonit nejvýš o polovinu své výšky, položit nejde.",
   "duvod.zaklad-jen-pilir": "Na základ patří jen pilíř. Vzpěry, lana i mostovku veď z pilíře nebo z opěr.",
+  "duvod.kotva-jen-tlumic": "Tahle kotva je připravená jen pro tlumič: vzpěra ani jiný prut se o ni neopře.",
+  "duvod.pilir-pahyl": "Na hlavě pilíře pod mostovkou smí být jen lano. Dotáhni pilíř až k mostovce; vzpěru veď z jeho dříku.",
   "duvod.stycnik-v-terenu": "Pod povrchem terénu se staví jen z kotev.",
   "duvod.zavazi-nepovolene": "Tolik závaží do jednoho styčníku tato úroveň nedovoluje.",
   "duvod.ladeny-tlumic-nepovoleny": "Tak těžký laděný tlumič tato úroveň nedovoluje.",
@@ -932,7 +944,7 @@ const CS = {
   "medaile.pruchod.podminka": "všichni přejdou, nikdo nespadne",
   "medaile.pruchod.podminkaSKmitanim": "všichni přejdou a most se pod nimi nerozkmitá nad {limit} m/s²",
   "medaile.mistrovska.komfort": "rozpočtová medaile a k ní kmitání mostovky nejvýš {limit} m/s²",
-  "medaile.rozpocet.podminka": "průchod s mostem do {castka}, na kterém se nic neporušilo",
+  "medaile.rozpocet.podminka": "průchod s mostem do {castka}, na kterém nic nepovolilo ani se trvale neohnulo",
   "medaile.mistrovska.rezerva": "rozpočtová medaile a k ní žádný prut využitý nad {limit}",
   "medaile.mistrovska.cestujici": "rozpočtová medaile a k ní zrychlení v autobusu nejvýš {limit} m/s²",
   "medaile.mistrovska.cestujiciVlaku": "rozpočtová medaile a k ní zrychlení v osobním voze nejvýš {limit} m/s²",
@@ -942,7 +954,7 @@ const CS = {
   "medaile.ziskana": "získaná",
   "medaile.chybi": "zatím ne",
   "vyzvy.nadpis": "Výzvy o efektivitu",
-  "vyzvy.uvod": "Kdo chce most vyladit: tři měřítka se stupni bronz, stříbro a zlato. Počítají se mostu, který zkouškou projde a nic se na něm neporuší; stupně ukáže výsledek.",
+  "vyzvy.uvod": "Kdo chce most vyladit: tři měřítka se stupni bronz, stříbro a zlato. Počítají se mostu, který zkouškou projde a nic na něm nepovolí ani se trvale neohne; stupně ukáže výsledek.",
   "vyzva.cena": "Nejlevnější most",
   "vyzva.hmotnost": "Nejlehčí most",
   "vyzva.zlom": "Únosnost na korunu",
@@ -955,7 +967,7 @@ const CS = {
   "vyzva.zlom.zastaralo": "starý rekord se měřil starší verzí výpočtu: pusť Do zlomu znovu",
   "vyzva.zlom.hodnota": "{tun} t na 100 000 Kč",
   "vyzva.rekord": "rekord {rekord} (tenhle most {tento})",
-  "vyzva.poruseny": "tenhle most se nepočítá: něco se na něm porušilo",
+  "vyzva.poruseny": "tenhle most se nepočítá: něco na něm povolilo nebo se trvale ohnulo",
   "vyzva.dalsi.do": "{stupen} do {prah}",
   "vyzva.dalsi.od": "{stupen} od {prah}",
   "vyzva.lepsiNezAutor": "o {podil} lepší než most autora hry",
@@ -976,6 +988,8 @@ const CS = {
   "vysledek.shrnuti.rozpad": "Simulace se numericky rozpadla a výsledek neplatí. Pošli mi prosím diagnostiku.",
   "vysledek.nedopnuto":
     "Lana nejsou dopnutá: mostovka už před zkouškou visela {mm} mm pod výkresem. Zkus Dopnout lana (N).",
+  "vysledek.trvaleOhnuty": "Prut {prut} byl využitý na {vyuziti}: ocel se tam trvale přetvořila. Most prošel, ale rozpočtovou medaili nedostane a do výzev se nepočítá.",
+  "vysledek.opreno": "Most nemá vlastní oporu: propadl se a zůstal ležet na terénu. O zem se most opírat nesmí; podepři ho z kotev a podpor tak, aby držel tvar sám.",
   "vysledek.bezRovnovahy":
     "Most neunesl ani vlastní váhu: povolil hned, dřív než na něj kdokoli vjel.",
   "vysledek.cena": "Cena",
@@ -1009,7 +1023,7 @@ const CS = {
     "Most se pod zátěží trvale přetvářel, ale nepovolil. Zkouška skončila dřív, než naložila všechno, co umí; unesl nejméně {tun} ({naMetr} na metr mostovky).",
   "vysledek.zlom.nic": "Most nemá klidovou polohu: neunesl ani sám sebe.",
   "vysledek.zlom.naKorunu": "Při ceně {cena} je to {hodnota}.",
-  "vysledek.zlom.nepocitaSe": "Do výzvy o únosnost se to zatím nepočítá: tenhle most ještě neprošel běžnou zkouškou. Pusť ji mezerníkem a pak zkoušku do zlomu zopakuj.",
+  "vysledek.zlom.nepocitaSe": "Do výzvy o únosnost se to zatím nepočítá: tenhle most ještě neprošel běžnou zkouškou, aniž se na něm něco porušilo. Pusť ji mezerníkem a pak zkoušku do zlomu zopakuj.",
   "zlom.chybiMostovka": "Zkouška do zlomu zatěžuje mostovku a na trase mezi {od} a {do} m žádná neleží. Dostav most od břehu k břehu.",
   "obalka.pist": "Prut {prut} (píst): největší síla {sila} z {nejvic} ({smer}) v čase {cas}",
   "obalka.pist.tlak": "tlačil",
@@ -1182,6 +1196,8 @@ const CS = {
   "zadani.0-01":
     "Pískoviště: žádný rozpočet, žádné medaile, všechny prvky. Postav most přes údolí a pusť na něj provoz; tlačítkem „Údolí a provoz“ nahoře v paletě si nastavíš, jak je údolí široké a hluboké, jestli přes něj vede lávka, silnice nebo trať, kolik je na dně základů pro pilíře a kdo přes most půjde nebo pojede. Zkouškou do zlomu zjistíš, kolik most unese; na lávce a na silnici najdeš budičem, kde rezonuje.",
   "prehled.bezPameti": "Prohlížeč nedovolil ukládat data, takže si hra postup nezapamatuje.",
+  "prehled.novaPravidla":
+    "Hra má nová pravidla medailí a přeladěné úrovně. Medaile ti zůstaly, mistrovská jen tam, kde máš i rozpočtovou (nově je to rozpočtová a k ní bonus úrovně). Rekordy výzev se měří znovu, protože úrovně jsou jiné.",
   "prehled.poskozeno": "Uložený postup se nepodařilo přečíst. Hra začala znovu; původní data zůstala v paměti prohlížeče pod klíčem mostmistr.ulozeni.poskozene.",
   "prehled.neznamaUroven": "Úroveň {uroven} neexistuje.",
 
@@ -1193,17 +1209,17 @@ const CS = {
   "zadani.1-01.vice":
     "Trojúhelník je jediný tvar z prutů, který drží bez tuhých spojů. Čím je plošší, tím víc jsou jeho pruty namáhané; tažený prut vydrží víc než stejně dlouhý tlačený.",
   "zadani.1-02":
-    "Dvanáct metrů cyklostezky v neděli odpoledne: šedesát chodců v obou směrech a mezi nimi pět cyklistů. Ve svazích pod mostem jsou dvě kotvy navíc: opři o ně vzpěry.",
+    "Dvanáct metrů cyklostezky v neděli odpoledne: přes šedesát chodců v obou směrech a mezi nimi pět cyklistů. Ve svazích pod mostem jsou dvě kotvy navíc: opři o ně vzpěry.",
   "zadani.1-02.vice":
     "Vzpěra z kotvy je kratší a levnější než příhrada nad mostovkou. Záleží i na tom, kam vede: krátká vzpěra unese víc než dlouhá.",
   "zadani.1-03":
-    "Šestnáct metrů: nejdřív chodec a cyklista, potom první auto, tuna a půl, a nakonec dodávka, tři a půl tuny. Lehké trámy už na všechno nestačí; pod mostovkou se stavět nesmí.",
+    "Šestnáct metrů: nejdřív chodec a cyklista, potom první auto, tuna a půl, a nakonec dodávka, tři a půl tuny. Dlouhý tlačený trám se pod ní vzepře; pod mostovkou se stavět nesmí.",
   "zadani.1-03.vice":
-    "Jarní voda sahá až pod mostovku, proto se staví jen nad ní. Dlouhý tlačený trám pod dodávkou vybočí: vyšší příhrada má menší síly v pásech, těžký trám unese víc, ale stojí víc než dvojnásobek.",
+    "Koryto pod mostem bere při jarní vodě všechno, co mu stojí v cestě, proto se staví jen nad mostovkou. Dlouhý tlačený trám pod dodávkou vybočí do strany; tomu se říká vzpěr. Pomůže ho zkrátit (styčníky blíž u sebe), postavit příhradu vyšší, aby měla v pásech menší síly, nebo vzít těžký trám: unese víc, ale stojí víc než dvojnásobek.",
   "zadani.1-04":
     "Dvacet čtyři metrů bez jediné podpory uprostřed: dvě auta za sebou, proti nim dodávka a dva cyklisté. Kotvy ve svazích leží šest metrů pod mostovkou: opři o ně vzpěradla.",
   "zadani.1-04.vice":
-    "Nebo postav příhradu přes celé údolí. Šestimetrový sloup nad kotvou je dlouhý a tlačený; pod dodávkou je na hraně. Pomůže mu těžký trám, nebo rozpěra v půli výšky, která ho zkrátí.",
+    "Jde to i příhradou přes celé údolí, jen vyjde dráž. Šestimetrový sloup nad kotvou je dlouhý a tlačený; pod dodávkou je na hraně. Pomůže mu těžký trám, nebo rozpěra v půli výšky, která ho zkrátí.",
   "zadani.2-01":
     "První ocelová lávka: čtyřiadvacet metrů pro chodce a jednoho běžce. Postav ji z ocelového profilu a všímej si nové osy frekvencí dole.",
   "zadani.2-01.vice":
@@ -1227,7 +1243,7 @@ const CS = {
   "zadani.3-03":
     "Třicet metrů přes hlubokou rokli, autobusy v obou směrech a dvě auta. Pod mostem je tentokrát místa dost: zkus příhradu postavit pod mostovku.",
   "zadani.3-03.vice":
-    "Tlak pak nese betonová mostovka, která ho umí, a ocel dole jen táhne. Vozovka je nová a hladká, takže cestující v autobusu ucítí jen to, jak se most pod nimi prohýbá. Mistrovská medaile chce jízdu skoro bez houpání; na to musí být most tuhý.",
+    "Příhrada pod mostovkou nechá tlak betonové mostovce, která ho umí, a ocel dole jen táhne. Vozovka je nová a hladká, takže cestující v autobusu ucítí jen to, jak se most pod nimi prohýbá. Mistrovská medaile chce jízdu skoro bez houpání; na to musí být most tuhý.",
   "zadani.3-04":
     "Osmačtyřicet metrů ve dvou polích; kolona čtyř nákladních aut na mostě zabrzdí a proti ní jede autobus. Brzdná síla, přes padesát tun, musí z mostu do skály uprostřed údolí.",
   "zadani.3-04.vice":
@@ -1237,13 +1253,13 @@ const CS = {
   "zadani.4-01.vice":
     "Síly v příhradě rostou s druhou mocninou rozpětí a tak velká by se do rozpočtu nevešla. Betonové pilíře rozdělí most na tři pole po osmnácti metrech a každé unese lehká příhrada. Pilíř smí stát jen na základu nebo na jiném pilíři. Výborně snáší tlak, špatně ohyb.",
   "zadani.4-02":
-    "Osmačtyřicet metrů, tři základy a nad vozovkou se stavět nesmí; pojede kolona tří nákladních aut, autobus a tahač s návěsem. Mostovka položená na pilíře se v kloubech prolomí: nově ji můžeš svařit.",
+    "Osmačtyřicet metrů a tři základy; nad vozovkou se stavět nesmí a pod ní smějí stát jen pilíře. Mostovka položená na pilíře se pod kolonou nákladních aut v kloubech prolomí: nově ji můžeš svařit.",
   "zadani.4-02.vice":
     "Klikni v paletě na Svar a potom na styčník. Svařený styčník se neohne, pruty v něm přenášejí ohyb a z mostovky se stane spojitý nosník, který příhradu nepotřebuje. Přetížená ocel ve svaru nepraskne hned, ale trvale se ohne; při zkoušce takové místo označí prstenec, plastický kloub.",
   "zadani.4-03":
     "Šedesát metrů a jediný základ, blíž k levému břehu; pojede kolona čtyř nákladních aut, autobus a tahač s návěsem. Postav na základ pylon, z jeho hlavy natáhni lana do styčníků mostovky a dopni je (N).",
   "zadani.4-03.vice":
-    "Tak vypadá zavěšený most. Lano umí jen táhnout a smí měřit až šedesát metrů. Delší pole táhne hlavu pylonu k sobě a drží ji jen kotevní lano do levé opěry: nedotažené se nejdřív protáhne, pylon se mezitím ohne a pod kolonou zlomí. Tlačítko Dopnout lana (N) nastaví napínáky tak, aby mostovka pod vlastní tíhou zůstala rovná; jednotlivá lana doladíš položkou Napínák lana. Na ose frekvencí uvidíš, že povolená lana visí a most je měkký, kdežto dotažená ho ztuží.",
+    "Pylon s lany do mostovky je zavěšený most. Lano umí jen táhnout a smí měřit až šedesát metrů. Delší pole táhne hlavu pylonu k sobě a drží ji jen kotevní lano do levé opěry: nedotažené se nejdřív protáhne, pylon se mezitím ohne a pod kolonou zlomí. Tlačítko Dopnout lana (N) nastaví napínáky tak, aby mostovka pod vlastní tíhou zůstala rovná; jednotlivá lana doladíš položkou Napínák lana.",
   "zadani.4-04":
     "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano a z něj závěsy k mostovce.",
   "zadani.4-04.vice":

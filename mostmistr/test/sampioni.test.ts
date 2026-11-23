@@ -7,21 +7,24 @@
 // MM_CAST=1/4 až 4/4 zpracuje každou čtvrtou úroveň a zapíše `urovne/sampioni.cast-N.json`,
 // MM_ZAPIS_SAMPIONU=sloz pak části vloží do `urovne/sampioni.json` a smaže je. MM_UROVNE=3-,4-03
 // omezí hledání na úrovně, jejichž id tak začíná (po změně jedné kapitoly netřeba hledat všude);
-// ostatní úrovně v souboru zůstanou, jak byly.
+// ostatní úrovně v souboru zůstanou, jak byly. Každý šampion nese otisk mostu, ze kterého
+// vznikl: po změně referenčního mostu se jeho úpravy nepoužijí (zlato je pak most autora)
+// a test řekne, že je čas hledat znovu. MM_ZAPIS_SAMPIONU=otisky otisky jen přepíše, a to
+// šampionům, kteří s dnešním referenčním mostem stále obstojí.
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { VERZE_FYZIKY } from "../src/jadro/verze";
 import { Zkouska } from "../src/zkouska/zkouska";
-import { hodnotaMostu, pouzijUpravy, svarMostovky, zestihli, type Meritko, type Uprava } from "../urovne/hubnuti";
+import { hodnotaMostu, otiskMostu, pouzijUpravy, svarMostovky, zestihli, type Meritko, type Uprava } from "../urovne/hubnuti";
 import { nactiKampan, nasadaUrovne } from "../urovne/index";
 import { RESENI } from "../urovne/reseni";
-import { KLICE_RESENI, MERITKA_SAMPIONU, sampionUrovne, ULOZENI_SAMPIONI, type UlozenySampion } from "../urovne/vyzvy";
+import { MERITKA_SAMPIONU, sampionUrovne, ULOZENI_SAMPIONI, vychoziMost, vychoziMosty, type UlozenySampion } from "../urovne/vyzvy";
 
 const kampan = nactiKampan();
 
-/** Projde most zkouškou úrovně, aniž by se na něm cokoli porušilo? Jen takový most se do výzev počítá. */
+/** Projde most zkouškou úrovně, aniž by se na něm cokoli porušilo nebo trvale ohnulo, a stojí sám? */
 function obstoji(uroven: Uroven, navrh: NavrhMostu): boolean {
   if (zkontrolujNavrh(navrh, uroven).length > 0) return false;
   let zkouska: Zkouska;
@@ -38,7 +41,10 @@ function obstoji(uroven: Uroven, navrh: NavrhMostu): boolean {
     if (pojistka++ > 400) throw new Error("zkouška neskončila");
   }
   const vysledek = zkouska.vysledek();
-  return vysledek.pruchod && vysledek.poruseni === 0;
+  // Šampion je most, který by hra hráči pochválila: stojí sám (má klidovou polohu, nevisí na něm
+  // volný prut) a nic se na něm neporušilo ani trvale neohnulo. První šampioni M12 takoví nebyli
+  // všichni: čtyři neměli klidovou polohu a čtyři měli plastické klouby (kontrola obtížnosti).
+  return vysledek.pruchod && vysledek.neporuseny && !vysledek.bezRovnovahy;
 }
 
 const soubor = (cast?: number): URL => new URL(cast ? `../urovne/sampioni.cast-${cast}.json` : "../urovne/sampioni.json", import.meta.url);
@@ -49,7 +55,7 @@ function zapis(kam: URL, urovne: Record<string, Record<Meritko, UlozenySampion>>
     const meritka = MERITKA_SAMPIONU.map((m) => {
       const s = sampioni[m];
       const upravy = s.upravy.map((u) => `          ${JSON.stringify(u)}`).join(",\n");
-      return `      ${JSON.stringify(m)}: {\n        "z": ${JSON.stringify(s.z)},\n        "upravy": [${upravy ? `\n${upravy}\n        ` : ""}]\n      }`;
+      return `      ${JSON.stringify(m)}: {\n        "z": ${JSON.stringify(s.z)},\n        "otisk": ${JSON.stringify(s.otisk)},\n        "upravy": [${upravy ? `\n${upravy}\n        ` : ""}]\n      }`;
     });
     return `    ${JSON.stringify(id)}: {\n${meritka.join(",\n")}\n    }`;
   });
@@ -57,19 +63,18 @@ function zapis(kam: URL, urovne: Record<string, Record<Meritko, UlozenySampion>>
 }
 
 /**
- * Najde šampiona úrovně v měřítku: zeštíhlí každý referenční most, na kterém se nic neporuší,
- * jednou tak, jak je, a jednou se svařenou mostovkou (kde úroveň svary dovoluje), a vezme
- * nejlepší výsledek.
+ * Najde šampiona úrovně v měřítku: zeštíhlí každý most autora, na kterém se nic neporuší
+ * (mosty pro medaile i další mosty pro výzvy), jednou tak, jak je, a jednou se svařenou
+ * mostovkou (kde úroveň svary dovoluje), a vezme nejlepší výsledek.
  */
 function najdi(uroven: Uroven, meritko: Meritko): UlozenySampion {
-  const reseni = RESENI[uroven.id]!;
   let nejlepsi: (UlozenySampion & { hodnota: number }) | null = null;
-  for (const z of KLICE_RESENI) {
+  for (const { z, navrh: most } of vychoziMosty(uroven.id)) {
     const zacatky: Uprava[][] = [[]];
-    const svary = svarMostovky(reseni[z]);
+    const svary = svarMostovky(most);
     if (uroven.povoleneSvary && svary.length > 0) zacatky.push(svary);
     for (const uvod of zacatky) {
-      const vychozi = pouzijUpravy(reseni[z], uvod);
+      const vychozi = pouzijUpravy(most, uvod);
       if (!obstoji(uroven, vychozi)) continue;
       const { upravy, navrh } = zestihli(
         uroven,
@@ -79,11 +84,11 @@ function najdi(uroven: Uroven, meritko: Meritko): UlozenySampion {
         (zkus) => zkontrolujNavrh(zkus, uroven).length === 0,
       );
       const hodnota = hodnotaMostu(navrh, uroven, meritko);
-      if (!nejlepsi || hodnota < nejlepsi.hodnota - 1e-9) nejlepsi = { z, upravy: [...uvod, ...upravy], hodnota };
+      if (!nejlepsi || hodnota < nejlepsi.hodnota - 1e-9) nejlepsi = { z, otisk: otiskMostu(most), upravy: [...uvod, ...upravy], hodnota };
     }
   }
   if (!nejlepsi) throw new Error(`${uroven.id}: žádný referenční most neprojde bez porušení`);
-  return { z: nejlepsi.z, upravy: nejlepsi.upravy };
+  return { z: nejlepsi.z, otisk: nejlepsi.otisk, upravy: nejlepsi.upravy };
 }
 
 describe("šampioni výzev", () => {
@@ -107,6 +112,26 @@ describe("šampioni výzev", () => {
         expect(casti.length, "žádná část k vložení").toBeGreaterThan(0);
         zapis(soubor(), sNovymi(nove));
         for (const cast of casti) rmSync(cast);
+        return;
+      }
+      if (rezim === "otisky") {
+        // Referenční most se změnil jen zápisem (jiné pořadí prutů, komentář v kódu): úpravy
+        // sedí dál, jen otisk ne. Znovu ho zapíše, ale jen šampionům, kteří stále obstojí.
+        const nove: Record<string, Record<Meritko, UlozenySampion>> = {};
+        for (const uroven of kampan) {
+          const ulozeny = ULOZENI_SAMPIONI.urovne[uroven.id];
+          if (!ulozeny) continue;
+          const zaznam = {} as Record<Meritko, UlozenySampion>;
+          for (const meritko of MERITKA_SAMPIONU) {
+            const vychozi = vychoziMost(uroven.id, ulozeny[meritko].z)!;
+            const sampion = pouzijUpravy(vychozi, ulozeny[meritko].upravy);
+            expect(obstoji(uroven, sampion), `${uroven.id} ${meritko}: šampion neobstojí, pusť npm run sampioni`).toBe(true);
+            expect(hodnotaMostu(sampion, uroven, meritko)).toBeLessThanOrEqual(hodnotaMostu(vychozi, uroven, meritko));
+            zaznam[meritko] = { ...ulozeny[meritko], otisk: otiskMostu(vychozi) };
+          }
+          nove[uroven.id] = zaznam;
+        }
+        zapis(soubor(), nove);
         return;
       }
       if (rezim === "1") {
@@ -133,8 +158,15 @@ describe("šampioni výzev", () => {
           const sampion = sampionUrovne(uroven.id, meritko);
           expect(sampion, rada).not.toBeNull();
           expect(obstoji(uroven, sampion!), rada).toBe(true);
-          const vychozi = RESENI[uroven.id]![ulozeny.z];
+          const vychozi = vychoziMost(uroven.id, ulozeny.z)!;
           expect(hodnotaMostu(sampion!, uroven, meritko), rada).toBeLessThanOrEqual(hodnotaMostu(vychozi, uroven, meritko));
+        }
+        // Další mosty pro výzvy mají důvod: obstojí a jsou levnější nebo lehčí než mosty pro medaile.
+        const proMedaile = [RESENI[uroven.id]!.pruchod, RESENI[uroven.id]!.rozpocet, RESENI[uroven.id]!.mistrovska];
+        for (const dalsi of RESENI[uroven.id]!.vyzvy ?? []) {
+          expect(obstoji(uroven, dalsi.navrh), `${uroven.id} „${dalsi.nazev}“ neobstojí`).toBe(true);
+          const lepsi = MERITKA_SAMPIONU.some((m) => proMedaile.every((most) => hodnotaMostu(dalsi.navrh, uroven, m) < hodnotaMostu(most, uroven, m)));
+          expect(lepsi, `${uroven.id} „${dalsi.nazev}“ není levnější ani lehčí než mosty pro medaile`).toBe(true);
         }
       }
     },
@@ -156,6 +188,19 @@ describe("zeštíhlení mostu", () => {
     for (const s of bez.stycniky) expect(bez.pruty.some((p) => p.a === s.id || p.b === s.id)).toBe(true);
     expect(() => pouzijUpravy(most, [{ prut: 9999, pryc: true }])).toThrow(/prut 9999/);
     expect(() => pouzijUpravy(most, [{ stycnik: 9999, zavazi: 0 }])).toThrow(/styčník 9999/);
+  });
+
+  it("otisk mostu se změní s každou změnou prutu nebo styčníku a šampion z jiného mostu se nepoužije", () => {
+    const jiny = { ...most, pruty: most.pruty.map((p, i) => (i === 0 ? { ...p, prvek: "drevo-lehke" as const } : p)) };
+    const posunuty = { ...most, stycniky: most.stycniky.map((s, i) => (i === most.stycniky.length - 1 ? { ...s, y: s.y + 1 } : s)) };
+    expect(otiskMostu(most)).toMatch(/^[0-9a-f]{8}$/);
+    expect(otiskMostu({ ...most })).toBe(otiskMostu(most));
+    expect(otiskMostu(jiny)).not.toBe(otiskMostu(most));
+    expect(otiskMostu(posunuty)).not.toBe(otiskMostu(most));
+    // Všichni uložení šampioni nesou otisk svého dnešního referenčního mostu.
+    for (const [id, zaznam] of Object.entries(ULOZENI_SAMPIONI.urovne)) {
+      for (const meritko of MERITKA_SAMPIONU) expect(zaznam[meritko].otisk, `${id} ${meritko}`).toBe(otiskMostu(vychoziMost(id, zaznam[meritko].z)!));
+    }
   });
 
   it("ubírá, jen dokud most obstojí, a stejný vstup dá stejný výsledek", () => {

@@ -15,6 +15,13 @@ export interface ReseniUrovne {
   mistrovska: NavrhMostu;
   /** Mosty, které zkouškou projít nesmějí. */
   pady: { nazev: string; navrh: NavrhMostu }[];
+  /**
+   * Další mosty, které zkouškou projdou a nic se na nich neporuší, a přitom jsou levnější nebo
+   * lehčí než mosty pro medaile (většinu našli recenzenti). Ve výzvách o cenu a o hmotnost se
+   * počítají mezi mosty autora a hledání šampionů z nich vychází stejně jako z mostů pro
+   * medaile (`urovne/vyzvy.ts`): zlato výzvy tak není volnější než most, o kterém se ví.
+   */
+  vyzvy?: { nazev: string; navrh: NavrhMostu }[];
 }
 
 const L: IdPrvku = "drevo-lehke";
@@ -165,6 +172,34 @@ function vzperadla(k: Kreslic, hloubka: number, sloup: IdPrvku, rozpera = false)
     k.prut(L, [vnitrni, -hloubka], [12, 0]);
     k.prut(L, [kotva, 0], [vnitrni, -hloubka]);
   }
+}
+
+/**
+ * Lomené vzpěry z kotev hlubokého údolí (úroveň 1-04) z lehkého trámu: z kotvy přes uzel
+ * o dva metry dál a tři metry pod mostovkou do sousedního styčníku mostovky, od sloupu k uzlu
+ * šikmina a pod prostředním polem věšadlo hluboké `vesadlo` metrů. S `rozpera` je sloup nad
+ * kotvou rozdělený v půli výšky a opřený rozpěrou o uzel vzpěry.
+ */
+function lomeneVzpery(k: Kreslic, rozpera: boolean, vesadlo: number): void {
+  for (const [kotva, smer] of [
+    [4, 1],
+    [20, -1],
+  ] as const) {
+    const uzel: [number, number] = [kotva + 2 * smer, -3];
+    if (rozpera) {
+      k.prut(L, [kotva, -6], [kotva, -3]);
+      k.prut(L, [kotva, -3], [kotva, 0]);
+      k.prut(L, [kotva, -3], uzel);
+    } else {
+      k.prut(L, [kotva, -6], [kotva, 0]);
+    }
+    k.prut(L, [kotva, -6], uzel);
+    k.prut(L, uzel, [kotva + 4 * smer, 0]);
+    k.prut(L, [kotva, 0], uzel);
+  }
+  k.prut(L, [8, 0], [12, -vesadlo]);
+  k.prut(L, [12, -vesadlo], [16, 0]);
+  k.prut(L, [12, 0], [12, -vesadlo]);
 }
 
 const TO: IdPrvku = "ocel-tezka";
@@ -759,8 +794,6 @@ export const MOSTY_UKAZEK = {
   }),
   /** Lehké příhrady pod mostovkou na pilířích. */
   "4-01": triPole(3, O, O),
-  /** Nízká lávka s tlumičem naladěným na takt kapely. */
-  "5-03": lavka("5-03", 36, 4, rovne(36, 4, 1), tlumice([16], 1200, 2)),
   /** Viadukt s těžkými vzpěrami z půlky pilířů do kolejiště z obou stran. */
   "6-03": viadukt(3, true, vzperyPiliru(TO)),
 } as const satisfies Record<string, NavrhMostu>;
@@ -885,27 +918,46 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
         }),
       },
     ],
+    vyzvy: [
+      // Most recenzenta M12: mostovka po dvou metrech a nad ní metr vysoká trojúhelníková
+      // příhrada jen z lehkého trámu. Krátké pruty se nevzepřou (78 %), a tak je o desetinu
+      // levnější než mosty s těžkým trámem; mistrovskou medaili ale nedá.
+      {
+        nazev: "hustá nízká příhrada jen z lehkého trámu",
+        navrh: navrh("1-03", (k) => {
+          mostovka(k, 16, 2);
+          for (let x = 0; x < 16; x += 2) {
+            k.prut(L, [x, 0], [x + 1, 1]);
+            k.prut(L, [x + 1, 1], [x + 2, 0]);
+          }
+          for (let x = 1; x < 15; x += 2) k.prut(L, [x, 1], [x + 2, 1]);
+        }),
+      },
+    ],
   },
 
-  // Hluboké údolí, 24 m: dvě auta, proti nim dodávka a dva cyklisté. Vzpěradla z kotev ve
+  // Hluboké údolí, 24 m: dvě auta, proti nim dodávka a dva cyklisté. Vzpěry z kotev ve
   // svazích zkrátí rozpětí na třetinu; šestimetrový lehký sloup nad kotvou je pod dodávkou na
-  // hraně vzpěru (84 až 92 %), takže rozhoduje, čím se zkrátí nebo zesílí.
+  // hraně vzpěru, takže rozhoduje, čím se zkrátí nebo zesílí. Mosty pro medaile jsou z rodiny,
+  // kterou při hraní M12 postavil recenzent napoprvé a byla levnější i bezpečnější než všechny
+  // dosavadní mosty autora: krátká lomená vzpěra do sousedního styčníku mostovky a nízké
+  // věšadlo pod prostředním polem (docs/STAV.md, „Nezávislé recenze M12“).
   "1-04": {
-    // Vzpěradla z lehkého trámu, jen šestimetrové sloupy nad kotvami jsou těžké.
+    // Vzpěradla s uzlem tři metry pod mostovkou, lehké sloupy rozdělené rozpěrou: projde, ale
+    // do inženýrského rozpočtu se nevejde.
     pruchod: navrh("1-04", (k) => {
-      mostovka(k, 24, 4);
-      vzperadla(k, 3, T);
-    }),
-    // Lehké sloupy rozdělené v půli a opřené rozpěrou: levnější než těžký trám.
-    rozpocet: navrh("1-04", (k) => {
       mostovka(k, 24, 4);
       vzperadla(k, 3, L, true);
     }),
-    // Totéž s uzlem vzpěradla o metr níž: dolní vzpěra z kotvy je kratší (4,5 m místo 5 m),
-    // nese menší sílu a vzpírá se později.
+    // Lomené vzpěry a šestimetrové sloupy vcelku: levné, sloup je na 68 %.
+    rozpocet: navrh("1-04", (k) => {
+      mostovka(k, 24, 4);
+      lomeneVzpery(k, false, 2);
+    }),
+    // Sloupy rozdělené rozpěrou v půli výšky a věšadlo jen metr hluboké: 48 %.
     mistrovska: navrh("1-04", (k) => {
       mostovka(k, 24, 4);
-      vzperadla(k, 4, L, true);
+      lomeneVzpery(k, true, 1);
     }),
     pady: [
       { nazev: "jen mostovka", navrh: navrh("1-04", (k) => mostovka(k, 24, 4)) },
@@ -1365,6 +1417,11 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
         nazev: "píst sedm metrů od čepu s malým zdvihem: křídlo se nezvedne dost",
         navrh: dvoukridlySUzly("7-04", 32, [3, 7, 12], { hloubka: 3, kam: 7, zdvih: 1.5 }),
       },
+    ],
+    vyzvy: [
+      // Most recenzenta M12: křídlo rozkreslené na tři dílce místo čtyř ušetří dva svary.
+      // Mistrovskou medaili nedá (delší pole se víc ohýbá), jen nejnižší cenu.
+      { nazev: "křídla ze tří dílců", navrh: dvoukridlySUzly("7-04", 32, [4, 10], { hloubka: 6, kam: 4, zdvih: 2.25 }) },
     ],
   },
 };

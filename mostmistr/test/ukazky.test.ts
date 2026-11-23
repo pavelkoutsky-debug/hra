@@ -95,6 +95,15 @@ describe("ukázky k úrovním", () => {
         }
       });
 
+      it("pravý most v úrovni samotné mistrovskou medaili nezíská: nápověda ji zamyká a ukázka ji neprozradí", () => {
+        // Most, který úroveň odmítne (dražší než rozpočet), medaili dostat nemůže.
+        if (zkontrolujNavrh(ukazka.b.navrh, uroven).length > 0) return;
+        const vysledek = prehraj({ uroven, navrh: ukazka.b.navrh });
+        // 7-03: ukázka stojí na „stejné křídlo, stejný píst z hluboké kotvy“ a takový most pro
+        // průchod úroveň nemá; výjimka je vědomá (docs/STAV.md, „Nezávislé recenze M12“).
+        expect(vysledek.medaile.mistrovska, uroven.id).toBe(uroven.id === "7-03");
+      });
+
       const a = prehraj(ukazka.a);
       const b = prehraj(ukazka.b);
 

@@ -81,6 +81,8 @@ function sProvozem(uroven: Uroven, jizdniRad: PolozkaJizdnihoRadu[]): Uroven {
  * Ukázka k úrovni, nebo null, když žádnou nemá. Ukázka předvádí princip, ne hospodaření:
  * její mosty nejsou vázané rozpočtem úrovně (most se třemi tlumiči smí být dražší), takže
  * úroveň obou stran rozpočet nemá. Bez toho by zkouška dražší most odmítla jako neplatný.
+ * Pravý most ukázky nemá být most pro mistrovskou medaili: nápověda ho zamyká do projití
+ * úrovně a ukázka v zadání by ho prozradila hned (hlídá `test/ukazky.test.ts`).
  */
 export function ukazkaUrovne(uroven: Uroven): UkazkaUrovne | null {
   const sceny = scenyUkazky(uroven);
@@ -114,7 +116,8 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
         { cas: 0, trasa, smer: 1, druh: "cyklista", pocet: 2 },
         { cas: 1, trasa, smer: -1, druh: "chodec", pocet: 4, kadence: 1.9 },
       ]);
-      return { a: { uroven: vylet, navrh: reseni.pady[1]!.navrh }, b: { uroven: vylet, navrh: reseni.mistrovska } };
+      // Most pro rozpočtovou medaili: vzpěry má také, ale delší než most pro mistrovskou.
+      return { a: { uroven: vylet, navrh: reseni.pady[1]!.navrh }, b: { uroven: vylet, navrh: reseni.rozpocet } };
     }
 
     // Stejná příhrada: krajní šikminy z lehkého a z těžkého trámu. Osobní auto unesou obě,
@@ -130,7 +133,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Lehká příhrada přes celé údolí proti vzpěradlům z kotev ve svazích.
     case "1-04":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
     // Ocel unese víc než dřevo, ale tvar musí držet stejně: horní pás bez diagonál se zkosí.
     case "2-01":
@@ -159,12 +162,15 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejná mostovka, příhrada metr a tři metry vysoká: nízká neunese ani sebe.
     case "3-01":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
     // Stejný tvar s dvanáctimetrovým horním pásem: z lehkého profilu vybočí, z těžkého ne.
+    // Dvoumetrová příhrada mostu pro rozpočtovou medaili a tatáž celá z lehkého profilu.
+    // (Třímetrová s těžkým pásem má v úrovni mistrovskou medaili a ukázka by ji prozradila.)
     case "3-02": {
-      const lehky = reseni.pady[2]!.navrh;
-      return { a: { uroven, navrh: lehky }, b: { uroven, navrh: sTezkymPasem(lehky) } };
+      const tezky = reseni.rozpocet;
+      const lehky: NavrhMostu = { ...tezky, pruty: tezky.pruty.map((p) => (p.prvek === "ocel-tezka" ? { ...p, prvek: "ocel-lehka" } : p)) };
+      return { a: { uroven, navrh: lehky }, b: { uroven, navrh: tezky } };
     }
 
     // Stejná nízká příhrada nad mostovkou a pod ní: nahoře se ocelový pás vzpírá, dole tlak nese beton.
@@ -183,7 +189,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejná mostovka na pilířích: s klouby mezi poli a svařená.
     case "4-02":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
     // Stejný zavěšený most: bez kotevních lan do opěr a s nimi.
     case "4-03":
@@ -195,15 +201,17 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejný dav, dva mosty: nižší s lidmi sjede do pásma jejich kroků, vyšší zůstane nad ním.
     case "5-01":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet }, rychlost: 3 };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod }, rychlost: 3 };
 
     // Stejná nízká lávka pod běžci: bez laděného tlumiče a s ním.
     case "5-02":
       return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: sLadenymTlumicem(reseni.pruchod, 1000, 2.5) } };
 
-    // Stejný most i závaží, jiné ladění: daleko od mostu a na most s lidmi.
+    // Stejný most i závaží, jiné ladění: daleko od mostu a na takt kapely. Most pro průchod
+    // (závaží 600 kg): s těžším závažím by tentýž most dal mistrovskou medaili a ukázka by ji
+    // prozradila.
     case "5-03":
-      return { a: { uroven, navrh: reseni.pady[2]!.navrh }, b: { uroven, navrh: MOSTY_UKAZEK["5-03"] }, rychlost: 2 };
+      return { a: { uroven, navrh: sLadenymTlumicem(reseni.pruchod, 600, 3.2) }, b: { uroven, navrh: reseni.pruchod }, rychlost: 2 };
 
     // Stejný most pod skákajícím davem: bez tlumičů a se třemi naladěnými na dvojnásobek rytmu.
     case "5-04": {
@@ -233,7 +241,7 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejné dvě mostovky: spojené jen svislicemi a spojené i diagonálami.
     case "6-04":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.rozpocet } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
     // Stejné křídlo se stejným pístem: bez zámku ho na opěře drží ložisko a píst ho nezvedne.
     case "7-01":
@@ -241,9 +249,11 @@ function scenyUkazky(uroven: Uroven): UkazkaUrovne | null {
 
     // Stejná dvě křídla: bez zámku uprostřed jsou jeden kus a písty tlačí proti sobě.
     case "7-02":
-      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
+      return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.pruchod } };
 
-    // Stejné křídlo a stejná hluboká kotva: s malým zdvihem se nezvedne dost vysoko.
+    // Stejné křídlo a stejná hluboká kotva: s malým zdvihem se nezvedne dost vysoko. Jediná
+    // ukázka, která předvádí most pro mistrovskou medaili: most pro průchod má kotvu mělkou
+    // a ukázka by netvrdila „stejné křídlo, stejný píst“ (výjimka je v testu ukázek).
     case "7-03":
       return { a: { uroven, navrh: reseni.pady[1]!.navrh }, b: { uroven, navrh: reseni.mistrovska } };
 

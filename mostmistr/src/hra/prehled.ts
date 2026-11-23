@@ -13,7 +13,7 @@ import { celyVyrez } from "../vykres/kamera";
 import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
 import { znackyMedaili } from "./medaile";
-import type { Uloziste } from "./uloziste";
+import { OZNAMENI_M12, type Uloziste } from "./uloziste";
 import { pripojVazbu } from "./vazba";
 import { popisVyzev, stupneVyzev } from "./vyzvy";
 import { pripojZaznam } from "./zaznam";
@@ -193,6 +193,11 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   const zpravy = [hlaseni];
   if (!uloziste.trvale) zpravy.push(t("prehled.bezPameti"));
   if (uloziste.poskozeno) zpravy.push(t("prehled.poskozeno"));
+  // Hráč se starším postupem se jednou dozví, proč má jiné medaile a prázdné rekordy výzev.
+  if (uloziste.oznameni === OZNAMENI_M12) {
+    zpravy.push(t("prehled.novaPravidla"));
+    uloziste.odlozOznameni();
+  }
   const text = zpravy.filter((z) => z !== "").join(" ");
   const poleHlaseni = udaj("prehled-hlaseni");
   poleHlaseni.textContent = text;

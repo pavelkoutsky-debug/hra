@@ -4,12 +4,14 @@
     "1-01": {
       "cena": {
         "z": "pruchod",
+        "otisk": "73f507e1",
         "upravy": [
           {"stycnik":3,"x":4,"y":1}
         ]
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "73f507e1",
         "upravy": [
           {"stycnik":3,"x":4,"y":1}
         ]
@@ -18,63 +20,69 @@
     "1-02": {
       "cena": {
         "z": "mistrovska",
+        "otisk": "df9f0e1a",
         "upravy": []
       },
       "hmotnost": {
         "z": "mistrovska",
+        "otisk": "df9f0e1a",
         "upravy": []
       }
     },
     "1-03": {
       "cena": {
-        "z": "pruchod",
+        "z": "vyzva-0",
+        "otisk": "4407f7ab",
         "upravy": [
-          {"stycnik":5,"x":4,"y":2},
-          {"stycnik":6,"x":12,"y":2},
-          {"stycnik":5,"x":5,"y":1},
-          {"stycnik":6,"x":11,"y":1},
-          {"stycnik":7,"x":8,"y":2}
+          {"stycnik":9,"x":2,"y":1},
+          {"stycnik":16,"x":14,"y":1}
         ]
       },
       "hmotnost": {
-        "z": "pruchod",
+        "z": "vyzva-0",
+        "otisk": "4407f7ab",
         "upravy": [
-          {"stycnik":5,"x":4,"y":2},
-          {"stycnik":6,"x":12,"y":2}
+          {"stycnik":9,"x":2,"y":1},
+          {"stycnik":16,"x":14,"y":1}
         ]
       }
     },
     "1-04": {
       "cena": {
-        "z": "pruchod",
+        "z": "rozpocet",
+        "otisk": "8aec0817",
         "upravy": [
-          {"prut":6,"prvek":"drevo-lehke"},
-          {"prut":11,"prvek":"drevo-lehke"},
-          {"stycnik":8,"x":7,"y":-2}
+          {"stycnik":11,"x":12,"y":-1},
+          {"stycnik":8,"x":6,"y":-2},
+          {"stycnik":10,"x":18,"y":-2}
         ]
       },
       "hmotnost": {
-        "z": "pruchod",
+        "z": "rozpocet",
+        "otisk": "8aec0817",
         "upravy": [
-          {"prut":6,"prvek":"drevo-lehke"},
-          {"prut":11,"prvek":"drevo-lehke"},
-          {"stycnik":8,"x":7,"y":-2}
+          {"stycnik":11,"x":12,"y":-1},
+          {"stycnik":8,"x":6,"y":-2},
+          {"stycnik":10,"x":18,"y":-2}
         ]
       }
     },
     "2-01": {
       "cena": {
         "z": "rozpocet",
+        "otisk": "7caebb66",
         "upravy": []
       },
       "hmotnost": {
         "z": "rozpocet",
+        "otisk": "7caebb66",
         "upravy": []
       }
     },
     "2-02": {
       "cena": {
         "z": "rozpocet",
+        "otisk": "5f28e2b9",
         "upravy": [
           {"stycnik":11,"x":13,"y":2},
           {"stycnik":12,"x":17,"y":1},
@@ -87,6 +95,7 @@
       },
       "hmotnost": {
         "z": "rozpocet",
+        "otisk": "5f28e2b9",
         "upravy": [
           {"stycnik":11,"x":13,"y":2},
           {"stycnik":12,"x":17,"y":1},
@@ -101,6 +110,7 @@
     "2-03": {
       "cena": {
         "z": "pruchod",
+        "otisk": "5c2b56bb",
         "upravy": [
           {"stycnik":3,"zavazi":0},
           {"stycnik":9,"x":5,"y":1},
@@ -130,6 +140,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "5c2b56bb",
         "upravy": [
           {"stycnik":3,"zavazi":0},
           {"stycnik":4,"zavazi":1900},
@@ -161,6 +172,7 @@
     "2-04": {
       "cena": {
         "z": "pruchod",
+        "otisk": "c624d335",
         "upravy": [
           {"stycnik":9,"x":5,"y":1},
           {"stycnik":10,"x":27,"y":1},
@@ -175,12 +187,14 @@
       },
       "hmotnost": {
         "z": "mistrovska",
+        "otisk": "5972ff7e",
         "upravy": []
       }
     },
     "3-01": {
       "cena": {
         "z": "pruchod",
+        "otisk": "c5ad7884",
         "upravy": [
           {"stycnik":5,"x":7,"y":3},
           {"stycnik":6,"x":17,"y":3},
@@ -192,6 +206,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "c5ad7884",
         "upravy": [
           {"stycnik":6,"x":17,"y":3},
           {"stycnik":5,"x":7,"y":3},
@@ -204,29 +219,32 @@
     },
     "3-02": {
       "cena": {
-        "z": "mistrovska",
+        "z": "pruchod",
+        "otisk": "6912d2c0",
         "upravy": [
-          {"stycnik":8,"x":13,"y":2},
-          {"stycnik":7,"x":7,"y":1},
-          {"stycnik":10,"x":23,"y":2},
-          {"stycnik":11,"x":29,"y":1},
-          {"stycnik":9,"x":18,"y":2},
-          {"prut":12,"pryc":true},
-          {"prut":16,"pryc":true},
-          {"stycnik":7,"x":8,"y":2},
-          {"stycnik":7,"x":9,"y":2},
-          {"stycnik":7,"x":10,"y":2},
-          {"stycnik":7,"x":11,"y":2},
-          {"stycnik":11,"x":28,"y":2},
-          {"stycnik":8,"x":14,"y":2},
-          {"stycnik":10,"x":22,"y":2},
-          {"stycnik":8,"x":15,"y":2},
-          {"stycnik":10,"x":21,"y":2},
-          {"stycnik":11,"x":27,"y":2}
+          {"prut":6,"prvek":"ocel-lehka"},
+          {"prut":7,"prvek":"ocel-lehka"},
+          {"prut":17,"prvek":"ocel-lehka"},
+          {"prut":18,"prvek":"ocel-lehka"},
+          {"prut":19,"prvek":"ocel-lehka"},
+          {"prut":20,"prvek":"ocel-lehka"},
+          {"prut":12,"prvek":"ocel-lehka"},
+          {"prut":13,"prvek":"ocel-lehka"},
+          {"prut":14,"prvek":"ocel-lehka"},
+          {"prut":15,"prvek":"ocel-lehka"},
+          {"prut":16,"prvek":"ocel-lehka"},
+          {"stycnik":9,"x":13,"y":2},
+          {"stycnik":11,"x":23,"y":2},
+          {"stycnik":10,"x":18,"y":2},
+          {"stycnik":9,"x":14,"y":2},
+          {"stycnik":11,"x":22,"y":2},
+          {"stycnik":9,"x":15,"y":2},
+          {"stycnik":11,"x":21,"y":2}
         ]
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "6912d2c0",
         "upravy": [
           {"prut":6,"prvek":"ocel-lehka"},
           {"prut":7,"prvek":"ocel-lehka"},
@@ -252,6 +270,7 @@
     "3-03": {
       "cena": {
         "z": "rozpocet",
+        "otisk": "fe51d87a",
         "upravy": [
           {"stycnik":8,"x":11,"y":-1},
           {"stycnik":9,"x":18,"y":-1},
@@ -263,6 +282,7 @@
       },
       "hmotnost": {
         "z": "rozpocet",
+        "otisk": "fe51d87a",
         "upravy": [
           {"stycnik":8,"x":11,"y":-1},
           {"stycnik":9,"x":18,"y":-1},
@@ -276,6 +296,7 @@
     "3-04": {
       "cena": {
         "z": "pruchod",
+        "otisk": "2527bf49",
         "upravy": [
           {"stycnik":13,"pryc":true},
           {"stycnik":9,"x":7,"y":3},
@@ -297,6 +318,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "2527bf49",
         "upravy": [
           {"stycnik":13,"pryc":true},
           {"stycnik":9,"x":7,"y":3},
@@ -320,6 +342,7 @@
     "4-01": {
       "cena": {
         "z": "rozpocet",
+        "otisk": "8404b732",
         "upravy": [
           {"stycnik":14,"x":6,"y":-1},
           {"stycnik":15,"x":48,"y":-1},
@@ -335,6 +358,7 @@
       },
       "hmotnost": {
         "z": "rozpocet",
+        "otisk": "8404b732",
         "upravy": [
           {"stycnik":14,"x":6,"y":-1},
           {"stycnik":15,"x":48,"y":-1},
@@ -352,16 +376,19 @@
     "4-02": {
       "cena": {
         "z": "pruchod",
+        "otisk": "06fda7fc",
         "upravy": []
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "06fda7fc",
         "upravy": []
       }
     },
     "4-03": {
       "cena": {
         "z": "mistrovska",
+        "otisk": "43201862",
         "upravy": [
           {"stycnik":13,"x":24,"y":12},
           {"stycnik":12,"x":24,"y":10},
@@ -374,6 +401,7 @@
       },
       "hmotnost": {
         "z": "mistrovska",
+        "otisk": "43201862",
         "upravy": [
           {"stycnik":13,"x":24,"y":12},
           {"stycnik":12,"x":24,"y":10},
@@ -388,6 +416,7 @@
     "4-04": {
       "cena": {
         "z": "rozpocet",
+        "otisk": "ffe6cfdd",
         "upravy": [
           {"stycnik":14,"x":-3,"y":11},
           {"stycnik":17,"x":6,"y":8},
@@ -400,6 +429,7 @@
       },
       "hmotnost": {
         "z": "rozpocet",
+        "otisk": "ffe6cfdd",
         "upravy": [
           {"stycnik":16,"x":76,"y":11},
           {"stycnik":27,"x":65,"y":8},
@@ -420,6 +450,7 @@
     "5-01": {
       "cena": {
         "z": "pruchod",
+        "otisk": "ce33a107",
         "upravy": [
           {"stycnik":13,"x":5,"y":3},
           {"stycnik":14,"x":43,"y":3},
@@ -445,6 +476,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "ce33a107",
         "upravy": [
           {"stycnik":13,"x":5,"y":3},
           {"stycnik":14,"x":43,"y":3},
@@ -472,6 +504,7 @@
     "5-02": {
       "cena": {
         "z": "pruchod",
+        "otisk": "2b6972d1",
         "upravy": [
           {"stycnik":4,"tlumic":300},
           {"stycnik":4,"tlumic":150},
@@ -491,6 +524,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "2b6972d1",
         "upravy": [
           {"stycnik":4,"tlumic":300},
           {"stycnik":4,"tlumic":150},
@@ -512,6 +546,7 @@
     "5-03": {
       "cena": {
         "z": "pruchod",
+        "otisk": "6d0a75a1",
         "upravy": [
           {"stycnik":4,"tlumic":300},
           {"stycnik":10,"x":5,"y":1},
@@ -532,6 +567,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "6d0a75a1",
         "upravy": [
           {"stycnik":4,"tlumic":300},
           {"stycnik":11,"x":31,"y":1},
@@ -554,6 +590,7 @@
     "5-04": {
       "cena": {
         "z": "mistrovska",
+        "otisk": "1ad8fe76",
         "upravy": [
           {"stycnik":7,"tlumic":0},
           {"stycnik":9,"tlumic":500},
@@ -566,6 +603,7 @@
       },
       "hmotnost": {
         "z": "mistrovska",
+        "otisk": "1ad8fe76",
         "upravy": [
           {"stycnik":7,"tlumic":0},
           {"stycnik":9,"tlumic":500},
@@ -580,6 +618,7 @@
     "6-01": {
       "cena": {
         "z": "mistrovska",
+        "otisk": "b049d323",
         "upravy": [
           {"stycnik":8,"x":15,"y":5},
           {"stycnik":7,"x":9,"y":4},
@@ -596,6 +635,7 @@
       },
       "hmotnost": {
         "z": "mistrovska",
+        "otisk": "b049d323",
         "upravy": [
           {"stycnik":8,"x":15,"y":5},
           {"stycnik":7,"x":9,"y":4},
@@ -613,47 +653,36 @@
     },
     "6-02": {
       "cena": {
-        "z": "pruchod",
+        "z": "mistrovska",
+        "otisk": "8347f232",
         "upravy": [
-          {"stycnik":9,"x":11,"y":-2},
-          {"stycnik":11,"x":25,"y":-2},
-          {"stycnik":10,"x":18,"y":-2},
-          {"stycnik":7,"x":6,"y":-2},
-          {"stycnik":8,"x":30,"y":-2},
-          {"stycnik":7,"x":6,"y":-1},
-          {"stycnik":9,"x":10,"y":-1},
-          {"stycnik":8,"x":30,"y":-1},
-          {"stycnik":11,"x":26,"y":-2},
-          {"stycnik":11,"x":27,"y":-2},
-          {"stycnik":9,"x":9,"y":-1},
-          {"prut":17,"pryc":true},
-          {"prut":16,"pryc":true},
-          {"stycnik":8,"x":31,"y":-1}
+          {"stycnik":8,"x":18,"y":-4},
+          {"stycnik":7,"x":8,"y":-3},
+          {"stycnik":9,"x":28,"y":-3},
+          {"stycnik":8,"x":18,"y":-3},
+          {"stycnik":8,"x":18,"y":-2},
+          {"stycnik":7,"x":9,"y":-2},
+          {"stycnik":9,"x":27,"y":-2}
         ]
       },
       "hmotnost": {
-        "z": "pruchod",
+        "z": "mistrovska",
+        "otisk": "8347f232",
         "upravy": [
-          {"stycnik":9,"x":11,"y":-2},
-          {"stycnik":11,"x":25,"y":-2},
-          {"stycnik":10,"x":18,"y":-2},
-          {"stycnik":7,"x":6,"y":-2},
-          {"stycnik":8,"x":30,"y":-2},
-          {"stycnik":7,"x":6,"y":-1},
-          {"stycnik":9,"x":10,"y":-1},
-          {"stycnik":8,"x":30,"y":-1},
-          {"stycnik":11,"x":26,"y":-2},
-          {"stycnik":11,"x":27,"y":-2},
-          {"stycnik":9,"x":9,"y":-1},
-          {"prut":17,"pryc":true},
-          {"prut":16,"pryc":true},
-          {"stycnik":8,"x":31,"y":-1}
+          {"stycnik":8,"x":18,"y":-4},
+          {"stycnik":7,"x":8,"y":-3},
+          {"stycnik":9,"x":28,"y":-3},
+          {"stycnik":8,"x":18,"y":-3},
+          {"stycnik":8,"x":18,"y":-2},
+          {"stycnik":7,"x":9,"y":-2},
+          {"stycnik":9,"x":27,"y":-2}
         ]
       }
     },
     "6-03": {
       "cena": {
         "z": "mistrovska",
+        "otisk": "177f95da",
         "upravy": [
           {"stycnik":1,"svar":true},
           {"stycnik":2,"svar":true},
@@ -666,40 +695,41 @@
           {"stycnik":9,"svar":true},
           {"stycnik":10,"svar":true},
           {"stycnik":11,"svar":true},
-          {"stycnik":24,"pryc":true},
-          {"stycnik":25,"pryc":true},
           {"stycnik":19,"pryc":true},
-          {"stycnik":22,"pryc":true},
-          {"prut":19,"pryc":true},
-          {"prut":25,"pryc":true},
-          {"stycnik":21,"x":13,"y":-2},
+          {"stycnik":29,"pryc":true},
+          {"prut":35,"pryc":true},
+          {"prut":43,"pryc":true},
+          {"prut":44,"pryc":true},
+          {"stycnik":2,"svar":false},
+          {"stycnik":6,"svar":false},
+          {"stycnik":9,"svar":false},
+          {"stycnik":21,"x":13,"y":-3},
+          {"stycnik":21,"x":14,"y":-2},
           {"stycnik":21,"x":14,"y":-1},
-          {"stycnik":23,"x":43,"y":-2},
-          {"stycnik":3,"svar":false},
-          {"stycnik":11,"svar":false},
-          {"stycnik":26,"x":66,"y":-2},
-          {"stycnik":29,"x":46,"y":-6},
-          {"stycnik":10,"svar":false},
-          {"stycnik":21,"x":15,"y":-1},
-          {"stycnik":23,"x":44,"y":-1},
-          {"stycnik":29,"x":47,"y":-6},
-          {"stycnik":17,"x":48,"y":-8},
-          {"stycnik":17,"x":48,"y":-7},
+          {"stycnik":20,"x":18,"y":-2},
           {"stycnik":28,"x":22,"y":-7},
-          {"stycnik":21,"x":16,"y":-1},
-          {"stycnik":20,"x":17,"y":-2},
-          {"stycnik":28,"x":23,"y":-7},
+          {"stycnik":28,"x":23,"y":-6},
           {"stycnik":14,"x":24,"y":-8},
-          {"stycnik":23,"x":45,"y":-2},
           {"stycnik":14,"x":24,"y":-7},
-          {"stycnik":23,"x":46,"y":-2},
-          {"prut":42,"pryc":true},
-          {"stycnik":26,"x":65,"y":-2},
-          {"stycnik":26,"x":64,"y":-2}
+          {"stycnik":24,"x":35,"y":-3},
+          {"stycnik":21,"x":15,"y":-1},
+          {"stycnik":3,"svar":false},
+          {"stycnik":5,"svar":false},
+          {"stycnik":23,"x":42,"y":-2},
+          {"stycnik":25,"x":54,"y":-2},
+          {"stycnik":26,"x":66,"y":-2},
+          {"stycnik":22,"x":29,"y":-2},
+          {"stycnik":26,"x":67,"y":-1},
+          {"stycnik":20,"x":19,"y":-2},
+          {"stycnik":24,"x":34,"y":-3},
+          {"stycnik":24,"x":33,"y":-3},
+          {"stycnik":20,"x":20,"y":-2},
+          {"prut":42,"pryc":true}
         ]
       },
       "hmotnost": {
         "z": "mistrovska",
+        "otisk": "177f95da",
         "upravy": [
           {"stycnik":1,"svar":true},
           {"stycnik":2,"svar":true},
@@ -712,39 +742,25 @@
           {"stycnik":9,"svar":true},
           {"stycnik":10,"svar":true},
           {"stycnik":11,"svar":true},
-          {"stycnik":24,"pryc":true},
           {"stycnik":19,"pryc":true},
-          {"stycnik":25,"pryc":true},
-          {"stycnik":22,"pryc":true},
-          {"prut":19,"pryc":true},
-          {"prut":25,"pryc":true},
-          {"stycnik":21,"x":13,"y":-2},
-          {"stycnik":21,"x":14,"y":-1},
-          {"stycnik":23,"x":43,"y":-2},
-          {"stycnik":26,"x":66,"y":-2},
-          {"stycnik":29,"x":46,"y":-6},
-          {"stycnik":21,"x":15,"y":-1},
-          {"stycnik":28,"x":22,"y":-6},
-          {"stycnik":23,"x":44,"y":-1},
-          {"stycnik":29,"x":47,"y":-6},
-          {"stycnik":17,"x":48,"y":-8},
-          {"stycnik":17,"x":48,"y":-7},
-          {"stycnik":20,"x":18,"y":-2},
-          {"stycnik":21,"x":16,"y":-1},
-          {"stycnik":14,"x":24,"y":-8},
-          {"stycnik":28,"x":23,"y":-6},
-          {"stycnik":14,"x":24,"y":-7},
-          {"stycnik":21,"x":17,"y":-1},
-          {"stycnik":20,"x":18,"y":-1},
-          {"stycnik":23,"x":45,"y":-2},
-          {"stycnik":23,"x":46,"y":-2},
-          {"prut":44,"pryc":true}
+          {"stycnik":29,"pryc":true},
+          {"prut":35,"pryc":true},
+          {"prut":43,"pryc":true},
+          {"prut":44,"pryc":true},
+          {"stycnik":28,"x":22,"y":-7},
+          {"stycnik":24,"x":35,"y":-3},
+          {"stycnik":24,"x":34,"y":-3},
+          {"stycnik":15,"x":24,"y":-7},
+          {"stycnik":28,"x":23,"y":-8},
+          {"stycnik":15,"x":24,"y":-8},
+          {"stycnik":24,"x":33,"y":-3}
         ]
       }
     },
     "6-04": {
       "cena": {
         "z": "pruchod",
+        "otisk": "fd44ed92",
         "upravy": [
           {"prut":17,"prvek":"ocel-lehka"},
           {"prut":18,"prvek":"ocel-lehka"},
@@ -755,6 +771,7 @@
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "fd44ed92",
         "upravy": [
           {"prut":17,"prvek":"ocel-lehka"},
           {"prut":18,"prvek":"ocel-lehka"},
@@ -767,20 +784,24 @@
     "7-01": {
       "cena": {
         "z": "rozpocet",
+        "otisk": "d25ddf96",
         "upravy": []
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "2e5d1836",
         "upravy": []
       }
     },
     "7-02": {
       "cena": {
         "z": "mistrovska",
+        "otisk": "55ed9ec6",
         "upravy": []
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "b5cadd24",
         "upravy": [
           {"stycnik":5,"pryc":true},
           {"stycnik":10,"pryc":true}
@@ -790,20 +811,24 @@
     "7-03": {
       "cena": {
         "z": "pruchod",
+        "otisk": "19222308",
         "upravy": []
       },
       "hmotnost": {
         "z": "rozpocet",
+        "otisk": "7df3f290",
         "upravy": []
       }
     },
     "7-04": {
       "cena": {
-        "z": "pruchod",
+        "z": "vyzva-0",
+        "otisk": "359cfd0d",
         "upravy": []
       },
       "hmotnost": {
         "z": "pruchod",
+        "otisk": "404db98c",
         "upravy": []
       }
     }
