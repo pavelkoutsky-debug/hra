@@ -67,6 +67,11 @@ import { CARA_SKRYTA, prazdnySnimek, Zaznam, type Snimek, type Topologie } from 
 import { DRUHY_ZVUKU, Poslech, type Zvuk } from "../zvuk/deje";
 import { Ozvuceni } from "../zvuk/ozvuceni";
 import { nasadaUrovne } from "../../urovne/index";
+import { zakladVyzev } from "../../urovne/vyzvy";
+import { prahyVyzev, unosnostNaKorunu } from "../data/vyzvy";
+import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
+import { ZKOUSKA_DO_ZLOMU } from "../zkouska/zlom";
+import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
 import { pripojVazbu } from "./vazba";
 import { pripojZaznam } from "./zaznam";
@@ -136,6 +141,8 @@ interface Beh {
   pokus: boolean;
   /** Budič, kterým se most při pokusu rozkmitával; null u zkoušky a u brnknutí. */
   budic: BudicZkousky | null;
+  /** Zkouška do zlomu: bez provozu a bez medailí, ale počítá se do výzvy o únosnost na korunu. */
+  zlom: boolean;
 }
 
 /** Průběhy veličin v čase, jak je sbírá analytický panel ze záznamu zkoušky. */
@@ -276,6 +283,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   let prehravani: StavPrehravani = { cas: 0, bezi: false, rychlost: 1 };
   const snimek: Snimek = prazdnySnimek();
   let rekord: Rekord | undefined = uloziste.rekord(uroven.id);
+  /** Výzvy o efektivitu: co dokázaly referenční mosty a prahy z toho; null, kde úroveň referenční mosty nemá. */
+  const zakladVyzevUrovne = zakladVyzev(uroven);
+  const prahy = zakladVyzevUrovne ? prahyVyzev(zakladVyzevUrovne) : null;
   let casovacHlaseni: number | undefined;
   /** Ukazovat u prutů čísla využití? */
   let cisla = uloziste.cislaVyuziti;
@@ -1164,8 +1174,10 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     };
     nastav("vyber", true);
     prvek('[data-akce="vyber"]', HTMLButtonElement).setAttribute("aria-pressed", String(nastroj === "vyber"));
-    // Pokusy jsou vidět a dají se zmáčknout i bez mostu; pak poradí, co jim chybí.
-    prvek('[data-cast="pokusy"]', HTMLElement).hidden = !(uroven.osaFrekvenci || uroven.budic);
+    // Pokusy jsou vidět a dají se zmáčknout i bez mostu; pak poradí, co jim chybí. Zkouška
+    // do zlomu je na každé úrovni.
+    prvek('[data-cast="pokusy"]', HTMLElement).hidden = false;
+    prvek('[data-akce="zlom"]', HTMLButtonElement).disabled = !stavi;
     const tlacitkoBrnknuti = prvek('[data-akce="brnknout"]', HTMLButtonElement);
     tlacitkoBrnknuti.hidden = !uroven.osaFrekvenci;
     tlacitkoBrnknuti.disabled = !stavi;
@@ -1740,15 +1752,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     return b.spocitanoVse ? b.trvani : Math.max(b.trvani, b.zaznam.konec);
   }
 
-  function spustZkousku(brnknuti?: { stycnik: number; sila: number }, budic?: BudicZkousky): void {
+  function spustZkousku(brnknuti?: { stycnik: number; sila: number }, budic?: BudicZkousky, zlom = false): void {
     if (rezim !== "stavba") return;
     editor.zrusTah();
-    // Brnknout a rozkmitat budičem se dá i most dražší, než je rozpočet; zkoušet ne.
+    // Brnknout a rozkmitat budičem se dá i most dražší, než je rozpočet; zkoušet ne, a to ani
+    // do zlomu (únosnost na korunu se měří jen u mostu, který se do rozpočtu vejde).
     const pokus = brnknuti !== undefined || budic !== undefined;
+    const druhPokusu = brnknuti ? "brnknuti" : budic ? "budic" : zlom ? "zlom" : null;
     const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(pokus && p.druh === "nad-rozpocet"))[0];
     if (prekazka) {
       ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
-      zapis("zkouska.odmitnuta", { duvod: prekazka.druh, pokus: brnknuti ? "brnknuti" : budic ? "budic" : null, cena: cenaNavrhu(editor.navrh) });
+      zapis("zkouska.odmitnuta", { duvod: prekazka.druh, pokus: druhPokusu, cena: cenaNavrhu(editor.navrh) });
       return;
     }
     skryjHlaseni();
@@ -1767,8 +1781,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       vysledekUkazan: false,
       naKonecPoVypoctu: false,
       oznaceny: null,
-      pokus,
+      pokus: pokus || zlom,
       budic: budic ?? null,
+      zlom,
     };
     beh = novy;
     // Zkoušku pouští gesto hráče, takže smí vzniknout zvuk.
@@ -1782,13 +1797,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       ukazHlaseni(t("zkouska.chyba", { duvod: chyba instanceof Error ? chyba.message : String(chyba) }), "varovani", false);
       return;
     }
-    if (!pokus) zkousekVUrovni += 1;
+    if (!pokus && !zlom) zkousekVUrovni += 1;
     vypocetOd = Date.now();
     zapis("zkouska.start", {
       navrh: navrhNaText(editor.navrh),
       cena: cenaNavrhu(editor.navrh),
       prutu: editor.navrh.pruty.length,
-      pokus: brnknuti ? "brnknuti" : budic ? "budic" : null,
+      pokus: druhPokusu,
       uprav: upravOdZkousky,
       sekund: sekundVUrovni(),
     });
@@ -1803,6 +1818,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         verzeFyziky: VERZE_FYZIKY,
         ...(brnknuti ? { brnknuti } : {}),
         ...(budic ? { budic } : {}),
+        ...(zlom ? { zlom: ZKOUSKA_DO_ZLOMU } : {}),
       },
     });
 
@@ -1868,8 +1884,11 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
           predchoziVysledek = posledniVysledek;
           posledniVysledek = vysledek;
           if (!vysledek.rozpad) {
-            rekord = uloziste.zapocitej(uroven.id, vysledek.medaile, vysledek.cena, VERZE_FYZIKY);
+            // Hmotnost mostu patří k výzvě o nejlehčí most; počítá se jen u mostu, který prošel.
+            rekord = uloziste.zapocitej(uroven.id, vysledek.medaile, vysledek.cena, VERZE_FYZIKY, hmotnostNavrhu(b.navrh, uroven));
           }
+        } else if (b.zlom && vysledek.zlom && !vysledek.rozpad) {
+          rekord = uloziste.zapocitejZlom(uroven.id, unosnostNaKorunu(vysledek.zlom.celkem, vysledek.cena), VERZE_FYZIKY);
         }
         if (prehravani.cas > b.trvani || b.naKonecPoVypoctu) prehravani = { ...prehravani, cas: b.trvani, bezi: false };
         zapisVysledek(b, vysledek);
@@ -1906,7 +1925,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     };
     zapis("zkouska.konec", {
       pruchod: vysledek.pruchod,
-      pokus: b.budic ? "budic" : b.pokus ? "brnknuti" : null,
+      pokus: b.zlom ? "zlom" : b.budic ? "budic" : b.pokus ? "brnknuti" : null,
+      // Zkouška do zlomu: kolik most unesl (kN) a kolik je to na korunu (N/Kč).
+      zlom: vysledek.zlom ? Math.round(vysledek.zlom.celkem / 1000) : null,
+      zlomNaKorunu: vysledek.zlom ? Math.round(unosnostNaKorunu(vysledek.zlom.celkem, vysledek.cena) * 1000) / 1000 : null,
+      // Stupně výzev úrovně po téhle zkoušce (0 až 3 za cenu, hmotnost a únosnost na korunu).
+      vyzvy: prahy ? { ...stupneVyzev(prahy, rekord).stupne } : null,
+      hmotnost: Math.round(hmotnostNavrhu(b.navrh, uroven)),
       sekund: sekundVUrovni(),
       zkouska: zkousekVUrovni,
       ucastniku: vysledek.ucastniku,
@@ -2232,11 +2257,13 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         ? "vysledek.brnknuti"
         : vysledek.budic
           ? "vysledek.budic"
-          : vysledek.pruchod
-          ? "vysledek.obstal"
-          : "vysledek.neobstal";
+          : vysledek.zlom
+            ? "vysledek.zlom"
+            : vysledek.pruchod
+              ? "vysledek.obstal"
+              : "vysledek.neobstal";
     udaj("vysledek-nadpis").textContent = t(nadpis);
-    const jePokus = vysledek.brnknuti !== null || vysledek.budic !== null;
+    const jePokus = vysledek.brnknuti !== null || vysledek.budic !== null || vysledek.zlom !== null;
     panelVysledku.dataset.stav = vysledek.rozpad ? "rozpad" : jePokus ? "brnknuti" : vysledek.pruchod ? "obstal" : "neobstal";
     udaj("vysledek-medaile").hidden = jePokus;
     // Pokus se s minulou zkouškou neporovnává: neměří totéž.
@@ -2263,6 +2290,31 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
       else zmereno.cara = krivka;
       document.body.dataset.budic = frekvence?.toFixed(3) ?? "";
       document.body.dataset.budicZrychleni = zrychleni.toFixed(3);
+    }
+    else if (vysledek.zlom) {
+      // Zkouška do zlomu: kolik most unesl a kolik je to na korunu. Který prut povolil první,
+      // říká záznam porušení pod čísly; píst a most, který vydržel, porušení nemají.
+      const zlom = vysledek.zlom;
+      const tun = `${cislo(zlom.celkem / TIHOVE_ZRYCHLENI / 1000, 1)}\u00a0t`;
+      const naMetr = `${cislo(zlom.zatizeni / 1000, 1)}\u00a0kN`;
+      if (vysledek.bezRovnovahy) vety.push(t("vysledek.zlom.nic"));
+      else if (zlom.cas === null) vety.push(t("vysledek.zlom.vydrzel", { tun, naMetr }));
+      else {
+        vety.push(t("vysledek.zlom.unesl", { tun, sila: `${cislo(zlom.celkem / 1000, 0)}\u00a0kN`, naMetr }));
+        const prvekPrutu = b.navrh.pruty[zlom.prut]?.prvek;
+        if (prvekPrutu && KATALOG[prvekPrutu].druh === "pist") {
+          vety.push(t("vysledek.zlom.pist", { prut: zlom.prut + 1, cas: zapisCasu(zlom.cas) }));
+        }
+      }
+      if (zlom.celkem > 0) {
+        vety.push(
+          t("vysledek.zlom.naKorunu", {
+            cena: koruny(vysledek.cena),
+            hodnota: zapisVyzvy("zlom", unosnostNaKorunu(zlom.celkem, vysledek.cena)),
+          }),
+        );
+      }
+      document.body.dataset.zlom = (zlom.celkem / 1000).toFixed(0);
     }
     else if (vysledek.ucastniku === 0) vety.push(t("vysledek.shrnuti.bezProvozu"));
     else if (vysledek.prejelo === vysledek.ucastniku && vysledek.spadlo === 0) {
@@ -2389,6 +2441,17 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
     vypisPohyb(b, vysledek, minule);
 
     vypisMedaile(udaj("vysledek-medaile"), uroven, vysledek.medaile, rekord?.medaile);
+    // Výzvy o efektivitu: ukážou se, jakmile je úroveň projitá nebo hráč zkusil zkoušku do zlomu.
+    const castVyzev = prvek('[data-cast="vyzvy"]', HTMLElement);
+    const ukazVyzvy =
+      prahy !== null &&
+      zakladVyzevUrovne !== null &&
+      !vysledek.rozpad &&
+      !vysledek.brnknuti &&
+      !vysledek.budic &&
+      (rekord?.medaile.pruchod === true || vysledek.zlom !== null);
+    castVyzev.hidden = !ukazVyzvy;
+    if (ukazVyzvy) vypisVyzvy(udaj("vysledek-vyzvy"), prahy, zakladVyzevUrovne, rekord);
     udaj("vysledek-cena").replaceChildren(
       ...bezNull([document.createTextNode(koruny(vysledek.cena)), rozdil(vysledek.cena, minule?.cena, koruny)]),
     );
@@ -2741,6 +2804,7 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
   priKliknuti("zkouska", () => (rezim === "stavba" ? spustZkousku() : zpetKeStavbe()));
   priKliknuti("vyber", prepniVyber);
   priKliknuti("brnknout", prepniBrnknuti);
+  priKliknuti("zlom", () => spustZkousku(undefined, undefined, true));
   priKliknuti("budic", prepniBudic);
   priKliknuti("budic-rozsah", () => {
     rytmusBudice = null;
@@ -2926,6 +2990,9 @@ export function spustUroven(uroven: Uroven, kampan: readonly Uroven[], uloziste:
         break;
       case "u":
         prepniBudic();
+        break;
+      case "d":
+        if (!udalost.repeat) spustZkousku(undefined, undefined, true);
         break;
       default: {
         const poradi = Number(klavesa) - 1;
