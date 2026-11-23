@@ -142,7 +142,8 @@ export function postupKampani(
     const zaklad = zakladVyzev(uroven);
     if (zaklad) {
       postup.vyzevCelkem += 9;
-      postup.vyzev += stupneVyzev(prahyVyzev(zaklad), rekord).soucet;
+      // Stupně výzev se počítají jen na projité úrovni, stejně jako je ukazuje její karta.
+      if (medaile.pruchod) postup.vyzev += stupneVyzev(prahyVyzev(zaklad), rekord).soucet;
     }
   }
   return postup;
@@ -201,17 +202,27 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   // Postup kampaní: kolik úrovní je projitých, kolik medailí a stupňů výzev hráč má.
   const postup = postupKampani(kampan, uloziste);
   const polePostupu = udaj("prehled-postup");
-  polePostupu.textContent =
-    t("prehled.postup", {
-      projito: postup.projito,
-      urovni: kampan.length,
-      medaili: postup.medaili,
-      medailiCelkem: postup.medailiCelkem,
-      vyzev: postup.vyzev,
-      vyzevCelkem: postup.vyzevCelkem,
-    }) + (postup.projito === kampan.length && kampan.length > 0 ? ` ${t("prehled.dokonceno")}` : "");
+  const dokonceno = postup.projito === kampan.length && kampan.length > 0;
+  polePostupu.textContent = t("prehled.postup", {
+    projito: postup.projito,
+    urovni: kampan.length,
+    medaili: postup.medaili,
+    medailiCelkem: postup.medailiCelkem,
+    vyzev: postup.vyzev,
+    vyzevCelkem: postup.vyzevCelkem,
+  });
+  polePostupu.title = t("prehled.postup.popis");
   polePostupu.dataset.projito = String(postup.projito);
-  polePostupu.dataset.dokonceno = String(postup.projito === kampan.length && kampan.length > 0);
+  polePostupu.dataset.dokonceno = String(dokonceno);
+  // Dokončená kampaň má vlastní oznámení: věta přilepená za čísla by zanikla.
+  const poleDokonceno = udaj("prehled-dokonceno");
+  poleDokonceno.hidden = !dokonceno;
+  poleDokonceno.replaceChildren();
+  if (dokonceno) {
+    const nadpis = document.createElement("strong");
+    nadpis.textContent = t("prehled.dokonceno.nadpis");
+    poleDokonceno.append(nadpis, document.createTextNode(` ${t("prehled.dokonceno")}`));
+  }
   document.body.dataset.rezim = "prehled";
 
   // Zpětná vazba a deník hraní: v přehledu není most, který by šel přiložit.

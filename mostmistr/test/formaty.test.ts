@@ -86,7 +86,7 @@ describe("čísla anglicky", () => {
     expect(celeCislo(-2500)).toBe("−2,500");
     expect(koruny(33133)).toBe("33,133\u00a0Kč");
     expect(hmotnost(1250)).toBe("1.3\u00a0t");
-    expect(procenta(0.756)).toBe("76\u00a0%");
+    expect(procenta(0.756)).toBe("76%");
   });
 
   it("datum má měsíc slovem, aby se nespletl den s měsícem", () => {

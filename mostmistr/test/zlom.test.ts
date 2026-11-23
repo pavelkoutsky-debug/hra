@@ -120,9 +120,39 @@ describe("zkouška do zlomu", () => {
       ...urovenRegrese({ rozpeti: 8, sirka: SIRKA, vybaveni: VYBAVENI }),
       trasy: [{ id: "lavka", druh: "lavka", zacatek: { x: 0, y: 0 }, konec: { x: 8, y: 0 } }],
     });
-    const { vysledek } = zlom(uroven, k.navrh());
+    const { vysledek, trvani } = zlom(uroven, k.navrh());
     expect(vysledek.bezRovnovahy).toBe(true);
     expect(vysledek.zlom).toMatchObject({ zatizeni: 0, celkem: 0, cas: 0 });
+    // Trosky se dál nezatěžují: zkouška skončí, jakmile dopadnou.
+    expect(trvani).toBeLessThan(DOBEH_ZLOMU + 0.5);
+  });
+
+  it("nárůst zátěže, který nic nezatíží, zkouška odmítne (jinak by „prošla“ bez provozu)", () => {
+    for (const narust of [0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => new Zkouska(lavka(), prkno(), 1, undefined, undefined, { narust })).toThrow(/nárůst zátěže/);
+    }
+  });
+
+  it("pohyblivý most se do zlomu staví stejně jako pro běžnou zkoušku", () => {
+    // Mostovka po metru a zámek jako čep: stejný počet prvků i styčníků mostu.
+    const uroven = nactiKampan().find((u) => u.id === "7-01")!;
+    const navrh = RESENI["7-01"]!.pruchod;
+    const bezna = new Zkouska(uroven, navrh, nasadaUrovne(uroven));
+    const doZlomu = new Zkouska(uroven, navrh, nasadaUrovne(uroven), undefined, undefined, ZKOUSKA_DO_ZLOMU);
+    const pocetProvozu = bezna.simulace.soustava.pocetStycniku - doZlomu.simulace.soustava.pocetStycniku;
+    // Běžná zkouška má navíc jen styčníky a pérování vozidel.
+    expect(pocetProvozu).toBeGreaterThan(0);
+    expect(doZlomu.trasyMostovky).toEqual(bezna.trasyMostovky);
+    // Dvanáct metrů mostovky po metru, ne po šestimetrových dílech, jak je nakreslená.
+    const dilu = (z: Zkouska): number => {
+      const mostovka = new Set(z.trasyMostovky);
+      let pocet = 0;
+      const s = z.simulace.soustava;
+      for (let e = 0; e < s.pocetPrvku; e++) if (mostovka.has(s.prut[e]!)) pocet += 1;
+      return pocet;
+    };
+    expect(dilu(doZlomu)).toBe(dilu(bezna));
+    expect(dilu(doZlomu)).toBeGreaterThanOrEqual(12);
   });
 
   it("most, který vydržel až do konce, unesl aspoň to, co na něm leželo", () => {
@@ -169,5 +199,33 @@ describe("zkouška do zlomu", () => {
       vstup: { uroven: lavka({ rozpocet: 100 }), navrh: prkno(), nasada: 1, verzeFyziky: VERZE_FYZIKY, zlom: ZKOUSKA_DO_ZLOMU },
     });
     expect(draha).toEqual([{ typ: "chyba", kod: "neplatny-vstup", podrobnosti: "nad-rozpocet" }]);
+  });
+
+  it("přes zprávy: most, který nevede od břehu k břehu, zkoušku do zlomu nedostane", () => {
+    const start = (navrh: NavrhMostu, zlomu: boolean): ZpravaZeZkousky[] => {
+      const zpravy: ZpravaZeZkousky[] = [];
+      const beh = new BehZkousky((z) => zpravy.push(z));
+      beh.prijmi({
+        typ: "start",
+        vstup: { uroven: lavka(), navrh, nasada: 1, verzeFyziky: VERZE_FYZIKY, ...(zlomu ? { zlom: ZKOUSKA_DO_ZLOMU } : {}) },
+      });
+      return zpravy;
+    };
+    const odmitnuto = [{ typ: "chyba", kod: "neplatny-vstup", podrobnosti: "zlom-bez-mostovky" }];
+    // Prázdný výkres.
+    expect(start(new Kreslic().navrh(), true)).toEqual(odmitnuto);
+    // Jen trámy bez mostovky: zátěž by neměla na čem ležet a únosnost by vyšla z délky trasy.
+    const tramy = new Kreslic();
+    tramy.prut("drevo-lehke", [0, 0], [2, 1]);
+    tramy.prut("drevo-lehke", [2, 1], [4, 0]);
+    expect(start(tramy.navrh(), true)).toEqual(odmitnuto);
+    // Půlka mostovky.
+    const pulka = new Kreslic();
+    pulka.prut("mostovka-drevo", [0, 0], [2, 0]);
+    expect(start(pulka.navrh(), true)).toEqual(odmitnuto);
+    // Běžná zkouška takový most pustí (a provoz na něm spadne).
+    expect(start(pulka.navrh(), false)[0]).toMatchObject({ typ: "zacatek" });
+    // Celá mostovka zkoušku do zlomu dostane.
+    expect(start(prkno(), true)[0]).toMatchObject({ typ: "zacatek" });
   });
 });

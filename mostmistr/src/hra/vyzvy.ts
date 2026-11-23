@@ -7,28 +7,31 @@ import {
   DRUHY_VYZEV,
   mensiJeLepsi,
   stupenVyzvy,
+  zobrazenaHodnota,
   type DruhVyzvy,
   type PrahyVyzev,
   type StupenVyzvy,
   type ZakladVyzev,
 } from "../data/vyzvy";
-import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { cislo, hmotnost, koruny, procenta } from "../ui/formaty";
+import { celeCislo, cislo, koruny, procenta } from "../ui/formaty";
 import { t } from "../ui/slovnik";
 
 const ZNAK_STUPNE = "●";
 const ZNAK_BEZ_STUPNE = "○";
 
-/** Únosnost na korunu (N/Kč) v tunách na 100 000 Kč: číslo, které se dá představit. */
-export function tunNaStoTisic(naKorunu: number): number {
-  return (naKorunu * 100_000) / TIHOVE_ZRYCHLENI / 1000;
-}
-
-/** Hodnota výzvy slovy: cena v korunách, hmotnost v kg nebo t, únosnost v tunách na 100 000 Kč. */
+/**
+ * Hodnota výzvy slovy: cena v korunách, hmotnost v kg nebo t, únosnost v tunách na 100 000 Kč.
+ * Píše přesně to číslo, podle kterého se stupně porovnávají (`zobrazenaHodnota`).
+ */
 export function zapisVyzvy(druh: DruhVyzvy, hodnota: number): string {
-  if (druh === "cena") return koruny(hodnota);
-  if (druh === "hmotnost") return hmotnost(hodnota);
-  return t("vyzva.zlom.hodnota", { tun: cislo(tunNaStoTisic(hodnota), 1) });
+  const videt = zobrazenaHodnota(druh, hodnota);
+  if (druh === "cena") return koruny(videt);
+  if (druh === "hmotnost") {
+    // Tři platné číslice: do deseti tun v kilogramech, výš v tunách.
+    if (videt < 10_000) return `${celeCislo(videt)}\u00a0kg`;
+    return `${cislo(videt / 1000, videt < 100_000 ? 1 : 0)}\u00a0t`;
+  }
+  return t("vyzva.zlom.hodnota", { tun: cislo(videt, 1) });
 }
 
 /** Co hráč ve výzvě zatím dokázal; null, dokud ji neměřil. */
@@ -56,9 +59,16 @@ export function popisVyzev(prahy: PrahyVyzev, rekord: Rekord | undefined): strin
 
 /**
  * Naplní seznam `<ul class="vyzvy">` třemi výzvami úrovně. `zaklad` (co dokázal nejlepší
- * referenční most) slouží k poznámce, o kolik je hráč lepší než autor hry.
+ * referenční most) slouží k poznámce, o kolik je hráč lepší než autor hry. `tento` je to, co
+ * ve výzvách změřila právě skončená zkouška (ve výsledku zkoušky; jinde se nedává).
  */
-export function vypisVyzvy(seznam: HTMLElement, prahy: PrahyVyzev, zaklad: ZakladVyzev, rekord: Rekord | undefined): void {
+export function vypisVyzvy(
+  seznam: HTMLElement,
+  prahy: PrahyVyzev,
+  zaklad: ZakladVyzev,
+  rekord: Rekord | undefined,
+  tento: Partial<Record<DruhVyzvy, number | null>> = {},
+): void {
   seznam.replaceChildren(
     ...DRUHY_VYZEV.map((druh) => {
       const hodnota = hodnotaVyzvy(druh, rekord);
@@ -78,7 +88,14 @@ export function vypisVyzvy(seznam: HTMLElement, prahy: PrahyVyzev, zaklad: Zakla
       const casti: string[] = [];
       if (hodnota === null) casti.push(t(druh === "zlom" ? "vyzva.zlom.nezkouseno" : "vyzva.nezmereno"));
       else {
-        casti.push(zapisVyzvy(druh, hodnota), t(`vyzva.stupen.${stupen}`));
+        // Řádek ukazuje rekord. Když právě zkoušený most dopadl jinak, řekne to, jinak by pod
+        // sebou stála dvě různá čísla bez vysvětlení.
+        const ted = tento[druh];
+        const jinak = ted !== null && ted !== undefined && zobrazenaHodnota(druh, ted) !== zobrazenaHodnota(druh, hodnota);
+        casti.push(
+          jinak ? t("vyzva.rekord", { rekord: zapisVyzvy(druh, hodnota), tento: zapisVyzvy(druh, ted) }) : zapisVyzvy(druh, hodnota),
+          t(`vyzva.stupen.${stupen}`),
+        );
         // Kdo je lepší než nejlepší referenční most, má to vědět: zlato je jen jeho úroveň.
         const autor = druh === "zlom" ? zaklad.zlom : zaklad[druh];
         const lepsi = mensiJeLepsi(druh) ? (autor - hodnota) / autor : (hodnota - autor) / autor;

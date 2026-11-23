@@ -202,15 +202,23 @@ export class Zkouska {
     budic?: BudicZkousky,
     zlom?: ZlomZkousky,
   ) {
+    // Nárůst zátěže, se kterým by zkouška do zlomu nic nezatížila, je chyba volajícího; bez
+    // odmítnutí by z ní vyšla zkouška bez provozu, která „projde“.
+    if (zlom && !(zlom.narust > 0 && Number.isFinite(zlom.narust))) {
+      throw new Error("Zkouška do zlomu potřebuje kladný nárůst zátěže.");
+    }
+    // Most se staví podle úrovně, jak je (mostovka pohyblivého mostu po metru, zámek jako čep):
+    // pokus i zkouška do zlomu tak zkoušejí tentýž most jako běžná zkouška a rozbor.
+    const urovenStavby = uroven;
     // Pokus není zkouška: most se při něm nezvedá a lodě neplují. Stejně tak zkouška do zlomu.
     if (brnknuti || budic || zlom) uroven = { ...uroven, jizdniRad: [], pohyb: null, lode: [] };
-    this.#zlom = zlom && zlom.narust > 0 ? zlom : null;
+    this.#zlom = zlom ?? null;
     this.#uroven = uroven;
     this.#navrh = navrh;
     this.#brnknuty = brnknuti ? brnknuti.stycnik : -1;
     this.#budic = budic && budic.stycnik >= 0 && budic.stycnik < navrh.stycniky.length ? budic : null;
     const tiha = TIHOVE_ZRYCHLENI;
-    const stavba = sestavMost(uroven, navrh);
+    const stavba = sestavMost(urovenStavby, navrh);
     const stycnikuMostu = stavba.popis.stycniky.length;
     const prvkuMostu = stavba.popis.prvky.length;
     const plan = naplanujProvoz(stavba.popis, uroven, nasada, tiha);
@@ -369,6 +377,8 @@ export class Zkouska {
     for (const lod of uroven.lode) trvani = Math.max(trvani, lod.cas + lod.trvani + DOBEH);
     this.trvani = trvani;
     if (plan.ucastnici.length === 0 && !uroven.pohyb && uroven.lode.length === 0) this.#konec = bezProvozu;
+    // Most bez klidové polohy neunesl nic; trosky stačí nechat dopadnout, zatěžovat je nemá smysl.
+    if (this.#zlom && this.bezRovnovahy) this.#konec = DOBEH_ZLOMU;
     // Až nakonec: přetržení mění stavbu a ohlašuje to všemu, co se výše připravilo.
     this.#pretrhniPretazenaLana(s);
   }
@@ -440,7 +450,7 @@ export class Zkouska {
         // Budič: svislá síla ve styčníku, dokud nedojede na konec svého rozsahu.
         const budic = this.#budic;
         if (budic && cas <= budic.trvani) s.fy[budic.stycnik] = s.fy[budic.stycnik]! - budic.sila * this.#fazeBudice[1];
-        if (this.#zlom) {
+        if (this.#zlom && !this.bezRovnovahy) {
           // Po prvním porušení zátěž už neroste: zůstává ležet, kde byla.
           const q = this.#zlomCas === null ? zatizeniZlomu(this.#zlom, cas) : this.#zlomZatizeni;
           for (const z of this.#zatez) {

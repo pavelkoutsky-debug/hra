@@ -128,7 +128,7 @@ describe("jazyk hry", () => {
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await ceskeTexty(stranka)).toEqual([]);
-    const vyzvy = (await stranka.locator('[data-udaj="zadani-vyzvy"] li').allInnerTexts()).map((v) => v.replace(/[  ]/g, " "));
+    const vyzvy = (await stranka.locator('[data-udaj="zadani-vyzvy"] li').allInnerTexts()).map((v) => v.replace(/[\u00a0\u202f]/g, " "));
     expect(vyzvy[0]).toContain("31,100 Kč");
     await stranka.screenshot({ path: `${SLOZKA}/jazyk-zadani-en.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
@@ -137,11 +137,13 @@ describe("jazyk hry", () => {
     await stranka.locator('[data-akce="import"]').click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await stranka.locator('[data-akce="okno-nacist"]').click();
-    await stranka.locator('[data-akce="analyza"]').click();
-    await stranka.locator('body[data-analyza="otevrena"]').waitFor();
     expect(await ceskeTexty(stranka)).toEqual([]);
     await stranka.screenshot({ path: `${SLOZKA}/jazyk-stavba-en.png` });
-    await stranka.locator('[data-akce="analyza-zavrit"]').click();
+    // Nápověda: soupis mostu a věta o ceně.
+    await stranka.locator('[data-akce="napoveda"]').click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await ceskeTexty(stranka)).toEqual([]);
+    await stranka.keyboard.press("Escape");
 
     // Zkouška a výsledek.
     await stranka.locator(PLATNO).focus();
@@ -169,6 +171,38 @@ describe("jazyk hry", () => {
     await stranka.screenshot({ path: `${SLOZKA}/jazyk-pad-en.png` });
     await kontext.close();
   }, 240_000);
+
+  it("úroveň s analýzou, zkouška do zlomu a pohyblivý most jsou anglicky", async () => {
+    const { kontext, stranka } = await novyHrac("en-US");
+    // Lávka s rezonanční křivkou: analytický panel je otevřený hned.
+    await stranka.goto(`${adresa}?uroven=5-01`);
+    await stranka.locator(PLATNO).waitFor();
+    await stranka.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    await stranka.locator('[data-akce="import"]').click();
+    await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["5-01"]!.pruchod));
+    await stranka.locator('[data-akce="okno-nacist"]').click();
+    await stranka.locator('body[data-analyza="otevrena"]').waitFor();
+    await stranka.locator('canvas[data-udaj="krivka"][data-vrcholu]').waitFor({ timeout: 60_000 });
+    expect(await ceskeTexty(stranka)).toEqual([]);
+    await stranka.screenshot({ path: `${SLOZKA}/jazyk-analyza-en.png` });
+
+    // Pohyblivý most: zadání s loděmi a zvedáním, popisky kotev, zkouška do zlomu.
+    await stranka.goto(`${adresa}?uroven=7-01`);
+    await stranka.locator(PLATNO).waitFor();
+    await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
+    expect(await ceskeTexty(stranka)).toEqual([]);
+    await stranka.locator('#okno-zadani button[value="zavrit"]').click();
+    await stranka.locator('[data-akce="import"]').click();
+    await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["7-01"]!.pruchod));
+    await stranka.locator('[data-akce="okno-nacist"]').click();
+    await stranka.locator('[data-akce="zlom"]').click();
+    await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
+    await stranka.locator('[data-akce="na-konec"]').click();
+    await stranka.locator(".vysledek").waitFor({ state: "visible" });
+    expect(await ceskeTexty(stranka)).toEqual([]);
+    await stranka.screenshot({ path: `${SLOZKA}/jazyk-zlom-en.png` });
+    await kontext.close();
+  }, 300_000);
 
   it("anglická zkušebna a sandbox jsou taky anglicky", async () => {
     const { kontext, stranka } = await novyHrac("en-GB");

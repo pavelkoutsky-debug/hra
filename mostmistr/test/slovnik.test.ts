@@ -49,12 +49,8 @@ describe("angličtina", () => {
   });
 
   it("nenechává v textu českou diakritiku, která tam nepatří", () => {
-    // Vlastní jména (Žďákovský most, Kč) jsou v pořádku; hlídá se zapomenutá česká věta.
-    const POVOLENE = /Kč|Žďákov|Ždákov|Dvořák|Vltav|Mariánsk|Štefánik|Čech|Nusel|Děčín|Střekov|Podolsk|Orlík|Brno|Plzeň|Ústí|Šance|Hlávk|Libeň|Troj|Zbraslav|Železn|Bechyn|Tábor|Mánes|Jirásk|Palack|Švermov|Barrandov|Lochkov|Oparno|Vršovic|Čern|Kolín|Poděbrad|Mělník|Litoměřic|Hradec|Králové|Olomouc|Ostrav|Zlín|Jihlav|Budějovic|Písek|Stádlec|Lužnic|Sázav|Berounk|Ohř|Svratk|Dyj|Morav|Labe|Jizer|Úpa|Česk|Příbram|Křivoklát|Karlův|Náměšť|Třebíč|Žďár/;
-    const ceske = klice.filter((klic) => {
-      const anglicky = TEXTY.en[klic] ?? "";
-      return /[ěščřžýůďťň]/i.test(anglicky.replace(new RegExp(POVOLENE.source, "g"), ""));
-    });
+    // Měna (Kč) a název češtiny na přepínači jazyka česky být mají; jinak jde o zapomenutou větu.
+    const ceske = klice.filter((klic) => /[ěščřžýůďťň]/i.test((TEXTY.en[klic] ?? "").replace(/Kč|Česky/g, "")));
     expect(ceske).toEqual([]);
   });
 

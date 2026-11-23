@@ -56,9 +56,9 @@ export function koruny(castka: number): string {
   return `${celeCislo(castka)}\u00a0Kč`;
 }
 
-/** Podíl jako procenta bez desetinných míst; 0,756 → „76 %“. */
+/** Podíl jako procenta bez desetinných míst; 0,756 → „76 %“ (anglicky bez mezery: „76%“). */
 export function procenta(podil: number): string {
-  return `${celeCislo(podil * 100)}\u00a0%`;
+  return `${celeCislo(podil * 100)}${anglicky() ? "" : "\u00a0"}%`;
 }
 
 /** Hmotnost: do tuny v kilogramech, výš v tunách s jedním desetinným místem. */

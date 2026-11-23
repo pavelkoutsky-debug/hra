@@ -29,6 +29,7 @@
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <p class="prehled__postup" data-udaj="prehled-postup"></p>
+        <p class="prehled__dokonceno" data-udaj="prehled-dokonceno" role="status" hidden></p>
         <div class="prehled__kapitoly"></div>
         <label class="prehled__volba">
           <input type="checkbox" id="odemknout-vse" />
@@ -81,6 +82,18 @@
             <span data-text="denik.upozorneni"></span>
             <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
             <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
+          </div>
+          <!-- Zadání, nápověda a nastavení pískoviště jsou nahoře: na dlouhé paletě by jinak byly pod okrajem okna. -->
+          <div class="paleta__dvojice paleta__uvod">
+            <button type="button" class="paleta__tlacitko" data-akce="zadani" data-popis="paleta.zadaniOkno.popis">
+              <span data-text="paleta.zadaniOkno"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="napoveda" data-popis="napoveda.tlacitko.popis" hidden>
+              <span data-text="napoveda.tlacitko"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="sandbox" data-popis="sandbox.tlacitko.popis" hidden>
+              <span data-text="sandbox.tlacitko"></span>
+            </button>
           </div>
           <h2 data-text="paleta.prvky"></h2>
           <div class="paleta__prvky"></div>
@@ -211,16 +224,7 @@
 
           <h2 data-text="paleta.zadani"></h2>
           <p class="paleta__zadani" data-udaj="zadani"></p>
-          <button type="button" class="paleta__tlacitko" data-akce="zadani">
-            <span data-text="paleta.zadaniOkno"></span>
-          </button>
-          <button type="button" class="paleta__tlacitko" data-akce="napoveda" data-popis="napoveda.tlacitko.popis" hidden>
-            <span data-text="napoveda.tlacitko"></span>
-          </button>
-          <button type="button" class="paleta__tlacitko" data-akce="sandbox" data-popis="sandbox.tlacitko.popis" hidden>
-            <span data-text="sandbox.tlacitko"></span>
-          </button>
-          <ul class="medaile" data-udaj="podminky"></ul>
+          <ul class="medaile" data-udaj="podminky" data-jen-kampan></ul>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
             <span data-text="vazba.tlacitko"></span>
           </button>
@@ -295,7 +299,7 @@
               <h2 data-udaj="vysledek-nadpis"></h2>
               <p data-udaj="vysledek-shrnuti"></p>
             </div>
-            <ul class="medaile" data-udaj="vysledek-medaile"></ul>
+            <ul class="medaile" data-udaj="vysledek-medaile" data-jen-kampan></ul>
             <div class="vysledek__vyzvy" data-cast="vyzvy" hidden>
               <h3 data-text="vyzvy.nadpis"></h3>
               <ul class="vyzvy" data-udaj="vysledek-vyzvy"></ul>
@@ -342,7 +346,7 @@
               <dt data-text="pole.hmotnost"></dt>
               <dd data-udaj="hmotnost"></dd>
             </div>
-            <div class="pole__bunka">
+            <div class="pole__bunka" data-jen-kampan>
               <dt data-text="pole.medaile"></dt>
               <dd class="pole__medaile" data-udaj="medaile"></dd>
             </div>
@@ -530,8 +534,8 @@
           </div>
           <div class="okno__vedlejsi">
             <!-- Medaile jsou cíl úrovně: stojí nahoře, ať nejsou v dlouhém zadání pod okrajem okna. -->
-            <h3 data-text="zadani.medaile"></h3>
-            <ul class="medaile" data-udaj="zadani-medaile"></ul>
+            <h3 data-text="zadani.medaile" data-jen-kampan></h3>
+            <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
             <h3 data-text="zadani.provoz"></h3>
             <ul class="okno__seznam" data-udaj="zadani-provoz"></ul>
             <h3 data-text="zadani.stavba"></h3>

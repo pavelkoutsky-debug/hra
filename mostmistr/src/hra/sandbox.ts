@@ -6,10 +6,12 @@ import {
   MEZE_SANDBOXU,
   nactiSandbox,
   nejvicVeSkupine,
+  nejvicZakladu,
   PROVOZ_SANDBOXU,
   stejneUdoli,
   VERZE_SANDBOXU,
   vychoziPocet,
+  vychoziProvoz,
   type DruhProvozuSandboxu,
   type NastaveniSandboxu,
   type PolozkaSandboxu,
@@ -25,17 +27,29 @@ export interface MoznostiSandboxu {
   pouzij: (nastaveni: NastaveniSandboxu, smazatMost: boolean) => void;
 }
 
-/** Co je na nastavení špatně, slovy pro hráče: které pole a jaké má meze. */
-function textChyby(chyba: unknown): string {
+/**
+ * Co je na nastavení špatně, slovy pro hráče: které pole a jaké má meze. `data` je to, co
+ * hráč do formuláře napsal; meze některých polí závisejí na jiných (základy na rozpětí,
+ * počet na druhu provozu).
+ */
+function textChyby(chyba: unknown, data: { rozpeti: number; provoz: { druh: string }[] }): string {
   const cesta = chyba instanceof ChybaDat ? chyba.cesta : "";
   if (cesta === "sandbox.rozpeti") return t("sandbox.chyba.rozpeti", MEZE_SANDBOXU.rozpeti);
   if (cesta === "sandbox.hloubka") return t("sandbox.chyba.hloubka", MEZE_SANDBOXU.hloubka);
-  if (cesta === "sandbox.zaklady") return t("sandbox.chyba.zaklady", MEZE_SANDBOXU.zaklady);
-  const radek = /^sandbox\.provoz\[(\d+)\]\.(pocet|cas)$/.exec(cesta);
+  if (cesta === "sandbox.zaklady") {
+    return t("sandbox.chyba.zaklady", { rozpeti: data.rozpeti, max: nejvicZakladu(data.rozpeti) });
+  }
+  const radek = /^sandbox\.provoz\[(\d+)\]\.(pocet|cas|smer)$/.exec(cesta);
   if (radek) {
-    return t(radek[2] === "pocet" ? "sandbox.chyba.pocet" : "sandbox.chyba.cas", {
-      radek: Number(radek[1]) + 1,
-      max: MEZE_SANDBOXU.cas.max,
+    const poradi = Number(radek[1]);
+    if (radek[2] === "smer") return t("sandbox.chyba.smerKoleje", { radek: poradi + 1 });
+    if (radek[2] === "cas") return t("sandbox.chyba.cas", { radek: poradi + 1, max: MEZE_SANDBOXU.cas.max });
+    const druh = data.provoz[poradi]?.druh ?? "";
+    const znamy = (Object.values(PROVOZ_SANDBOXU).flat() as string[]).includes(druh);
+    return t("sandbox.chyba.pocet", {
+      radek: poradi + 1,
+      min: MEZE_SANDBOXU.pocet.min,
+      max: znamy ? nejvicVeSkupine(druh as DruhProvozuSandboxu) : MEZE_SANDBOXU.pocet.max,
     });
   }
   return t("sandbox.chyba", { duvod: chyba instanceof Error ? chyba.message : String(chyba) });
@@ -138,12 +152,13 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
     return polozka;
   }
 
+  /** Plný jízdní řád: tlačítko zůstává klikací a řekne, proč další položku nepřidá. */
   function obnovPridat(): void {
-    pridat.disabled = seznam.children.length >= MEZE_SANDBOXU.polozek;
+    pridat.setAttribute("aria-disabled", String(seznam.children.length >= MEZE_SANDBOXU.polozek));
   }
 
   /** Nastavení, jak je teď ve formuláři; čísla mimo meze nechá projít ke kontrole, ta řekne proč. */
-  function zFormulare(): unknown {
+  function zFormulare(): { rozpeti: number; provoz: { druh: string }[] } & Record<string, unknown> {
     const provoz = [...seznam.children].map((uzel) => {
       const pole = (jmeno: string): string =>
         uzel.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-pole="${jmeno}"]`)?.value ?? "";
@@ -183,26 +198,36 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
         uzel.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-pole="${jmeno}"]`)?.value ?? "";
       return { druh: pole("druh") as DruhProvozuSandboxu, pocet: Number(pole("pocet")), smer: Number(pole("smer")) === -1 ? -1 : 1, cas: Number(pole("cas")) };
     });
-    seznam.replaceChildren(...polozky.map(radek));
+    // Trasa, po které by nic nejelo, není k ničemu: prázdný řád dostane výchozí provoz.
+    seznam.replaceChildren(...(polozky.length > 0 ? polozky : vychoziProvoz(zvolenyDruh())).map(radek));
     obnovPridat();
   });
 
   pridat.addEventListener("click", () => {
+    if (seznam.children.length >= MEZE_SANDBOXU.polozek) {
+      hlaseni.dataset.druh = "varovani";
+      hlaseni.textContent = t("sandbox.chyba.plno", { max: MEZE_SANDBOXU.polozek });
+      return;
+    }
     const prvni = PROVOZ_SANDBOXU[zvolenyDruh()][0];
+    // Po jedné koleji jedou všechny vlaky stejným směrem jako první.
+    const smerPrvniho = Number(seznam.querySelector<HTMLSelectElement>('[data-pole="smer"]')?.value ?? 1) === -1 ? -1 : 1;
+    const smer = zvolenyDruh() === "kolej" ? smerPrvniho : 1;
     // Další položka vyráží pět sekund po té poslední, ať se na mostě hned nepotkají.
     let cas = 0;
     for (const uzel of seznam.children) cas = Math.max(cas, Number(uzel.querySelector<HTMLInputElement>('[data-pole="cas"]')?.value ?? 0) + 5);
-    seznam.append(radek({ druh: prvni, pocet: vychoziPocet(prvni), smer: 1, cas: Math.min(cas, MEZE_SANDBOXU.cas.max) }));
+    seznam.append(radek({ druh: prvni, pocet: vychoziPocet(prvni), smer, cas: Math.min(cas, MEZE_SANDBOXU.cas.max) }));
     obnovPridat();
   });
 
   pouzit.addEventListener("click", () => {
     let nove: NastaveniSandboxu;
+    const data = zFormulare();
     try {
-      nove = nactiSandbox(zFormulare());
+      nove = nactiSandbox(data);
     } catch (chyba) {
       hlaseni.dataset.druh = "varovani";
-      hlaseni.textContent = textChyby(chyba);
+      hlaseni.textContent = textChyby(chyba, data);
       return;
     }
     const smazat = !stejneUdoli(soucasne, nove) && moznosti.maMost();
