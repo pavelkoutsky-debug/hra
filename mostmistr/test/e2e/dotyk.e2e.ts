@@ -326,6 +326,59 @@ describe("dotykové ovládání výkresu", () => {
     await telefon.close();
   }, 200_000);
 
+  it("tablet na výšku: cíle v patičce přehledu na prst, popisky nástrojů do sebe nenarážejí a lišta říká, kde hráč je", async () => {
+    const tablet = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+    const s = await tablet.newPage();
+    s.on("pageerror", (chyba) => chyby.push(chyba.message));
+    try {
+      await s.goto(adresa);
+      await s.locator(".karta").first().waitFor();
+      // Zaškrtávátko záznamu hraní (cílem je celý řádek s popiskem) a odkazy v patičce: aspoň 44 px.
+      const volba = (await s.locator("label.prehled__volba:has(#zaznam-hrani)").boundingBox())!;
+      expect(volba.height).toBeGreaterThanOrEqual(44);
+      for (const odkaz of await s.locator(".prehled__verze a").all()) {
+        if (!(await odkaz.isVisible())) continue;
+        expect((await odkaz.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+
+      await s.goto(`${adresa}?uroven=1-01`);
+      await s.locator(PLATNO).waitFor();
+      await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+      // Lišta říká, ve které úrovni hráč je, i když se celý název nevejde.
+      const cislo = s.locator('[data-udaj="uroven-id"]');
+      expect(await cislo.isVisible()).toBe(true);
+      expect(await cislo.innerText()).toBe("1-01");
+      // Popisky nástrojů se vejdou do tlačítek a sousední tlačítka se nepřekrývají.
+      const nastroje = await s.locator("#obrazovka-uroven .paleta__nastroje .paleta__tlacitko").all();
+      expect(nastroje.length).toBeGreaterThanOrEqual(4);
+      for (const tlacitko of nastroje) {
+        const pretece = await tlacitko.evaluate((u) => u.scrollWidth > u.clientWidth + 1);
+        expect(pretece, await tlacitko.innerText()).toBe(false);
+      }
+      const smazat = (await s.locator('#obrazovka-uroven .paleta [data-akce="smazat"]').boundingBox())!;
+      const vse = (await s.locator('#obrazovka-uroven .paleta [data-akce="smazat-vse"]').boundingBox())!;
+      expect(smazat.x + smazat.width).toBeLessThanOrEqual(vse.x);
+      // Nevysvětlené bílé pruhy (ukázka tloušťky čáry) v úzké paletě nejsou.
+      expect(await s.locator("#obrazovka-uroven .paleta__ukazka").first().isVisible()).toBe(false);
+      await s.screenshot({ path: `${SLOZKA}/tablet-stavba.png` });
+
+      // Vše pryč: most zmizí a hlášení řekne, jak ho vrátit; Zpět ho vrátí.
+      await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
+      await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
+      await s.locator('[data-akce="okno-nacist"]').tap();
+      const pocet = await s.locator("body").getAttribute("data-pruty");
+      expect(Number(pocet)).toBeGreaterThan(0);
+      await s.locator('#obrazovka-uroven .paleta [data-akce="smazat-vse"]').tap();
+      expect(await s.locator("body").getAttribute("data-pruty")).toBe("0");
+      expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toContain("Zpět");
+      await s.screenshot({ path: `${SLOZKA}/tablet-vse-pryc.png` });
+      await s.locator('#obrazovka-uroven .paleta [data-akce="zpet"]').tap();
+      expect(await s.locator("body").getAttribute("data-pruty")).toBe(pocet);
+    } finally {
+      await tablet.close();
+    }
+  }, 120_000);
+
   it("na telefonu a tabletu se žádná úroveň ani pískoviště nerozlije do šířky, česky ani anglicky", async () => {
     // Úrovně kampaně, pískoviště a případy Havarijní komise (ty mají navíc pruh se změnami).
     const urovne = [...nactiKampan().map((u) => `?uroven=${u.id}`), "?sandbox", ...PRIPADY.map((p) => `?uroven=${p.uroven.id}`)];

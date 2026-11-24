@@ -123,6 +123,14 @@ body {
   flex: 1;
 }
 
+/* Číslo úrovně v liště: jen v úzkém okně, kde se celý název nevejde. */
+.lista__id {
+  display: none;
+  flex: none;
+  color: var(--cara-silna);
+  white-space: nowrap;
+}
+
 .tlacitko {
   flex: none;
   min-height: 28px;
@@ -1127,6 +1135,12 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   font-size: 11px;
 }
 
+/* Ve výsledku zkoušky: proč tenhle most medaili nezískal, s čísly. */
+.medaile__proc {
+  grid-column: 2;
+  font-size: 11px;
+}
+
 /* Hlášení nad výkresem */
 
 .vykres__hlaseni {
@@ -1202,6 +1216,22 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 .vysledek__verdikt {
   flex: 1 1 240px;
   min-width: 0;
+}
+
+/* Věta, která se vedle tlačítek nevešla do tří řádků, dostane celou šířku pruhu. */
+.vysledek__pruh--dlouha .vysledek__verdikt {
+  flex-basis: 100%;
+}
+
+/*
+ * Rozbalené podrobnosti v širokém okně zaberou nejvýš polovinu výšky výkresu a zbytek se
+ * posouvá uvnitř panelu: most (a prut, o kterém pruh mluví) musí zůstat vidět. Telefon má
+ * vlastní pravidla (podrobnosti se tam při návratu v čase zavírají samy).
+ */
+@media (min-width: 701px) {
+  .vysledek {
+    max-height: 50%;
+  }
 }
 
 .vysledek h2 {
@@ -2239,11 +2269,35 @@ a.karta__obal:hover {
   color: inherit;
 }
 
+/* Prst potřebuje cíl aspoň 44 px: volba záznamu hraní a odkazy v patičce přehledu. */
+@media (pointer: coarse) {
+  .prehled__volba {
+    min-height: 44px;
+  }
+
+  .prehled__volba input {
+    width: 22px;
+    height: 22px;
+  }
+
+  .prehled__verze a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 4px;
+  }
+}
+
 /* Na úzkém okně se schová to, bez čeho se dá hrát. */
 @media (max-width: 1180px) {
   .rozpocet__popis,
   .lista .lista__uroven {
     display: none;
+  }
+
+  /* Název úrovně se do lišty nevejde: zůstane aspoň její číslo. */
+  .lista .lista__id {
+    display: inline;
   }
 }
 
@@ -2264,6 +2318,25 @@ a.karta__obal:hover {
     min-width: 0;
     gap: 4px;
     padding-inline: 5px;
+  }
+
+  /*
+   * Nástroje v úzké paletě (tablet na výšku): klávesová zkratka se vedle popisku nevešla
+   * („SmazatVše pryč“, „Zrcadli“). Zkratku říká bublina tlačítka; popisek smí na dva řádky.
+   */
+  .paleta__nastroje kbd {
+    display: none;
+  }
+
+  .paleta__nastroje .paleta__tlacitko {
+    padding-inline: 4px;
+    font-size: 12px;
+    white-space: normal;
+  }
+
+  /* Ukázka tloušťky čáry pod názvem prvku: v úzké paletě vypadá jako nevysvětlený bílý pruh. */
+  .paleta__ukazka {
+    display: none;
   }
 
   .rozpocet__pruh {

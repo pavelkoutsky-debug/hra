@@ -3,10 +3,12 @@
 import { describe, expect, it } from "vitest";
 import { zkontrolujNavrh } from "../src/data/navrh";
 import { VERZE_FYZIKY } from "../src/jadro/verze";
+import { popisekBehuUkazky, popisekKonceUkazky } from "../src/hra/popisekUkazky";
+import { cislo } from "../src/ui/formaty";
 import { jeKlicTextu } from "../src/ui/slovnik";
 import { hezkeZvetseni, nejvetsiVychylka, zvetsiPohyb } from "../src/vykres/zvetseni";
 import { BehZkousky } from "../src/zkouska/beh";
-import type { VysledekZkousky, ZpravaZeZkousky } from "../src/zkouska/protokol";
+import type { Udalost, VysledekZkousky, ZpravaZeZkousky } from "../src/zkouska/protokol";
 import { CARA_MOSTOVKA, CARA_PRUT, STYCNIK_BEZNY, STYCNIK_SKRYTY, type Topologie } from "../src/zkouska/zaznam";
 import { nactiKampan, nasadaUrovne } from "../urovne/index";
 import { ukazkaUrovne, type StranaUkazky } from "../urovne/ukazky";
@@ -169,6 +171,20 @@ describe("ukázky k úrovním", () => {
 
       }
 
+      it("popisek pod mostem po doběhnutí řekne výsledek a u ukázky o kmitání nejvyšší hodnotu, ne okamžitou", () => {
+        const popisA = popisekKonceUkazky(ukazka.a.uroven, a);
+        const popisB = popisekKonceUkazky(ukazka.b.uroven, b);
+        expect(popisA).toMatch(/^neobstál/);
+        expect(popisB).toMatch(/^obstál/);
+        // Most, který se zřítil, „spadl“: kolik při tom kmital, nikoho nezajímá.
+        if (a.spadlo > 0 || a.rozpad) expect(popisA).toBe("neobstál: spadl");
+        if (oPevnosti) expect(popisA, uroven.id).not.toContain("m/s²");
+        else {
+          expect(popisA).toBe(`neobstál: kmitání nejvýš ${cislo(a.komfort!.zrychleni, 1)} m/s²`);
+          expect(popisB).toBe(`obstál: nejvýš ${cislo(b.komfort!.zrychleni, 1)} m/s²`);
+        }
+      });
+
       it("ukázka netrvá déle než půl minuty (dlouhé děje se přehrávají zrychleně)", () => {
         expect(Math.max(a.trvani, b.trvani) / (ukazka.rychlost ?? 1)).toBeLessThan(32);
       });
@@ -234,5 +250,22 @@ describe("zvětšení pohybu pro kreslení", () => {
     expect(hezkeZvetseni(0.004, 1.1)).toBe(200);
     expect(hezkeZvetseni(0.6, 1.1)).toBe(1);
     expect(hezkeZvetseni(0, 1.1)).toBe(1);
+  });
+});
+
+describe("popisek ukázky během děje", () => {
+  const uroven = kampan.find((u) => u.id === "2-03")!;
+  const zaklad = { pruchod: false, spadlo: 0, rozpad: false, poruseni: 0, komfort: { zrychleni: 3.9, cas: 10, trida: 4, stycnik: 0, prekroceno: 5 } } as unknown as VysledekZkousky;
+  it("ukazuje největší dosavadní kmitání, ne okamžité", () => {
+    expect(popisekBehuUkazky(uroven, zaklad, [], 12, 3.94)).toBe("kmitání zatím nejvýš 3,9 m/s²");
+  });
+  it("jakmile něco povolí, číslo kmitání zmizí", () => {
+    const udalosti = [{ druh: "poruseni", cas: 4, prut: 0 }] as unknown as Udalost[];
+    expect(popisekBehuUkazky(uroven, zaklad, udalosti, 3, 1)).toBe("kmitání zatím nejvýš 1,0 m/s²");
+    expect(popisekBehuUkazky(uroven, zaklad, udalosti, 5, 1)).toBe("něco povolilo");
+  });
+  it("v první kapitole (lekce o pevnosti) kmitání neukazuje", () => {
+    const prvni = kampan.find((u) => u.id === "1-01")!;
+    expect(popisekBehuUkazky(prvni, zaklad, [], 12, 3.9)).toBe("");
   });
 });
