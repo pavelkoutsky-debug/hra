@@ -199,6 +199,27 @@ describe("most bez vlastní opory, který se opře o terén", () => {
 });
 
 describe("lekce, které nejde obejít", () => {
+  it("4-05: zkouška kapitoly o lanech nejde složit příhradou bez lan", () => {
+    // Recenze obtížnosti M12c: lehká příhrada nad delším polem dávala rozpočtovou medaili
+    // v šedesáti ze sto deseti tvarů a levněji než zavěšený most. Úroveň proto ocelové pruty
+    // nedovoluje; mosty autora (mostovka, pilíř, lana) je nepotřebují.
+    const uroven = kampan.find((u) => u.id === "4-05")!;
+    expect(uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut")).toEqual([]);
+    const k = new Kreslic("4-05");
+    for (let x = 0; x < 72; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+    k.prut("pilir", [48, -14], [48, -2]);
+    k.prut("pilir", [48, -2], [48, 0]);
+    for (let x = 3; x < 48; x += 6) {
+      k.prut("ocel-lehka", [x - 3, 0], [x, 5]);
+      k.prut("ocel-lehka", [x, 5], [x + 3, 0]);
+      if (x + 6 < 48) k.prut("ocel-lehka", [x, 5], [x + 6, 5]);
+    }
+    const problemy = zkontrolujNavrh(k.navrh(), uroven).filter((p) => p.druh !== "nad-rozpocet");
+    expect(problemy.length).toBeGreaterThan(0);
+    expect(new Set(problemy.map((p) => p.druh))).toEqual(new Set(["prvek-nepovoleny"]));
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["4-05"]![klic], uroven), klic).toEqual([]);
+  });
+
   it("2-04: o kotvy pro tlumiče se neopře vzpěra; tlumič do nich vést smí", () => {
     // Kontrola obtížnosti M12: se vzpěrami z těch kotev do každého styčníku mostovky měla lávka
     // bez jediného tlumiče všechny tři medaile a zlato obou výzev za 87 % inženýrského rozpočtu.

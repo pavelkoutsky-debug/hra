@@ -1406,7 +1406,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Seventy-two metres across a ravine where there is nowhere to put a pier; a low-loader carrying a hundred and twenty tonnes will cross, followed by two lorries. Build a suspension bridge: two pylons, a main cable over their heads and hangers from it to the deck.",
   "zadani.4-04.vice":
     "The pylons stand on the footings on the banks; between them the main cable sags in a curve, and behind the pylons you fix it to the anchors in the ground. The hangers run vertically to the deck joints. The main cable is four times stronger than an ordinary one, which would snap here. Under the weight of the deck it settles into a curve by itself and the hangers must match it in length: without tensioning (N) the deck will sag by tens of centimetres.",
-  "zadani.4-05": "A seventy-two-metre road across a valley where only one pier can be founded, and not in the middle: forty-eight metres from the left bank. Nothing may be built under the longer span; two articulated lorries will cross, a convoy of three trucks will meet them, and finally a lorry will meet a bus.",
+  "zadani.4-05": "A seventy-two-metre road across a valley where only one pier can be founded, and not in the middle: forty-eight metres from the left bank. Nothing may be built under the longer span and all you have is the pier and cables; two articulated lorries will cross, a convoy of three trucks will meet them, and finally a lorry will meet a bus.",
   "zadani.5-01":
     "A footbridge on the embankment, forty-eight metres, and a crowd on it: a hundred and twenty people, each at their own pace of around 1.7 Hz. The promenade should be calm: vibration must not exceed 0.5 m/s².",
   "zadani.5-01.vice":
