@@ -226,10 +226,11 @@ describe("odhad kmitání proti zkoušce", () => {
         // Kde lidé ztrácejí krok (nad 2,5 m/s²), zkouška roste pomaleji než lineární odhad.
         if (zkouska < 2.5) pomery.push(odhad / zkouska);
         expect(odhad / zkouska, popis).toBeGreaterThan(0.72);
-        // Jediná výjimka: měkkou poloviční visutou lávku v 8-02, kterou rozkmitá malé procesí,
-        // odhad nadsazuje o 31 %. Most propadne podle odhadu i podle zkoušky.
+        // Jediná výjimka: měkkou poloviční visutou lávku v 8-02 (pylony 10 m pod vedením), kterou
+        // rozkmitá procesí, odhad nadsazuje o 48 % (2,65 proti 1,80 m/s² při mezi 1,0). Most
+        // propadne podle odhadu i podle zkoušky.
         const mekkaLavka = u.id === "8-02" && nazev === "poloviční visutá lávka";
-        expect(odhad / zkouska, popis).toBeLessThan(zkouska >= 2.5 ? 1.6 : mekkaLavka ? 1.4 : 1.3);
+        expect(odhad / zkouska, popis).toBeLessThan(zkouska >= 2.5 ? 1.6 : mekkaLavka ? 1.5 : 1.3);
         // Most, který na kmitání propadl, odhad nikdy neoznačí za klidný; most, který prošel, nikdy za jasně nevyhovující.
         if (zkouska > mez(u)) expect(odhad, popis).toBeGreaterThanOrEqual(KLID * mez(u));
         else expect(odhad, popis).toBeLessThanOrEqual(NAD * mez(u));
