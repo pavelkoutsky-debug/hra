@@ -214,6 +214,30 @@ describe("editor", () => {
     expect(e.lzeZpet).toBe(false);
   });
 
+  it("výměna mostu za jiný zapomene historii: Zpět cizí most nevrátí", () => {
+    const { e, tahni } = novy();
+    tahni([0, 0], [4, 0]);
+    tahni([4, 0], [8, 0]);
+    const vlastni = e.navrh;
+    // Most z odkazu: jiný návrh téže úrovně.
+    const cizi = pridejPrut(pridejPrut(prazdnyNavrh(uroven.id), B(0, 0), B(4, 0), "mostovka-drevo"), B(0, 0), B(2, 2), "drevo-lehke");
+    e.vymen(cizi);
+    expect(e.navrh).toBe(cizi);
+    expect(e.lzeZpet).toBe(false);
+    expect(e.lzeZnovu).toBe(false);
+    expect(e.posledniAkce).toBe("import");
+    // Úprava cizího mostu jde vzít zpět jen k němu, ne dál k mostu hráče.
+    tahni([4, 0], [8, 0]);
+    e.zpet();
+    expect(e.navrh).toBe(cizi);
+    expect(e.lzeZpet).toBe(false);
+    // A zpátky: ani tady Zpět cizí most nevrátí.
+    e.vymen(vlastni);
+    expect(e.navrh).toBe(vlastni);
+    expect(e.lzeZpet).toBe(false);
+    expect(e.lzeZnovu).toBe(false);
+  });
+
   it("kliknutím vybere prut nebo styčník, Shift přidává, Delete maže", () => {
     const { e, tahni } = novy();
     tahni([0, 0], [4, 0]);

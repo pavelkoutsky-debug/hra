@@ -11,6 +11,7 @@ import {
   KLIC_SANDBOXU,
   KLIC_ZABERU,
   KLIC_ULOZENI,
+  KLIC_VYZEV_ODKAZU,
   KLIC_ZVUKU,
   OZNAMENI_M12,
   Uloziste,
@@ -285,5 +286,28 @@ describe("paměť prošlých mostů a volba zpomaleného záběru", () => {
     expect(new Uloziste(sklad).zpomaleniPadu).toBe(false);
     uloziste.zpomaleniPadu = true;
     expect(new Uloziste(sklad).zpomaleniPadu).toBe(true);
+  });
+
+  it("výzva z odkazu se pamatuje pro každou úroveň zvlášť a poškozený zápis nevadí", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    expect(uloziste.vyzvaOdkazu("1-01")).toBeNull();
+    uloziste.nastavVyzvuOdkazu("1-01", "AQQEMS0wMQ");
+    uloziste.nastavVyzvuOdkazu("1-03", "AQQEMS0wMw");
+    expect(new Uloziste(sklad).vyzvaOdkazu("1-01")).toBe("AQQEMS0wMQ");
+    expect(new Uloziste(sklad).vyzvaOdkazu("1-03")).toBe("AQQEMS0wMw");
+    uloziste.nastavVyzvuOdkazu("1-01", null);
+    expect(new Uloziste(sklad).vyzvaOdkazu("1-01")).toBeNull();
+    expect(new Uloziste(sklad).vyzvaOdkazu("1-03")).toBe("AQQEMS0wMw");
+    // Uložený postup (mosty a rekordy) výzva neovlivní.
+    expect(sklad.data.has(KLIC_ULOZENI)).toBe(false);
+    for (const zapis of ["{", "[]", "null", '{"1-01":7}', `{"1-01":"${"A".repeat(7000)}"}`]) {
+      sklad.data.set(KLIC_VYZEV_ODKAZU, zapis);
+      expect(new Uloziste(sklad).vyzvaOdkazu("1-01")).toBeNull();
+    }
+    // Bez paměti prohlížeče se nic nepamatuje a nic nespadne.
+    const bez = new Uloziste(null);
+    bez.nastavVyzvuOdkazu("1-01", "AQQEMS0wMQ");
+    expect(bez.vyzvaOdkazu("1-01")).toBeNull();
   });
 });

@@ -191,6 +191,24 @@ export class Editor {
     this.#zmen(navrh, "import");
   }
 
+  /**
+   * Vymění celý návrh za jiný most a zapomene historii kroků. Pro přechod mezi vlastním mostem
+   * a mostem z odkazu: Zpět nesmí cizí most vrátit do výkresu hráče (uložil by se jako jeho)
+   * ani hráčův most do výkresu, kde je hostem.
+   */
+  vymen(navrh: NavrhMostu): void {
+    this.zrusVyber();
+    this.tah = null;
+    this.#zpet.length = 0;
+    this.#znovu.length = 0;
+    this.posledniAkce = "import";
+    this.posledniPrut = null;
+    if (navrh === this.#navrh) return;
+    this.#navrh = navrh;
+    this.#ocistiVyber();
+    this.#poZmene();
+  }
+
   zpet(): void {
     const predchozi = this.#zpet.pop();
     if (!predchozi) return;

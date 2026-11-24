@@ -2,11 +2,13 @@
 // nebo sandbox (`?sandbox`). Zkušební výkres 0-00 do kampaně nepatří, ale adresou otevřít jde.
 
 import { nactiKampan, nactiUrovne } from "../urovne/index";
+import { ChybaDat } from "./data/kontrola";
+import { PARAMETR_MOSTU, rozkodujMost } from "./data/sdileni";
 import { sandboxZTextu, urovenSandboxu } from "./data/sandbox";
 import { denikHry } from "./denik/prohlizec";
 import { spustPrehled } from "./hra/prehled";
 import { skladProhlizece, Uloziste } from "./hra/uloziste";
-import { spustUroven } from "./hra/uroven";
+import { spustUroven, type MostZOdkazu } from "./hra/uroven";
 import { doplnTexty } from "./ui/dom";
 import { pripojPojmy } from "./ui/pojmy";
 import { prepnutyJazyk, pripravJazyk } from "./ui/jazyk";
@@ -19,7 +21,18 @@ pripojPojmy();
 try {
   const uloziste = new Uloziste(skladProhlizece());
   const kampan = nactiKampan();
-  const id = new URLSearchParams(window.location.search).get("uroven");
+  // Most z odkazu (sdílení): kód v adrese nese most i jeho úroveň. Poškozený odkaz hru
+  // nezastaví: otevře se úroveň z adresy (nebo přehled) a hráč se dozví, co se stalo.
+  const kodMostu = new URLSearchParams(window.location.search).get(PARAMETR_MOSTU);
+  let mostZOdkazu: MostZOdkazu | null = null;
+  if (kodMostu !== null) {
+    try {
+      mostZOdkazu = { kod: kodMostu, navrh: rozkodujMost(kodMostu) };
+    } catch (chyba) {
+      mostZOdkazu = { chyba: chyba instanceof ChybaDat && chyba.kod === "novejsi-verze" ? "novejsi" : "poskozeny" };
+    }
+  }
+  const id = (mostZOdkazu && "navrh" in mostZOdkazu ? mostZOdkazu.navrh.uroven : null) ?? new URLSearchParams(window.location.search).get("uroven");
   // Deník hraní: anonymní záznam toho, co se ve hře děje (viz src/denik/).
   const denik = denikHry();
   const prepnuto = prepnutyJazyk();
@@ -36,10 +49,10 @@ try {
     }
     spustUroven(urovenSandboxu(nastaveni), kampan, uloziste, denik, nastaveni);
   } else if (id === null) {
-    spustPrehled(kampan, uloziste, denik);
+    spustPrehled(kampan, uloziste, denik, mostZOdkazu && "chyba" in mostZOdkazu ? t(`sdileni.chyba.${mostZOdkazu.chyba}`) : undefined);
   } else {
     const uroven = nactiUrovne().find((u) => u.id === id);
-    if (uroven) spustUroven(uroven, kampan, uloziste, denik);
+    if (uroven) spustUroven(uroven, kampan, uloziste, denik, null, mostZOdkazu);
     else spustPrehled(kampan, uloziste, denik, t("prehled.neznamaUroven", { uroven: id }));
   }
 } catch (chyba) {

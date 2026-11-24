@@ -4,6 +4,7 @@
 
 import type { NavrhMostu } from "../data/navrh";
 import { ID_SANDBOXU, sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
+import { NEJDELSI_KOD_MOSTU } from "../data/sdileni";
 import {
   prazdneUlozeni,
   ulozeniNaText,
@@ -44,6 +45,8 @@ export const KLIC_PROSLYCH = "mostmistr.prosle";
 export const KLIC_OZNAMENI = "mostmistr.oznameni";
 /** Oznámení o nových pravidlech medailí a přeladěných úrovních (M12). */
 export const OZNAMENI_M12 = "m12";
+/** Výzvy z odkazů: kód mostu, který má hráč v úrovni překonat cenou (viz `src/data/sdileni.ts`). */
+export const KLIC_VYZEV_ODKAZU = "mostmistr.vyzvy-odkazu";
 /** Kolik posledních prošlých mostů si hra na úroveň pamatuje. */
 const NEJVIC_PROSLYCH = 8;
 /** Nastavení sandboxu: údolí, trasa a provoz. */
@@ -239,6 +242,37 @@ export class Uloziste {
       const vysledek: Record<string, string[]> = {};
       for (const [uroven, seznam] of Object.entries(data)) {
         if (Array.isArray(seznam)) vysledek[uroven] = seznam.filter((o): o is string => typeof o === "string");
+      }
+      return vysledek;
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Výzva z odkazu pro úroveň: kód mostu, který má hráč překonat cenou, nebo null. Pamatuje se
+   * přes zavření hry, dokud ji hráč nezruší nebo nepřijme jinou.
+   */
+  vyzvaOdkazu(uroven: string): string | null {
+    return this.#vyzvyOdkazu()[uroven] ?? null;
+  }
+
+  nastavVyzvuOdkazu(uroven: string, kod: string | null): void {
+    const vse = this.#vyzvyOdkazu();
+    if (kod === null) delete vse[uroven];
+    else vse[uroven] = kod;
+    this.#pis(KLIC_VYZEV_ODKAZU, JSON.stringify(vse));
+  }
+
+  #vyzvyOdkazu(): Record<string, string> {
+    const zapis = this.#cti(KLIC_VYZEV_ODKAZU);
+    if (zapis === null) return {};
+    try {
+      const data: unknown = JSON.parse(zapis);
+      if (typeof data !== "object" || data === null || Array.isArray(data)) return {};
+      const vysledek: Record<string, string> = {};
+      for (const [uroven, kod] of Object.entries(data)) {
+        if (typeof kod === "string" && kod.length <= NEJDELSI_KOD_MOSTU) vysledek[uroven] = kod;
       }
       return vysledek;
     } catch {
