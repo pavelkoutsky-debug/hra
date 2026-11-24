@@ -48,6 +48,22 @@ body {
   overflow: hidden;
 }
 
+/* Věta pro prohlížeč bez JavaScriptu (všechny obrazovky hry jsou do spuštění skryté). */
+.bez-skriptu {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 16px 20px;
+  border: 1px solid var(--cara);
+  color: var(--cara-silna);
+  font-size: 15px;
+}
+
+.bez-skriptu span {
+  display: block;
+  margin-top: 8px;
+  color: var(--popisek);
+}
+
 .hra {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1125,6 +1141,12 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   border: 1px solid rgb(207 227 255 / 0.6);
   color: var(--cara-silna);
   pointer-events: none;
+}
+
+/* Odkaz v hlášení (Načíst znovu po aktualizaci hry) musí jít stisknout, i když hlášení myš propouští. */
+.vykres__hlaseni a {
+  color: var(--cara-silna);
+  pointer-events: auto;
 }
 
 .vykres__hlaseni:empty {

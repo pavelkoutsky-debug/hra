@@ -1,0 +1,15 @@
+{
+  "name": "Mostmistr",
+  "short_name": "Mostmistr",
+  "description": "Stavění mostů na technickém výkresu s poctivou fyzikou. · Bridge building on a technical drawing with honest physics.",
+  "lang": "cs",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#103f78",
+  "theme_color": "#0b2f5c",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

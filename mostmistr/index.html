@@ -7,9 +7,33 @@
     <meta name="description" content="Mostmistr: stavění mostů na technickém výkresu s poctivou fyzikou." />
     <title>Mostmistr</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      Náhled odkazu při sdílení. Stránka je jedna pro oba jazyky, proto je popis česky i anglicky.
+      %ADRESA_WEBU% doplní sestavení z proměnné URL na Netlify (og:image musí být absolutní adresa).
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mostmistr" />
+    <meta property="og:title" content="Mostmistr" />
+    <meta property="og:description" content="Stavěj mosty na technickém výkresu a vyzkoušej je poctivou fyzikou. · Build bridges on a technical drawing and test them with honest physics." />
+    <meta property="og:url" content="%ADRESA_WEBU%/" />
+    <meta property="og:image" content="%ADRESA_WEBU%/nahled.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Příhradový most na technickém výkresu ve hře Mostmistr" />
+    <meta property="og:locale" content="cs_CZ" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="/src/styly.css" />
   </head>
   <body>
+    <noscript>
+      <p class="bez-skriptu">
+        Mostmistr je hra o stavění mostů a bez JavaScriptu se nespustí: povol ho prosím a načti stránku znovu.
+        <span lang="en">Mostmistr is a bridge-building game and needs JavaScript: please enable it and reload the page.</span>
+      </p>
+    </noscript>
     <!-- Přehled kampaně -->
     <div class="hra hra--prehled" id="obrazovka-prehled" hidden>
       <header class="lista">
@@ -855,7 +879,6 @@
       <span data-udaj="pojem-text"></span>
     </div>
 
-    <noscript>Mostmistr potřebuje zapnutý JavaScript. / Mostmistr needs JavaScript turned on.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
