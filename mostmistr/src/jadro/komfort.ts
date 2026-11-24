@@ -79,6 +79,19 @@ export function vytvorMereniKomfortu(s: Soustava, stycniky: Iterable<number>, me
   return m;
 }
 
+/** Kopie měření se stejným stavem filtrů: dál se měří nezávisle na originálu. */
+export function zkopirujMereniKomfortu(m: MereniKomfortu): MereniKomfortu {
+  return {
+    ...m,
+    stycniky: m.stycniky.slice(),
+    rychlost: m.rychlost.slice(),
+    dolni: m.dolni.slice(),
+    dolniMinula: m.dolniMinula.slice(),
+    horni: m.horni.slice(),
+    ctverec: m.ctverec.slice(),
+  };
+}
+
 /**
  * Zpracuje jeden krok simulace délky `dt`, který skončil v čase `cas`. Filtry běží pořád;
  * do největší hodnoty se měření započítá, jen když je `pocitat` (na mostě jsou lidé).
