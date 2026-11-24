@@ -148,7 +148,7 @@ describe("upozornění na deník hraní", () => {
     const upozorneni = stranka.locator('#obrazovka-prehled [data-udaj="zaznam-upozorneni"]');
     expect(await upozorneni.isVisible()).toBe(true);
     // Upozornění říká, že záznam odchází autorům hry, co v něm je a že jde vypnout.
-    expect(await upozorneni.innerText()).toContain("anonymně odesílá autorům záznam hraní");
+    expect(await upozorneni.innerText()).toContain("odesílá autorům záznam hraní");
     expect(await upozorneni.innerText()).toContain("Záznam jde kdykoli vypnout");
     expect(await stranka.locator("#zaznam-hrani").isChecked()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/a0-upozorneni-na-denik.png` });
@@ -271,9 +271,9 @@ describe("zpětná vazba", () => {
     await stranka.locator('#obrazovka-uroven .paleta [data-akce="vazba"]').click();
     const okno = stranka.locator("#okno-vazba");
     await okno.waitFor({ state: "visible" });
-    expect(await udaj("vazba-zaznam")).toContain("anonymně odesílá autorům");
+    expect(await udaj("vazba-zaznam")).toContain("odesílá autorům záznam hraní pod náhodným číslem");
     await akce("vazba-zaznam").click();
-    expect(await udaj("vazba-zaznam")).toBe("Anonymní záznam hraní je vypnutý.");
+    expect(await udaj("vazba-zaznam")).toBe("Záznam hraní je vypnutý.");
     // Kdo záznam vypnul, tomu se kroky ze hry ke zprávě samy nepřikládají.
     expect(await stranka.locator("#vazba-prilohy").isChecked()).toBe(false);
     expect(await telo("denik")).toBe("vypnuto");
@@ -505,6 +505,45 @@ describe("stránka správce", () => {
     await expect.poll(() => stranka.locator("#hlaseni").innerText()).toMatch(/^Smazáno: deník \d{4}-\d{2}-\d{2} \(\d+ dávek\)\.$/);
     expect(await sklad.klice("denik/")).toEqual([]);
     expect(await stranka.locator("#den-pocty").innerText()).toBe("Deník je zatím prázdný.");
+  });
+
+  it("okno Soukromí a kontakt ukáže číslo hráče, přepne záznam a vede k žádosti o smazání", async () => {
+    await stranka.goto(adresa);
+    await stranka.locator(".karta").first().waitFor();
+    const okno = stranka.locator("#okno-soukromi");
+    await stranka.locator('.prehled__verze [data-akce="soukromi"]').click();
+    await okno.waitFor({ state: "visible" });
+    // Číslo hráče je to, pod kterým hra vede záznam (podle něj jde na serveru dohledat a smazat).
+    const cislo = await stranka.evaluate(() => window.localStorage.getItem("mostmistr.hrac"));
+    expect(cislo).toMatch(/^[0-9a-f-]{8,}$/i);
+    expect(await udaj("soukromi-hrac")).toBe(cislo);
+    const text = await okno.innerText();
+    for (const cast of ["12 měsících", "24 měsících", "Netlify", "automatický rozbor", "od prvního otevření"]) expect(text, cast).toContain(cast);
+    await stranka.screenshot({ path: `${SLOZKA}/a9-soukromi.png` });
+    // Vypínač záznamu dělá totéž co vypínač v přehledu.
+    const pred = await telo("denik");
+    await akce("soukromi-zaznam").click();
+    expect(await telo("denik")).toBe(pred === "zapnuto" ? "vypnuto" : "zapnuto");
+    await akce("soukromi-zaznam").click();
+    expect(await telo("denik")).toBe(pred);
+    // Žádost o smazání jde oknem Napiš nám.
+    await akce("soukromi-napis").click();
+    await stranka.locator("#okno-vazba").waitFor({ state: "visible" });
+    expect(await okno.isVisible()).toBe(false);
+    await stranka.locator('#okno-vazba button[value="zavrit"]').click();
+    // Adresa ?soukromi okno otevře rovnou (odkaz bez skriptu vede na tutéž stránku).
+    await stranka.goto(`${adresa}?soukromi`);
+    await okno.waitFor({ state: "visible" });
+    await okno.locator('button[value="zavrit"]').click();
+    // Na telefonu se okno vejde na šířku a dá se zavřít.
+    await stranka.setViewportSize({ width: 390, height: 844 });
+    await stranka.locator('.prehled__verze [data-akce="soukromi"]').click();
+    await okno.waitFor({ state: "visible" });
+    const obdelnik = await okno.boundingBox();
+    expect(obdelnik!.width).toBeLessThanOrEqual(390);
+    await stranka.screenshot({ path: `${SLOZKA}/a9-soukromi-telefon.png` });
+    await okno.locator('button[value="zavrit"]').click();
+    await stranka.setViewportSize({ width: 1280, height: 720 });
   });
 
   it("během celého průchodu prohlížeč nehlásil žádnou chybu", () => {

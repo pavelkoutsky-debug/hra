@@ -321,24 +321,50 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vazba.pocet": "{pocet} / {nejvic} characters",
   "vazba.kontakt": "Email, if you want a reply (optional)",
   "vazba.kontakt.poznamka":
-    "We will see your email only with this message. The message also carries the number under which the game keeps your anonymous play log, so we can tell from it what you tried in the game.",
+    "We will see your email only with this message. The message also carries the number under which the game keeps your play log, so we can tell from it what you tried in the game. The text of the message is also read by an automated daily review.",
   "denik.bezPameti": "The browser won’t let the game remember anything, so no play log is kept.",
   "vazba.odeslat": "Send",
   "vazba.odesilaSe": "Sending…",
   "vazba.diky": "Thanks, your message has arrived.",
   "vazba.diky.kontakt": "Thanks, your message has arrived. We can reply to the email you gave.",
   "vazba.nepodarilo": "Sending failed. Please try again in a moment; your text will stay here until you leave this page.",
-  "vazba.zaznam.zapnuty": "The game anonymously sends its authors a play log so that we can improve it.",
-  "vazba.zaznam.vypnuty": "The anonymous play log is turned off.",
+  "vazba.zaznam.zapnuty": "The game sends its authors a play log under a random number so that we can improve it.",
+  "vazba.zaznam.vypnuty": "The play log is turned off.",
   "vazba.zaznam.vypnout": "Turn log off",
   "vazba.zaznam.zapnout": "Turn log on",
   "vazba.zVysledku": "Something not right? Write to us",
   "denik.upozorneni":
-    "The game anonymously sends its authors a play log: which levels you open, how you build and how the tests turn out. No names or emails, just a random number for this browser. You can turn the log off at any time.",
+    "The game sends its authors a play log: which levels you open, how you build and how the tests turn out. No name or email, only a random number for this browser. You can turn the log off at any time.",
   "denik.vypnuto": "The play log is off and nothing more is being sent. You can turn it on at any time in the campaign overview.",
+  "soukromi.odkaz": "Privacy and contact",
+  "soukromi.vice": "More about privacy",
+  "soukromi.nadpis": "Privacy and contact",
+  "soukromi.uvod": "Mostmistr has no ads, no accounts and no third-party tracking code. Here is everything the game knows about you and what you can do about it.",
+  "soukromi.prohlizec.nadpis": "In your browser",
+  "soukromi.prohlizec":
+    "Campaign progress, your bridges, settings and a random player number are kept in this browser's storage (these are not cookies). If you clear the site's data in your browser, it is all gone.",
+  "soukromi.denik.nadpis": "Play log",
+  "soukromi.denik":
+    "Until you turn it off, the game sends its authors a play log under this browser's random number, starting the first time you open the game: which levels you open, how you build (including the shape of the bridge), how the tests turn out, the window size, the language and browser errors. No name, email or location. It is used only to tune the game.",
+  "soukromi.vazba.nadpis": "Messages to the authors",
+  "soukromi.vazba":
+    "A message from the Write to us window carries the text, its kind, your rating and the player number, optionally the attached bridge and your latest steps in the game, and an email only if you fill it in. The texts of messages, without the email field, are also read daily by an automated review (a language model) that suggests changes to the game; emails and phone numbers typed into the text are blacked out for it.",
+  "soukromi.zebricek.nadpis": "Leaderboards",
+  "soukromi.zebricek":
+    "A leaderboard entry holds a nickname, the bridge and its result; everyone can see the nickname and the result. So that leaderboards, messages and the log cannot be flooded, the server remembers for at most two days a fingerprint of the network address from which the address cannot be recovered.",
+  "soukromi.kde.nadpis": "Where it is kept and for how long",
+  "soukromi.kde":
+    "The data is kept with Netlify, the service the game runs on (like every web server it also keeps its own access logs). The play log is deleted after 12 months, messages after 24 months. We do not pass the data on or sell it to anyone.",
+  "soukromi.smazani.nadpis": "Deletion and questions",
+  "soukromi.smazani":
+    "Do you want your data deleted, or do you have a question? Write to us through the Write to us window and include the player number shown below; we can reply only if you add an email. The game is run by its authors.",
+  "soukromi.hrac": "Your player number:",
+  "soukromi.kopirovat": "Copy",
+  "soukromi.zkopirovano": "Copied",
+  "soukromi.napis": "Write to us",
   "denik.rozumim": "Got it",
   "denik.vypnout": "Turn log off",
-  "denik.volba": "Send the authors an anonymous play log (helps improve the game)",
+  "denik.volba": "Send the authors a play log under a random number (helps improve the game)",
 
   // Paleta
   "paleta.prvky": "Elements",

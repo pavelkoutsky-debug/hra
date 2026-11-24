@@ -27,6 +27,7 @@
         <p class="prehled__list"><a href="?list" data-akce="otevrit-list" data-udaj="prehled-list"></a></p>
         <div class="zaznam" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
@@ -45,6 +46,7 @@
         <p class="prehled__verze">
           <span data-udaj="prehled-verze"></span>
           · <a href="/zkusebna.html" data-text="lista.zkusebna" data-popis="lista.zkusebna.popis"></a>
+          · <a href="?soukromi" data-akce="soukromi" data-text="soukromi.odkaz"></a>
         </p>
       </main>
     </div>
@@ -133,6 +135,7 @@
         <!-- Kdo přijde odkazem, zadání neotevírá: upozornění na záznam hraní má vidět tady. -->
         <div class="zaznam zaznam--host" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
@@ -320,6 +323,7 @@
           <!-- Upozornění o záznamu hraní je až pod nástroji: hráč ho uvidí, ale nezabírá mu místo na stavbu. -->
           <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
             <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
             <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
             <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
           </div>
@@ -684,7 +688,10 @@
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="zebricek-zapsat" data-text="zebricek.zapsat"></button>
         </div>
         <p class="okno__hlaseni" data-udaj="zebricek-hlaseni" role="status"></p>
-        <p class="okno__poznamka" data-text="zebricek.soukromi"></p>
+        <p class="okno__poznamka">
+          <span data-text="zebricek.soukromi"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+        </p>
         <div class="okno__tlacitka">
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
         </div>
@@ -722,7 +729,10 @@
         </label>
         <label class="vazba__popisek" for="vazba-kontakt" data-text="vazba.kontakt"></label>
         <input id="vazba-kontakt" type="email" maxlength="200" autocomplete="email" />
-        <p class="vazba__poznamka" data-text="vazba.kontakt.poznamka"></p>
+        <p class="vazba__poznamka">
+          <span data-text="vazba.kontakt.poznamka"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+        </p>
         <input id="vazba-web" class="vazba__past" type="text" name="potvrzeni-zpravy" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <p class="vazba__zaznam">
           <span data-udaj="vazba-zaznam"></span>
@@ -785,12 +795,45 @@
         </div>
         <div class="zaznam zaznam--vOkne" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <p class="okno__napoveda" data-udaj="zadani-ovladani" data-text="zadani.ovladani"></p>
         <div class="okno__tlacitka">
           <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="zadani.zacit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--pojmy okno--soukromi" id="okno-soukromi">
+      <form method="dialog">
+        <h2 data-text="soukromi.nadpis"></h2>
+        <p data-text="soukromi.uvod"></p>
+        <h3 data-text="soukromi.prohlizec.nadpis"></h3>
+        <p data-text="soukromi.prohlizec"></p>
+        <h3 data-text="soukromi.denik.nadpis"></h3>
+        <p data-text="soukromi.denik"></p>
+        <p class="soukromi__radek">
+          <span data-udaj="soukromi-zaznam"></span>
+          <button type="button" class="tlacitko" data-akce="soukromi-zaznam"></button>
+        </p>
+        <h3 data-text="soukromi.vazba.nadpis"></h3>
+        <p data-text="soukromi.vazba"></p>
+        <h3 data-text="soukromi.zebricek.nadpis"></h3>
+        <p data-text="soukromi.zebricek"></p>
+        <h3 data-text="soukromi.kde.nadpis"></h3>
+        <p data-text="soukromi.kde"></p>
+        <h3 data-text="soukromi.smazani.nadpis"></h3>
+        <p data-text="soukromi.smazani"></p>
+        <p class="soukromi__radek">
+          <span data-text="soukromi.hrac"></span>
+          <code class="soukromi__hrac" data-udaj="soukromi-hrac"></code>
+          <button type="button" class="tlacitko" data-akce="soukromi-kopirovat"></button>
+        </p>
+        <div class="okno__tlacitka">
+          <button type="button" class="tlacitko" data-akce="soukromi-napis" data-text="soukromi.napis"></button>
+          <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>
     </dialog>

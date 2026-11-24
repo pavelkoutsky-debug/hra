@@ -922,6 +922,31 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   width: min(640px, calc(100vw - 24px));
 }
 
+/* Okno Soukromí a kontakt: odstavce pod malými nadpisy, řádek s číslem hráče a vypínačem. */
+.okno--soukromi h3 {
+  margin: 14px 0 4px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.okno--soukromi p {
+  margin: 0 0 6px;
+}
+
+.soukromi__radek {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.soukromi__hrac {
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
 /*
  * Slovníček je delší než obrazovka telefonu: tlačítko Zavřít drží u spodního okraje okna,
  * ať se k němu nemusí rolovat přes všechny pojmy.

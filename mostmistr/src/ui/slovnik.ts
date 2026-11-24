@@ -323,24 +323,50 @@ const CS = {
   "vazba.pocet": "{pocet} / {nejvic} znaků",
   "vazba.kontakt": "E-mail, pokud chceš odpověď (nepovinné)",
   "vazba.kontakt.poznamka":
-    "E-mail uvidíme jen u této zprávy. Zpráva nese i číslo, pod kterým si hra vede tvůj anonymní záznam hraní, takže podle něj poznáme, co jsi ve hře zkoušel.",
+    "E-mail uvidíme jen u této zprávy. Zpráva nese i číslo, pod kterým si hra vede tvůj záznam hraní, takže podle něj poznáme, co jsi ve hře zkoušel. Text zprávy čte i automatický denní rozbor.",
   "denik.bezPameti": "Prohlížeč hře nedovolí nic si zapamatovat, proto se záznam hraní nevede.",
   "vazba.odeslat": "Odeslat",
   "vazba.odesilaSe": "Odesílám…",
   "vazba.diky": "Díky, zpráva dorazila.",
   "vazba.diky.kontakt": "Díky, zpráva dorazila. Odpovědět ti můžeme na uvedený e-mail.",
   "vazba.nepodarilo": "Odeslat se nepodařilo. Zkus to prosím za chvíli znovu; text tu zůstane, dokud neodejdeš z této stránky.",
-  "vazba.zaznam.zapnuty": "Hra anonymně odesílá autorům záznam hraní, abychom ji mohli vylepšovat.",
-  "vazba.zaznam.vypnuty": "Anonymní záznam hraní je vypnutý.",
+  "vazba.zaznam.zapnuty": "Hra odesílá autorům záznam hraní pod náhodným číslem, abychom ji mohli vylepšovat.",
+  "vazba.zaznam.vypnuty": "Záznam hraní je vypnutý.",
   "vazba.zaznam.vypnout": "Vypnout záznam",
   "vazba.zaznam.zapnout": "Zapnout záznam",
   "vazba.zVysledku": "Něco nesedí? Napiš nám",
   "denik.upozorneni":
-    "Hra anonymně odesílá autorům záznam hraní: které úrovně otevřeš, jak stavíš a jak dopadnou zkoušky. Žádná jména ani e-maily, jen náhodné číslo tohoto prohlížeče. Záznam jde kdykoli vypnout.",
+    "Hra odesílá autorům záznam hraní: které úrovně otevřeš, jak stavíš a jak dopadnou zkoušky. Bez jména a e-mailu, jen pod náhodným číslem tohoto prohlížeče. Záznam jde kdykoli vypnout.",
   "denik.vypnuto": "Záznam hraní je vypnutý a nic dalšího se neodesílá. Zapnout ho můžeš kdykoli v přehledu kampaně.",
+  "soukromi.odkaz": "Soukromí a kontakt",
+  "soukromi.vice": "Více o soukromí",
+  "soukromi.nadpis": "Soukromí a kontakt",
+  "soukromi.uvod": "Mostmistr nemá reklamy, účty ani měřicí kódy cizích firem. Tady je všechno, co o tobě hra ví, a co s tím můžeš udělat.",
+  "soukromi.prohlizec.nadpis": "V tvém prohlížeči",
+  "soukromi.prohlizec":
+    "Postup kampaní, tvoje mosty, nastavení a náhodné číslo hráče si hra ukládá do paměti tohoto prohlížeče (nejsou to cookies). Když paměť stránky v prohlížeči smažeš, je všechno pryč.",
+  "soukromi.denik.nadpis": "Záznam hraní",
+  "soukromi.denik":
+    "Dokud ho nevypneš, hra odesílá autorům záznam hraní pod náhodným číslem tohoto prohlížeče, a to už od prvního otevření: které úrovně otevřeš, jak stavíš (i tvar mostu), jak dopadnou zkoušky, velikost okna, jazyk a chyby prohlížeče. Žádné jméno, e-mail ani poloha. Slouží jen k ladění hry.",
+  "soukromi.vazba.nadpis": "Zprávy autorům",
+  "soukromi.vazba":
+    "Zpráva z okna Napiš nám nese text, druh, hodnocení a číslo hráče, případně přiložený most a poslední kroky ve hře, a e-mail, jen když ho vyplníš. Texty zpráv bez pole s e-mailem denně čte i automatický rozbor (jazykový model), který autorům navrhuje úpravy hry; e-maily a telefonní čísla napsané přímo do textu se pro něj začerní.",
+  "soukromi.zebricek.nadpis": "Žebříčky",
+  "soukromi.zebricek":
+    "Do žebříčku jde přezdívka, most a jeho výsledek; přezdívku a výsledek uvidí všichni. Aby žebříčky, zprávy a záznam nešly zahltit, pamatuje si server nejvýš dva dny otisk síťové adresy, ze kterého adresu zpátky získat nejde.",
+  "soukromi.kde.nadpis": "Kde to leží a jak dlouho",
+  "soukromi.kde":
+    "Data leží u služby Netlify, na které hra běží (jako každý webový server si vede i vlastní provozní záznamy přístupů). Záznam hraní se maže po 12 měsících, zprávy po 24 měsících. Nikomu dalšímu je nepředáváme a neprodáváme.",
+  "soukromi.smazani.nadpis": "Smazání a dotazy",
+  "soukromi.smazani":
+    "Chceš svá data smazat, nebo se na něco zeptat? Napiš nám přes okno Napiš nám a uveď číslo hráče, které vidíš níž; odpovědět ti můžeme, jen když připojíš e-mail. Hru provozují její autoři.",
+  "soukromi.hrac": "Tvoje číslo hráče:",
+  "soukromi.kopirovat": "Zkopírovat",
+  "soukromi.zkopirovano": "Zkopírováno",
+  "soukromi.napis": "Napiš nám",
   "denik.rozumim": "Rozumím",
   "denik.vypnout": "Vypnout záznam",
-  "denik.volba": "Odesílat autorům anonymní záznam hraní (pomáhá hru vylepšovat)",
+  "denik.volba": "Odesílat autorům záznam hraní pod náhodným číslem (pomáhá hru vylepšovat)",
 
   // Paleta
   "paleta.prvky": "Prvky",
