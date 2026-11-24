@@ -270,6 +270,56 @@ describe("lekce, které nejde obejít", () => {
     for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["8-01"]![klic], uroven), klic).toEqual([]);
   });
 
+  it("8-02: lávka na lanech bez laděného tlumiče: paleta nemá ocel a vedení drží pylony nízko", () => {
+    // Recenze obtížnosti M14 (nález 1): krátký šikmý ocelový stožár s hlavou nad mostovkou posunul
+    // vlastní frekvence lávky mezi rytmy útvaru a procesí a lávka bez jediného tlumiče dostala
+    // mistrovskou medaili, o čtvrt milionu levněji než most autora. Úroveň proto ocelové pruty
+    // nedovoluje (pylon je pilíř na základu za opěrou) a vedení ve výšce 10,5 m nepustí vysoké
+    // pylony, ze kterých projde bez tlumiče poloviční visutá lávka.
+    const uroven = kampan.find((u) => u.id === "8-02")!;
+    expect(uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut")).toEqual([]);
+    const lavka = (stav: (k: Kreslic) => void): NavrhMostu => {
+      const k = new Kreslic("8-02");
+      for (let x = 0; x < 60; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+      stav(k);
+      return k.navrh();
+    };
+    const druhy = (navrh: NavrhMostu): Set<string> => new Set(zkontrolujNavrh(navrh, uroven).map((p) => p.druh).filter((druh) => druh !== "nad-rozpocet"));
+    // Most recenzenta: stožáry z opěr do (5, 5) a (55, 5), vějíř lan a kotevní lano.
+    const sikmeStozary = lavka((k) => {
+      for (const [pata, hlava, kotva, smer] of [
+        [0, 5, -16, 1],
+        [60, 55, 76, -1],
+      ] as const) {
+        k.prut("ocel-lehka", [pata, 0], [hlava, 5]);
+        for (const od of [6, 12, 18, 24, 30]) k.prut("lano", [hlava, 5], [pata + smer * od, 0]);
+        k.prut("lano", [hlava, 5], [kotva, 0]);
+      }
+    });
+    expect(druhy(sikmeStozary)).toEqual(new Set(["prvek-nepovoleny"]));
+    // Pilířový pylon vyšší než vedení: do zóny. Desetimetrový pod ni projde.
+    const sPylony = (vyska: number): NavrhMostu =>
+      lavka((k) => {
+        for (const [zaklad, kotva, smer] of [
+          [-4, -16, 1],
+          [64, 76, -1],
+        ] as const) {
+          k.prut("pilir", [zaklad, 0], [zaklad, vyska]);
+          for (const od of [6, 12, 18, 24]) k.prut("lano", [zaklad, vyska], [(smer === 1 ? 0 : 60) + smer * od, 0]);
+          k.prut("lano", [zaklad, vyska], [kotva, 0]);
+        }
+      });
+    expect(druhy(sPylony(12))).toEqual(new Set(["prut-v-zakazane-zone", "stycnik-v-zakazane-zone"]));
+    expect(druhy(sPylony(10))).toEqual(new Set());
+    // Mosty autora mají laděné tlumiče a lana a kontrolou projdou.
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) {
+      const most = RESENI["8-02"]![klic];
+      expect(zkontrolujNavrh(most, uroven), klic).toEqual([]);
+      expect(most.stycniky.filter((s) => s.tlumic).length, klic).toBeGreaterThanOrEqual(2);
+      expect(most.pruty.filter((p) => p.prvek === "lano" || p.prvek === "lano-nosne").length, klic).toBeGreaterThanOrEqual(4);
+    }
+  });
+
   it("2-04: o kotvy pro tlumiče se neopře vzpěra; tlumič do nich vést smí", () => {
     // Kontrola obtížnosti M12: se vzpěrami z těch kotev do každého styčníku mostovky měla lávka
     // bez jediného tlumiče všechny tři medaile a zlato obou výzev za 87 % inženýrského rozpočtu.

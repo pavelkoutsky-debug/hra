@@ -245,14 +245,28 @@ describe("dotykové ovládání výkresu", () => {
     const platno = stranka.locator("canvas.vykres__platno");
     await platno.waitFor();
     const obrys = (await platno.boundingBox())!;
+    // Zkušebna po načtení scény pohled ještě srovná: test na ustálený pohled počká, jinak by
+    // pod zátěží stroje změřil místo posunu prstem to srovnání.
+    const ustalenyPohled = async (): Promise<string> => {
+      let minule = "";
+      for (let i = 0; i < 40; i++) {
+        const ted = (await platno.getAttribute("data-kamera")) ?? "";
+        if (ted !== "" && ted === minule) return ted;
+        minule = ted;
+        await stranka.waitForTimeout(150);
+      }
+      return minule;
+    };
+    const vychozi = await ustalenyPohled();
     // Celý výkres posunout nejde (pohled se drží ve výřezu), proto nejdřív přiblížit.
     await platno.focus();
     await stranka.keyboard.press("+");
     await stranka.keyboard.press("+");
     await stranka.keyboard.press("+");
     await snimek();
-    const pred = await platno.getAttribute("data-kamera");
-    expect(pred).not.toBeNull();
+    const pred = await ustalenyPohled();
+    expect(pred).not.toBe("");
+    expect(pred).not.toBe(vychozi);
     const start = { x: obrys.x + obrys.width / 2, y: obrys.y + obrys.height / 2, id: 1 };
     await dotyk("touchStart", [start]);
     await dotyk("touchMove", [{ ...start, x: start.x + 40 }]);
