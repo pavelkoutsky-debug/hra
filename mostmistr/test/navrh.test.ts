@@ -59,6 +59,13 @@ describe("čtení návrhu", () => {
     expect(navrhZTextu(navrhNaText(navrh))).toEqual(navrh);
   });
 
+  it("styčník, do kterého nevede žádný prut, se při čtení zahodí (editor ho nevyrobí, zkouška by na něm spadla)", () => {
+    const navrh = trojuhelnik();
+    const sOsamelym = { ...navrh, stycniky: [...navrh.stycniky, { id: 77, x: 9, y: 4, svar: true }, { id: 78, x: 10, y: 4, zamek: true }] };
+    expect(nactiNavrh(sOsamelym)).toEqual(navrh);
+    expect(navrhZTextu(navrhNaText(sOsamelym as NavrhMostu))).toEqual(navrh);
+  });
+
   it("odmítne text, který není zápis mostu", () => {
     expect(() => navrhZTextu("tohle není most")).toThrow(ChybaDat);
   });

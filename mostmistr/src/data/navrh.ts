@@ -164,6 +164,12 @@ export function nactiNavrh(data: unknown): NavrhMostu {
     if (!idStycniku.has(p.a)) throw new ChybaDat(`${c}.pruty[${i}].a`, `styčník ${p.a} v návrhu není`);
     if (!idStycniku.has(p.b)) throw new ChybaDat(`${c}.pruty[${i}].b`, `styčník ${p.b} v návrhu není`);
   });
+  // Styčník, do kterého nevede žádný prut, editor nevyrobí (se smazaným prutem mizí i on). Cizí
+  // zápis (Import, odkaz) ho mít může; zahodí se, protože nic nenese a zkouška by na styčníku
+  // bez hmoty skončila chybou místo výsledku.
+  const spojene = new Set<number>();
+  for (const p of navrh.pruty) spojene.add(p.a).add(p.b);
+  if (navrh.stycniky.some((s) => !spojene.has(s.id))) navrh.stycniky = navrh.stycniky.filter((s) => spojene.has(s.id));
   return navrh;
 }
 

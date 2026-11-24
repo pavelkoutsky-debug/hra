@@ -11,10 +11,11 @@
 //
 // Co hráč uvidí: vlak vjede zleva a v 2,4 s se vzepře levá krajní šikmina (zpomalený záběr
 // u levé opěry), konec příhrady ztratí oporu, mostovka se u opěry propadne a vozy spadnou.
-// Pravá krajní šikmina má do té chvíle 62 %. Těžký horní pás má jen kolem 40 %.
+// Pravá krajní šikmina má do té chvíle 63 %, těžký horní pás pod 40 %. Síla, kterou šikmina
+// nese v opravě (3,9 MN), je 1,29násobek toho, co lehký profil té délky unese ve vzpěru (3,0 MN).
 //
 // Oprava komise (2 změny): obě krajní šikminy z těžkého profilu. Nejvíc pak nese kolejiště
-// (63 %), šikminy kolem 30 %. Když hráč zesílí jen tu, která povolila (jedna změna), vlak
+// (63 %), šikminy kolem 32 %. Když hráč zesílí jen tu, která povolila (jedna změna), vlak
 // dojede dál a vzepře se pravá: příčina je stejná na obou koncích.
 //
 // Slepé opravy: zesílit jen levou šikminu; těžké svislice u opěr (šikmina nese pořád totéž);

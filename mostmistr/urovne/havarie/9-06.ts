@@ -13,7 +13,7 @@
 //
 // Co hráč uvidí: zámek se odemkne, píst zvedá kořen křídla a vnější polovina visí v nesvařeném
 // styčníku dolů (věta „zalomené křídlo“), loď do ní narazí, po sklopení zámek nezapadne
-// a nákladní auto s autobusem spadnou. Žádný prut se přitom neporuší (nejvíc 37 %): příčina je
+// a nákladní auto s autobusem spadnou. Žádný prut se přitom neporuší (nejvíc 24 %): příčina je
 // v tom, co na výkresu chybí, ne v tom, co je slabé. Kdo svaří styčník (první, co ho napadne),
 // uvidí druhou chybu: křídlo se zvedne vcelku, ale klesne a loď narazí (věta „píst neudržel“).
 //
@@ -23,8 +23,10 @@
 // pata pístu přetáhnout do hluboké kotvy (posunutý styčník) a přenastavit zdvih: také tři změny.
 //
 // Slepé opravy: jen svar (píst neudrží); svar a druhý píst z hluboké kotvy vedle mělkého (mělký
-// píst se zdvihem 1,5 m zastaví křídlo dřív, než ho hluboký zvedne, loď narazí); píst
-// v hluboké kotvě bez svaru (křídlo se zalomí, loď proplouvá, ale zámek pak nezapadne).
+// píst se zdvihem 1,5 m zastaví křídlo dřív, než ho hluboký zvedne, loď narazí; s jiným zdvihem
+// druhého pístu je to malý zdvih nebo totéž); píst v hluboké kotvě bez svaru (křídlo se zalomí,
+// loď narazí do visící poloviny a zámek pak nezapadne). Samotný větší zdvih nepomůže: s 2 m
+// píst křídlo s nesvařeným styčníkem zalomí stejně a od 2,25 m je zdvih za úvratí.
 
 import type { PripadHavarie } from "../../src/data/havarie";
 import { Kreslic } from "../../src/data/kreslic";
