@@ -120,10 +120,15 @@ import {
   klidnyUsek,
   type KlidnyUsek,
 } from "./rezie";
+import { jeStejnaPrace, NEJVIC_PRACI, odkazNaScenar, ulozPraci, volnyNazevPrace } from "../data/dilna";
+import { cisloPripadu, NEJVIC_ZMEN_OPRAVY, otevrenePripady, stavOpravy, type PripadHavarie } from "../data/havarie";
+import type { ZmenaMostu } from "../data/zmeny";
+import { PRIPADY } from "../../urovne/havarie/index";
 import { rysyMostu } from "../data/rysy";
 import { sandboxNaText, type NastaveniSandboxu } from "../data/sandbox";
 import { RESENI } from "../../urovne/reseni";
 import { pripojNapovedu, type Napoveda } from "./napoveda";
+import { pripojDilnu } from "./dilna";
 import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
@@ -132,6 +137,29 @@ import { pripojZaznam } from "./zaznam";
 import { Ukazka } from "./ukazka";
 import { podminkaMistrovske, vypisMedaile, vypisMedailePruhu, znackyMedaili } from "./medaile";
 import { HLASITOSTI, type Uloziste } from "./uloziste";
+
+/** Klíč hlášení, které má hra ukázat až po novém načtení stránky (jednou). */
+const KLIC_ODLOZENEHO_HLASENI = "mostmistr.hlaseni";
+
+/** Uloží hlášení pro příští načtení stránky; bez paměti sezení se nestane nic. */
+function odlozHlaseni(text: string): void {
+  try {
+    window.sessionStorage.setItem(KLIC_ODLOZENEHO_HLASENI, text);
+  } catch {
+    // Paměť sezení není: hlášení se neukáže, nic dalšího se nestane.
+  }
+}
+
+/** Vrátí a smaže hlášení odložené před načtením stránky; null, když žádné není. */
+function vyzvedniHlaseni(): string | null {
+  try {
+    const text = window.sessionStorage.getItem(KLIC_ODLOZENEHO_HLASENI);
+    if (text !== null) window.sessionStorage.removeItem(KLIC_ODLOZENEHO_HLASENI);
+    return text;
+  } catch {
+    return null;
+  }
+}
 
 /** Volný okraj kolem výřezu při zobrazení celého výkresu, v pixelech. */
 const OKRAJ_VYKRESU = 28;
@@ -286,6 +314,8 @@ interface Beh {
   dopnutoMarne: string | null;
   /** Tahle zkouška prošla poslední chybějící úrovní kampaně: výsledek vede na závěrečný list. */
   kampanDokoncena?: boolean;
+  /** Tahle zkouška uzavřela případ Havarijní komise: kolika změnami a jestli je to lepší než dřív. */
+  pripadUzavren?: { zmen: number; lepsi: boolean };
   /** Pokus (brnknutí nebo budič), ne zkouška: nepočítá se do medailí ani do obálky. */
   pokus: boolean;
   /** Budič, kterým se most při pokusu rozkmitával; null u zkoušky a u brnknutí. */
@@ -387,8 +417,11 @@ export function spustUroven(
   denik: Denik,
   sandbox: NastaveniSandboxu | null = null,
   odkaz: MostZOdkazu | null = null,
+  havarie: PripadHavarie | null = null,
 ): void {
   prvek("#obrazovka-uroven", HTMLElement).hidden = false;
+  /** Pískoviště a Havarijní komise stojí mimo kampaň: bez medailí, rekordů, výzev a galerie. */
+  const mimoSoutez = sandbox !== null || havarie !== null;
 
   // ---- Deník hraní: co hráč v úrovni dělá (viz src/denik/) ----
   // Čas v úrovni běží jen, když je stránka vidět; panel na pozadí se do něj nepočítá.
@@ -588,20 +621,32 @@ export function spustUroven(
 
   const ulozeny = uloziste.navrh(uroven.id);
   let naposledUlozeny: NavrhMostu | null = ulozeny ?? null;
+  /** Stránka se právě načítá znovu s jinou prací z dílny: výkres už se nesmí uložit přes ni. */
+  let neukladat = false;
   // Most z odkazu (sdílení): hráč se na něj dívá jako host. Jeho vlastní most zůstává uložený
   // a nic se nepřepisuje, dokud se sám nerozhodne; odkaz na most, který už má, je obyčejné otevření.
-  const zOdkazu = sandbox === null && odkaz !== null && "navrh" in odkaz && odkaz.navrh.uroven === uroven.id ? odkaz : null;
+  // V pískovišti je to scénář z odkazu: údolí i most přišly adresou a pískoviště hráče zůstává.
+  const zOdkazu = odkaz !== null && "navrh" in odkaz && odkaz.navrh.uroven === uroven.id ? odkaz : null;
   /**
    * Most z odkazu, na který se hráč právě dívá; null, když staví svůj. `odlozeno` je výkres
    * hráče i s historií kroků, když na cizí most nahlíží z vlastní stavby (výzva z odkazu).
    */
   let host: { kod: string; navrh: NavrhMostu; odlozeno?: OdlozenyVykres } | null =
-    zOdkazu && !(ulozeny && navrhNaText(ulozeny) === navrhNaText(zOdkazu.navrh)) ? zOdkazu : null;
+    zOdkazu &&
+    !(
+      ulozeny &&
+      navrhNaText(ulozeny) === navrhNaText(zOdkazu.navrh) &&
+      // Scénář, který hráč už má na stole (stejný most ve stejném údolí), je obyčejné otevření.
+      (sandbox === null || sandboxNaText(uloziste.sandbox) === sandboxNaText(sandbox))
+    )
+      ? zOdkazu
+      : null;
   /** Jak dopadly běžné zkoušky téhle návštěvy: zápis mostu → prošel bez porušení? */
   const zkouseneMosty = new Map<string, boolean>();
   /** Výzva z odkazu: soupeřův most, který má hráč v téhle úrovni překonat cenou. */
   let vyzvaOdkazu: { kod: string; cena: number } | null = sandbox === null ? vyzvaZKodu(uloziste.vyzvaOdkazu(uroven.id)) : null;
-  const editor = new Editor(uroven, host?.navrh ?? ulozeny ?? prazdnyNavrh(uroven.id), poZmeneNavrhu);
+  // Případ Havarijní komise začíná mostem, který spadl; rozdělaná oprava má přednost.
+  const editor = new Editor(uroven, host?.navrh ?? ulozeny ?? havarie?.most ?? prazdnyNavrh(uroven.id), poZmeneNavrhu);
   // Výchozí stav výkresu není úprava: bez toho by první klik mimo kreslení (výběr, nástroj)
   // zapsal do deníku změnu stavby, která se nestala.
   naposledUlozeny = editor.navrh;
@@ -1683,7 +1728,7 @@ export function spustUroven(
       if (poleHlaseni.dataset.odmitnuti) skryjHlaseni();
       naposledUlozeny = editor.navrh;
       // Most z odkazu se neukládá: hráč je v něm host a jeho vlastní most zůstává, jak byl.
-      if (!host) uloziste.ulozNavrh(editor.navrh);
+      if (!host && !neukladat) uloziste.ulozNavrh(editor.navrh);
       naplanujRozbor();
       zapisUpravu();
     }
@@ -1817,6 +1862,9 @@ export function spustUroven(
    * (do řádku pod osou), jinak všechny. Prázdný text, když rozbor odhad nemá.
    */
   function radaKeKmitani(r: RozborMostu, kratce = false): string {
+    // Havarijní komise učí diagnózu: hra tam říká, co se stalo, ne co s tím. (Rada „tužší most“
+    // by navíc vedla k opravě, která se do dovolených změn nevejde.)
+    if (havarie) return "";
     if (!r.odhad) return "";
     const odhad = r.odhad.zrychleni;
     const po = (pomer: number): string => zrychleniSlovy(pomer * odhad);
@@ -2880,6 +2928,16 @@ export function spustUroven(
       zapis("zkouska.odmitnuta", { duvod: prekazka.druh, pokus: druhPokusu, cena: cenaNavrhu(editor.navrh) });
       return;
     }
+    // Havarijní komise: oprava smí mít jen pár změn. Pokusy (brnknutí, budič, do zlomu) jsou
+    // diagnostika a smějí běžet na čemkoli.
+    if (havarie && !pokus && !zlom) {
+      const zmen = stavOpravy(havarie, editor.navrh).zmeny.length;
+      if (zmen > NEJVIC_ZMEN_OPRAVY) {
+        ukazHlaseni(t("komise.mocZmen", { zmen, nejvic: NEJVIC_ZMEN_OPRAVY }), "varovani", true);
+        zapis("zkouska.odmitnuta", { duvod: "moc-zmen", pokus: druhPokusu, cena: cenaNavrhu(editor.navrh) });
+        return;
+      }
+    }
     // Zkouška do zlomu zatěžuje mostovku: bez mostu od břehu k břehu není co měřit.
     const mezera = zlom ? mezeryTras(editor.navrh, uroven)[0] : undefined;
     if (mezera) {
@@ -3069,11 +3127,11 @@ export function spustUroven(
             prosleMosty.add(navrhNaText(b.navrh));
             // Pamatuje se i přes zavření hry (jen v kampani: pískoviště výzvy nemá; cizí most
             // z odkazu také ne, dokud si ho hráč nenechá).
-            if (sandbox === null && !b.host) uloziste.zapisProsly(uroven.id, otiskNavrhu(b.navrh));
+            if (!mimoSoutez && !b.host) uloziste.zapisProsly(uroven.id, otiskNavrhu(b.navrh));
           }
           // V pískovišti se nesoutěží: rekordy ani medaile se tam nevedou. Cizí most z odkazu
           // hráči také nic nezapíše: pruh hosta slibuje, že se nic neukládá, dokud se nerozhodne.
-          if (!vysledek.rozpad && sandbox === null && !b.host) {
+          if (!vysledek.rozpad && !mimoSoutez && !b.host) {
             const projitaCela = (): boolean => kampan.every((u) => uloziste.rekord(u.id)?.medaile.pruchod === true);
             const predtim = projitaCela();
             // Hmotnost mostu patří k výzvě o nejlehčí most; počítá se jen u mostu, který prošel.
@@ -3085,7 +3143,7 @@ export function spustUroven(
           // Galerie pro závěrečný list: nejlepší most, který úrovní prošel (víc medailí,
           // neporušený, levnější). Jen v kampani a jen vlastní most: cizí most z odkazu do
           // galerie hráče nepatří, dokud si ho nenechá a nezkusí jako svůj.
-          if (vysledek.pruchod && !vysledek.rozpad && sandbox === null && !b.host) {
+          if (vysledek.pruchod && !vysledek.rozpad && !mimoSoutez && !b.host) {
             const m = vysledek.medaile;
             uloziste.zapisDoGalerie(uroven.id, {
               kod: zakodujMost(b.navrh),
@@ -3095,7 +3153,20 @@ export function spustUroven(
               verzeFyziky: VERZE_FYZIKY,
             });
           }
-        } else if (b.zlom && vysledek.zlom && !vysledek.rozpad && sandbox === null && !b.host) {
+          // Havarijní komise: případ je uzavřený, když opravený most projde a liší se od spadlého
+          // nejvýš dovoleným počtem změn (aspoň jednou: spadlý most sám neprojde).
+          // Oprava, při které se pod provozem něco poruší, opravou není (i když auta přejedou):
+          // případ uzavírá jen most, který prošel bez porušení, stejně jako oprava komise.
+          if (havarie && vysledek.pruchod && !vysledek.rozpad && !b.host) {
+            const zmen = stavOpravy(havarie, b.navrh).zmeny.length;
+            if (zmen >= 1 && zmen <= NEJVIC_ZMEN_OPRAVY && neporuseny) {
+              const drive = uloziste.havarie[uroven.id];
+              b.pripadUzavren = { zmen, lepsi: drive === undefined || zmen < drive };
+              uloziste.zapisHavarii(uroven.id, zmen);
+              zapis("havarie", { co: "uzavrena", zmen, drive: drive ?? 0 });
+            }
+          }
+        } else if (b.zlom && vysledek.zlom && !vysledek.rozpad && !mimoSoutez && !b.host) {
           // Únosnost na korunu se počítá jen mostu, který úrovní prošel: jinak by výzvu vyhrál
           // most bez toho, co úroveň učí (bez závaží, bez pístu), protože je levnější.
           b.zlomSePocita = prosleMosty.has(navrhNaText(b.navrh)) || uloziste.prosel(uroven.id, otiskNavrhu(b.navrh));
@@ -3546,6 +3617,8 @@ export function spustUroven(
 
   /** Rada, co s prutem, který povolil daným způsobem. */
   function radaKPoruseni(zpusob: number, navrh?: NavrhMostu, prut?: number): string {
+    // V Havarijní komisi hra neradí (viz `radaKeKmitani`): věta o porušení říká jen, co povolilo.
+    if (havarie) return "";
     if (zpusob === ZPUSOB_TAH) return t("rada.tah");
     if (zpusob === ZPUSOB_TLAK) return t("rada.tlak");
     // Pylon s lany neohne tíha, ale lana, která ho táhnou víc na jednu stranu: podepřít
@@ -3719,7 +3792,7 @@ export function spustUroven(
     // Most s nedopnutými lany visel pod výkresem už před zkouškou: silnější prvek ani další
     // styčník to nespraví, napínáky ano.
     if (b.nedopnuto !== null && b.dopnutoMarne === null) return `${veta} ${t("rada.nedopnuto", { mm: celeCislo(Math.round(1000 * b.nedopnuto)) })}`;
-    return `${veta} ${radaKPoruseni(u.zpusob, b.navrh, u.prut)}`;
+    return `${veta} ${radaKPoruseni(u.zpusob, b.navrh, u.prut)}`.trim();
   }
 
   /**
@@ -4587,7 +4660,7 @@ export function spustUroven(
     polePrvniho.hidden = !ukazatPrvni;
     // K větě s čísly patří rada, co s tím (ne u mostu, který přesto obstál, a u lana přetrženého napínákem).
     const sRadou = prvni?.druh === "poruseni" && !vysledek.pruchod && !pretrzenoNapinakem(b, prvni);
-    textSPojmy(polePrvniho, prvni && ukazatPrvni ? `${vetaOPoruseni(b, prvni)}${sRadou ? ` ${radaKPoruseni(prvni.zpusob, b.navrh, prvni.prut)}` : ""}` : "");
+    textSPojmy(polePrvniho, prvni && ukazatPrvni ? `${vetaOPoruseni(b, prvni)}${sRadou ? ` ${radaKPoruseni(prvni.zpusob, b.navrh, prvni.prut)}` : ""}`.trim() : "");
     // Zpomaleně jde přehrát všechno, na co záběr umí zamířit (i náraz lodi a pád); pokusy záběr nemají.
     const jeCoPrehrat = slozilSe || prvniPorucha(b.udalosti) !== null;
     prvek('[data-akce="prehrat-poruseni"]', HTMLElement).hidden = !jeCoPrehrat || (b.pokus && !b.zlom);
@@ -4611,6 +4684,16 @@ export function spustUroven(
     odkaz.href = dokoncena ? `${window.location.pathname}?list` : dalsi ? `?uroven=${dalsi.id}` : window.location.pathname;
     odkaz.dataset.posledni = String(posledni);
     odkaz.dataset.dokoncena = String(dokoncena);
+    if (havarie) {
+      // Po uzavření případu vede odkaz na další otevřený případ, jinak zpátky na přehled.
+      const uzavreny = uloziste.havarie[uroven.id] !== undefined;
+      const dalsiPripad = PRIPADY[PRIPADY.findIndex((p) => p.uroven.id === uroven.id) + 1];
+      const otevrene = otevrenePripady(PRIPADY, new Set(kampan.filter((u) => uloziste.rekord(u.id)?.medaile.pruchod).map((u) => u.id)), uloziste.havarie);
+      const kam = dalsiPripad && (otevrene.has(dalsiPripad.uroven.id) || uloziste.odemcenoVse) ? dalsiPripad : undefined;
+      odkaz.hidden = !(uzavreny && !jePokus);
+      odkaz.textContent = t(kam ? "komise.dalsi" : "komise.naPrehled");
+      odkaz.href = kam ? `?uroven=${kam.uroven.id}` : window.location.pathname;
+    }
     odkaz.onclick = () => zapis("ovladani", { co: dokoncena ? "kampan-dokoncena" : posledni ? "na-prehled" : "dalsi-uroven" });
 
     udaj("otisk").textContent = t("vysledek.otisk", { otisk: vysledek.otisk });
@@ -4646,15 +4729,45 @@ export function spustUroven(
     }
     // Za větu o provozu a příčinu patří to, co hráč čeká nejvíc: jak dopadla výzva z odkazu,
     // a u cizího mostu, že se mu nezapočítal.
+    // V pískovišti s vlastním cílem (rozpočet, klidnější most) patří k výhře i to, že ho most splnil.
+    const castiCile: string[] = [];
+    if (sandbox && vysledek.pruchod && !jePokus) {
+      if (sandbox.rozpocet !== null) castiCile.push(t("sandbox.cil.rozpocet", { castka: koruny(sandbox.rozpocet) }));
+      if (sandbox.komfort < 3 && vysledek.komfort) castiCile.push(t("sandbox.cil.komfort", { mez: cislo(MEZE_KOMFORTU[sandbox.komfort - 1]!, 1) }));
+    }
+    // Mez kmitání se měří jen pod lidmi: na mostě, po kterém nikdo nešel, se cíl nevyhodnotí
+    // (není ani splněný, ani nesplněný) a výsledek to řekne.
+    const bezLidi = sandbox !== null && sandbox.komfort < 3 && !vysledek.komfort && vysledek.pruchod && !jePokus;
+    const vetaCile =
+      castiCile.length > 0
+        ? t("sandbox.cil.splnen", { cil: castiCile.join(t("sandbox.cil.a")) }) + (bezLidi ? ` ${t("sandbox.cil.bezLidi")}` : "")
+        : bezLidi
+          ? t("sandbox.cil.bezLidi")
+          : null;
+    const maCil = sandbox !== null && (sandbox.rozpocet !== null || sandbox.komfort < 3) && !jePokus;
+    document.body.dataset.cilSandboxu = !maCil ? "" : castiCile.length > 0 ? "splnen" : bezLidi ? "nemereno" : "nesplnen";
+    // Havarijní komise: uzavřený případ, nebo připomenutí, že tohle byl ještě spadlý most.
+    let vetaKomise: string | null = null;
+    if (havarie && !jePokus) {
+      if (b.pripadUzavren) vetaKomise = vetaUzavreni(b.pripadUzavren.zmen);
+      else if (!vysledek.pruchod && stavOpravy(havarie, b.navrh).zmeny.length === 0) vetaKomise = t("komise.vysledek.puvodni", { nejvic: NEJVIC_ZMEN_OPRAVY });
+      // Most přejeli, ale něco na něm povolilo: komise takovou opravu neuzná a řekne proč.
+      else if (vysledek.pruchod && !vysledek.neporuseny) vetaKomise = t("komise.vysledek.poruseno");
+    }
+    document.body.dataset.pripadUzavren = b.pripadUzavren ? String(b.pripadUzavren.zmen) : "";
+    const poleNalezu = udaj("vysledek-nalez");
+    const klicNalezu = `havarie.${uroven.id}.nalez`;
+    poleNalezu.hidden = !(b.pripadUzavren && jeKlicTextu(klicNalezu));
+    if (!poleNalezu.hidden && jeKlicTextu(klicNalezu)) textSPojmy(poleNalezu, t("komise.nalez", { nalez: t(klicNalezu) }));
     // Kampaň dokončená touhle zkouškou: řekne to i věta, ne jen popisek tlačítka.
     const vetaDokonceni = b.kampanDokoncena && !jePokus ? t("vysledek.kampanDokoncena.veta") : null;
-    const dovetekPruhu = b.host && !jePokus ? t("sdileni.vysledek.host") : (vetaDokonceni ?? vetaVyzvyOdkazu);
+    const dovetekPruhu = b.host && !jePokus ? t("sdileni.vysledek.host") : (vetaKomise ?? vetaCile ?? vetaDokonceni ?? vetaVyzvyOdkazu);
     const vetaVPruhu = [vety[0] ?? "", pricina, dovetekPruhu].filter((cast) => cast !== null && cast !== "").join(" ");
     udaj("vysledek-veta").textContent = vetaVPruhu;
     // Pruh má na větu dva řádky; co se nevejde, je celé v bublině i v podrobnostech.
     udaj("vysledek-veta").title = vetaVPruhu;
     const pruhMedaili = udaj("vysledek-medaile-pruh");
-    pruhMedaili.hidden = jePokus || sandbox !== null;
+    pruhMedaili.hidden = jePokus || mimoSoutez;
     if (!pruhMedaili.hidden) vypisMedailePruhu(pruhMedaili, uroven, vysledek.medaile, rekord?.medaile);
     // Hlavní tlačítko: po výhře Další úroveň, po prohře Upravit most (i v úrovni, která už je projitá).
     const hlavniJeDalsi = !odkaz.hidden && (vysledek.pruchod || jePokus);
@@ -4678,15 +4791,38 @@ export function spustUroven(
   // ---- Okno se zadáním úrovně ----
 
   function naplnZadani(): void {
-    udaj("zadani-list").textContent = t(uroven.zkouskova ? "zadani.zkouska" : "zadani.uroven", { id: uroven.id });
+    udaj("zadani-list").textContent = havarie
+      ? t("komise.pripad", { cislo: cisloPripadu(uroven.id) })
+      : t(uroven.zkouskova ? "zadani.zkouska" : "zadani.uroven", { id: uroven.id });
     udaj("zadani-zkouska").hidden = !uroven.zkouskova;
     udaj("zadani-nazev").textContent = nazevUrovne(uroven);
     const klic = `zadani.${uroven.id}`;
-    textSPojmy(udaj("zadani-text"), jeKlicTextu(klic) ? t(klic) : "");
-    // Zadání jsou dvě věty; vysvětlení a souvislosti jsou pod „Více“ (sbalené).
-    const vice = `${klic}.vice`;
-    udaj("zadani-vice").hidden = !jeKlicTextu(vice);
-    textSPojmy(udaj("zadani-vice"), jeKlicTextu(vice) ? t(vice) : "");
+    if (havarie) {
+      // Spis případu: co se stalo, a pravidla opravy. Nález komise je vidět až po uzavření.
+      const spis = `havarie.${uroven.id}.spis`;
+      const nalez = `havarie.${uroven.id}.nalez`;
+      // Pravidla jmenují jen změny, které paleta případu dovoluje udělat.
+      const druhyZmen = [t("komise.zadani.zmeny")];
+      if (uroven.povolenePrvky.includes("pist")) druhyZmen.push(t("komise.zadani.zmeny.nastaveni.pist"));
+      if (uroven.povolenePrvky.includes("tlumic")) druhyZmen.push(t("komise.zadani.zmeny.nastaveni.tlumic"));
+      if (uroven.povoleneSvary) druhyZmen.push(t("komise.zmena.svar"));
+      if (uroven.pohyb) druhyZmen.push(t("komise.zmena.zamek"));
+      if (uroven.nejvetsiZavazi > 0) druhyZmen.push(t("komise.zmena.zavazi"));
+      if (uroven.nejvetsiTlumic > 0) druhyZmen.push(t("komise.zmena.tlumic"));
+      const maLana = uroven.povolenePrvky.some((id) => KATALOG[id].druh === "lano");
+      const presun = uroven.nejvetsiTlumic > 0 ? t("komise.zadani.presun.tlumic") : uroven.nejvetsiZavazi > 0 ? t("komise.zadani.presun") : "";
+      const pravidla = t("komise.zadani.pravidla", { nejvic: NEJVIC_ZMEN_OPRAVY, zmeny: druhyZmen.join(", "), napinaky: maLana ? t("komise.zadani.napinaky") : "", presun });
+      textSPojmy(udaj("zadani-text"), `${jeKlicTextu(spis) ? t(spis) : ""} ${pravidla}`);
+      const uzavreny = uloziste.havarie[uroven.id] !== undefined && jeKlicTextu(nalez);
+      udaj("zadani-vice").hidden = !uzavreny;
+      textSPojmy(udaj("zadani-vice"), uzavreny && jeKlicTextu(nalez) ? t("komise.nalez", { nalez: t(nalez) }) : "");
+    } else {
+      textSPojmy(udaj("zadani-text"), jeKlicTextu(klic) ? t(klic) : "");
+      // Zadání jsou dvě věty; vysvětlení a souvislosti jsou pod „Více“ (sbalené).
+      const vice = `${klic}.vice`;
+      udaj("zadani-vice").hidden = !jeKlicTextu(vice);
+      textSPojmy(udaj("zadani-vice"), jeKlicTextu(vice) ? t(vice) : "");
+    }
 
     const polozka = (text: string): HTMLLIElement => {
       const uzel = document.createElement("li");
@@ -4754,7 +4890,8 @@ export function spustUroven(
     const poleSkutecnosti = udaj("zadani-skutecnost");
     poleSkutecnosti.hidden = !jeKlicTextu(skutecnost);
     if (jeKlicTextu(skutecnost)) poleSkutecnosti.textContent = t("zadani.skutecnost", { text: t(skutecnost) });
-    udaj("zadani-vice-obal").hidden = !jeKlicTextu(vice) && !jeKlicTextu(skutecnost);
+    // „Více o úloze“ má smysl, jen když pod ním něco je (u případu komise nález po uzavření).
+    udaj("zadani-vice-obal").hidden = udaj("zadani-vice").hidden && !jeKlicTextu(skutecnost);
     // Návod k ovládání patří jen k úplně první úrovni.
     udaj("zadani-ovladani").hidden = uroven.id !== kampan[0]?.id;
     // Na dotykové obrazovce se nekreslí myší a mezerník tam není.
@@ -4831,11 +4968,69 @@ export function spustUroven(
   }
 
   /** Pruh nad výkresem pro most z odkazu a rámeček výzvy v paletě. */
+  /** Věta o uzavření případu podle počtu změn (jedna změna má vlastní tvar). */
+  function vetaUzavreni(zmen: number): string {
+    return t(zmen === 1 ? "komise.vysledek.uzavreno.jedna" : "komise.vysledek.uzavreno", { zmen });
+  }
+
+  /** Jak se změna jmenuje v pruhu: nastavení prutu podle toho, čemu patří (zdvih pístu, tlumič). */
+  function jmenoZmeny(zmena: ZmenaMostu): string {
+    if (zmena.druh === "nastaveni") {
+      const prvekPrutu = editor.navrh.pruty.find((p) => p.id === zmena.prut)?.prvek;
+      if (prvekPrutu === "pist") return t("komise.zmena.nastaveni.pist");
+      if (prvekPrutu === "tlumic") return t("komise.zmena.nastaveni.tlumic");
+    }
+    return t(`komise.zmena.${zmena.druh}`);
+  }
+
+  /** Pruh Havarijní komise nad výkresem: kolik změn oprava má a které to jsou. */
+  function obnovKomisi(): void {
+    if (!havarie) return;
+    const { zmeny } = stavOpravy(havarie, editor.navrh);
+    const pruh = udaj("komise");
+    pruh.hidden = false;
+    pruh.dataset.stav = zmeny.length === 0 ? "puvodni" : zmeny.length > NEJVIC_ZMEN_OPRAVY ? "moc" : "v-mezich";
+    document.body.dataset.zmen = String(zmeny.length);
+    // Stejné změny se vypíšou jednou s počtem („2× přidaný prut“).
+    const pocty = new Map<string, number>();
+    for (const zmena of zmeny) {
+      const jmeno = jmenoZmeny(zmena);
+      pocty.set(jmeno, (pocty.get(jmeno) ?? 0) + 1);
+    }
+    const seznam = [...pocty].map(([jmeno, kolik]) => (kolik > 1 ? `${kolik}× ` : "") + jmeno).join(", ");
+    const uzavreno = uloziste.havarie[uroven.id];
+    udaj("komise-text").textContent = [
+      t("komise.pruh", { cislo: cisloPripadu(uroven.id), nazev: nazevUrovne(uroven) }),
+      zmeny.length === 0 ? t("komise.pruh.puvodni", { nejvic: NEJVIC_ZMEN_OPRAVY }) : t("komise.pruh.zmeny", { zmen: zmeny.length, nejvic: NEJVIC_ZMEN_OPRAVY, seznam }),
+      uzavreno !== undefined ? vetaUzavreni(uzavreno) : "",
+    ]
+      .filter((cast) => cast !== "")
+      .join(" ");
+    const vratit = prvek('[data-akce="komise-puvodni"]', HTMLButtonElement);
+    vratit.setAttribute("aria-disabled", String(zmeny.length === 0));
+    // Při zkoušce pruh zůstává (plátno nesmí změnit výšku), jen se z něj nedá nic spustit.
+    for (const tlacitko of pruh.querySelectorAll("button")) tlacitko.disabled = rezim !== "stavba";
+  }
+
   function obnovSdileni(): void {
+    obnovKomisi();
     const pruh = udaj("host");
     pruh.hidden = host === null;
     document.body.dataset.host = host ? "ano" : "ne";
-    if (host) {
+    prvek('[data-akce="host-ulozit"]', HTMLButtonElement).hidden = sandbox === null;
+    if (host && sandbox) {
+      // Scénář z odkazu: nic se nepřekonává, jde jen o to, kam s ním.
+      const maVlastni = (ulozenyMost()?.pruty.length ?? 0) > 0;
+      udaj("host-text").textContent = t(editor.navrh !== host.navrh ? "dilna.host.text.upraveny" : "dilna.host.text", {
+        cena: koruny(cenaNavrhu(editor.navrh)),
+        dovetek: t(maVlastni ? "dilna.host.dovetek.vlastni" : "dilna.host.dovetek.zadny"),
+      });
+      pruh.dataset.stav = editor.navrh !== host.navrh ? "upraveny" : "nezkouseny";
+      prvek('[data-akce="host-nechat"]', HTMLButtonElement).textContent = t("dilna.host.otevrit");
+      prvek('[data-akce="host-zpet"]', HTMLButtonElement).textContent = t("dilna.host.zpet");
+      prvek('[data-akce="host-prekonat"]', HTMLButtonElement).hidden = true;
+      for (const tlacitko of pruh.querySelectorAll("button")) tlacitko.disabled = rezim !== "stavba";
+    } else if (host) {
       const cena = koruny(cenaNavrhu(editor.navrh));
       const prosel = overeni(host.navrh);
       const klic =
@@ -4938,6 +5133,93 @@ export function spustUroven(
       const klic = prijmout ? (melVlastni ? "sdileni.nechano.vyzva.zpet" : "sdileni.nechano.vyzva") : melVlastni ? "sdileni.nechano.zpet" : "sdileni.nechano";
       ukazHlaseni(t(klic, { cena: koruny(cenaNavrhu(byl.navrh)) }), "info", true);
     }
+  }
+
+  /**
+   * Na návštěvě ve scénáři má hráč vlastní pískoviště uložené stranou. Než ho něco přepíše
+   * (otevření scénáře ve svém pískovišti, otevření práce z dílny), jeho rozestavěný most se
+   * uloží do dílny. Vrací false, když to nejde (plná dílna, plná paměť prohlížeče): volající
+   * pak nic nepřepisuje. Že se zápis povedl, se čte zpátky z paměti: úložiště chybu zápisu
+   * spolkne, a most by zmizel bez stopy.
+   */
+  function schovejVlastniDoDilny(): boolean {
+    const vlastni = ulozenyMost();
+    if (!vlastni || vlastni.pruty.length === 0) return true;
+    let kod: string | null = null;
+    try {
+      kod = zakodujMost(vlastni);
+    } catch {
+      kod = null;
+    }
+    if (kod === null) return false;
+    const mojeUdoli = uloziste.sandbox;
+    const jeVDilne = (): boolean => uloziste.dilna.prace.some((p) => jeStejnaPrace(p, mojeUdoli, kod));
+    if (jeVDilne()) return true;
+    const dilna = uloziste.dilna;
+    const ulozeni = ulozPraci(dilna, volnyNazevPrace(dilna, t("dilna.nazev.rozestaveny")), mojeUdoli, vlastni, Date.now());
+    if (ulozeni.stav !== "ulozeno") return false;
+    uloziste.dilna = ulozeni.dilna;
+    if (!jeVDilne()) return false;
+    // Stránka se teď načte znovu s jiným mostem na stole: kam se poděl ten jeho, řekne hra po načtení.
+    odlozHlaseni(t("dilna.host.schovano", { nazev: ulozeni.dilna.prace[0]!.nazev }));
+    return true;
+  }
+
+  /**
+   * Hráč se rozhodl, co se scénářem z odkazu (pískoviště): uložit ho do dílny, otevřít ho ve
+   * svém pískovišti (jeho rozestavěný most se nejdřív sám uloží do dílny), nebo se vrátit.
+   */
+  function ukonciScenar(jak: "ulozit" | "nechat" | "zpet"): void {
+    if (!host || !sandbox || rezim !== "stavba") return;
+    const dilna = uloziste.dilna;
+    if (jak === "ulozit") {
+      // Tentýž scénář podruhé druhou práci nezakládá.
+      let kodScenare: string | null = null;
+      try {
+        kodScenare = zakodujMost(editor.navrh);
+      } catch {
+        kodScenare = null;
+      }
+      const stejna = kodScenare === null ? undefined : dilna.prace.find((p) => jeStejnaPrace(p, sandbox, kodScenare));
+      if (stejna) {
+        ukazHlaseni(t("dilna.host.uzJe", { nazev: stejna.nazev }), "info", true);
+        return;
+      }
+      const vysledek = ulozPraci(dilna, volnyNazevPrace(dilna, t("dilna.nazev.zOdkazu")), sandbox, editor.navrh, Date.now());
+      zapis("dilna", { co: "scenar-ulozit", stav: vysledek.stav, praci: vysledek.dilna.prace.length });
+      if (vysledek.stav !== "ulozeno" && vysledek.stav !== "prepsano") {
+        ukazHlaseni(t(vysledek.stav === "plno" ? "dilna.ulozit.plno" : "dilna.ulozit.velky", { nejvic: celeCislo(NEJVIC_PRACI) }), "varovani", true);
+        return;
+      }
+      uloziste.dilna = vysledek.dilna;
+      // Zápis se čte zpátky: plná paměť prohlížeče by jinak dala „uloženo“ bez uložení.
+      const ulozena = vysledek.dilna.prace[0]!;
+      if (!uloziste.dilna.prace.some((p) => p.nazev === ulozena.nazev && p.kod === ulozena.kod)) {
+        ukazHlaseni(t("dilna.ulozit.nejde"), "varovani", true);
+        return;
+      }
+      ukazHlaseni(t("dilna.host.ulozeno", { nazev: ulozena.nazev }), "info", true);
+      return;
+    }
+    if (jak === "nechat") {
+      // Rozestavěný most hráče nesmí zmizet bez stopy: co není v dílně, tam se uloží samo.
+      if (!schovejVlastniDoDilny()) {
+        ukazHlaseni(t("dilna.host.neniKam"), "varovani", true);
+        zapis("dilna", { co: "scenar-otevrit", stav: "neni-kam" });
+        return;
+      }
+      zapis("dilna", { co: "scenar-otevrit", stav: "ok", upraveny: editor.navrh !== host.navrh });
+      const scenar = editor.navrh;
+      host = null;
+      uloziste.sandbox = sandbox;
+      uloziste.ulozNavrh(scenar);
+    } else {
+      zapis("dilna", { co: "scenar-zpet" });
+    }
+    // Pískoviště hráče se načte znovu ze své paměti; bez paměti prohlížeče by se scénář ztratil,
+    // takže tam zůstane na adrese.
+    if (uloziste.trvale || jak === "zpet") window.location.search = "?sandbox";
+    else obnovStavbu();
   }
 
   /** Ukáže znovu soupeřův most z přijaté výzvy; vlastní most zůstává uložený. */
@@ -5374,6 +5656,10 @@ export function spustUroven(
           voda: nove.voda,
           zaklady: nove.zaklady,
           provoz: nove.provoz.map((p) => `${p.pocet}x${p.druh}`).join(","),
+          zvedani: nove.zvedani ? nove.zvedani.kridla : 0,
+          lod: nove.zvedani?.lod ?? 0,
+          rozpocet: nove.rozpocet ?? 0,
+          komfort: nove.komfort,
           smazanMost: smazatMost,
         });
         uloziste.sandbox = nove;
@@ -5388,7 +5674,44 @@ export function spustUroven(
       },
     });
     tlacitkoSandboxu.addEventListener("click", () => {
-      if (rezim === "stavba") oknoSandboxu.otevri();
+      if (rezim !== "stavba") return;
+      // Scénář z odkazu není pískoviště hráče: měnit ho jde, až si ho otevře ve svém.
+      if (host) ukazHlaseni(t("dilna.host.nastaveni"), "info", true);
+      else oknoSandboxu.otevri();
+    });
+    // Dílna: pojmenované práce (údolí s provozem a most), náhledy a odkaz na scénář.
+    const stul = sandbox;
+    const oknoDilny = pripojDilnu({
+      uloziste,
+      nastaveni: () => stul,
+      navrh: () => editor.navrh,
+      naNavsteve: () => host !== null,
+      otevri: (prace) => {
+        if (!uloziste.trvale) {
+          // Bez paměti prohlížeče nese práci adresa: otevře se jako scénář z odkazu.
+          window.location.href = odkazNaScenar(window.location.origin + window.location.pathname, prace.nastaveni, prace.kod);
+          return true;
+        }
+        // Na návštěvě je vlastní pískoviště hráče uložené stranou a otevření práce ho přepíše:
+        // jeho rozestavěný most se nejdřív uloží do dílny, jinak se nic neotevře.
+        if (host !== null && !schovejVlastniDoDilny()) return false;
+        // Od téhle chvíle se výkres neukládá: stůl patří otevírané práci.
+        host = null;
+        neukladat = true;
+        uloziste.sandbox = prace.nastaveni;
+        uloziste.ulozNavrh(rozkodujMost(prace.kod));
+        window.location.search = "?sandbox";
+        return true;
+      },
+      zapis: (data) => zapis("dilna", data),
+    });
+    // Hlášení odložené před načtením stránky (kam se uložil rozestavěný most).
+    const odlozene = vyzvedniHlaseni();
+    if (odlozene !== null && host === null) ukazHlaseni(odlozene, "info", false);
+    const tlacitkoDilny = prvek('[data-akce="dilna"]', HTMLButtonElement);
+    tlacitkoDilny.hidden = false;
+    tlacitkoDilny.addEventListener("click", () => {
+      if (rezim === "stavba") oknoDilny.otevri();
     });
   }
   priKliknuti("brnknout", prepniBrnknuti);
@@ -5458,9 +5781,26 @@ export function spustUroven(
   priKliknuti("sdileni-zprava", () => void zkopirujKeSdileni(poleZpravy, "zprava"));
   priKliknuti("sdileni-system", () => void sdilejSystemem());
   priKliknuti("sdileni-obrazek", stahniObrazek);
+  priKliknuti("komise-spis", () => {
+    if (rezim === "stavba") otevriZadani();
+  });
+  priKliknuti("komise-puvodni", () => {
+    if (!havarie || rezim !== "stavba") return;
+    if (stavOpravy(havarie, editor.navrh).zmeny.length === 0) {
+      ukazHlaseni(t("komise.puvodni.uzJe"), "info", true);
+      return;
+    }
+    // Krok jako každý jiný: Zpět vrátí rozdělanou opravu.
+    editor.nahrad(havarie.most);
+    zapis("havarie", { co: "puvodni" });
+    obnovStavbu();
+    platno.prekresli();
+    ukazHlaseni(t("komise.puvodni.vraceno"), "info", true);
+  });
   priKliknuti("host-prekonat", () => ukonciHosta("prekonat"));
-  priKliknuti("host-nechat", () => ukonciHosta("nechat"));
-  priKliknuti("host-zpet", () => ukonciHosta("zpet"));
+  priKliknuti("host-nechat", () => (sandbox ? ukonciScenar("nechat") : ukonciHosta("nechat")));
+  priKliknuti("host-zpet", () => (sandbox ? ukonciScenar("zpet") : ukonciHosta("zpet")));
+  priKliknuti("host-ulozit", () => ukonciScenar("ulozit"));
   priKliknuti("vyzva-ukazat", ukazSouperuvMost);
   priKliknuti("vyzva-zrusit", zrusVyzvuOdkazu);
   priKliknuti("prehrat", prepniPrehravani);
@@ -5803,7 +6143,8 @@ export function spustUroven(
   // ---- Úvodní naplnění stránky ----
 
   vytvorPaletu();
-  udaj("uroven").textContent = `${uroven.id}  ${nazevUrovne(uroven)}`;
+  if (havarie) document.body.dataset.havarie = uroven.id;
+  udaj("uroven").textContent = havarie ? `${t("komise.pripad", { cislo: cisloPripadu(uroven.id) })}  ${nazevUrovne(uroven)}` : `${uroven.id}  ${nazevUrovne(uroven)}`;
   // V úzkém okně se název zkrátí třemi tečkami: celý je v bublině.
   udaj("uroven").title = `${uroven.id}  ${nazevUrovne(uroven)}`;
   udaj("nazev").textContent = nazevUrovne(uroven);
@@ -5892,7 +6233,8 @@ export function spustUroven(
   // Zadání se otevře samo, dokud v úrovni nic nestojí. V sandboxu jen napoprvé: po každé
   // změně údolí je výkres prázdný a zadání by se otevíralo pořád dokola.
   // Hlášení o odkazu, který nešel přečíst, má být vidět: zadání by ho zakrylo.
-  if (editor.navrh.pruty.length === 0 && !(sandbox && uloziste.sandboxNavstiven) && !chybaOdkazu) otevriZadani();
+  // Případ Havarijní komise začíná spisem: hráč má vědět, co se stalo, než most pustí znovu.
+  if ((editor.navrh.pruty.length === 0 || (havarie !== null && ulozeny === undefined)) && !(sandbox && uloziste.sandboxNavstiven) && !chybaOdkazu) otevriZadani();
   if (sandbox) uloziste.sandboxNavstiven = true;
 
   // Dotaz na verzi fyziky zároveň ověří, že pracovní vlákno se simulací funguje.

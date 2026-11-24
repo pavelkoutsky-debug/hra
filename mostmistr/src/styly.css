@@ -27,8 +27,9 @@ body {
   display: none !important;
 }
 
-/* V pískovišti se nesoutěží: medaile tam nejsou vidět nikde. */
-body[data-sandbox] [data-jen-kampan] {
+/* V pískovišti a v Havarijní komisi se nesoutěží: medaile tam nejsou vidět nikde. */
+body[data-sandbox] [data-jen-kampan],
+body[data-havarie] [data-jen-kampan] {
   display: none !important;
 }
 
@@ -285,7 +286,9 @@ a.tlacitko {
 
 /* Pískoviště nemá buňku s medailemi: cena a hmotnost si rozdělí celý řádek, ať nezbude díra. */
 body[data-sandbox] .pole__bunka:nth-child(2),
-body[data-sandbox] .pole__bunka:nth-child(3) {
+body[data-sandbox] .pole__bunka:nth-child(3),
+body[data-havarie] .pole__bunka:nth-child(2),
+body[data-havarie] .pole__bunka:nth-child(3) {
   grid-column: span 3;
 }
 
@@ -731,7 +734,8 @@ body[data-sandbox] .pole__bunka:nth-child(3) {
 
 /* Nápověda a nastavení pískoviště patří ke stavbě; při zkoušce zašednou jako zbytek palety. */
 body[data-rezim="zkouska"] .paleta__uvod [data-akce="napoveda"],
-body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
+body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"],
+body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   opacity: 0.4;
   pointer-events: none;
 }
@@ -855,6 +859,11 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="sandbox"] {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
   cursor: help;
+}
+
+/* Pojem a interpunkce hned za ním drží na řádku pohromadě. */
+.pojem__celek {
+  white-space: nowrap;
 }
 
 .pojem:hover,
@@ -1562,13 +1571,68 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   width: 68px;
 }
 
+.okno--sandbox input.sandbox__castka {
+  width: 112px;
+}
+
+/* Hotová údolí: řada tlačítek, každé vyplní celé nastavení. */
+.sandbox__predlohy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.sandbox__predlohy .tlacitko {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 9px;
+  text-align: left;
+}
+
+.sandbox__predlohy .tlacitko small {
+  font-size: 11px;
+  color: var(--popisek);
+}
+
+.sandbox__pole--zvedani {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--cara);
+}
+
+.sandbox__pole--zvedani[hidden] {
+  display: none;
+}
+
+/* Okno pískoviště je dlouhé: posouvá se jeho obsah, tlačítka zůstávají dole na dohled. */
+.okno--sandbox form {
+  display: flex;
+  flex-direction: column;
+  max-height: min(86vh, 860px);
+}
+
+.okno--sandbox .sandbox__obsah {
+  overflow-y: auto;
+  /* Spodní okraj: poslední řádek formuláře nesmí končit přesně na hraně posuvné části. */
+  padding: 0 4px 10px 0;
+}
+
+/* Oddíly formuláře mají nad nadpisem odstup; první nadpis ne. */
+.okno--sandbox .sandbox__obsah h3 {
+  margin-top: 16px;
+}
+
+.okno--sandbox .sandbox__obsah h3:first-child {
+  margin-top: 0;
+}
+
 .sandbox__provoz {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* Dlouhý jízdní řád se posouvá uvnitř okna, aby tlačítka dole zůstala vidět i v nízkém okně. */
-  max-height: 32vh;
-  overflow-y: auto;
   margin: 6px 0 8px;
   padding: 2px 4px 2px 0;
   list-style: none;
@@ -1590,6 +1654,143 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   .sandbox__pole {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Okno dílny: uložené práce z pískoviště s náhledy. */
+
+.okno--dilna {
+  width: min(720px, 94vw);
+}
+
+.okno--dilna form {
+  display: flex;
+  flex-direction: column;
+  max-height: min(86vh, 860px);
+}
+
+.dilna__obsah {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.okno--dilna h3 {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.dilna__ulozit,
+.dilna__odkaz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+
+.dilna__ulozit label,
+.dilna__odkaz label {
+  flex: 0 0 132px;
+  color: var(--popisek);
+}
+
+.okno--dilna input[type="text"] {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.okno--dilna .tlacitko[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+.okno--dilna .okno__hlaseni[data-druh="ok"],
+.okno--sandbox .okno__hlaseni[data-druh="ok"] {
+  color: var(--cara-silna);
+}
+
+.dilna__prace {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.dilna__karta {
+  display: flex;
+  gap: 12px;
+  padding: 6px;
+  border: 1px solid var(--cara);
+}
+
+.dilna__nahled {
+  flex: 0 0 auto;
+  width: 200px;
+  height: 116px;
+  border: 1px solid var(--cara);
+}
+
+.dilna__texty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dilna__jmeno {
+  overflow-wrap: anywhere;
+  color: var(--cara-silna);
+  font-weight: normal;
+}
+
+.dilna__popis {
+  color: var(--popisek);
+  font-size: 12px;
+}
+
+.dilna__tlacitka {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+
+@media (max-width: 560px) {
+  .dilna__karta {
+    flex-direction: column;
+  }
+
+  .dilna__nahled {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 200 / 116;
+  }
+
+  .dilna__ulozit label,
+  .dilna__odkaz label {
+    flex-basis: 100%;
+  }
+}
+
+.vysledek__nalez {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.vysledek__nalez[hidden] {
+  display: none;
 }
 
 .vazba__druhy {
@@ -1734,6 +1935,18 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   color: var(--cara-silna);
 }
 
+/* Oddíl Havarijní komise v přehledu: stejné karty jako úrovně, oddělený linkou. */
+.komise {
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--cara);
+}
+
+.komise[hidden] {
+  display: none;
+}
+
+.komise h1,
 .kapitola h1 {
   margin: 0;
   color: var(--cara-silna);
@@ -1772,7 +1985,8 @@ a.karta__obal:hover {
   outline: 2px solid var(--cara-silna);
 }
 
-.karta[data-zamceno="true"] .karta__obal {
+.karta[data-zamceno="true"] .karta__obal,
+.pripad[data-zamceno="true"] .karta__obal {
   border-style: dashed;
   opacity: 0.55;
 }
@@ -3122,6 +3336,15 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   background: var(--zvyrazneni);
 }
 
+/* Pruh Havarijní komise: kolik změn oprava má; přes povolený počet varuje. */
+.host--komise[data-stav="moc"] .host__text {
+  color: var(--varovani);
+}
+
+.host--komise .tlacitko[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
 .host__text {
   flex: 1 1 260px;
   margin: 0;
@@ -3177,6 +3400,15 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   body[data-host="ano"] .uroven .paleta {
     max-height: 20vh;
     max-height: 20dvh;
+  }
+
+  /*
+   * V Havarijní komisi bere pruh případu výkresu místo a lávky k tomu mají pod výkresem osu
+   * frekvencí: paleta mu ho vrátí, ať výkresu zbude aspoň třetina výšky telefonu.
+   */
+  body[data-havarie] .uroven .paleta {
+    max-height: 26vh;
+    max-height: 26dvh;
   }
 }
 

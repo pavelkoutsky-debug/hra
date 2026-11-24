@@ -279,7 +279,7 @@ describe("sandbox", () => {
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-nazev")).toBe("Pískoviště");
-    expect(await udaj("zadani-text")).toContain("žádný rozpočet, žádné medaile");
+    expect(await udaj("zadani-text")).toContain("žádné medaile, všechny prvky");
     // Výchozí provoz: dvě osobní auta zleva a nákladní auto zprava.
     const provoz = await udaj("zadani-provoz");
     expect(provoz).toContain("2× osobní auto");
@@ -428,6 +428,88 @@ describe("sandbox", () => {
     expect(await udaj("sandbox-hlaseni")).toBe("Rozpětí údolí musí být celé číslo od 6 do 72 m.");
     await stranka.screenshot({ path: `${SLOZKA}/r7-sandbox-trat.png` });
     await stranka.keyboard.press("Escape");
+  }, 240_000);
+
+  it("hotové údolí s kanálem: zvedací most se zámkem uprostřed pustí loď; vlastní cíl rozpočtu", async () => {
+    await akce("sandbox").click();
+    await stranka.locator("#okno-sandbox").waitFor({ state: "visible" });
+    // Šest hotových údolí; kliknutí jen vyplní formulář a řekne to.
+    expect(await pole("[data-predloha]").count()).toBe(6);
+    expect(await pole("#sandbox-zvedani").isChecked()).toBe(false);
+    expect(await pole('[data-udaj="sandbox-zvedani"]').isVisible()).toBe(false);
+    await pole('[data-predloha="kanal"]').click();
+    expect(await udaj("sandbox-hlaseni")).toBe("Vyplněno: Kanál 16 m. Uprav, co chceš, a dej Použít.");
+    expect(await pole("#sandbox-rozpeti").inputValue()).toBe("16");
+    expect(await pole("#sandbox-druh").inputValue()).toBe("silnice");
+    expect(await pole("#sandbox-zvedani").isChecked()).toBe(true);
+    expect(await pole("#sandbox-kridla").inputValue()).toBe("2");
+    expect(await pole("#sandbox-lod").inputValue()).toBe("9");
+    // Loď bez vody nejde a okno řekne, co s tím.
+    await pole("#sandbox-voda").uncheck();
+    await akce("sandbox-pouzit").click();
+    expect(await udaj("sandbox-hlaseni")).toBe("Loď potřebuje vodu: zaškrtni, že je na dně voda, nebo nastav výšku lodi na 0.");
+    await pole("#sandbox-voda").check();
+    await stranka.screenshot({ path: `${SLOZKA}/r7b-sandbox-predloha.png` });
+    await Promise.all([stranka.waitForEvent("load"), akce("sandbox-pouzit").click()]);
+    await stranka.locator(PLATNO).waitFor();
+    // Zvedací most má v paletě píst a zámek a na ose zvednutí, loď a sklopení.
+    const prvky = await stranka.locator(".paleta__prvky [data-prvek]").evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-prvek")));
+    expect(prvky).toContain("pist");
+    expect(await stranka.locator('button[data-pridavek="zamek"]').isVisible()).toBe(true);
+    expect(await udaj("jizdni-rad")).toContain("loď");
+
+    // Dvě křídla po osmi metrech, píst pod každým, zámek uprostřed.
+    const stycniky = [
+      { id: 0, x: 0, y: 0 },
+      { id: 1, x: 4, y: 0, svar: true },
+      { id: 2, x: 8, y: 0, zamek: true },
+      { id: 3, x: 12, y: 0, svar: true },
+      { id: 4, x: 16, y: 0 },
+      { id: 5, x: 0, y: -5 },
+      { id: 6, x: 16, y: -5 },
+    ];
+    const most = {
+      verze: 4,
+      uroven: "0-01",
+      stycniky,
+      pruty: [
+        { id: 0, a: 0, b: 1, prvek: "mostovka-ocel" },
+        { id: 1, a: 1, b: 2, prvek: "mostovka-ocel" },
+        { id: 2, a: 4, b: 3, prvek: "mostovka-ocel" },
+        { id: 3, a: 3, b: 2, prvek: "mostovka-ocel" },
+        { id: 4, a: 5, b: 1, prvek: "pist", zdvih: 2 },
+        { id: 5, a: 6, b: 3, prvek: "pist", zdvih: 2 },
+      ],
+    };
+    await nactiMost(JSON.stringify(most));
+    expect(await telo("pruty")).toBe("6");
+    await spust();
+    await nastavCas(15);
+    await stranka.screenshot({ path: `${SLOZKA}/r7c-sandbox-kanal.png` });
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    expect(await stranka.locator('[data-udaj="vysledek-pohyb"]').getAttribute("data-narazilo")).toBe("0");
+    // Bez cíle výsledek o cíli mlčí.
+    expect(await telo("cil-sandboxu")).toBe("");
+    await akce("upravit").click();
+
+    // Vlastní cíl: rozpočet pod cenou mostu (570 000 Kč) ke zkoušce nepustí, nad ní ano.
+    await akce("sandbox").click();
+    await stranka.locator("#okno-sandbox").waitFor({ state: "visible" });
+    await pole("#sandbox-rozpocet").fill("5");
+    await akce("sandbox-pouzit").click();
+    expect(await udaj("sandbox-hlaseni")).toBe("Rozpočet musí být celé číslo od 10 000 do 50 000 000 Kč; prázdné pole znamená bez rozpočtu.");
+    await pole("#sandbox-rozpocet").fill("600000");
+    await Promise.all([stranka.waitForEvent("load"), akce("sandbox-pouzit").click()]);
+    await stranka.locator(PLATNO).waitFor();
+    // Cíl most nemaže a rozpočet je na liště i v zadání.
+    expect(await telo("pruty")).toBe("6");
+    expect(await udaj("rozpocet")).toBe("570 000 Kč / 600 000 Kč");
+    await spust();
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    expect(await telo("cil-sandboxu")).toBe("splnen");
+    expect(await udaj("vysledek-veta")).toContain("Vlastní cíl splněn: rozpočet 600 000 Kč.");
+    await stranka.screenshot({ path: `${SLOZKA}/r7d-sandbox-cil.png` });
+    await akce("upravit").click();
   }, 240_000);
 
   it("během sandboxu prohlížeč nehlásil žádnou chybu", () => {
