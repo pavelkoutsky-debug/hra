@@ -151,9 +151,9 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
       break;
     }
     case "zaveseny": {
-      if (rysy.pylonyNaOperach) {
-        // Stožáry na opěrách: z hlavy vějíř lan do mostovky a kotevní lano za opěru. Pod
-        // mostovkou nic není (jeden stožár kreslíme vlevo; na které opěře stojí, skica neříká).
+      if (rysy.pylonyNaBrezich) {
+        // Pylony na březích: z hlavy vějíř lan do mostovky a kotevní lano za opěru. Pod
+        // mostovkou nic není (jeden pylon kreslíme vlevo; na kterém břehu stojí, skica neříká).
         const vrchol = y - h * 1.5;
         const stozary: (readonly [number, number])[] = rysy.pylonu <= 1 ? [[x0, 1]] : [[x0, 1], [x1, -1]];
         for (const [pata, smer] of stozary) {
@@ -286,6 +286,14 @@ export function nakresliSkicu(ctx: Kontext, sirka: number, vyska: number, rysy: 
       [stred, dno - 4],
       [stred + rozpeti * 0.12, y],
     ]);
+  }
+
+  // Ztužující příhrada lanového mostu: nízký pás trojúhelníků nad středem mostovky, kam lana
+  // z pylonů nedosáhnou.
+  if (rysy.prihradaNavic) {
+    ctx.strokeStyle = BARVY.cara;
+    ctx.lineWidth = 1.5;
+    prihrada(ctx, x0 + rozpeti * 0.3, x1 - rozpeti * 0.3, y, h * 0.35, 4);
   }
 
   // Věšadlo navíc: malý trojúhelník nad středem mostovky.

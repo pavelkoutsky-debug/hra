@@ -86,6 +86,21 @@ Tři čerství agenti na záložním modelu: recenze kódu, hraní v prohlíže�
 - **Odkaz na závěrečný list** dostane hráč po dokončení kampaně kteroukoli úrovní, ne jen úrovní 8-03.
 - Drobné: `test/e2e/rezonance.e2e.ts` počítá s osmi kapitolami; komentář pádu „bez příhrady“ v 8-01 říká, co se opravdu stane (most se poruší hned vlastní tíhou); inženýrský rozpočet 8-02 je 1 410 000 Kč (2,96 % nad mostem pro mistrovskou; bylo 3,03 %); výjimka tolerance odhadu kmitání platí jen pro poloviční visutou lávku 8-02, ne pro všechny mosty; průhyb po dopnutí drží dva milimetry všude kromě 8-01 (tři); test zkoušek jmenuje kapitolu 8, ne „poslední kapitolu“; stožáry z více dílů se nepočítají do ztužující příhrady.
 
+**Zapracováno z hraní** (zásadní nález žádný, sedm středních; hráč pustil 40 mostů, postavil 8-03 myší a prošel celou kampaň)
+- **8-02: lávka bez tlumiče nedostala radu o tlumiči** (jeden tlumič stáhne odhad na 83 %, pod mez úrovně; rada měla práh 80 %). První laděný tlumič hra radí už od 95 % (`NOVY_TLUMIC_OD`) a řekne, když jeden stačit nebude. „Více o úloze“ už netvrdí, že mostovka má vlastní frekvenci přímo v kroku: rozbor měří vynucené kmitání měkké lávky a zadání říká totéž.
+- **8-02: rada „vyšší příhrada“ u lávky na lanech.** Lanový most dostane radu o vyšších pylonech a lanech (`kmitani.rada.tuzsi*.lana`).
+- **8-01: rady vodily v kruhu.** Most s rovným kotevním lanem z prvku nosné lano dostal radu o tvaru nosného lana visutého mostu; radu o tvaru teď dostane jen most, který visutý opravdu je (podle rysů, ne podle prvku). Pylon, který kotevní lano má, už neslyší „dej mu kotevní lano“: hra řekne, že je na tah vějíře slabé (nosné lano nebo druhé), nebo že mostovka visí tam, kam lana nedosáhnou (přidat lana, nebo ji ztužit příhradou); nabízí jen to, co úroveň dovoluje.
+- **8-01: skica nápovědy** kreslila pylony do řeky; pylony na březích (na opěrách i za nimi) se kreslí na koncích mostu a ztužující příhrada je ve skice vidět.
+- **8-03: „Více o úloze“** tvrdilo, že pro měkké dosednutí nesmí píst pracovat na hraně síly, a výsledek mistrovského mostu hlásil píst na mezi. Text teď říká, co platí: křídlo se při spouštění musí udržet (lehčí křídlo, nebo druhý píst).
+- Drobné: jedno křídlo ztužují pruty („Křídlo“, ne „Křídla“); výsledek zkoušky, kterou hráč dokončil kampaň, to říká větou, ne jen popiskem tlačítka.
+
+**Nezapracováno z hraní**
+- **8-01: mistrovská jde o 90 tisíc levněji** (horní pás z lehké oceli, 4 228 305 Kč, využití 61 % při mezi 62 %) a v 8-01 i 8-02 projde most pro mistrovskou i s napínáky na nule. Inženýrský rozpočet je 2,8 % nad mostem autora, jak chce pravidlo; levnější most má rezervu bonusu jeden procentní bod a jako referenční by byl křehký. Dopnutí lan kapitola 8 nevynucuje (to je lekce 4-03); vynucuje lana a příhradu.
+- **Překryvy popisků** (zdvihy dvou pístů v 8-03 s hladinou, tlumiče přes popisek zóny na telefonu, náhledy listu u 2-03, 5-04 a 8-02), useknutý popisek horní zóny v 8-01 a zóny bez popisku na výchozím pohledu. Totéž jako u starších úrovní; chce to obecné rozmísťování popisků, ne záplatu po úrovních.
+- **8-02 při zkoušce v okně 1280 × 720:** analytický panel zakryje hlavy stožárů (jde zavřít klávesou A). **8-01 na telefonu** je na výchozím pohledu malý pruh a kreslit jde až po přiblížení (96 m na 390 px).
+- **List na obrazovce** má čtyři karty v řadě, pátá úroveň kapitoly je na dalším řádku (stažený obrázek má pět); prázdný list jde stáhnout.
+- Neověřeno: třetí krok nápovědy v kapitole 8, zkouška do zlomu a sdílení v kapitole 8, skutečný telefon, Firefox a Safari.
+
 ## M13 — výsledek
 
 Sdílení mostu odkazem (návrh 13 z `docs/RECENZE.md`): důvod se ke hře vrátit a poslat ji dál. Verze hry 0.18.0. Fyzika ani úrovně se nemění. S milníkem jde ven i příprava zkouškových úrovní (formát úrovně 8 s polem `zkouskova`: úroveň bez ukázky a bez nápovědy, se štítkem v přehledu); samotné zkouškové úrovně přijdou se zbytkem M12 a do té doby se nic z toho neprojeví.

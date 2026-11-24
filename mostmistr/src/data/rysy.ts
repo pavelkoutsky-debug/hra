@@ -61,8 +61,11 @@ export interface RysyMostu {
    * ocelového stožáru); 0 u mostu bez lan.
    */
   pylonu: number;
-  /** Pylony stojí na opěrách na koncích mostu (stožáry s kotevními lany za opěru), ne v údolí. */
-  pylonyNaOperach: boolean;
+  /**
+   * Pylony stojí na březích: na opěrách na koncích mostu nebo za nimi (stožáry a pylony
+   * s kotevními lany do břehu), ne v údolí. Skica je pak nekreslí s dříkem do dna.
+   */
+  pylonyNaBrezich: boolean;
   /** Svary mostovky leží hlavně mezi pilíři, ne nad nimi. */
   svaryMeziPodporami: boolean;
 }
@@ -165,6 +168,11 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
     }
   }
 
+  // Konce hlavní trasy: pylon na nich nebo za nimi stojí na břehu.
+  const trasa = uroven.trasy[0];
+  const levyKonec = trasa ? Math.min(trasa.zacatek.x, trasa.konec.x) : -Infinity;
+  const pravyKonec = trasa ? Math.max(trasa.zacatek.x, trasa.konec.x) : Infinity;
+
   let soustava: NosnaSoustava;
   if (pisty > 0) soustava = "zvedaci";
   else if (lana > 0) soustava = boduNosnehoLana > 0 ? "visuty" : "zaveseny";
@@ -196,7 +204,7 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
     vzperyNavic: opreno && nesNad,
     vesadloNavic: nesPod && nad > 0,
     pylonu: lanovy ? pylony.size : 0,
-    pylonyNaOperach: lanovy && pylony.size > 0 && [...pylony].every((x) => uroven.kotvy.some((k) => k.x === x)),
+    pylonyNaBrezich: lanovy && pylony.size > 0 && [...pylony].every((x) => x <= levyKonec || x >= pravyKonec),
     svaryMeziPodporami: svaruJinde > svaruNadPilirem,
   };
 }
@@ -210,7 +218,8 @@ export function principMostu(rysy: RysyMostu): string[] {
   if (rysy.soustava === "zvedaci") {
     vety.push(rysy.kridel >= 2 ? "zvedaci.dve" : "zvedaci.jedno");
     if (rysy.zamek) vety.push(rysy.kridel >= 2 ? "zamek.mezi" : "zamek.breh");
-    if (rysy.ztuzeni) vety.push("ztuzeni");
+    // Jedno křídlo: věta nesmí mluvit o křídlech.
+    if (rysy.ztuzeni) vety.push(rysy.kridel >= 2 ? "ztuzeni" : "ztuzeni.jedno");
     return vety;
   }
   if (rysy.soustava === "nosnik") vety.push(rysy.svary ? "nosnik.svareny" : "nosnik");

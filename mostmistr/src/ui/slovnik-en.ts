@@ -1362,6 +1362,17 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "sandbox.chyba.cas": "Row {radek} of the timetable has a time outside the range 0 to {max} s.",
   "sandbox.chyba.smerKoleje": "The line has a single track: the train in row {radek} of the timetable must run in the same direction as the first one, otherwise they would collide on the bridge.",
   "sandbox.chyba.plno": "The timetable holds at most {max} items. Remove one, or raise the number in a row.",
+  "dopnuti.rada.zbylo.kotveny": "Something gives way under the pull of the cables although the pylons have backstays: the backstay is too weak for the pull of the fan ({lano}), or the deck hangs where the cables do not reach ({mostovka}).",
+  "rada.ohyb.pylon.kotveny": "It was bent by the cables, which pull it more to one side. It has a backstay, but the backstay cannot balance the pull from the span: {lano}, or lean the pylon against the pull.",
+  "rada.lano.silnejsi": "use a main cable instead, or add a second one",
+  "rada.lano.druhe": "add a second one",
+  "rada.mostovka.prihrada": "add cables, or stiffen it with a truss",
+  "rada.mostovka.lana": "add cables",
+  "kmitani.rada.novyTlumic.malo": "A tuned damper at {f} Hz would help: estimate about {a} m/s². One will probably not be enough; once the bridge has it, the game suggests the next.",
+  "kmitani.rada.tuzsi.lana": "A stiffer bridge would help (taller pylons, more cables or steeper cables).",
+  "kmitani.rada.tuzsi.vyrazne.lana": "Only a much stiffer bridge would help (much taller pylons and more cables).",
+  "napoveda.princip.ztuzeni.jedno": "More members above the deck stiffen the leaf.",
+  "vysledek.kampanDokoncena.veta": "That completes the campaign: you have passed every level.",
   "zadani.0-01": "Sandbox: no budget, no medals, all the elements. Build a bridge across the valley and send traffic over it; with the “Valley & traffic” button at the top of the palette you set how wide and deep the valley is, whether a footbridge, a road or a railway crosses it, how many footings for piers there are at the bottom and who will walk or drive across the bridge. With the test to failure you find out how much the bridge carries; on a footbridge and on a road the shaker finds where it resonates.",
   "prehled.bezPameti": "The browser did not allow data to be saved, so the game will not remember your progress.",
   "prehled.novaPravidla":
@@ -1494,11 +1505,11 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.8-02":
     "A ceremonial column of forty people marching at 2 Hz will cross this sixty-metre footbridge while a slow procession comes the other way; nothing may pass above the viewpoint in the middle. Cables will carry the deck cheaply, but the vibration under people must not exceed 1.0 m/s².",
   "zadani.8-02.vice":
-    "A cable-stayed footbridge is light and cheap, but the mast heads sway on their backstays and the deck has natural frequencies right at walking pace. Stiffening it enough to escape the rhythm is expensive. A tuned mass damper set to the marching rhythm calms the vibration, but it carries nothing by itself: you need both.",
+    "A cable-stayed footbridge is light and cheap, but soft: the mast heads sway on their backstays and forty people marching in step set the deck swaying even though they do not hit any of its natural frequencies exactly. Stiffening it enough to stay still under them is expensive. A tuned mass damper set to the marching rhythm calms the vibration, but it carries nothing by itself: you need both, and for two rhythms perhaps two dampers.",
   "zadani.8-03":
     "A harbour railway crosses a thirty-metre shipping canal: a locomotive crosses in the morning, then the bridge must make way for a ship fourteen metres tall, and as soon as it is down again a loaded freight train rolls over it. The machinery, with the pivot and the cylinder anchors, is in the left wall; the right bank has only a bearing.",
   "zadani.8-03.vice":
-    "A leaf strong enough for a train is heavy, and a heavy leaf is hard for the cylinder to lift. Shape helps: a truss above the track carries the train and weighs little, while a solid deck is heavy and weak. The cylinder needs a long lever arm, which means the deep anchor, and enough stroke for the ship. If the leaf is to come down gently, the cylinder must not work at the limit of its force.",
+    "A leaf strong enough for a train is heavy, and a heavy leaf is hard for the cylinder to lift. Shape helps: a truss above the track carries the train and weighs little, while a solid deck is heavy and weak. The cylinder needs a long lever arm, which means the deep anchor, and enough stroke for the ship. If the leaf is to come down gently, it has to be held while it is lowered: a lighter leaf, or a second cylinder to share its weight.",
   "zadani.2-04":
     "A march-past: the column crosses three times, at a slow, a normal and a quick march, and each rhythm sets a bridge of a different height swinging. Either find a height that avoids all three, or damp the bridge.",
   "zadani.2-04.vice":
