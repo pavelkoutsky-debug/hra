@@ -6,6 +6,7 @@ import { ChybaDat } from "./data/kontrola";
 import { PARAMETR_MOSTU, rozkodujMost } from "./data/sdileni";
 import { sandboxZTextu, urovenSandboxu } from "./data/sandbox";
 import { denikHry } from "./denik/prohlizec";
+import { spustList } from "./hra/list";
 import { spustPrehled } from "./hra/prehled";
 import { skladProhlizece, Uloziste } from "./hra/uloziste";
 import { spustUroven, type MostZOdkazu } from "./hra/uroven";
@@ -48,6 +49,9 @@ try {
       // Nastavení v adrese nejde přečíst: platí uložené.
     }
     spustUroven(urovenSandboxu(nastaveni), kampan, uloziste, denik, nastaveni);
+  } else if (id === null && new URLSearchParams(window.location.search).has("list")) {
+    // Závěrečný list kampaně: souhrn a galerie mostů hráče.
+    spustList(kampan, uloziste, denik);
   } else if (id === null) {
     spustPrehled(kampan, uloziste, denik, mostZOdkazu && "chyba" in mostZOdkazu ? t(`sdileni.chyba.${mostZOdkazu.chyba}`) : undefined);
   } else {

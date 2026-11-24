@@ -24,6 +24,7 @@
         <p class="prehled__hlaseni" data-udaj="prehled-hlaseni" role="alert" hidden></p>
         <p class="prehled__postup" data-udaj="prehled-postup"></p>
         <p class="prehled__dokonceno" data-udaj="prehled-dokonceno" role="status" hidden></p>
+        <p class="prehled__list"><a href="?list" data-akce="otevrit-list" data-udaj="prehled-list"></a></p>
         <div class="zaznam" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
@@ -43,6 +44,28 @@
           <span data-udaj="prehled-verze"></span>
           · <a href="/zkusebna.html" data-text="lista.zkusebna" data-popis="lista.zkusebna.popis"></a>
         </p>
+      </main>
+    </div>
+
+    <!-- Závěrečný list: souhrn kampaně a galerie mostů hráče -->
+    <div class="hra hra--prehled" id="obrazovka-list" hidden>
+      <header class="lista">
+        <span class="lista__nazev" data-text="hra.nazev"></span>
+        <span class="lista__oddil" data-udaj="list-oddil"></span>
+        <span class="lista__mezera"></span>
+        <button type="button" class="tlacitko" data-akce="list-obrazek" data-text="list.stahnout" data-popis="list.stahnout.popis"></button>
+        <a class="tlacitko" href="/" data-text="lista.kampan"></a>
+      </header>
+      <main class="prehled list">
+        <section class="list__zahlavi">
+          <h1 data-udaj="list-nadpis"></h1>
+          <p class="list__veta" data-udaj="list-veta"></p>
+          <dl class="list__cisla" data-udaj="list-cisla"></dl>
+          <p class="list__hlaseni" data-udaj="list-hlaseni" role="status"></p>
+        </section>
+        <div class="prehled__kapitoly" data-udaj="list-kapitoly"></div>
+        <p class="list__poznamka" data-udaj="list-poznamka" hidden></p>
+        <canvas data-udaj="list-platno" hidden></canvas>
       </main>
     </div>
 

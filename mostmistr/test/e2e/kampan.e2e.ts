@@ -136,9 +136,17 @@ describe("kampaň od první úrovně do poslední", () => {
         } else {
           expect(await odkaz.getAttribute("data-posledni")).toBe("true");
           expect(await odkaz.getAttribute("data-dokoncena")).toBe("true");
-          expect(await odkaz.innerText()).toBe("Kampaň dokončena · přehled");
+          expect(await odkaz.innerText()).toBe("Kampaň dokončena · závěrečný list");
           await stranka.screenshot({ path: `${SLOZKA}/k1-posledni-uroven.png` });
+          // Po poslední úrovni se ukáže závěrečný list s mosty hráče: každá úroveň v něm má
+          // most, kterým prošla.
           await odkaz.click();
+          await stranka.locator('body[data-rezim="list"]').waitFor();
+          expect(await telo("list")).toBe("dokonceno");
+          expect(await telo("list-mostu")).toBe(String(kampan.length));
+          expect(await stranka.locator('#obrazovka-list .karta[data-puvod="galerie"]').count()).toBe(kampan.length);
+          await stranka.screenshot({ path: `${SLOZKA}/k1-zaverecny-list.png`, fullPage: true });
+          await stranka.locator("#obrazovka-list .lista a.tlacitko").click();
           await stranka.locator('body[data-rezim="prehled"]').waitFor();
         }
       }

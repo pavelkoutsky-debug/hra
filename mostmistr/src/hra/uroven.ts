@@ -2966,6 +2966,18 @@ export function spustUroven(
             // Hmotnost mostu patří k výzvě o nejlehčí most; počítá se jen u mostu, který prošel.
             rekord = uloziste.zapocitej(uroven.id, vysledek.medaile, vysledek.cena, VERZE_FYZIKY, hmotnostNavrhu(b.navrh, uroven), neporuseny);
           }
+          // Galerie pro závěrečný list: nejlepší most, který úrovní prošel (víc medailí,
+          // neporušený, levnější). Jen v kampani.
+          if (vysledek.pruchod && !vysledek.rozpad && sandbox === null) {
+            const m = vysledek.medaile;
+            uloziste.zapisDoGalerie(uroven.id, {
+              kod: zakodujMost(b.navrh),
+              cena: vysledek.cena,
+              medaili: Number(m.pruchod) + Number(m.rozpocet) + Number(m.mistrovska),
+              neporuseny,
+              verzeFyziky: VERZE_FYZIKY,
+            });
+          }
         } else if (b.zlom && vysledek.zlom && !vysledek.rozpad && sandbox === null) {
           // Únosnost na korunu se počítá jen mostu, který úrovní prošel: jinak by výzvu vyhrál
           // most bez toho, co úroveň učí (bez závaží, bez pístu), protože je levnější.
@@ -4359,7 +4371,8 @@ export function spustUroven(
     odkaz.hidden = !(projita && !jePokus && vKampani);
     odkaz.classList.toggle("tlacitko--hlavni", vysledek.pruchod);
     odkaz.textContent = t(dokoncena ? "vysledek.kampanDokoncena" : posledni ? "vysledek.naPrehled" : "vysledek.dalsi");
-    odkaz.href = dalsi ? `?uroven=${dalsi.id}` : window.location.pathname;
+    // Po poslední úrovni dokončené kampaně vede odkaz na závěrečný list se souhrnem a mosty hráče.
+    odkaz.href = dalsi ? `?uroven=${dalsi.id}` : dokoncena ? `${window.location.pathname}?list` : window.location.pathname;
     odkaz.dataset.posledni = String(posledni);
     odkaz.dataset.dokoncena = String(dokoncena);
     odkaz.onclick = () => zapis("ovladani", { co: dokoncena ? "kampan-dokoncena" : posledni ? "na-prehled" : "dalsi-uroven" });
