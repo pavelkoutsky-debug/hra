@@ -195,13 +195,13 @@ describe("odkaz na most", () => {
     const odkaz = odkazNaMost("https://mostmistr.netlify.app/?uroven=2-03&jazyk=en&zaznam=vypnout#x", most);
     const adresa = new URL(odkaz);
     expect(adresa.origin + adresa.pathname).toBe("https://mostmistr.netlify.app/");
-    expect([...adresa.searchParams.keys()]).toEqual(["uroven", "most"]);
+    expect([...adresa.searchParams.keys()]).toEqual(["most", "uroven"]);
     expect(adresa.searchParams.get("uroven")).toBe("2-03");
     expect(rozkodujMost(adresa.searchParams.get("most")!)).toEqual(most);
     expect(adresa.hash).toBe("");
     // Náhled pull requestu a hra ve složce fungují stejně.
     expect(odkazNaMost("https://deploy-preview-21--mostmistr.netlify.app/hra/index.html", most)).toMatch(
-      /^https:\/\/deploy-preview-21--mostmistr\.netlify\.app\/hra\/index\.html\?uroven=2-03&most=[A-Za-z0-9_-]+$/,
+      /^https:\/\/deploy-preview-21--mostmistr\.netlify\.app\/hra\/index\.html\?most=[A-Za-z0-9_-]+&uroven=2-03$/,
     );
   });
 
@@ -285,15 +285,14 @@ describe("kód, který tahle verze hry nezná", () => {
     }
     const bajty: number[] = [];
     for (let i = 0; i + 8 <= bity.length; i += 8) bajty.push(bity.slice(i, i + 8).reduce((a, b) => a * 2 + b, 0));
-    const telo = bajty.slice(0, -2);
+    const telo = bajty.slice(0, -4);
     uprav(telo);
     let h = 0x811c9dc5;
     for (const b of telo) {
       h ^= b;
       h = Math.imul(h, 0x01000193) >>> 0;
     }
-    const soucet = (h ^ (h >>> 16)) & 0xffff;
-    const vse = [...telo, soucet & 255, soucet >> 8];
+    const vse = [...telo, h & 255, (h >>> 8) & 255, (h >>> 16) & 255, (h >>> 24) & 255];
     let text = "";
     for (let i = 0; i < vse.length; i += 3) {
       const a = vse[i]!;

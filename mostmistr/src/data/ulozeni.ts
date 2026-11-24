@@ -120,15 +120,25 @@ function rekord(h: unknown, cesta: string): Rekord {
 }
 
 /** Přečte uložení z dat neznámého tvaru. Při chybě vyhodí `ChybaDat` s cestou k místu chyby. */
-export function nactiUlozeni(data: unknown): Ulozeni {
+/**
+ * Přečte uložený postup. Rozestavěný most, který nejde přečíst (nebo patří jiné úrovni), se
+ * zahodí a jeho úroveň se zapíše do `zahozene`; zbytek postupu zůstává. Jeden vadný most
+ * nesmí hráče připravit o medaile a mosty ze všech ostatních úrovní.
+ */
+export function nactiUlozeni(data: unknown, zahozene: string[] = []): Ulozeni {
   const c = "ulozeni";
   const o = prevedNaAktualni(data, VERZE_ULOZENI, PREVODY_ULOZENI, c);
   jenZnameKlice(o, c, ["verze", "navrhy", "rekordy"]);
   const ulozeni = prazdneUlozeni();
   for (const [id, navrh] of Object.entries(objekt(o.navrhy, `${c}.navrhy`))) {
-    const nacteny = nactiNavrh(navrh);
-    if (nacteny.uroven !== id) throw new ChybaDat(`${c}.navrhy.${id}`, "návrh patří k jiné úrovni");
-    ulozeni.navrhy[id] = nacteny;
+    try {
+      const nacteny = nactiNavrh(navrh);
+      if (nacteny.uroven !== id) throw new ChybaDat(`${c}.navrhy.${id}`, "návrh patří k jiné úrovni");
+      ulozeni.navrhy[id] = nacteny;
+    } catch (chyba) {
+      if (!(chyba instanceof ChybaDat)) throw chyba;
+      zahozene.push(id);
+    }
   }
   for (const [id, zaznam] of Object.entries(objekt(o.rekordy, `${c}.rekordy`))) {
     ulozeni.rekordy[id] = rekord(zaznam, `${c}.rekordy.${id}`);
@@ -154,14 +164,14 @@ export function verzeZapisuUlozeni(zapis: string): number | null {
   }
 }
 
-export function ulozeniZTextu(zapis: string): Ulozeni {
+export function ulozeniZTextu(zapis: string, zahozene: string[] = []): Ulozeni {
   let data: unknown;
   try {
     data = JSON.parse(zapis);
   } catch {
     throw new ChybaDat("ulozeni", "text není platný zápis uloženého postupu");
   }
-  return nactiUlozeni(data);
+  return nactiUlozeni(data, zahozene);
 }
 
 /**

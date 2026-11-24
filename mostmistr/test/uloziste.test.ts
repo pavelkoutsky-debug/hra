@@ -191,6 +191,29 @@ describe("úložiště postupu", () => {
   });
 });
 
+describe("postup s jedním mostem, který nejde přečíst", () => {
+  it("zahodí jen ten most, medaile nechá a původní zápis odloží stranou", () => {
+    const sklad = new SkladVPameti();
+    const prvni = new Uloziste(sklad);
+    prvni.ulozNavrh(most());
+    prvni.zapocitej("1-01", PRUCHOD, 12_000, 1);
+    prvni.zapocitej("1-02", PRUCHOD, 30_000, 1);
+    // Do postupu se dostal most se dvěma pruty téhož id.
+    const zapis = JSON.parse(sklad.getItem(KLIC_ULOZENI)!) as { navrhy: Record<string, { pruty: unknown[] }> };
+    zapis.navrhy["1-01"]!.pruty.push(zapis.navrhy["1-01"]!.pruty[0]);
+    const vadny = JSON.stringify(zapis);
+    sklad.setItem(KLIC_ULOZENI, vadny);
+    const po = new Uloziste(sklad);
+    expect(po.poskozeno).toBe(false);
+    expect(po.navrh("1-01")).toBeUndefined();
+    expect(po.rekord("1-01")?.medaile.pruchod).toBe(true);
+    expect(po.rekord("1-02")?.medaile.pruchod).toBe(true);
+    expect(sklad.getItem(KLIC_POSKOZENEHO)).toBe(vadny);
+    // Postup je zapsaný čistý: další start už nic nezahazuje.
+    expect(JSON.parse(sklad.getItem(KLIC_ULOZENI)!).navrhy).toEqual({});
+  });
+});
+
 describe("hra otevřená ve dvou záložkách", () => {
   it("zápis z jedné záložky nevrátí druhé starý most ani nesmaže její medaile", () => {
     const sklad = new SkladVPameti();

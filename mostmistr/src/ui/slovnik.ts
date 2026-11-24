@@ -909,6 +909,7 @@ const CS = {
   "duvod.ladeny-tlumic-nepovoleny": "Tak těžký laděný tlumič tato úroveň nedovoluje.",
   "duvod.ladeny-tlumic-mimo-rozsah": "Laděný tlumič je nastavený mimo rozsah, ve kterém ho lze vyrobit.",
   "duvod.tlumeni-mimo-rozsah": "Tlumič má nastavení mimo rozsah, který se dá vyrobit.",
+  "duvod.tuhost-nepatri": "Tenhle prut má nastavenou tuhost pružiny, která k němu nepatří. Smaž ho a nakresli znovu.",
   "duvod.predpeti-mimo-rozsah": "Napínák lana je nastavený mimo rozsah.",
   "duvod.zdvih-mimo-rozsah": "Píst má větší zdvih, než dokáže: prodlouží nebo zkrátí se nejvýš o polovinu své délky.",
   "duvod.zamek-nepovoleny": "Zámek patří jen na pohyblivý most; tenhle se nezvedá.",

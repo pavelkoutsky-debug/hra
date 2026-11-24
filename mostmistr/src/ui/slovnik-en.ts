@@ -939,6 +939,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "duvod.ladeny-tlumic-nepovoleny": "This level does not allow a tuned mass damper that heavy.",
   "duvod.ladeny-tlumic-mimo-rozsah": "The tuned mass damper is set outside the range in which it can be made.",
   "duvod.tlumeni-mimo-rozsah": "The damper’s setting is outside the range that can be made.",
+  "duvod.tuhost-nepatri": "This member carries a spring stiffness that does not belong to it. Delete it and draw it again.",
   "duvod.predpeti-mimo-rozsah": "The cable turnbuckle is set out of range.",
   "duvod.zdvih-mimo-rozsah": "The cylinder’s stroke is larger than it can manage: it extends or shortens by at most half its length.",
   "duvod.zamek-nepovoleny": "A lock belongs only on a movable bridge; this one does not lift.",

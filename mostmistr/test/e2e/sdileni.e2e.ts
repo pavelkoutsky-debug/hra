@@ -134,7 +134,7 @@ describe("sdílení mostu odkazem", () => {
     odkaz = await s.locator("#sdileni-odkaz").inputValue();
     // Odkaz nese jen úroveň a kód mostu a je krátký: projde zprávou i e-mailem.
     expect(odkaz).toBe(odkazNaMost(adresa, SDILENY));
-    expect(new URL(odkaz).search).toMatch(/^\?uroven=1-03&most=[A-Za-z0-9_-]+$/);
+    expect(new URL(odkaz).search).toMatch(/^\?most=[A-Za-z0-9_-]+&uroven=1-03$/);
     expect(odkaz.length).toBeLessThan(300);
     expect(rozkodujMost(new URL(odkaz).searchParams.get("most")!)).toEqual(SDILENY);
     const zprava = bezMezer(await s.locator("#sdileni-zprava").inputValue());

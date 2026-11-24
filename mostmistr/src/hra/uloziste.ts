@@ -91,7 +91,14 @@ export class Uloziste {
     const zapis = this.#cti(KLIC_ULOZENI);
     if (zapis !== null) {
       try {
-        ulozeni = ulozeniZTextu(zapis);
+        const zahozene: string[] = [];
+        ulozeni = ulozeniZTextu(zapis, zahozene);
+        // Most, který nešel přečíst, hra zahodila a jede dál; původní zápis zůstane stranou
+        // pro případ, že by ho někdo chtěl zachránit ručně.
+        if (zahozene.length > 0) {
+          this.#pis(KLIC_POSKOZENEHO, zapis);
+          this.#pis(KLIC_ULOZENI, ulozeniNaText(ulozeni));
+        }
         const puvodni = verzeZapisuUlozeni(zapis);
         if (puvodni !== null && puvodni < ulozeni.verze) {
           // Starší formát se hned zapíše v novém: převod by jinak proběhl při každém načtení

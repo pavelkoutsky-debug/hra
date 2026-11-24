@@ -51,14 +51,32 @@ function novejsi(duvod: string): ChybaDat {
   return new ChybaDat("odkaz", duvod, "novejsi-verze");
 }
 
-/** Kontrolní součet (FNV-1a, dolních 16 bitů) bajtů `od` až `po`. */
+/** Kolik bajtů má kontrolní součet na konci kódu. */
+const BAJTU_SOUCTU = 4;
+
+/**
+ * Kontrolní součet prvních `po` bajtů: FNV-1a, všech 32 bitů. Šestnáct bitů by nestačilo:
+ * záměna jediného znaku by zhruba jednou z šedesáti tisíc případů otevřela jiný most, a to
+ * se u odkazů, které lidé přepisují a zkracují, stane.
+ */
 function soucet(bajty: ArrayLike<number>, po: number): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < po; i++) {
     h ^= bajty[i]!;
     h = Math.imul(h, 0x01000193) >>> 0;
   }
-  return (h ^ (h >>> 16)) & 0xffff;
+  return h >>> 0;
+}
+
+/** Sedí kontrolní součet na konci `bajty`? */
+function soucetSedi(bajty: ArrayLike<number>): boolean {
+  const konec = bajty.length - BAJTU_SOUCTU;
+  if (konec < 2) return false;
+  const h = soucet(bajty, konec);
+  for (let i = 0; i < BAJTU_SOUCTU; i++) {
+    if (bajty[konec + i] !== ((h >>> (8 * i)) & 255)) return false;
+  }
+  return true;
 }
 
 class Zapis {
@@ -253,7 +271,7 @@ export function zakodujMost(navrh: NavrhMostu): string {
   }
 
   const kontrola = soucet(z.bajty, z.bajty.length);
-  z.bajty.push(kontrola & 255, kontrola >> 8);
+  for (let i = 0; i < BAJTU_SOUCTU; i++) z.bajty.push((kontrola >>> (8 * i)) & 255);
   return naZnaky(z.bajty);
 }
 
@@ -265,9 +283,9 @@ export function zakodujMost(navrh: NavrhMostu): string {
 export function rozkodujMost(kod: string): NavrhMostu {
   if (kod.length > NEJDELSI_KOD_MOSTU) throw poskozeny("je delší, než hra čte");
   const bajty = zeZnaku(kod);
-  if (bajty.length < 4) throw poskozeny("je příliš krátký");
-  const konec = bajty.length - 2;
-  if (soucet(bajty, konec) !== (bajty[konec]! | (bajty[konec + 1]! << 8))) throw poskozeny("nesedí kontrolní součet");
+  if (bajty.length < BAJTU_SOUCTU + 2) throw poskozeny("je příliš krátký");
+  const konec = bajty.length - BAJTU_SOUCTU;
+  if (!soucetSedi(bajty)) throw poskozeny("nesedí kontrolní součet");
 
   const c = new Cteni(bajty, konec);
   const verzeKodu = c.cele();
@@ -342,10 +360,15 @@ export function mostBezVypnutych(navrh: NavrhMostu): NavrhMostu {
   };
 }
 
-/** Odkaz, který most otevře v jeho úrovni: adresa hry (`zaklad`, bez dotazu) a dva parametry. */
+/**
+ * Odkaz, který most otevře v jeho úrovni: adresa hry (`zaklad`, bez dotazu) a dva parametry.
+ * Kód mostu je první a úroveň poslední: kód může končit pomlčkou nebo podtržítkem a ty na
+ * konci odkazu některé aplikace odříznou; číslo úrovně na konci přežije (a kdyby ne, most ji
+ * nese v kódu sám).
+ */
 export function odkazNaMost(zaklad: string, navrh: NavrhMostu): string {
   const bezDotazu = zaklad.replace(/[?#].*$/, "");
-  return `${bezDotazu}?uroven=${encodeURIComponent(navrh.uroven)}&${PARAMETR_MOSTU}=${zakodujMost(navrh)}`;
+  return `${bezDotazu}?${PARAMETR_MOSTU}=${zakodujMost(navrh)}&uroven=${encodeURIComponent(navrh.uroven)}`;
 }
 
 /**
@@ -368,9 +391,7 @@ export function kodMostuVTextu(text: string): string | null {
   // a Import o něm má říct, že to není most, ne že je odkaz poškozený.
   if (!/^[A-Za-z0-9_-]{8,}$/.test(cisty)) return null;
   try {
-    const bajty = zeZnaku(cisty);
-    const konec = bajty.length - 2;
-    return bajty.length >= 4 && soucet(bajty, konec) === (bajty[konec]! | (bajty[konec + 1]! << 8)) ? cisty : null;
+    return soucetSedi(zeZnaku(cisty)) ? cisty : null;
   } catch {
     return null;
   }
