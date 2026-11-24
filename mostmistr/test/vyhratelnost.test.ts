@@ -1,6 +1,7 @@
 // Každá úroveň kampaně jde vyhrát, každou medaili lze získat a triviální most neprojde.
 // Medaile jdou po schodech (rozpočtová je průchod do inženýrského rozpočtu bez porušení,
 // mistrovská je rozpočtová a k ní bonus úrovně) a referenční mosty to ukazují.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../src/data/cena";
 import { KATALOG } from "../src/data/katalog";
@@ -344,6 +345,42 @@ describe("lekce, které nejde obejít", () => {
       expect(most.pruty.filter((p) => p.prvek === "lano" || p.prvek === "lano-nosne").length, klic).toBeGreaterThanOrEqual(4);
     }
   });
+
+  it("8-02: měkká lávka, která mezi lany visí jako pás, neobstojí: úroveň hlídá průhyb mostovky", () => {
+    // Hledání šampionů výzev po M14 došlo k lávce s jediným pylonem, třemi lany a malými tlumiči,
+    // jejíž mostovka visela 1,2 až 1,5 m pod výkresem: rozpočtová medaile za 1,03 milionu (most
+    // autora 1,76 milionu) a se sedmi tlumiči i mistrovská za 1,27 milionu. Lana i tlumiče měla,
+    // ale hotový most to není. Úroveň proto hlídá průhyb mostovky (`nejvetsiPruhyb`, 10 cm).
+    const uroven = kampan.find((u) => u.id === "8-02")!;
+    expect(uroven.nejvetsiPruhyb).toBe(0.1);
+    const mekke = JSON.parse(readFileSync(new URL("./data/8-02-mekke-lavky.json", import.meta.url), "utf8")) as Record<string, NavrhMostu>;
+    expect(Object.keys(mekke).length).toBe(2);
+    for (const [nazev, most] of Object.entries(mekke)) {
+      const v = zkousej(uroven, most);
+      // Nic se na ní neporuší a lidé přejdou; neobstojí jen proto, že nedrží tvar.
+      expect(v.poruseni, nazev).toBe(0);
+      expect(v.spadlo, nazev).toBe(0);
+      expect(v.pruvesVKlidu, nazev).toBeGreaterThan(1);
+      expect(v.pruhyb?.prekroceno, nazev).not.toBeNull();
+      expect(v.pruhyb!.prekroceno!, nazev).toBeLessThan(0.5);
+      expect(v.pruchod, nazev).toBe(false);
+      expect(v.medaile, nazev).toEqual({ pruchod: false, rozpocet: false, mistrovska: false });
+    }
+    // Mosty autora drží tvar s velkou rezervou (lana do každého styčníku, dopnuté napínáky)…
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) {
+      const v = zkousej(uroven, RESENI["8-02"]![klic]);
+      expect(v.pruhyb?.prekroceno, klic).toBeNull();
+      expect(v.pruhyb!.nejvetsi, klic).toBeLessThan(0.05);
+      expect(v.pruchod, klic).toBe(true);
+    }
+    // …a bez dopnutí ne: lekce o napínácích ze 4-03 tu platí taky.
+    const mistrovska = RESENI["8-02"]!.mistrovska;
+    const povoleny = zkousej(uroven, { ...mistrovska, pruty: mistrovska.pruty.map((p) => ({ ...p, predpeti: 0 })) });
+    expect(povoleny.pruvesVKlidu).toBeGreaterThan(0.1);
+    expect(povoleny.pruchod).toBe(false);
+    // Úroveň, která průhyb nehlídá, ho neměří, a pokus (zkouška do zlomu) taky ne.
+    expect(zkousej(kampan.find((u) => u.id === "4-03")!, RESENI["4-03"]!.pruchod).pruhyb).toBeNull();
+  }, 240_000);
 
   it("2-04: o kotvy pro tlumiče se neopře vzpěra; tlumič do nich vést smí", () => {
     // Kontrola obtížnosti M12: se vzpěrami z těch kotev do každého styčníku mostovky měla lávka

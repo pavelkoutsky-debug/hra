@@ -1,5 +1,5 @@
 {
-  "verze": 8,
+  "verze": 9,
   "id": "8-02",
   "nazev": "Lávka na lanech",
   "vyrez": {
@@ -151,5 +151,6 @@
   ],
   "pohyb": null,
   "lode": [],
-  "zkouskova": false
+  "zkouskova": false,
+  "nejvetsiPruhyb": 0.1
 }

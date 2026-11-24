@@ -545,7 +545,7 @@ export function spustUroven(
    * (`zkouskova`), se do něj nepočítají, jinak by každá změna formátu zahodila hráčům paměť
    * prošlých mostů. Verze se píše sedmička, protože do formátu 7 včetně se do otisku počítala.
    */
-  const otiskUrovne = fnv(JSON.stringify({ ...uroven, verze: 7, zkouskova: undefined }));
+  const otiskUrovne = fnv(JSON.stringify({ ...uroven, verze: 7, zkouskova: undefined, nejvetsiPruhyb: uroven.nejvetsiPruhyb ?? undefined }));
   const otiskNavrhu = (navrh: NavrhMostu): string => {
     const text = navrhNaText(navrh);
     return `${VERZE_FYZIKY}:${otiskUrovne}:${fnv(text)}:${text.length}`;
@@ -846,7 +846,10 @@ export function spustUroven(
         if (pruves) {
           const nadpis = t(pruves.nad ? "pruves.nadpis.nad" : "pruves.nadpis", { mm: celeCislo(Math.round(1000 * pruves.metru)) });
           const rada = dopnutoMarne(editor.navrh) !== null ? "pruves.rada.marne" : pruves.nad ? "pruves.rada.nad" : "pruves.rada";
-          nakresliSlozeni(ctx, kamera, rozmer, pruves.misto, nadpis, t(rada));
+          // Kde úroveň průhyb hlídá, most s takovou odchylkou zkouškou neprojde: řekni kolik smí.
+          const mez = uroven.nejvetsiPruhyb;
+          const smi = mez !== null && pruves.metru > mez ? ` ${t("pruves.mez", { mez: celeCislo(Math.round(1000 * mez)) })}` : "";
+          nakresliSlozeni(ctx, kamera, rozmer, pruves.misto, nadpis, `${t(rada)}${smi}`);
         }
       }
     }
@@ -3259,6 +3262,9 @@ export function spustUroven(
       // Kdy kmitání přesáhlo mez úrovně (s); null, když ji nepřesáhlo.
       kmitaniNadMez: vysledek.komfort?.prekroceno != null ? Math.round(vysledek.komfort.prekroceno * 10) / 10 : null,
       autobus: vysledek.komfortCestujicich ? Math.round(vysledek.komfortCestujicich.zrychleni * 100) / 100 : null,
+      // Největší průhyb mostovky proti výkresu (mm) a jestli přesáhl mez úrovně; null, kde ho úroveň nehlídá.
+      pruhyb: vysledek.pruhyb ? Math.round(1000 * vysledek.pruhyb.nejvetsi) : null,
+      pruhybNadMez: vysledek.pruhyb ? vysledek.pruhyb.prekroceno !== null : null,
       bezRovnovahy: vysledek.bezRovnovahy,
       rozpad: vysledek.rozpad,
       zvednuto: vysledek.pohyb ? vysledek.pohyb.zvednuto : null,
@@ -3954,6 +3960,10 @@ export function spustUroven(
     if (!vysledek || vysledek.pruchod || vysledek.rozpad || (b.pokus && !b.zlom)) return false;
     if (b.zaber.stav === "pripraven" && b.zaber.domov) return false;
     const kdy = slozeniBehu(b) ? ZABER.okamzikSlozeni : (prvniPorucha(b.udalosti)?.cas ?? null);
+    // Průhyb mostovky nad mezí úrovně rozhodl ve chvíli, kdy ji mostovka překročila (měkká lávka
+    // ji překročí hned, už vlastní vahou), pokud se most neporušil ještě dřív.
+    const prohnuto = vysledek.pruhyb?.prekroceno ?? null;
+    if (prohnuto !== null && (kdy === null || prohnuto <= kdy)) return prehravani.cas >= prohnuto + VYSLEDEK_PO_PORUSE;
     const prekroceno = vysledek.komfort?.prekroceno ?? null;
     // Most, na kterém něco povolilo, ale stál dál a neprošel až na kmitání pod lidmi: rozhodlo
     // kmitání, ne porucha. Výsledek dvě sekundy po poruše by přišel dřív, než se most rozkmital.
@@ -4433,6 +4443,19 @@ export function spustUroven(
       });
       vety.push(t("vysledek.trvaleOhnuty", { prut: nejvic + 1, vyuziti: procenta(vysledek.nejvetsiVyuziti) }));
     }
+    // Úroveň, která hlídá průhyb mostovky: most, jehož mostovka se od výkresu odchýlila víc, než
+    // úroveň dovoluje, neobstál, i kdyby všichni přešli. Když se liší už v klidu, říká se to tak.
+    const pruhyb = jePokus ? null : vysledek.pruhyb;
+    const prohnuto = pruhyb !== null && pruhyb.prekroceno !== null ? pruhyb : null;
+    if (prohnuto && !vysledek.rozpad) {
+      const hned = (vysledek.pruvesVKlidu ?? 0) > prohnuto.mez;
+      vety.push(
+        t(hned ? "vysledek.pruhyb.klid" : "vysledek.pruhyb", {
+          mm: celeCislo(Math.round(1000 * (hned ? (vysledek.pruvesVKlidu ?? 0) : prohnuto.nejvetsi))),
+          mez: celeCislo(Math.round(1000 * prohnuto.mez)),
+        }),
+      );
+    }
     // Most s lany, který už před zkouškou visel hluboko pod výkresem, má nedopnuté napínáky.
     const maLana = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "lano");
     if (!vysledek.pruchod && !jePokus && maLana && (vysledek.pruvesVKlidu ?? 0) > 0.1) {
@@ -4724,9 +4747,14 @@ export function spustUroven(
       const dalsi = vety.slice(1).find((v) => v !== vetaNarazuLodi);
       // Most, který se porušil, ale stál dál a všichni přešli, neprošel až na kmitání pod lidmi.
       const rozhodloKmitani = pricinaKmitanim !== null && vysledek.spadlo === 0 && vysledek.prejelo === vysledek.ucastniku && (vysledek.komfort?.prekroceno ?? null) !== null;
+      // Průhyb mostovky nad mezí úrovně, pokud se most neporušil ještě dřív.
+      const rozhodlPruhyb = prohnuto !== null && (prvni === null || prvni.cas >= (prohnuto.prekroceno ?? 0));
       if (vetaMezery) pricina = prvniVeta(vetaMezery);
       else if (pricinaPohybu) pricina = prvniVeta(pricinaPohybu);
-      else if (rozhodloKmitani) pricina = pricinaKmitanim;
+      else if (rozhodlPruhyb && prohnuto) {
+        pricina = t("vysledek.kratce.pruhyb", { mm: celeCislo(Math.round(1000 * prohnuto.nejvetsi)), mez: celeCislo(Math.round(1000 * prohnuto.mez)) });
+        if (maLana && (vysledek.pruvesVKlidu ?? 0) > prohnuto.mez && b.dopnutoMarne === null) pricina = `${pricina} ${t("vysledek.kratce.nedopnuto")}`;
+      } else if (rozhodloKmitani) pricina = pricinaKmitanim;
       else if (prvni?.druh === "poruseni") {
         pricina = t("vysledek.kratce.prvni", { prut: prvni.prut + 1, zpusob: t(nazevZpusobu(prvni.zpusob)) });
         // Nedopnutá lana jsou příčina, o které má hráč vědět hned, ne až v podrobnostech.

@@ -240,6 +240,7 @@ const CS = {
   "slozeni.rada.pilir": "Nebo pod něj postav pilíř.",
   "pruves.nadpis": "Mostovka tu visí {mm} mm pod výkresem",
   "pruves.rada": "už vlastní vahou: dopni lana (N)",
+  "pruves.mez": "Tady smí nejvýš {mez} mm.",
   "pruves.rada.marne": "i s dopnutými lany: něco pod jejich tahem uhýbá",
   "pruves.nadpis.nad": "Mostovka je tu {mm} mm nad výkresem",
   "pruves.rada.nad": "lana jsou přetažená: dopni je znovu (N)",
@@ -269,6 +270,7 @@ const CS = {
   "frekvence.slozeni": "most se složí – viz značka na výkresu",
   "vysledek.kratce.slozeni": "Složil se vlastní vahou: {duvod}.",
   "vysledek.kratce.nedopnuto": "Lana nejsou dopnutá: zkus Dopnout lana (N).",
+  "vysledek.kratce.pruhyb": "Mostovka se od výkresu odchýlila o {mm} mm; smí nejvýš o {mez} mm.",
   "vysledek.kratce.prvni": "Jako první povolil prut {prut} (označený na výkresu): {zpusob}.",
   "vysledek.prehratPoruseni.popis": "Přehraje první porušení znovu, zpomaleně a zblízka",
   "vysledek.prehratPoruseni.kratce": "Zpomaleně",
@@ -985,6 +987,7 @@ const CS = {
   "medaile.mistrovska": "Mistrovská",
   "medaile.pruchod.podminka": "všichni přejdou, nikdo nespadne",
   "medaile.pruchod.podminkaSKmitanim": "všichni přejdou a most se pod nimi nerozkmitá nad {limit} m/s²",
+  "medaile.pruchod.pruhyb": "mostovka se od výkresu neodchýlí o víc než {mm} mm",
   "medaile.mistrovska.komfort": "rozpočtová medaile a k ní kmitání mostovky nejvýš {limit} m/s²",
   "medaile.rozpocet.podminka": "průchod s mostem do {castka}, na kterém nic nepovolilo ani se trvale neohnulo",
   "medaile.mistrovska.rezerva": "rozpočtová medaile a k ní žádný prut využitý nad {limit}",
@@ -1033,6 +1036,10 @@ const CS = {
   "vysledek.dopnutoMarne":
     "Mostovka už před zkouškou visela {mm} mm pod výkresem, i když jsou lana dopnutá: napínáky víc nespraví.",
   "vysledek.trvaleOhnuty": "Prut {prut} byl využitý na {vyuziti}: ocel se tam trvale přetvořila. Most prošel, ale rozpočtovou medaili nedostane a do výzev se nepočítá.",
+  "vysledek.pruhyb":
+    "Mostovka se při zkoušce odchýlila od výkresu o {mm} mm; tahle úroveň dovoluje nejvýš {mez} mm. Všichni přešli, ale most, který se pod lidmi takhle prohýbá, neobstál: podepři mostovku hustěji, aby držela tvar.",
+  "vysledek.pruhyb.klid":
+    "Mostovka se už pod vlastní tíhou liší od výkresu o {mm} mm; tahle úroveň dovoluje nejvýš {mez} mm. Most, jehož mostovka nedrží tvar, tu neobstojí: podepři ji v každém styčníku.",
   "vysledek.opreno": "Most nemá vlastní oporu: propadl se a zůstal ležet na terénu. O zem se most opírat nesmí; podepři ho z kotev a podpor tak, aby držel tvar sám.",
   "vysledek.bezRovnovahy":
     "Most neunesl ani vlastní váhu: povolil hned, dřív než na něj kdokoli vjel.",
@@ -1660,9 +1667,9 @@ const CS = {
   "zadani.8-01.vice":
     "Vlak je několikrát těžší než silniční provoz. Na straně k řece vede po pylonech do výšky osmnácti metrů schodiště pro údržbu, takže lana k řece smějí z pylonu vycházet až nad ním. Pod nízký strop nad středem řeky odtamtud dosáhnou z každého břehu jen do necelých dvou pětin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
   "zadani.8-02":
-    "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést, a nad celým údolím visí ve výšce 10,5 m elektrické vedení. Lana na betonových pylonech lávku unesou, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s².",
+    "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést, a nad celým údolím visí ve výšce 10,5 m elektrické vedení. Lana na betonových pylonech lávku unesou, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s² a mostovka se nesmí od výkresu odchýlit o víc než 10 cm.",
   "zadani.8-02.vice":
-    "Zavěšená lávka je lehká, ale měkká: krok čtyřiceti lidí ji rozkmitá, i když žádnou její vlastní frekvenci přesně netrefí, a pomalé procesí chytí lávku, která útvaru uteče. Pylony tu jdou postavit jen z pilířů na základech za opěrami a pod vedení se vejdou nejvýš desetimetrové. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí, a tlumičů několik, jeden na šedesát metrů lávky nestačí.",
+    "Zavěšená lávka je lehká, ale měkká: krok čtyřiceti lidí ji rozkmitá, i když žádnou její vlastní frekvenci přesně netrefí, a pomalé procesí chytí lávku, která útvaru uteče. Pylony tu jdou postavit jen z pilířů na základech za opěrami a pod vedení se vejdou nejvýš desetimetrové. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí, a tlumičů několik, jeden na šedesát metrů lávky nestačí. Mostovka navíc musí držet tvar z výkresu na deset centimetrů: lávka, která by mezi lany visela jako pás, tu neobstojí, takže chce lano do každého styčníku a dopnuté napínáky.",
   "zadani.8-03":
     "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
   "zadani.8-03.vice":

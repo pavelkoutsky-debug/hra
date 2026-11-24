@@ -496,5 +496,6 @@ export function urovenSandboxu(nastaveni: NastaveniSandboxu): Uroven {
     pohyb: zvedani ? { zvednout: zvedani.cas, sklopit: zvedani.cas + (lod ? ZVEDANI.sklopitPo : ZVEDANI.sklopitBezLodi) } : null,
     lode: zvedani && lod ? [{ cas: zvedani.cas + ZVEDANI.lodPo, trvani: ZVEDANI.lodTrva, ...plavebniProfil(L, zvedani.kridla), vyska: zvedani.lod }] : [],
     zkouskova: false,
+    nejvetsiPruhyb: null,
   });
 }

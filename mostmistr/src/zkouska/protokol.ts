@@ -349,6 +349,20 @@ export interface KomfortZkousky {
   prekroceno: number | null;
 }
 
+/** Průhyb mostovky proti výkresu, jak ho zkouška změřila; viz `VysledekZkousky.pruhyb`. */
+export interface PruhybZkousky {
+  /** Největší odchylka mostovky od výkresu, m. */
+  nejvetsi: number;
+  /** Čas největší odchylky, s. */
+  cas: number;
+  /** Souřadnice x místa největší odchylky na výkresu, m. */
+  x: number;
+  /** Mez úrovně, m. */
+  mez: number;
+  /** Čas, kdy mostovka mez poprvé překročila; null, když ji nepřekročila. */
+  prekroceno: number | null;
+}
+
 export interface VysledekZkousky {
   /** Všichni přešli a přejeli, nikdo nespadl. */
   pruchod: boolean;
@@ -384,6 +398,12 @@ export interface VysledekZkousky {
    * U mostu s lany prozradí nedopnuté napínáky. Null, když most klidovou polohu nemá.
    */
   pruvesVKlidu: number | null;
+  /**
+   * Průhyb mostovky v úrovni, která ho hlídá (`Uroven.nejvetsiPruhyb`): o kolik metrů se
+   * mostovka při zkoušce nejvíc odchýlila od výkresu, kdy, kde, a kdy poprvé překročila mez
+   * úrovně (null: nepřekročila). Null v úrovni bez meze a u pokusů.
+   */
+  pruhyb: PruhybZkousky | null;
   /** Největší využití ze všech prutů. */
   nejvetsiVyuziti: number;
   /** Kmitání mostovky, dokud po ní šli lidé; null v úrovni bez lidí. */

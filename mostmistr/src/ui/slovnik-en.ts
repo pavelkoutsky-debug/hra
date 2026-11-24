@@ -238,6 +238,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "slozeni.rada.pilir": "Or build a pier under it.",
   "pruves.nadpis": "The deck hangs {mm} mm below the drawing here",
   "pruves.rada": "under its own weight: tension the cables (N)",
+  "pruves.mez": "Here it may be {mez} mm at most.",
   "pruves.rada.marne": "even with the cables tensioned: something gives way under their pull",
   "pruves.nadpis.nad": "Here the deck sits {mm} mm above the drawing",
   "pruves.rada.nad": "the cables are over-tightened: tension them again (N)",
@@ -267,6 +268,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "frekvence.slozeni": "the bridge will fold – see the mark on the drawing",
   "vysledek.kratce.slozeni": "It folded under its own weight: {duvod}.",
   "vysledek.kratce.nedopnuto": "The cables are not tensioned: try Tension cables (N).",
+  "vysledek.kratce.pruhyb": "The deck moved {mm} mm away from the drawing; the limit is {mez} mm.",
   "vysledek.kratce.prvni": "Member {prut} (marked on the drawing) gave way first: {zpusob}.",
   "vysledek.prehratPoruseni.popis": "Replays the first failure, in slow motion and up close",
   "vysledek.prehratPoruseni.kratce": "Slow-mo",
@@ -1017,6 +1019,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "medaile.mistrovska": "Master",
   "medaile.pruchod.podminka": "everyone crosses, no one falls",
   "medaile.pruchod.podminkaSKmitanim": "everyone crosses and the bridge does not vibrate under them above {limit} m/s²",
+  "medaile.pruchod.pruhyb": "the deck stays within {mm} mm of the drawing",
   "medaile.mistrovska.komfort": "the Budget medal plus deck vibration of at most {limit} m/s²",
   "medaile.rozpocet.podminka": "a pass with a bridge costing up to {castka}, with nothing on it failing or bending permanently",
   "medaile.mistrovska.rezerva": "the Budget medal plus no member utilised above {limit}",
@@ -1064,6 +1067,10 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.dopnutoMarne":
     "Before the test the deck already hung {mm} mm below the drawing although the cables are tensioned: the turnbuckles cannot do more.",
   "vysledek.trvaleOhnuty": "Member {prut} was utilised to {vyuziti}: the steel deformed permanently there. The bridge passed, but it gets no Budget medal and does not count towards the challenges.",
+  "vysledek.pruhyb":
+    "During the test the deck moved {mm} mm away from the drawing; this level allows {mez} mm at most. Everyone crossed, but a bridge that sags like this under people does not pass: support the deck more closely so that it keeps its shape.",
+  "vysledek.pruhyb.klid":
+    "Under its own weight the deck already differs from the drawing by {mm} mm; this level allows {mez} mm at most. A bridge whose deck does not keep its shape does not pass here: support it at every joint.",
   "vysledek.opreno": "The bridge has no support of its own: it sagged and came to rest on the ground. A bridge must not lean on the ground; support it from the anchors and bearings so that it keeps its shape by itself.",
   "vysledek.bezRovnovahy":
     "The bridge could not carry even its own weight: it gave way straight away, before anyone drove onto it.",
@@ -1693,9 +1700,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.8-01.vice":
     "A train is several times heavier than road traffic. A maintenance stair runs up the river side of each pylon to eighteen metres, so cables towards the river may leave the pylon only above it. From there, under the low ceiling over mid-river, they reach just under two fifths of the span from each bank, and the middle has to be carried by a low truss hanging from the outermost cables. The truss alone cannot span the gap, and cables without it leave the middle hanging from the track deck alone. The backstays carry the whole pull of the fan, so one ordinary cable is not enough. A catenary mast and a signal stand at each end of the bridge: the space above the track at the abutments must stay clear.",
   "zadani.8-02":
-    "A ceremonial column of forty people marching at 2 Hz will cross this sixty-metre footbridge while a slow procession comes the other way; nothing may pass above the viewpoint in the middle, and a power line hangs across the whole valley at 10.5 m. Cables on concrete pylons will carry the deck, but the vibration under people must not exceed 1.0 m/s².",
+    "A ceremonial column of forty people marching at 2 Hz will cross this sixty-metre footbridge while a slow procession comes the other way; nothing may pass above the viewpoint in the middle, and a power line hangs across the whole valley at 10.5 m. Cables on concrete pylons will carry the deck, but the vibration under people must not exceed 1.0 m/s² and the deck must stay within 10 cm of the drawing.",
   "zadani.8-02.vice":
-    "A cable-stayed footbridge is light but soft: forty people marching in step set it swaying even though they do not hit any of its natural frequencies exactly, and the slow procession catches a deck that escapes the column. Pylons here can only be piers on the foundations behind the abutments, and under the power line they fit only up to ten metres. A tuned mass damper set to the marching rhythm calms the vibration, but it carries nothing by itself: you need both, and several dampers, because one is not enough for sixty metres of deck.",
+    "A cable-stayed footbridge is light but soft: forty people marching in step set it swaying even though they do not hit any of its natural frequencies exactly, and the slow procession catches a deck that escapes the column. Pylons here can only be piers on the foundations behind the abutments, and under the power line they fit only up to ten metres. A tuned mass damper set to the marching rhythm calms the vibration, but it carries nothing by itself: you need both, and several dampers, because one is not enough for sixty metres of deck. The deck must also keep the drawn shape to within ten centimetres: a walkway that hangs between the cables like a ribbon does not pass here, so it needs a cable at every joint and tensioned turnbuckles.",
   "zadani.8-03":
     "A harbour railway crosses a thirty-metre shipping canal: a locomotive crosses in the morning, then the bridge must make way for a ship fourteen metres tall, and as soon as it is down again a loaded freight train rolls over it. The machinery, with the pivot and the cylinder anchors, is in the left wall; the right bank has only a bearing.",
   "zadani.8-03.vice":

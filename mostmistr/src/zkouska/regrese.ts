@@ -88,6 +88,7 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     pohyb: null,
     lode: [],
     zkouskova: false,
+    nejvetsiPruhyb: null,
   };
 }
 

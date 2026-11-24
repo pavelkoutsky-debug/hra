@@ -48,9 +48,12 @@ function radky(uroven: Uroven, medaile: Readonly<Medaile>): RadekMedaile[] {
   // i v úrovních bez osy frekvencí (první kapitola): zkouška mez hlídá všude, kde lidé jdou,
   // a podmínka nesmí mlčet o něčem, kvůli čemu most neprojde.
   const lide = uroven.jizdniRad.some((p) => jeClovek(p.druh));
-  const pruchod = lide
+  const zaklad = lide
     ? t("medaile.pruchod.podminkaSKmitanim", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) })
     : t("medaile.pruchod.podminka");
+  // Úroveň, která hlídá průhyb mostovky, to musí říct tam, kde říká ostatní podmínky průchodu.
+  const pruchod =
+    uroven.nejvetsiPruhyb !== null ? `${zaklad}; ${t("medaile.pruchod.pruhyb", { mm: cislo(1000 * uroven.nejvetsiPruhyb, 0) })}` : zaklad;
   const seznam: RadekMedaile[] = [{ nazev: "medaile.pruchod", podminka: pruchod, ziskana: medaile.pruchod }];
   if (uroven.inzenyrskyRozpocet !== null) {
     seznam.push({
