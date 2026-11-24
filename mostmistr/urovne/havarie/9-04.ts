@@ -1,24 +1,25 @@
 // Případ 9-04 Havarijní komise (kapitola 4: lana, pylony, kotevní lana, napínáky a dopnutí).
 // Údolí úrovně 4-04 „Náklad století“: silnice 72 m přes rokli, základy pylonů na březích za
 // opěrami (x = −4 a 76) a kotvy pro kotevní lana dál od rokle (x = −18 a 90). Přes most jede
-// nadměrný náklad 120 t a za ním proti němu dvě nákladní auta.
+// nadměrný náklad 120 t a za ním proti němu dvě nákladní auta; jízdní řád je z úrovně.
 //
 // Spadlý most: zavěšený most se dvěma betonovými pylony vysokými 14 m. Z hlavy každého pylonu
 // vede vějíř šesti lan do mostovky (do styčníku 36 z obou stran) a dozadu nosné kotevní lano do
-// kotvy. Levé kotevní lano je v pořádku; pravé je uchycené na pylonu ve výšce 10 m, čtyři metry
-// pod hlavou, kam vedou lana vějíře. Vějíř táhne hlavu do rokle a kotevní lano ji nedrží: konec
-// pylonu nad ním je konzola, kterou lana ohýbají. K tomu nikdo nesáhl na napínáky (lana mají
-// výchozí předpětí, jak je editor položil), takže se mostovka prověsí o půl metru a lana dosednou,
-// teprve když se protáhnou a pylony se ohnou.
+// kotvy. Obě kotevní lana jsou ale uchycená na pylonech ve výšce 11 m, tři metry pod hlavou, kam
+// vedou lana vějíře. Hlavu tak nic nedrží: vějíř ohýbá konec pylonu nad kotevním lanem jako
+// konzolu a ohyb se přenáší až k patě. Lana jsou dopnutá (tlačítko Dopnout lana) a mostovka drží
+// tvar, takže most na výkresu vypadá v pořádku; pylony ale mají už bez provozu využití kolem 85 %
+// a samotné nákladní auto (26 t) levý pylon zlomí.
 //
-// Co hráč uvidí: první poruší ohyb pravého pylonu nad základem (76, 0)–(76, 10) zhruba v páté
-// sekundě, kdy nadměrný náklad teprve vjíždí na levou polovinu mostu: povolí pylon na druhé straně,
-// než je náklad. Při stavbě ho značka upozorní na průvěs mostovky a výsledek poradí dopnout lana.
-// Samotné dopnutí ale nestačí (pylon ohnutý lany: rada o kotevním laně) a samotné kotevní lano
-// z hlavy bez dopnutí také ne (prověšená mostovka ohne levý pylon).
+// Co hráč uvidí: první poruší ohyb levého pylonu u paty (−4, 0)–(−4, 11) zhruba v sedmé sekundě,
+// když nadměrný náklad vjede na levou polovinu mostu, a most se zřítí. Dopnout lana znovu nic
+// nezmění (už dopnutá jsou). Nabízí se opravit levý pylon, kde to povolilo: kotevní lano z hlavy
+// levého pylonu i s dopnutím vydrží, dokud náklad nepřejede na pravou půlku; tam pak povolí pravý
+// pylon, který má stejnou chybu. A kotevní lana z hlav bez nového dopnutí nestačí také: nová lana
+// visí volně, dokud se pylon neohne, protože dopnutá nízká lana nesou všechno.
 //
-// Oprava komise (dvě změny): nosné kotevní lano z hlavy pravého pylonu do kotvy (90, 0) a dopnutí
-// lan (napínáky všech lan jsou jedna změna). Původní nízké kotevní lano může zůstat.
+// Oprava komise (tři změny): nosné kotevní lano z hlavy každého pylonu do kotvy a dopnutí lan
+// (napínáky všech lan jsou jedna změna). Původní nízká kotevní lana můžou zůstat.
 
 import { PREDPETI_LANA, type IdPrvku } from "../../src/data/katalog";
 import { Kreslic } from "../../src/data/kreslic";
@@ -33,20 +34,20 @@ const ROZPETI = 72;
 /** Základy pylonů a kotvy kotevních lan (levý a pravý břeh). */
 const PYLON = [-4, 76] as const;
 const KOTVA = [-18, 90] as const;
-/** Výška hlavy pylonů a výška, ze které vede pravé kotevní lano spadlého mostu. */
+/** Výška hlavy pylonů a výška, ze které vedou kotevní lana spadlého mostu. */
 const HLAVA = 14;
-const NIZKO = 10;
+const NIZKO = 11;
 /** Styčníky mostovky, do kterých vedou lana z levého a z pravého pylonu. */
-const LEVY_VEJIR = [6, 12, 18, 24, 30, 36];
-const PRAVY_VEJIR = [36, 42, 48, 54, 60, 66];
+const VEJIR = [
+  [6, 12, 18, 24, 30, 36],
+  [36, 42, 48, 54, 60, 66],
+] as const;
 
-const uroven = urovenPripadu(4, "Most přes Hlubokou rokli", "4-04");
+const uroven = urovenPripadu(4, "Most se dvěma pylony", "4-04");
 
 interface Volby {
-  /** Kotevní lana pravého pylonu: výšky, ze kterých vedou do kotvy. */
-  pravaKotevni: readonly number[];
-  /** Z čeho je kotevní lano z hlavy pravého pylonu, když tam nějaké vede. */
-  zHlavy?: IdPrvku;
+  /** Kotevní lana levého a pravého pylonu: výšky, ze kterých vedou do kotvy. */
+  kotevni: readonly [readonly number[], readonly number[]];
   /** Napínáky lan v pořadí, v jakém jsou nakreslená; bez nich výchozí, jak lana editor položí. */
   predpeti?: readonly number[];
 }
@@ -59,16 +60,16 @@ function pylon(k: Kreslic, x: number, uchyty: readonly number[]): void {
   }
 }
 
-/** Most od začátku vlastním kresličem: mostovka, vějíře lan, kotevní lana a pylony. */
+/**
+ * Most od začátku vlastním kresličem: mostovka, vějíře lan obou pylonů, kotevní lana levého
+ * a pravého pylonu (v pořadí výšek z `kotevni`) a nakonec pylony.
+ */
 function most(volby: Volby): NavrhMostu {
   const k = new Kreslic(uroven.id);
   for (let x = 0; x < ROZPETI; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
-  for (const x of LEVY_VEJIR) k.prut(LANO, [PYLON[0], HLAVA], [x, 0]);
-  for (const x of PRAVY_VEJIR) k.prut(LANO, [PYLON[1], HLAVA], [x, 0]);
-  k.prut(NOSNE, [PYLON[0], HLAVA], [KOTVA[0], 0]);
-  for (const y of volby.pravaKotevni) k.prut(y === HLAVA ? (volby.zHlavy ?? NOSNE) : NOSNE, [PYLON[1], y], [KOTVA[1], 0]);
-  pylon(k, PYLON[0], []);
-  pylon(k, PYLON[1], volby.pravaKotevni);
+  for (const s of [0, 1]) for (const x of VEJIR[s]!) k.prut(LANO, [PYLON[s]!, HLAVA], [x, 0]);
+  for (const s of [0, 1]) for (const y of volby.kotevni[s]!) k.prut(NOSNE, [PYLON[s]!, y], [KOTVA[s]!, 0]);
+  for (const s of [0, 1]) pylon(k, PYLON[s]!, volby.kotevni[s]!);
   const navrh = k.navrh();
   let lano = 0;
   return {
@@ -79,22 +80,31 @@ function most(volby: Volby): NavrhMostu {
 
 /** Napínáky, jak je spočítalo dopnutí (`dopniLana`), v pořadí lan v `most`. */
 const PREDPETI = {
-  oprava: [] as readonly number[],
-  jenDopnout: [] as readonly number[],
-  obycejne: [] as readonly number[],
+  /** Spadlý most: dvanáct lan vějířů a nízká kotevní lana vlevo a vpravo. */
+  most: [0.139, 0.166, 0.196, 0.229, 0.264, 0.15, 0.167, 0.268, 0.233, 0.2, 0.171, 0.144, 0.44, 0.447],
+  /** Oprava komise: vějíře, vlevo nízké a z hlavy, vpravo nízké a z hlavy. */
+  oprava: [0.124, 0.15, 0.182, 0.216, 0.253, 0.147, 0.15, 0.256, 0.22, 0.186, 0.155, 0.128, 0.075, 0.262, 0.075, 0.262],
+  /** Kotevní lano z hlavy jen vlevo: vějíře, vlevo nízké a z hlavy, vpravo nízké. */
+  leve: [0.125, 0.151, 0.182, 0.217, 0.254, 0.245, 0.054, 0.265, 0.23, 0.197, 0.167, 0.14, 0.077, 0.294, 0.398],
+} as const;
+
+/** Napínáky spadlého mostu a výchozí u nových lan z hlav (hráč lana přidal a nedopnul). */
+const V = PREDPETI_LANA.vychozi;
+const BEZ_DOPNUTI = {
+  obe: [...PREDPETI.most.slice(0, 13), V, PREDPETI.most[13]!, V],
+  leve: [...PREDPETI.most.slice(0, 13), V, PREDPETI.most[13]!],
 };
 
 export const pripad04: PripadHavarie = {
   uroven,
   kapitola: "4",
-  most: most({ pravaKotevni: [NIZKO] }),
-  oprava: most({ pravaKotevni: [NIZKO, HLAVA], predpeti: PREDPETI.oprava }),
+  most: most({ kotevni: [[NIZKO], [NIZKO]], predpeti: PREDPETI.most }),
+  oprava: most({ kotevni: [[NIZKO, HLAVA], [NIZKO, HLAVA]], predpeti: PREDPETI.oprava }),
   slepe: [
-    // Tlačítko Dopnout lana: mostovka se srovná, ale hlavu pravého pylonu dál nic nedrží.
-    { nazev: "jen dopnout lana", navrh: most({ pravaKotevni: [NIZKO], predpeti: PREDPETI.jenDopnout }) },
-    // Správné kotevní lano, ale napínáky zůstaly výchozí: prověšená mostovka ohne levý pylon.
-    { nazev: "kotevní lano z hlavy bez dopnutí", navrh: most({ pravaKotevni: [NIZKO, HLAVA] }) },
-    // Kotevní lano z hlavy, ale jen obyčejné (závěsné), a dopnutí: hlavu neudrží.
-    { nazev: "obyčejné kotevní lano z hlavy a dopnutí", navrh: most({ pravaKotevni: [NIZKO, HLAVA], zHlavy: LANO, predpeti: PREDPETI.obycejne }) },
+    // Opravit pylon, který povolil: levý vydrží, náklad pak zlomí pravý se stejnou chybou.
+    { nazev: "kotevní lano z hlavy jen vlevo a dopnutí", navrh: most({ kotevni: [[NIZKO, HLAVA], [NIZKO]], predpeti: PREDPETI.leve }) },
+    // Správná kotevní lana bez nového dopnutí: dopnutá nízká lana nesou všechno a nová visí.
+    { nazev: "kotevní lana z hlav bez dopnutí", navrh: most({ kotevni: [[NIZKO, HLAVA], [NIZKO, HLAVA]], predpeti: BEZ_DOPNUTI.obe }) },
+    { nazev: "kotevní lano z hlavy jen vlevo bez dopnutí", navrh: most({ kotevni: [[NIZKO, HLAVA], [NIZKO]], predpeti: BEZ_DOPNUTI.leve }) },
   ],
 };

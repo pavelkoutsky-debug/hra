@@ -59,7 +59,16 @@ Obsah navíc ke kampani (návrhy 17 a 18 z `docs/RECENZE.md`): pískoviště jak
 
 **Havarijní komise** (`src/data/havarie.ts`, `src/data/zmeny.ts`, `urovne/havarie/`). Hráč dostane cizí most, který spadl, má zjistit proč a opravit ho **nejvýš třemi změnami**. Změna je jeden tah nástroje (přidaný, odebraný nebo vyměněný prut, posunutý styčník, svar, zámek, závaží, tlumič; napínáky všech lan dohromady jedna) a **počítá se výsledek, ne cesta**: prut smazaný a nakreslený znovu změna není, posunutý styčník je jedna změna, ne dvě za každý jeho prut. Nad výkresem je pruh s počtem a výčtem změn, spadlý most jde pustit, jak je (zpomalený záběr ukáže první porušení), zkouška s víc než třemi změnami se nespustí a „Vrátit spadlý most“ jde vzít zpět. Uzavřený případ ukáže nález komise (příčinu a poučení) a pamatuje si nejmenší počet změn. Případy jsou v přehledu pod kampaní a otevírají se s první projitou úrovní své kapitoly; medaile, rekordy ani galerie se jich netýkají.
 
-PRIPADY_TABULKA
+| Případ | Kapitola | Co je na mostě špatně | Oprava komise | Co nestačí |
+|---|---|---|---|---|
+| 1 Most přes rokli | 1 | dřevěná příhrada s jednou diagonálou obráceně: lehký trám je tlačený a pod dodávkou se vzepře | 2 změny: diagonálu odebrat a nakreslit správně (jedna změna taky jde: těžký trám) | těžké svislice vedle ní, vzpěra z kotvy ve svahu |
+| 2 Lávka u kasáren | 2 | nízká lávka v rezonanci s krokem vojáků (4,1 m/s² při mezi 2,5); závaží visí u opěr, kde lávka nekmitá | 3 změny: závaží do středu rozpětí (stačí i dvě) | těžší pruty, další závaží u opěr, jediné závaží |
+| 3 Most pod Skalkou | 3 | svislá noha na skále je kyvadlo a obě opěry jsou posuvné: brzdící kolonu nic nezachytí; první povolí diagonála nad nohou | 2 změny: dvě šikmé nohy ze skály do V | těžší diagonála, jediná šikmá noha |
+| 4 Most se dvěma pylony | 4 | kotevní lana uchycená tři metry pod hlavami pylonů: vějíř ohýbá vršek pylonu, ten se pod nadměrným nákladem zlomí u paty | 3 změny: kotevní lano z hlavy každého pylonu a dopnout lana | jen levý pylon, lana bez dopnutí |
+| 5 Most na vlečce | 6 | nízká příhrada nad kolejí s těžkým pásem, ale lehkými krajními šikminami: nesou reakci opěry a pod vlakem se vzepřou | 2 změny: obě krajní šikminy z těžkého profilu | jen ta, která povolila; těžké svislice; vyšší příhrada uprostřed |
+| 6 Most u loděnice | 7 | křídlo 20 m s nesvařeným styčníkem (při zvedání se zalomí) a pístem z mělké kotvy s malým zdvihem (zvednuté křídlo neudrží) | 3 změny: svar, pata pístu do hluboké kotvy, větší zdvih | jen svar; svar a druhý píst; píst přeložený bez svaru |
+
+U případů 2 až 6 nestačí žádná jednotlivá změna (návrháři strojově zkusili výměnu každého prutu, svar v každém styčníku a odebrání každého prutu: 36 až 65 změn na případ); u prvního stačí jedna, a to smysluplná. Opravy komise mají největší využití 25 až 63 % a výsledek spadlých mostů i oprav nezávisí na násadě náhody (pět dalších násad).
 
 Případy navrhli tři agenti (záložní model) podle společného zadání a kontroly `posudPripad`: spadlý most musí vypadat jako most, který by postavil rozumný člověk, selhat zřetelně, oprava komise projít bez porušení a s rezervou, a to, co hráče napadne první, nesmí stačit (slepé opravy v testu). `test/havarie.test.ts` to hlídá pro každý případ.
 
