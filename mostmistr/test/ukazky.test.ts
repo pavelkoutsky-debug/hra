@@ -43,7 +43,7 @@ describe("ukázky k úrovním", () => {
     }
   });
 
-  it("souvislost se skutečností má první úroveň a celá druhá až sedmá kapitola", () => {
+  it("souvislost se skutečností má první úroveň, celá druhá až sedmá kapitola a závěrečná kapitola", () => {
     const sTextem = kampan.filter((u) => jeKlicTextu(`skutecnost.${u.id}`)).map((u) => u.id);
     expect(sTextem).toEqual([
       "1-01",
@@ -71,6 +71,9 @@ describe("ukázky k úrovním", () => {
       "7-02",
       "7-03",
       "7-04",
+      "8-01",
+      "8-02",
+      "8-03",
     ]);
   });
 
