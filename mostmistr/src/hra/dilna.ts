@@ -56,7 +56,7 @@ function kodMostu(navrh: NavrhMostu): string | null {
 
 /** Druhý řádek karty: co přes údolí vede, jak je široké, co most stojí a kdy byl uložen. */
 function popisPrace(prace: PraceDilny, navrh: NavrhMostu): string {
-  return t("dilna.karta.popis", {
+  return t(prace.nastaveni.zvedani ? "dilna.karta.popis.zvedaci" : "dilna.karta.popis", {
     druh: t(`sandbox.druh.${prace.nastaveni.druh}`),
     rozpeti: celeCislo(prace.nastaveni.rozpeti),
     cena: koruny(cenaNavrhu(navrh)),

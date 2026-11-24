@@ -138,6 +138,29 @@ import { Ukazka } from "./ukazka";
 import { podminkaMistrovske, vypisMedaile, vypisMedailePruhu, znackyMedaili } from "./medaile";
 import { HLASITOSTI, type Uloziste } from "./uloziste";
 
+/** Klíč hlášení, které má hra ukázat až po novém načtení stránky (jednou). */
+const KLIC_ODLOZENEHO_HLASENI = "mostmistr.hlaseni";
+
+/** Uloží hlášení pro příští načtení stránky; bez paměti sezení se nestane nic. */
+function odlozHlaseni(text: string): void {
+  try {
+    window.sessionStorage.setItem(KLIC_ODLOZENEHO_HLASENI, text);
+  } catch {
+    // Paměť sezení není: hlášení se neukáže, nic dalšího se nestane.
+  }
+}
+
+/** Vrátí a smaže hlášení odložené před načtením stránky; null, když žádné není. */
+function vyzvedniHlaseni(): string | null {
+  try {
+    const text = window.sessionStorage.getItem(KLIC_ODLOZENEHO_HLASENI);
+    if (text !== null) window.sessionStorage.removeItem(KLIC_ODLOZENEHO_HLASENI);
+    return text;
+  } catch {
+    return null;
+  }
+}
+
 /** Volný okraj kolem výřezu při zobrazení celého výkresu, v pixelech. */
 const OKRAJ_VYKRESU = 28;
 const KROK_ZOOMU_TLACITKEM = 1.25;
@@ -1839,6 +1862,9 @@ export function spustUroven(
    * (do řádku pod osou), jinak všechny. Prázdný text, když rozbor odhad nemá.
    */
   function radaKeKmitani(r: RozborMostu, kratce = false): string {
+    // Havarijní komise učí diagnózu: hra tam říká, co se stalo, ne co s tím. (Rada „tužší most“
+    // by navíc vedla k opravě, která se do dovolených změn nevejde.)
+    if (havarie) return "";
     if (!r.odhad) return "";
     const odhad = r.odhad.zrychleni;
     const po = (pomer: number): string => zrychleniSlovy(pomer * odhad);
@@ -3589,6 +3615,8 @@ export function spustUroven(
 
   /** Rada, co s prutem, který povolil daným způsobem. */
   function radaKPoruseni(zpusob: number, navrh?: NavrhMostu, prut?: number): string {
+    // V Havarijní komisi hra neradí (viz `radaKeKmitani`): věta o porušení říká jen, co povolilo.
+    if (havarie) return "";
     if (zpusob === ZPUSOB_TAH) return t("rada.tah");
     if (zpusob === ZPUSOB_TLAK) return t("rada.tlak");
     // Pylon s lany neohne tíha, ale lana, která ho táhnou víc na jednu stranu: podepřít
@@ -3762,7 +3790,7 @@ export function spustUroven(
     // Most s nedopnutými lany visel pod výkresem už před zkouškou: silnější prvek ani další
     // styčník to nespraví, napínáky ano.
     if (b.nedopnuto !== null && b.dopnutoMarne === null) return `${veta} ${t("rada.nedopnuto", { mm: celeCislo(Math.round(1000 * b.nedopnuto)) })}`;
-    return `${veta} ${radaKPoruseni(u.zpusob, b.navrh, u.prut)}`;
+    return `${veta} ${radaKPoruseni(u.zpusob, b.navrh, u.prut)}`.trim();
   }
 
   /**
@@ -4630,7 +4658,7 @@ export function spustUroven(
     polePrvniho.hidden = !ukazatPrvni;
     // K větě s čísly patří rada, co s tím (ne u mostu, který přesto obstál, a u lana přetrženého napínákem).
     const sRadou = prvni?.druh === "poruseni" && !vysledek.pruchod && !pretrzenoNapinakem(b, prvni);
-    textSPojmy(polePrvniho, prvni && ukazatPrvni ? `${vetaOPoruseni(b, prvni)}${sRadou ? ` ${radaKPoruseni(prvni.zpusob, b.navrh, prvni.prut)}` : ""}` : "");
+    textSPojmy(polePrvniho, prvni && ukazatPrvni ? `${vetaOPoruseni(b, prvni)}${sRadou ? ` ${radaKPoruseni(prvni.zpusob, b.navrh, prvni.prut)}` : ""}`.trim() : "");
     // Zpomaleně jde přehrát všechno, na co záběr umí zamířit (i náraz lodi a pád); pokusy záběr nemají.
     const jeCoPrehrat = slozilSe || prvniPorucha(b.udalosti) !== null;
     prvek('[data-akce="prehrat-poruseni"]', HTMLElement).hidden = !jeCoPrehrat || (b.pokus && !b.zlom);
@@ -4769,7 +4797,18 @@ export function spustUroven(
       // Spis případu: co se stalo, a pravidla opravy. Nález komise je vidět až po uzavření.
       const spis = `havarie.${uroven.id}.spis`;
       const nalez = `havarie.${uroven.id}.nalez`;
-      textSPojmy(udaj("zadani-text"), `${jeKlicTextu(spis) ? t(spis) : ""} ${t("komise.zadani.pravidla", { nejvic: NEJVIC_ZMEN_OPRAVY })}`);
+      // Pravidla jmenují jen změny, které paleta případu dovoluje udělat.
+      const druhyZmen = [t("komise.zadani.zmeny")];
+      if (uroven.povolenePrvky.includes("pist")) druhyZmen.push(t("komise.zadani.zmeny.nastaveni.pist"));
+      if (uroven.povolenePrvky.includes("tlumic")) druhyZmen.push(t("komise.zadani.zmeny.nastaveni.tlumic"));
+      if (uroven.povoleneSvary) druhyZmen.push(t("komise.zmena.svar"));
+      if (uroven.pohyb) druhyZmen.push(t("komise.zmena.zamek"));
+      if (uroven.nejvetsiZavazi > 0) druhyZmen.push(t("komise.zmena.zavazi"));
+      if (uroven.nejvetsiTlumic > 0) druhyZmen.push(t("komise.zmena.tlumic"));
+      const maLana = uroven.povolenePrvky.some((id) => KATALOG[id].druh === "lano");
+      const presun = uroven.nejvetsiTlumic > 0 ? t("komise.zadani.presun.tlumic") : uroven.nejvetsiZavazi > 0 ? t("komise.zadani.presun") : "";
+      const pravidla = t("komise.zadani.pravidla", { nejvic: NEJVIC_ZMEN_OPRAVY, zmeny: druhyZmen.join(", "), napinaky: maLana ? t("komise.zadani.napinaky") : "", presun });
+      textSPojmy(udaj("zadani-text"), `${jeKlicTextu(spis) ? t(spis) : ""} ${pravidla}`);
       const uzavreny = uloziste.havarie[uroven.id] !== undefined && jeKlicTextu(nalez);
       udaj("zadani-vice").hidden = !uzavreny;
       textSPojmy(udaj("zadani-vice"), uzavreny && jeKlicTextu(nalez) ? t("komise.nalez", { nalez: t(nalez) }) : "");
@@ -4930,6 +4969,16 @@ export function spustUroven(
     return t(zmen === 1 ? "komise.vysledek.uzavreno.jedna" : "komise.vysledek.uzavreno", { zmen });
   }
 
+  /** Jak se změna jmenuje v pruhu: nastavení prutu podle toho, čemu patří (zdvih pístu, tlumič). */
+  function jmenoZmeny(zmena: ZmenaMostu): string {
+    if (zmena.druh === "nastaveni") {
+      const prvekPrutu = editor.navrh.pruty.find((p) => p.id === zmena.prut)?.prvek;
+      if (prvekPrutu === "pist") return t("komise.zmena.nastaveni.pist");
+      if (prvekPrutu === "tlumic") return t("komise.zmena.nastaveni.tlumic");
+    }
+    return t(`komise.zmena.${zmena.druh}`);
+  }
+
   /** Pruh Havarijní komise nad výkresem: kolik změn oprava má a které to jsou. */
   function obnovKomisi(): void {
     if (!havarie) return;
@@ -4940,8 +4989,11 @@ export function spustUroven(
     document.body.dataset.zmen = String(zmeny.length);
     // Stejné změny se vypíšou jednou s počtem („2× přidaný prut“).
     const pocty = new Map<string, number>();
-    for (const zmena of zmeny) pocty.set(zmena.druh, (pocty.get(zmena.druh) ?? 0) + 1);
-    const seznam = [...pocty].map(([druh, kolik]) => (kolik > 1 ? `${kolik}× ` : "") + t(`komise.zmena.${druh as ZmenaMostu["druh"]}`)).join(", ");
+    for (const zmena of zmeny) {
+      const jmeno = jmenoZmeny(zmena);
+      pocty.set(jmeno, (pocty.get(jmeno) ?? 0) + 1);
+    }
+    const seznam = [...pocty].map(([jmeno, kolik]) => (kolik > 1 ? `${kolik}× ` : "") + jmeno).join(", ");
     const uzavreno = uloziste.havarie[uroven.id];
     udaj("komise-text").textContent = [
       t("komise.pruh", { cislo: cisloPripadu(uroven.id), nazev: nazevUrovne(uroven) }),
@@ -5103,7 +5155,10 @@ export function spustUroven(
     const ulozeni = ulozPraci(dilna, volnyNazevPrace(dilna, t("dilna.nazev.rozestaveny")), mojeUdoli, vlastni, Date.now());
     if (ulozeni.stav !== "ulozeno") return false;
     uloziste.dilna = ulozeni.dilna;
-    return jeVDilne();
+    if (!jeVDilne()) return false;
+    // Stránka se teď načte znovu s jiným mostem na stole: kam se poděl ten jeho, řekne hra po načtení.
+    odlozHlaseni(t("dilna.host.schovano", { nazev: ulozeni.dilna.prace[0]!.nazev }));
+    return true;
   }
 
   /**
@@ -5114,6 +5169,18 @@ export function spustUroven(
     if (!host || !sandbox || rezim !== "stavba") return;
     const dilna = uloziste.dilna;
     if (jak === "ulozit") {
+      // Tentýž scénář podruhé druhou práci nezakládá.
+      let kodScenare: string | null = null;
+      try {
+        kodScenare = zakodujMost(editor.navrh);
+      } catch {
+        kodScenare = null;
+      }
+      const stejna = kodScenare === null ? undefined : dilna.prace.find((p) => jeStejnaPrace(p, sandbox, kodScenare));
+      if (stejna) {
+        ukazHlaseni(t("dilna.host.uzJe", { nazev: stejna.nazev }), "info", true);
+        return;
+      }
       const vysledek = ulozPraci(dilna, volnyNazevPrace(dilna, t("dilna.nazev.zOdkazu")), sandbox, editor.navrh, Date.now());
       zapis("dilna", { co: "scenar-ulozit", stav: vysledek.stav, praci: vysledek.dilna.prace.length });
       if (vysledek.stav !== "ulozeno" && vysledek.stav !== "prepsano") {
@@ -5634,6 +5701,9 @@ export function spustUroven(
       },
       zapis: (data) => zapis("dilna", data),
     });
+    // Hlášení odložené před načtením stránky (kam se uložil rozestavěný most).
+    const odlozene = vyzvedniHlaseni();
+    if (odlozene !== null && host === null) ukazHlaseni(odlozene, "info", false);
     const tlacitkoDilny = prvek('[data-akce="dilna"]', HTMLButtonElement);
     tlacitkoDilny.hidden = false;
     tlacitkoDilny.addEventListener("click", () => {

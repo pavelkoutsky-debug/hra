@@ -69,6 +69,9 @@ try {
         }
       }
       if (mostZOdkazu !== null && !mostPiskoviste) scenar = "chyba" in mostZOdkazu ? mostZOdkazu : { chyba: "poskozeny" };
+      // Most v adrese a údolí žádné nebo nečitelné od prvního znaku (`&sandbox`, `&sandbox=zzz`):
+      // most by se potichu zahodil. Hráč se má dozvědět, že odkaz nebyl celý.
+      else if (mostZOdkazu !== null && scenar === null) scenar = { chyba: "poskozeny" };
     } catch {
       // Nastavení v adrese nejde přečíst: platí uložené a hráč se dozví, že odkaz nebyl celý.
       if (mostZOdkazu !== null || jeSandboxVAdrese(sandboxVAdrese)) scenar = { chyba: "poskozeny" };

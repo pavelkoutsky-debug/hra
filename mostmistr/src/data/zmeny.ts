@@ -5,7 +5,8 @@
 // Změna je jedna věc, která je na mostě jinak: přidaný prut, odebraný prut, prut z jiného
 // materiálu, prut jinak nastavený (zdvih pístu, tlumič), posunutý styčník (se všemi svými
 // pruty dohromady), svar, zámek, závaží nebo laděný tlumič ve styčníku. Napínáky lan se počítají
-// dohromady jako jedna změna: tlačítko Dopnout lana je přenastaví všechny naráz.
+// dohromady jako jedna změna: tlačítko Dopnout lana je přenastaví všechny naráz. Závaží nebo
+// laděný tlumič přenesený beze změny do jiného styčníku je taky jedna změna (ne odebrání a přidání).
 //
 // Počítá se výsledek, ne cesta k němu: stejný opravený most má stejný počet změn, ať k němu
 // hráč došel jakkoli. Porovnává se proto jen tvar (místa styčníků a co je mezi nimi), nikdy id:
@@ -32,7 +33,9 @@ export type ZmenaMostu =
   /** Styčník posunutý na jiné místo (id v novém návrhu). */
   | { druh: "stycnik-posunut"; stycnik: number }
   /** Jiný svar, zámek, závaží nebo laděný tlumič ve styčníku (id v novém návrhu, jinak v původním). */
-  | { druh: "svar" | "zamek" | "zavazi" | "tlumic"; stycnik: number };
+  | { druh: "svar" | "zamek" | "zavazi" | "tlumic"; stycnik: number }
+  /** Závaží nebo laděný tlumič přenesený beze změny do jiného styčníku (id v novém návrhu). */
+  | { druh: "zavazi-presunuto" | "tlumic-presunut"; stycnik: number };
 
 const klicBodu = (s: { x: number; y: number }): string => `${s.x};${s.y}`;
 const klicPrutu = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -110,6 +113,44 @@ function zmenyStycniku(stary: StycnikNavrhu | undefined, novy: StycnikNavrhu | u
 /** Výklad: kde je v novém mostě styčník, který v původním stál na daném místě. */
 type Vyklad = Map<string, string>;
 
+/** Změna na styčníku i s tím, jak styčník vypadal a vypadá (jeden z nich může chybět). */
+interface ZmenaNaStycniku {
+  zmena: ZmenaMostu;
+  stary: StycnikNavrhu | undefined;
+  dnes: StycnikNavrhu | undefined;
+}
+
+/**
+ * Závaží (nebo laděný tlumič), které z jednoho styčníku zmizelo a stejné se objevilo v jiném,
+ * je přenesené: jedna změna místo dvou. Páruje se podle hodnoty (stejná hmotnost, stejné ladění)
+ * v pořadí, v jakém změny přišly (to určují místa, ne zápis).
+ */
+function slucPresuny(polozky: ZmenaNaStycniku[]): ZmenaMostu[] {
+  const vysledek = polozky.map((p) => p.zmena);
+  for (const [druh, presun, hodnota] of [
+    ["zavazi", "zavazi-presunuto", (s: StycnikNavrhu | undefined): string => ((s?.zavazi ?? 0) > 0 ? String(s!.zavazi) : "")],
+    ["tlumic", "tlumic-presunut", (s: StycnikNavrhu | undefined): string => (s?.tlumic ? `${s.tlumic.hmota};${s.tlumic.frekvence}` : "")],
+  ] as const) {
+    const pryc: { zmena: ZmenaMostu; hodnota: string }[] = [];
+    const nove: { zmena: ZmenaMostu; hodnota: string; stycnik: number }[] = [];
+    for (const { zmena, stary, dnes } of polozky) {
+      if (zmena.druh !== druh) continue;
+      const bylo = hodnota(stary);
+      const je = hodnota(dnes);
+      if (bylo !== "" && je === "") pryc.push({ zmena, hodnota: bylo });
+      else if (bylo === "" && je !== "") nove.push({ zmena, hodnota: je, stycnik: dnes!.id });
+    }
+    for (const odkud of pryc) {
+      const kam = nove.findIndex((n) => n.hodnota === odkud.hodnota);
+      if (kam < 0) continue;
+      const cil = nove.splice(kam, 1)[0]!;
+      vysledek.splice(vysledek.indexOf(odkud.zmena), 1);
+      vysledek[vysledek.indexOf(cil.zmena)] = { druh: presun, stycnik: cil.stycnik };
+    }
+  }
+  return vysledek;
+}
+
 interface Posudek {
   zmeny: ZmenaMostu[];
   /** Pruty původního mostu, které ve výkladu nemají protějšek, a nové pruty bez protějšku. */
@@ -154,18 +195,21 @@ function posud(puvodni: Most, novy: Most, vyklad: Vyklad): Posudek {
   const pridaneZmeny: ZmenaMostu[] = pridane.map((p) => ({ druh: "prut-pridan", prut: p.prut.id }));
 
   // Svary, zámky, závaží a tlumiče: posunutý styčník si je veze s sebou.
-  const naStycnicich: ZmenaMostu[] = [];
+  const naStycnicich: ZmenaNaStycniku[] = [];
   const obsazene = new Set<string>();
   for (const [misto, stary] of puvodni.stycniky) {
     const je = vyklad.get(misto);
     if (je !== undefined) obsazene.add(je);
-    naStycnicich.push(...zmenyStycniku(stary, je === undefined ? undefined : novy.stycniky.get(je)));
+    const dnes = je === undefined ? undefined : novy.stycniky.get(je);
+    for (const zmena of zmenyStycniku(stary, dnes)) naStycnicich.push({ zmena, stary, dnes });
   }
-  for (const [misto, s] of novy.stycniky) if (!obsazene.has(misto)) naStycnicich.push(...zmenyStycniku(undefined, s));
+  for (const [misto, dnes] of novy.stycniky) {
+    if (!obsazene.has(misto)) for (const zmena of zmenyStycniku(undefined, dnes)) naStycnicich.push({ zmena, stary: undefined, dnes });
+  }
 
   const zmeny = [...posuny, ...odebraneZmeny, ...zmenene, ...pridaneZmeny];
   if (napinaku > 0) zmeny.push({ druh: "napinaky", lan: napinaku });
-  zmeny.push(...naStycnicich);
+  zmeny.push(...slucPresuny(naStycnicich));
   return { zmeny, odebrane, pridane };
 }
 

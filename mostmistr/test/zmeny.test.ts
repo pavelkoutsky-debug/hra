@@ -188,4 +188,25 @@ describe("změny mezi dvěma návrhy mostu", () => {
     const jiny = nastavZdvih(p, new Set([pist.id]), (_id, delka) => zdvihPistu(undefined, delka) + 0.5);
     expect(zmenyMostu(p, jiny)).toEqual([{ druh: "nastaveni", prut: pist.id }]);
   });
+
+  it("závaží nebo laděný tlumič přenesený do jiného styčníku je jedna změna; s jinou hodnotou dvě", () => {
+    const dole = most.stycniky.filter((s) => s.y === 0 && s.x > 0);
+    const [a, b, c] = [dole[0]!, dole[1]!, dole[2]!];
+    const sA = nastavZavazi(most, new Set([a.id]), () => 800);
+    const preneseno = nastavZavazi(nastavZavazi(sA, new Set([a.id]), () => 0), new Set([b.id]), () => 800);
+    expect(zmenyMostu(sA, preneseno)).toEqual([{ druh: "zavazi-presunuto", stycnik: b.id }]);
+    // Jinak těžké závaží jinde není přenesení: jedno ubylo a jiné přibylo.
+    const jine = nastavZavazi(nastavZavazi(sA, new Set([a.id]), () => 0), new Set([b.id]), () => 900);
+    expect(druhy(zmenyMostu(sA, jine))).toEqual(["zavazi", "zavazi"]);
+    // Dvě závaží přenesená a třetí přidané: tři změny.
+    const dve = nastavZavazi(most, new Set([a.id, c.id]), () => 800);
+    const obe = nastavZavazi(nastavZavazi(dve, new Set([a.id, c.id]), () => 0), new Set([b.id]), () => 800);
+    expect(druhy(zmenyMostu(dve, obe)).sort()).toEqual(["zavazi", "zavazi-presunuto"]);
+    // Laděný tlumič stejně: stejná hmota i ladění jinde je přenesení.
+    const tlumeny = nastavLadenyTlumic(most, new Set([a.id]), () => ({ hmota: 600, frekvence: 2 }));
+    const jinde = nastavLadenyTlumic(nastavLadenyTlumic(tlumeny, new Set([a.id]), () => undefined), new Set([b.id]), () => ({ hmota: 600, frekvence: 2 }));
+    expect(zmenyMostu(tlumeny, jinde)).toEqual([{ druh: "tlumic-presunut", stycnik: b.id }]);
+    const preladeny = nastavLadenyTlumic(nastavLadenyTlumic(tlumeny, new Set([a.id]), () => undefined), new Set([b.id]), () => ({ hmota: 600, frekvence: 2.2 }));
+    expect(druhy(zmenyMostu(tlumeny, preladeny))).toEqual(["tlumic", "tlumic"]);
+  });
 });

@@ -861,6 +861,11 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   cursor: help;
 }
 
+/* Pojem a interpunkce hned za ním drží na řádku pohromadě. */
+.pojem__celek {
+  white-space: nowrap;
+}
+
 .pojem:hover,
 .pojem:focus-visible {
   color: var(--cara-silna);
@@ -1611,7 +1616,17 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 
 .okno--sandbox .sandbox__obsah {
   overflow-y: auto;
-  padding-right: 4px;
+  /* Spodní okraj: poslední řádek formuláře nesmí končit přesně na hraně posuvné části. */
+  padding: 0 4px 10px 0;
+}
+
+/* Oddíly formuláře mají nad nadpisem odstup; první nadpis ne. */
+.okno--sandbox .sandbox__obsah h3 {
+  margin-top: 16px;
+}
+
+.okno--sandbox .sandbox__obsah h3:first-child {
+  margin-top: 0;
 }
 
 .sandbox__provoz {

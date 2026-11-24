@@ -13,13 +13,16 @@
 // rozhoupe; kmitání překročí mez 2,5 m/s² v 8,4 s a vrcholí na 4,1 m/s² (1,66× mez). Most
 // „neobstál kvůli kmitání“, příčina je krok útvaru.
 //
-// Oprava komise (3 změny): tři dvoutunová závaží doprostřed rozpětí (styčníky 12, 16 a 20 m),
-// kde most kmitá nejvíc. Vlastní frekvence klesne na 1,99 Hz (s vojáky 1,81 Hz), pod krok
-// jednotky, a kmitání je 1,44 m/s² (0,58× mez). Závaží u opěr můžou zůstat.
+// Oprava komise (3 změny): obě závaží přenést od opěr doprostřed rozpětí (styčníky 12 a 20 m),
+// kde most kmitá nejvíc, a mezi ně zavěsit třetí (16 m). Přenesené závaží je jedna změna. Vlastní
+// frekvence klesne pod krok jednotky a kmitání je 1,59 m/s² (0,64× mez). Projde i ponechání
+// závaží u opěr a tři nová uprostřed (1,44 m/s²); jen dvě přenesená vedle sebe (12 a 16 m) projdou
+// těsně (2,47 m/s²), přenesená na 12 a 20 m bez třetího ne (2,99 m/s²).
 //
 // Slepé opravy: těžký profil v horním pásu (most je tužší i těžší a frekvence skoro stejná),
-// další dvě závaží blíž k opěrám (8 a 24 m) a jediné závaží uprostřed (frekvence klesne na
-// 2,33 Hz, s vojáky 2,03 Hz, a krok jednotky zůstává v rezonanci).
+// další dvě závaží blíž k opěrám (8 a 24 m), závaží přenesená jen o pole dál (8 a 24 m) a jediné
+// závaží uprostřed (frekvence klesne na 2,33 Hz, s vojáky 2,03 Hz, a krok jednotky zůstává
+// v rezonanci).
 
 import type { PripadHavarie } from "../../src/data/havarie";
 import type { IdPrvku } from "../../src/data/katalog";
@@ -46,6 +49,8 @@ const ZAVAZI_U_OPER: readonly [number, number][] = [
 interface Upravy {
   /** Závaží navíc ([x styčníku mostovky, kg]). */
   zavazi?: readonly [number, number][];
+  /** Kam se přenesla závaží od opěr (místo x = 4 a 28); bez toho zůstávají, kde je stavitel zavěsil. */
+  prenesena?: readonly [number, number];
   /** Prvek dílů horního pásu podle x jejich levého konce. */
   pas?: Readonly<Record<number, IdPrvku>>;
 }
@@ -60,7 +65,8 @@ function lavka(upravy: Upravy = {}): NavrhMostu {
     k.prut(O, vrchol, [x + POLE, 0]);
     if (x + POLE < ROZPETI) k.prut(upravy.pas?.[vrchol[0]] ?? O, vrchol, [vrchol[0] + POLE, VYSKA]);
   }
-  for (const [x, kg] of [...ZAVAZI_U_OPER, ...(upravy.zavazi ?? [])]) k.bod(x, 0, { zavazi: kg });
+  const puvodni: readonly [number, number][] = upravy.prenesena ? ZAVAZI_U_OPER.map(([, kg], i) => [upravy.prenesena![i]!, kg]) : ZAVAZI_U_OPER;
+  for (const [x, kg] of [...puvodni, ...(upravy.zavazi ?? [])]) k.bod(x, 0, { zavazi: kg });
   return k.navrh();
 }
 
@@ -68,13 +74,7 @@ export const pripad02: PripadHavarie = {
   uroven,
   kapitola: "2",
   most: lavka(),
-  oprava: lavka({
-    zavazi: [
-      [12, 2000],
-      [16, 2000],
-      [20, 2000],
-    ],
-  }),
+  oprava: lavka({ prenesena: [12, 20], zavazi: [[16, 2000]] }),
   slepe: [
     { nazev: "těžký profil v horním pásu uprostřed", navrh: lavka({ pas: { 10: TO, 14: TO, 18: TO } }) },
     {
@@ -86,6 +86,7 @@ export const pripad02: PripadHavarie = {
         ],
       }),
     },
+    { nazev: "závaží přenesená jen o pole dál", navrh: lavka({ prenesena: [8, 24] }) },
     { nazev: "jediné závaží uprostřed", navrh: lavka({ zavazi: [[16, 2000]] }) },
   ],
 };

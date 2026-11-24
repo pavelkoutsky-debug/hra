@@ -106,6 +106,11 @@ export type VysledekUlozeni =
  * Uloží údolí a most pod jménem `nazev`: práci stejného jména přepíše, jinak ji přidá na
  * začátek seznamu. Vrací novou dílnu a to, co se stalo; vstupní dílnu nemění.
  */
+/** Je to totéž jméno práce? Velikost písmen nerozhoduje: „Most“ a „most“ by hráč v dílně nerozeznal. */
+export function stejneJmenoPrace(a: string, b: string): boolean {
+  return a.toLocaleLowerCase() === b.toLocaleLowerCase();
+}
+
 export function ulozPraci(dilna: Dilna, nazev: string, nastaveni: NastaveniSandboxu, navrh: NavrhMostu, cas: number): VysledekUlozeni {
   const jmeno = upravNazevPrace(nazev);
   if (jmeno === "") return { stav: "bez-jmena", dilna };
@@ -117,9 +122,9 @@ export function ulozPraci(dilna: Dilna, nazev: string, nastaveni: NastaveniSandb
   }
   if (kod.length > NEJDELSI_KOD_MOSTU) return { stav: "velky", dilna };
   const prace: PraceDilny = { nazev: jmeno, nastaveni: nactiSandbox(nastaveni), kod, ulozeno: cas };
-  const byla = dilna.prace.some((p) => p.nazev === jmeno);
+  const byla = dilna.prace.some((p) => stejneJmenoPrace(p.nazev, jmeno));
   if (!byla && dilna.prace.length >= NEJVIC_PRACI) return { stav: "plno", dilna };
-  return { stav: byla ? "prepsano" : "ulozeno", dilna: { verze: VERZE_DILNY, prace: [prace, ...dilna.prace.filter((p) => p.nazev !== jmeno)] } };
+  return { stav: byla ? "prepsano" : "ulozeno", dilna: { verze: VERZE_DILNY, prace: [prace, ...dilna.prace.filter((p) => !stejneJmenoPrace(p.nazev, jmeno))] } };
 }
 
 export function smazPraci(dilna: Dilna, nazev: string): Dilna {
@@ -130,7 +135,7 @@ export function smazPraci(dilna: Dilna, nazev: string): Dilna {
 export function volnyNazevPrace(dilna: Dilna, zaklad: string): string {
   for (let n = 1; n <= NEJVIC_PRACI + 1; n++) {
     const nazev = `${zaklad} ${n}`;
-    if (!dilna.prace.some((p) => p.nazev === nazev)) return nazev;
+    if (!dilna.prace.some((p) => stejneJmenoPrace(p.nazev, nazev))) return nazev;
   }
   return `${zaklad} ${NEJVIC_PRACI + 2}`;
 }
