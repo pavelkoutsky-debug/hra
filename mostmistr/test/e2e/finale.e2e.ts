@@ -1,11 +1,11 @@
 // Závěrečná kapitola v bezhlavém prohlížeči: přehled s osmou kapitolou, zadání tří úrovní,
 // které spojují mechaniky dvou kapitol, nápověda k zavěšenému mostu se ztužující příhradou
 // a mosty autora pro mistrovskou medaili (vlak na lanech, lávka s tlumiči, zvedací most pro trať).
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { chromium, type Browser, type Page } from "playwright";
 import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { navrhNaText } from "../../src/data/navrh";
+import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
 
@@ -183,6 +183,28 @@ describe("závěrečná kapitola", () => {
     expect(popis).not.toContain("vyšší příhrada");
     await stranka.screenshot({ path: `${SLOZKA}/f3b-rada-8-02.png` });
   }, 120_000);
+
+  it("8-02: měkká lávka, která visí pod výkresem, neobstojí hned a hra řekne proč", async () => {
+    await otevri("8-02");
+    const mekke = JSON.parse(readFileSync(new URL("../data/8-02-mekke-lavky.json", import.meta.url), "utf8")) as Record<string, NavrhMostu>;
+    await nactiMost(navrhNaText(Object.values(mekke)[0]!));
+    // Už při stavbě značka říká, kolik mostovka visí; úroveň dovoluje deset centimetrů.
+    await stranka.locator("body[data-pruves]").waitFor({ timeout: 60_000 });
+    expect(Number(await telo("pruves"))).toBeGreaterThan(1000);
+    await stranka.screenshot({ path: `${SLOZKA}/f3c-pruves-8-02.png` });
+    await spust();
+    // Rozhodnuto je ve chvíli, kdy mostovka mez překročí (tady hned, vlastní vahou): výsledek
+    // přijde po pár sekundách děje, ne až za minutu na konci osy.
+    const vysledek = stranka.locator(".vysledek");
+    await vysledek.waitFor({ state: "visible", timeout: 60_000 });
+    expect(Number(await stranka.locator("#cas").inputValue())).toBeLessThan(15);
+    expect(await udaj("vysledek-nadpis")).toBe("MOST NEOBSTÁL");
+    const pruh = (await vysledek.innerText()).replace(/[\u00a0\u202f]/g, " ");
+    expect(pruh).toContain("Mostovka se od výkresu odchýlila o");
+    expect(pruh).toContain("smí nejvýš o 100 mm");
+    expect(await medaile()).toEqual(["false", "false", "false"]);
+    await stranka.screenshot({ path: `${SLOZKA}/f3d-pruhyb-8-02.png` });
+  }, 300_000);
 
   for (const [id, cas] of [["8-01", 24], ["8-02", 30], ["8-03", 16]] as const) {
     it(`${id}: most autora pro mistrovskou projde se všemi třemi medailemi`, async () => {
