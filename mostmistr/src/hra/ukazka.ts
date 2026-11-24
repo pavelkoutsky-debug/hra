@@ -18,6 +18,7 @@ import { KlientZkousky } from "../zkouska/klient";
 import type { PopisUcastnika } from "../zkouska/provoz";
 import type { Udalost, VysledekZkousky } from "../zkouska/protokol";
 import { nakresliZamkyZaznamu, stavPohybu, valecPrutu } from "./pohyb";
+import { nejvicDosud, popisekBehuUkazky, popisekKonceUkazky } from "./popisekUkazky";
 import { prazdnySnimek, Zaznam, type Snimek } from "../zkouska/zaznam";
 import { nasadaUrovne } from "../../urovne/index";
 import type { StranaUkazky, UkazkaUrovne } from "../../urovne/ukazky";
@@ -42,6 +43,20 @@ interface Strana {
   vychozi: Float32Array | null;
   snimek: Snimek;
   zvetsene: Float32Array;
+  /** Největší dosavadní kmitání ke každému snímku záznamu (`nejvicDosud`). */
+  dosud: Float64Array;
+}
+
+/** Poslední snímek záznamu, který nastal nejpozději v čase `cas`; −1, když žádný. */
+function indexSnimku(snimky: readonly Snimek[], cas: number): number {
+  let dolni = -1;
+  let horni = snimky.length - 1;
+  while (dolni < horni) {
+    const stred = (dolni + horni + 1) >> 1;
+    if (snimky[stred]!.cas <= cas) dolni = stred;
+    else horni = stred - 1;
+  }
+  return dolni;
 }
 
 /**
@@ -116,6 +131,7 @@ export class Ukazka {
         vychozi: null,
         snimek: prazdnySnimek(),
         zvetsene: new Float32Array(0),
+        dosud: new Float64Array(0),
       };
     });
   }
@@ -197,6 +213,7 @@ export class Ukazka {
     for (const strana of this.#strany) {
       const v = strana.vysledek!;
       strana.koren.dataset.pruchod = String(v.pruchod);
+      strana.dosud = nejvicDosud(strana.zadani.uroven, strana.ucastnici, strana.zaznam.snimky);
       if (v.komfort) strana.koren.dataset.kmitani = v.komfort.zrychleni.toFixed(2);
     }
     this.#koren.dataset.stav = "hraje";
@@ -264,27 +281,16 @@ export class Ukazka {
     nakresliZamkyZaznamu(ctx, kamera, rozmer, navrh, kresleny, odemceno);
     nakresliProvoz(ctx, kamera, rozmer, strana.ucastnici, kresleny);
 
-    // Pod plátnem: během děje okamžité kmitání, na konci verdikt.
+    // Pod plátnem: během děje největší dosavadní kmitání (u ukázky o kmitání), na konci výsledek.
     const vysledek = strana.vysledek;
     if (!vysledek) return;
     let text: string;
     if (this.#cas >= vysledek.trvani) {
-      const verdikt = t(vysledek.pruchod ? "ukazka.obstal" : "ukazka.neobstal");
-      // Kde úroveň hodnotí pohodlí cestujících, říká ukázka, jak se jim jelo.
-      const cestujici =
-        strana.zadani.uroven.mistrovska?.druh === "komfort-cestujicich" ? vysledek.komfortCestujicich : null;
-      const podrobnost =
-        vysledek.spadlo > 0
-          ? t("ukazka.spadlo", { spadlo: vysledek.spadlo, pocet: vysledek.ucastniku })
-          : vysledek.komfort
-            ? t("ukazka.nejvic", { zrychleni: cislo(vysledek.komfort.zrychleni, 1) })
-            : cestujici && cestujici.zrychleni > 0
-              ? t("ukazka.cestujici", { zrychleni: cislo(cestujici.zrychleni, 1) })
-              : "";
-      text = podrobnost ? `${verdikt} · ${podrobnost}` : verdikt;
+      text = popisekKonceUkazky(strana.zadani.uroven, vysledek);
       strana.stav.dataset.verdikt = vysledek.pruchod ? "obstal" : "neobstal";
     } else {
-      text = vysledek.komfort ? t("ukazka.kmitani", { zrychleni: cislo(snimek.kmitani, 1) }) : "";
+      const i = indexSnimku(strana.zaznam.snimky, cas);
+      text = popisekBehuUkazky(strana.zadani.uroven, vysledek, strana.udalosti, cas, i < 0 ? 0 : (strana.dosud[i] ?? 0));
       delete strana.stav.dataset.verdikt;
     }
     if (strana.stav.textContent !== text) strana.stav.textContent = text;

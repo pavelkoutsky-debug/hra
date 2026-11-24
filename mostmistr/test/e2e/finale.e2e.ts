@@ -182,7 +182,16 @@ describe("závěrečná kapitola", () => {
     expect(popis).toContain("Pomohl by laděný tlumič na 2,00 Hz");
     expect(popis).not.toContain("vyšší příhrada");
     await stranka.screenshot({ path: `${SLOZKA}/f3b-rada-8-02.png` });
-  }, 120_000);
+    // Most, který na kmitání neprošel, neslyší „nízký komfort“: řádek řekne mez úrovně.
+    await spust();
+    expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    const kmitani = await celyText("vysledek-kmitani");
+    expect(kmitani).toContain("nad mezí úrovně 1,0 m/s²");
+    expect(kmitani).not.toContain("komfort");
+    // Medaile, které most nedostal, říkají proč; průchod odkazem na větu nahoře.
+    const proc = await stranka.locator('[data-udaj="vysledek-medaile"] li').evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-proc")));
+    expect(proc).toEqual(["most zkouškou neprošel (proč, říká věta nahoře)", "nejdřív musí most projít", "nejdřív rozpočtová medaile"]);
+  }, 400_000);
 
   for (const [id, cas] of [["8-01", 24], ["8-02", 30], ["8-03", 16]] as const) {
     it(`${id}: most autora pro mistrovskou projde se všemi třemi medailemi`, async () => {
@@ -194,6 +203,7 @@ describe("závěrečná kapitola", () => {
       await stranka.screenshot({ path: `${SLOZKA}/f5-zkouska-${id}.png` });
       expect(await naKonec()).toBe("MOST OBSTÁL");
       expect(await medaile()).toEqual(["true", "true", "true"]);
+      expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-proc]').count()).toBe(0);
       await stranka.screenshot({ path: `${SLOZKA}/f6-vysledek-${id}.png` });
     }, 400_000);
   }
