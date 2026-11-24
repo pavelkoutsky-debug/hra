@@ -1476,7 +1476,7 @@ const CS = {
   "zadani.8-03":
     "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
   "zadani.8-03.vice":
-    "Křídlo, které unese vlak, je těžké, a těžké křídlo píst sotva zvedne. Pomůže tvar: příhrada nad kolejí nese vlak a váží málo, zatímco plná mostovka je těžká a slabá. Píst potřebuje dlouhé rameno, tedy hlubokou kotvu, a dost zdvihu pro loď. Kdo chce, aby křídlo dosedlo měkce, musí ho při spouštění udržet: lehčí křídlo, nebo druhý píst, který se o jeho tíhu podělí.",
+    "Křídlo, které unese vlak, je těžké, a těžké křídlo píst sotva zvedne. Pomůže tvar: příhrada nad kolejí nese vlak a váží málo, zatímco plná mostovka je těžká a slabá. Píst potřebuje dlouhé rameno, tedy hlubokou kotvu, a dost zdvihu pro loď. Kdo chce, aby křídlo dosedlo měkce, musí ho při spouštění přibrzdit: jediný píst ho pustí rychle, druhý píst z druhé kotvy ho zpomalí.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem, a každý rytmus rozhoupe jinak vysoký most. Buď najdi výšku, která se vyhne všem třem, nebo most utlum.",
   "zadani.2-04.vice":

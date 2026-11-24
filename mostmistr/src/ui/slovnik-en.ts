@@ -1509,7 +1509,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.8-03":
     "A harbour railway crosses a thirty-metre shipping canal: a locomotive crosses in the morning, then the bridge must make way for a ship fourteen metres tall, and as soon as it is down again a loaded freight train rolls over it. The machinery, with the pivot and the cylinder anchors, is in the left wall; the right bank has only a bearing.",
   "zadani.8-03.vice":
-    "A leaf strong enough for a train is heavy, and a heavy leaf is hard for the cylinder to lift. Shape helps: a truss above the track carries the train and weighs little, while a solid deck is heavy and weak. The cylinder needs a long lever arm, which means the deep anchor, and enough stroke for the ship. If the leaf is to come down gently, it has to be held while it is lowered: a lighter leaf, or a second cylinder to share its weight.",
+    "A leaf strong enough for a train is heavy, and a heavy leaf is hard for the cylinder to lift. Shape helps: a truss above the track carries the train and weighs little, while a solid deck is heavy and weak. The cylinder needs a long lever arm, which means the deep anchor, and enough stroke for the ship. If the leaf is to come down gently, it has to be slowed on the way down: a single cylinder lets it drop fast, a second cylinder from the other anchor holds it back.",
   "zadani.2-04":
     "A march-past: the column crosses three times, at a slow, a normal and a quick march, and each rhythm sets a bridge of a different height swinging. Either find a height that avoids all three, or damp the bridge.",
   "zadani.2-04.vice":
