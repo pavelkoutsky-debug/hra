@@ -27,7 +27,7 @@ Poslední aktualizace: 24. 11. 2026
 | M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Hotovo (24. 11. 2026): závěrečná kapitola se třemi úrovněmi, galerie mostů a závěrečný list; viz „M14 — výsledek“ |
 | M15 Dílna a Havarijní komise | Hotovo (24. 11. 2026): pískoviště jako dílna a režim Havarijní komise; viz „M15 — výsledek“ |
-| M16 Žebříčky a denní rozbor | Hotovo (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. Naplánovaná úloha potřebuje heslo správce jako síťový tajný údaj prostředí (`docs/ROZBOR.md`) |
+| M16 Žebříčky a denní rozbor | Hotovo (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. Naplánovaná úloha potřebuje od zadavatele heslo pro rozbor (`MM_ROZBOR_HESLO` v Netlify a jako síťový tajný údaj prostředí, viz `docs/ROZBOR.md`) |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -63,7 +63,7 @@ Poslední milník z koncepce (návrh 19 z `docs/RECENZE.md` a přání zadavatel
 - Server vydává **podklady dne** (`GET /api/sprava?co=podklady`): souhrn deníku hraní za den a za sedm dní, zprávy hráčů toho dne bez kontaktů a příloh, počty žebříčků (zápisy a odmítnutí podle důvodu) a shrnutí posledních rozborů.
 - **Rozbor píše naplánovaná úloha** (Claude Code na webu, jednou za 24 hodin, pokaždé v nové relaci): podklady vyhodnotí, navrhne nejvýš šest změn pro další verze a rozbor uloží (`POST /api/sprava?co=rozbor`). Server hlídá tvar a délky. Zadání úlohy je v `docs/ROZBOR.md`.
 - Zadavatel rozbor najde na **stránce správce** v záložce Denní rozbor (kritérium: „rozbor za poslední den vznikne bez zásahu člověka a zadavatel ho najde na stránce správce“): shrnutí, návrhy podle priority s důvodem a náročností a celý text. Rozbor přichází zvenčí, takže se na stránku píše jen jako text.
-- Úloha potřebuje, aby prostředí smělo na `mostmistr.netlify.app` a mělo heslo správce uložené jako síťový tajný údaj; heslo není v zadání úlohy ani v repozitáři.
+- **Úloha nedostává heslo správce.** Čte texty od hráčů, které se ji můžou pokusit navést k něčemu jinému, a proto má vlastní heslo `MM_ROZBOR_HESLO` (proměnná prostředí webu na Netlify, aspoň 16 znaků): otevírá jen podklady a rozbory, ne zprávy s kontakty, deník, žebříčky ani mazání. Prostředí úlohy musí smět na `mostmistr.netlify.app` a mít to heslo uložené jako síťový tajný údaj; v zadání úlohy ani v repozitáři není.
 
 **Testy.** `test/zebricek.test.ts` (přezdívka, řazení, poctivý zápis, podvrhy, zlom, paměť ověřených mostů a strop, souběžné zápisy, správa), `test/rozbor.test.ts` (podklady bez kontaktů, ukládání a meze rozboru, správa žebříčků přes jednu adresu), `test/e2e/zebricek.e2e.ts` (zápis po zkoušce, zlom, podvrh z prohlížeče, dva hráči, pískoviště a komise bez žebříčku, angličtina, telefon, stránka správce s rozborem a žebříčky).
 

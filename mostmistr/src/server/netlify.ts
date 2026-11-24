@@ -32,5 +32,6 @@ export function prostrediNetlify(kontext?: KontextNetlify): ProstrediServeru {
     nahoda: () => Array.from(crypto.getRandomValues(new Uint8Array(3)), (b) => b.toString(16).padStart(2, "0")).join(""),
     prostredi,
     hesloSpravce: promenna("MM_SPRAVCE_HESLO"),
+    hesloRozboru: promenna("MM_ROZBOR_HESLO"),
   };
 }

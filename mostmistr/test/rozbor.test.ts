@@ -158,6 +158,40 @@ describe("ukládání rozborů", () => {
   });
 });
 
+describe("heslo jen pro denní rozbor", () => {
+  const ANALYTIK = { authorization: "Bearer dlouhe-nahodne-heslo-rozboru" };
+
+  it("otevírá podklady a rozbory a smí rozbor uložit; zprávy hráčů, deník, žebříčky ani mazání ne", async () => {
+    const p = { ...server("2026-11-23T04:05:00.000Z"), hesloRozboru: "dlouhe-nahodne-heslo-rozboru" };
+    await prijmiVazbu(zadost("/api/vazba", { hlavicka: hlavicka(), druh: "chyba", text: "Zpráva.", kontakt: "hrac@example.org" }), p);
+    expect((await spravujVse(zadost("/api/sprava?co=podklady", undefined, ANALYTIK), p)).status).toBe(200);
+    expect((await spravujVse(zadost("/api/sprava?co=rozbor", rozbor(), ANALYTIK), p)).status).toBe(201);
+    expect((await spravujVse(zadost("/api/sprava?co=rozbory", undefined, ANALYTIK), p)).status).toBe(200);
+    expect((await spravujVse(zadost("/api/sprava?co=rozbor&den=2026-11-22", undefined, ANALYTIK), p)).status).toBe(200);
+    for (const cesta of ["co=vazby", "co=vazba&id=20261123T040500-000001", "co=dny", "co=den&den=2026-11-23", "co=export&den=2026-11-23", "co=zebricky", "co=overeni", "co=souhrn&den=2026-11-23"]) {
+      const o = await spravujVse(zadost(`/api/sprava?${cesta}`, undefined, ANALYTIK), p);
+      expect(o.status, cesta).toBe(403);
+      expect(JSON.stringify(await o.json())).not.toContain("example.org");
+    }
+    expect((await spravujVse(zadost("/api/sprava?co=smazat", { den: "2026-11-23" }, ANALYTIK), p)).status).toBe(403);
+    expect((await spravujVse(zadost("/api/sprava?co=zebricek-smazat", { znacka: "0".repeat(16) }, ANALYTIK), p)).status).toBe(403);
+    expect(await p.sklad.klice("vazba/")).toHaveLength(1);
+    // Heslo správce umí dál všechno; špatné heslo nic.
+    expect((await spravujVse(zadost("/api/sprava?co=vazby", undefined, SPRAVCE), p)).status).toBe(200);
+    expect((await spravujVse(zadost("/api/sprava?co=podklady", undefined, { authorization: "Bearer dlouhe-nahodne-heslo-rozborx" }), p)).status).toBe(401);
+  });
+
+  it("krátké heslo rozboru neplatí a stejné jako heslo správce není omezené", async () => {
+    const kratke = { ...server("2026-11-23T04:05:00.000Z"), hesloRozboru: "kratke" };
+    expect((await spravujVse(zadost("/api/sprava?co=podklady", undefined, { authorization: "Bearer kratke" }), kratke)).status).toBe(401);
+    const stejne = { ...server("2026-11-23T04:05:00.000Z"), hesloSpravce: "jedno-dlouhe-heslo-na-vse", hesloRozboru: "jedno-dlouhe-heslo-na-vse" };
+    expect((await spravujVse(zadost("/api/sprava?co=vazby", undefined, { authorization: "Bearer jedno-dlouhe-heslo-na-vse" }), stejne)).status).toBe(200);
+    // Bez nastaveného hesla rozboru se nic nemění.
+    const bez = server("2026-11-23T04:05:00.000Z");
+    expect((await spravujVse(zadost("/api/sprava?co=podklady", undefined, ANALYTIK), bez)).status).toBe(401);
+  });
+});
+
 describe("správa žebříčků přes /api/sprava", () => {
   it("správce vidí žebříčky, dostane most ze zápisu a smaže zápisy hráče; ostatní adresy správy běží dál", async () => {
     const p = server("2026-11-22T12:00:00.000Z");

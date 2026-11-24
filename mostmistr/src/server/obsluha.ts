@@ -84,6 +84,11 @@ export interface ProstrediServeru {
   prostredi: string;
   /** Heslo správce; null, dokud ho zadavatel v Netlify nenastavil. */
   hesloSpravce: string | null;
+  /**
+   * Heslo jen pro denní rozbor (viz `sprava.ts`): smí číst podklady a rozbory a rozbor uložit,
+   * nic jiného. Null nebo nenastavené: rozbor jde ukládat jen s heslem správce.
+   */
+  hesloRozboru?: string | null;
 }
 
 /** Zpětná vazba v seznamu: bez přiloženého mostu a událostí, s textem zkráceným na ukázku. */
@@ -319,7 +324,7 @@ export async function prijmiVazbu(zadost: Request, p: ProstrediServeru): Promise
 }
 
 /** Porovná dva texty tak, aby doba porovnání neprozradila, kolik znaků sedí. */
-async function stejne(a: string, b: string): Promise<boolean> {
+export async function stejne(a: string, b: string): Promise<boolean> {
   const koder = new TextEncoder();
   const [otiskA, otiskB] = await Promise.all([
     crypto.subtle.digest("SHA-256", koder.encode(a)),
