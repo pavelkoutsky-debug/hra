@@ -131,7 +131,7 @@ describe("stavba pohyblivého mostu", () => {
     expect(zkontrolujNavrh(kridlo(1.5), kanal())).toEqual([]);
     expect(zkontrolujNavrh(kridlo(1.75), kanal()).map((p) => p.druh)).toEqual(["zdvih-za-uvrati"]);
     expect(zkontrolujNavrh(kridlo(2), kanal()).map((p) => p.druh)).toEqual(["zdvih-za-uvrati"]);
-    expect(otoceniKridla(kridlo(2), kanal(), kridlo(2).pruty[4]!)).toEqual({ cos: -1 });
+    expect(otoceniKridla(kridlo(2), kanal(), kridlo(2).pruty[4]!)).toMatchObject({ cos: -1 });
     // Úhel otočení: L² = D² + r² − 2·D·r·cos γ s D = r = 3 m; na začátku γ = 90°.
     const otoceni = otoceniKridla(kridlo(1.5), kanal(), kridlo(1.5).pruty[4]!)!;
     const delka = Math.hypot(3, 3) + 1.5;

@@ -1,0 +1,156 @@
+{
+  "verze": 8,
+  "id": "4-05",
+  "nazev": "Jediný základ",
+  "vyrez": {
+    "xMin": -12,
+    "yMin": -21,
+    "xMax": 84,
+    "yMax": 30
+  },
+  "teren": [
+    {
+      "x": -12,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 6,
+      "y": -12
+    },
+    {
+      "x": 16,
+      "y": -18
+    },
+    {
+      "x": 40,
+      "y": -18
+    },
+    {
+      "x": 44,
+      "y": -14
+    },
+    {
+      "x": 52,
+      "y": -14
+    },
+    {
+      "x": 56,
+      "y": -18
+    },
+    {
+      "x": 62,
+      "y": -18
+    },
+    {
+      "x": 68,
+      "y": -10
+    },
+    {
+      "x": 72,
+      "y": 0
+    },
+    {
+      "x": 84,
+      "y": 0
+    }
+  ],
+  "hladina": -16,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 72,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": 48,
+      "y": -14
+    }
+  ],
+  "zakazaneZony": [
+    {
+      "xMin": 0.5,
+      "yMin": -18,
+      "xMax": 41.5,
+      "yMax": -0.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 72,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "A",
+  "rozpocet": 2590000,
+  "inzenyrskyRozpocet": 2163000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.6
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "lano",
+    "lano-nosne",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "souprava",
+      "pocet": 2
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "nakladni",
+      "pocet": 3,
+      "rozestup": 14
+    },
+    {
+      "cas": 14,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "souprava"
+    },
+    {
+      "cas": 15,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "autobus"
+    }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": true
+}

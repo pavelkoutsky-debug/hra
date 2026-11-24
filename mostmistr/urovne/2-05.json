@@ -1,0 +1,145 @@
+{
+  "verze": 8,
+  "id": "2-05",
+  "nazev": "Pochod a běh",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -9,
+    "xMax": 44,
+    "yMax": 8
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": -4
+    },
+    {
+      "x": 12,
+      "y": -4
+    },
+    {
+      "x": 16,
+      "y": -7
+    },
+    {
+      "x": 30,
+      "y": -7
+    },
+    {
+      "x": 33,
+      "y": -5
+    },
+    {
+      "x": 36,
+      "y": 0
+    },
+    {
+      "x": 44,
+      "y": 0
+    }
+  ],
+  "hladina": -5.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 36,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 12,
+      "y": -4,
+      "typ": "pevna",
+      "jen": "tlumic"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": -8,
+      "yMin": 1,
+      "xMax": 44,
+      "yMax": 8
+    },
+    {
+      "xMin": 0,
+      "yMin": -9,
+      "xMax": 12,
+      "yMax": -0.5
+    },
+    {
+      "xMin": 12,
+      "yMin": -9,
+      "xMax": 36,
+      "yMax": -0.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 36,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 2.5,
+  "hmotnostVybaveni": 60,
+  "nerovnost": "zadna",
+  "rozpocet": 565000,
+  "inzenyrskyRozpocet": 475000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 1.45
+  },
+  "povolenePrvky": [
+    "mostovka-drevo",
+    "ocel-lehka",
+    "tlumic"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 2000,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "utvar",
+      "pocet": 24,
+      "kadence": 1.8
+    },
+    {
+      "cas": 36,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "utvar",
+      "pocet": 9,
+      "kadence": 3.0
+    }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": true
+}

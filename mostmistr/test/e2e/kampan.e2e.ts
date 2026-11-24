@@ -84,7 +84,13 @@ describe("kampaň od první úrovně do poslední", () => {
     expect(await stranka.locator(".karta").count()).toBe(kampan.length);
     expect(await zamceno(kampan[0]!.id)).toBe("false");
     for (const uroven of kampan.slice(1)) expect(await zamceno(uroven.id), uroven.id).toBe("true");
-    expect(await udaj("prehled-postup")).toMatch(/^Projito 0 z 28 úrovní · medaile 0 z 84 · stupně výzev 0 z 252$/);
+    // Sedm kapitol po čtyřech úrovních a zkoušce: 35 úrovní, tři medaile a devět stupňů výzev na každou.
+    expect(kampan.length).toBe(35);
+    expect(await udaj("prehled-postup")).toBe(`Projito 0 z ${kampan.length} úrovní · medaile 0 z ${3 * kampan.length} · stupně výzev 0 z ${9 * kampan.length}`);
+    // Zkouška kapitoly má na kartě štítek; ostatní úrovně ne.
+    for (const uroven of kampan) {
+      expect(await stranka.locator(`[data-uroven="${uroven.id}"] .karta__stitek`).count(), uroven.id).toBe(uroven.zkouskova ? 1 : 0);
+    }
     expect(await stranka.locator('[data-udaj="prehled-dokonceno"]').isVisible()).toBe(false);
   });
 
@@ -114,8 +120,17 @@ describe("kampaň od první úrovně do poslední", () => {
         }
         await stranka.locator(`[data-uroven="${uroven.id}"] a`).click();
         await stranka.locator(PLATNO).waitFor();
+        // Zkouška kapitoly: zadání to říká, ukázka ani nápověda nejsou. Ostatní úrovně nápovědu mají.
+        expect(await stranka.locator('[data-udaj="zadani-zkouska"]').isVisible(), uroven.id).toBe(uroven.zkouskova);
+        if (uroven.zkouskova) {
+          // Nadtitul okna je verzálkami (styl), text je „Zkouška kapitoly · 1-05“.
+          expect((await udaj("zadani-list")).toLowerCase(), uroven.id).toBe(`zkouška kapitoly · ${uroven.id}`);
+          expect((await udaj("zadani-text")).length, uroven.id).toBeGreaterThan(40);
+          await stranka.screenshot({ path: `${SLOZKA}/k0-zkouska-${uroven.id}.png` });
+        }
         const zavrit = stranka.locator('#okno-zadani[open] button[value="zavrit"]');
         if ((await zavrit.count()) > 0) await zavrit.click();
+        expect(await akce("napoveda").isVisible(), `${uroven.id} nápověda`).toBe(!uroven.zkouskova);
 
         await akce("import").click();
         await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI[uroven.id]!.pruchod));
@@ -143,7 +158,7 @@ describe("kampaň od první úrovně do poslední", () => {
         }
       }
     },
-    1_500_000,
+    2_400_000,
   );
 
   it("po poslední úrovni je kampaň dokončená a všechny úrovně mají medaili za průchod", async () => {
@@ -153,7 +168,7 @@ describe("kampaň od první úrovně do poslední", () => {
     expect(await postup.getAttribute("data-projito")).toBe(String(kampan.length));
     expect(await postup.getAttribute("data-dokonceno")).toBe("true");
     // Dokončená kampaň má vlastní oznámení; věta přilepená za čísla postupu by zanikla.
-    expect(await udaj("prehled-postup")).toMatch(/^Projito 28 z 28 úrovní · /);
+    expect(await udaj("prehled-postup")).toMatch(new RegExp(`^Projito ${kampan.length} z ${kampan.length} úrovní · `));
     // Nadpis oznámení je verzálkami (styl), proto bez ohledu na velikost písmen.
     expect(await udaj("prehled-dokonceno")).toMatch(/^Kampaň dokončena\. Všechny úrovně jsou projité\./i);
     await stranka.screenshot({ path: `${SLOZKA}/k2-kampan-dokoncena.png` });

@@ -1,0 +1,155 @@
+{
+  "verze": 8,
+  "id": "6-05",
+  "nazev": "Nestejná pole",
+  "vyrez": {
+    "xMin": -14,
+    "yMin": -17,
+    "xMax": 80,
+    "yMax": 12
+  },
+  "teren": [
+    {
+      "x": -14,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 4,
+      "y": -7
+    },
+    {
+      "x": 8,
+      "y": -10
+    },
+    {
+      "x": 20,
+      "y": -10
+    },
+    {
+      "x": 24,
+      "y": -12
+    },
+    {
+      "x": 28,
+      "y": -14
+    },
+    {
+      "x": 58,
+      "y": -14
+    },
+    {
+      "x": 62,
+      "y": -7
+    },
+    {
+      "x": 66,
+      "y": 0
+    },
+    {
+      "x": 80,
+      "y": 0
+    }
+  ],
+  "hladina": -10.5,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 66,
+      "y": 0,
+      "typ": "posuvna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": 24,
+      "y": -12
+    }
+  ],
+  "zakazaneZony": [
+    {
+      "xMin": 24,
+      "yMin": -14,
+      "xMax": 66,
+      "yMax": -0.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "kolej",
+      "druh": "kolej",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 66,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 5,
+  "hmotnostVybaveni": 0,
+  "nerovnost": "B",
+  "rozpocet": 2400000,
+  "inzenyrskyRozpocet": 2144000,
+  "mistrovska": {
+    "druh": "komfort-cestujicich",
+    "limit": 0.5
+  },
+  "povolenePrvky": [
+    "kolejiste",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "rychlost": 27.8,
+      "vozy": [
+        {
+          "druh": "vuz-osobni",
+          "pocet": 4
+        }
+      ]
+    },
+    {
+      "cas": 9,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "vozy": [
+        {
+          "druh": "vuz-nakladni",
+          "pocet": 8
+        }
+      ],
+      "brzdeni": {
+        "misto": 64,
+        "stani": 3,
+        "zpomaleni": 2.5
+      }
+    }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": true
+}

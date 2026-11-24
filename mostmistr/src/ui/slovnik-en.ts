@@ -237,6 +237,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "slozeni.rada.pilir": "Or build a pier under it.",
   "pruves.nadpis": "The deck hangs {mm} mm below the drawing here",
   "pruves.rada": "under its own weight: tension the cables (N)",
+  "pruves.rada.marne": "even with the cables tensioned: something gives way under their pull",
   "pruves.nadpis.nad": "Here the deck sits {mm} mm above the drawing",
   "pruves.rada.nad": "the cables are over-tightened: tension them again (N)",
   "volny.nadpis": "Nothing holds this member",
@@ -256,6 +257,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "rada.tah": "It was stretched more than it can take. Use a stronger element, or spread the force over more members.",
   "rada.nedopnuto": "The cables are not tensioned: the deck already hung {mm} mm below the drawing before the test. Try Tension cables (N).",
   "rada.ohyb": "It bent more than it can take. Prop it in the middle with another joint, or use a stronger element.",
+  "rada.ohyb.pylon": "The cables bent it: they pull it more to one side. Balance them: give it a backstay on the other side (to the abutment or to an anchor), or lean the pylon against the pull.",
   "rada.smyk": "A transverse force sheared it near its end. Use a stronger element, or prop it closer to the load.",
   "stavba.porucha.nadpis": "This gave way first",
   "stavba.porucha.kratce": "member {prut} · {zpusob}",
@@ -377,9 +379,14 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "dopnuti.hotovo": "The cables are tensioned. Under its own weight the deck used to drop by up to {pred} mm; now it is at most {po} mm.",
   "dopnuti.hotovo.bezPred": "The cables are tensioned. Under its own weight the deck differs from the drawing by at most {po} mm.",
   "dopnuti.zbylo":
-    "The cables are tensioned as far as possible, but the deck still differs from the drawing by up to {po} mm. Under load the main cable settles into a curve; draw it that way from the start and tension the cables again.",
+    "The cables are tensioned as far as possible, but the deck still differs from the drawing by up to {po} mm. The turnbuckles cannot do more.",
   "dopnuti.pretizeno":
-    "The cables cannot pull the deck up to the drawing: they would have to carry more than they safely can (already {podil} of their strength). The deck stays up to {po} mm below the drawing. Give the main cable more sag (let it hang in a curve between the pylons) or build taller pylons, then tension the cables again.",
+    "The cables cannot pull the deck up to the drawing: the deck stays up to {po} mm below it and the cables already carry {podil} of their strength.",
+  "dopnuti.znovu": "Then tension the cables again.",
+  "dopnuti.rada.zbylo": "Under load the main cable settles into a curve: draw it that way from the start and tension the cables again.",
+  "dopnuti.rada.zbylo.bezNosneho": "Something gives way under the pull of the cables, most often a pylon pulled more to one side: give it a backstay on the other side.",
+  "dopnuti.rada.pretizeno": "The cables would have to carry more than is safe: give the main cable more sag (let it hang in a curve between the pylons), or build taller pylons.",
+  "dopnuti.rada.pretizeno.bezNosneho": "The cables would have to carry more than is safe: build a taller pylon so they run steeper, or add more of them.",
   "dopnuti.nejde":
     "The cables cannot be tensioned: part of the bridge is held by nothing, so it has no rest position. Hang every deck joint from a cable (or weld the deck) and check that the cables run all the way to anchors or pylons.",
   "zrcadleni.jenVyber": "Only the selected members are mirrored. For the whole bridge, clear the selection (Esc) and mirror again.",
@@ -411,6 +418,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "paleta.zdvih.poznamkaNula": "At most {nejvic} m (half the cylinder’s length).",
   "paleta.zdvih.uhel": "The leaf will rise by {uhel}°.",
   "paleta.zdvih.uhelMoc": "The leaf would rise by more than 70°: that close to vertical the cylinder cannot hold it. Shorten the stroke.",
+  "paleta.zdvih.dolu": "With this stroke the cylinder pulls the end of the leaf down, so the leaf will not rise. Give the stroke the opposite sign.",
   "paleta.zdvih.sila": "The cylinder pushes and pulls with at most {sila}.",
   "paleta.most": "Bridge",
   "paleta.brnknout": "Pluck",
@@ -447,6 +455,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "paleta.ladeny.vys": "Tune higher (with Shift, by 0.2 Hz)",
   "paleta.ladeny.cil": "What shakes the bridge most: the {kdo}, {slozka}: {f} Hz. Tune the damper to that rhythm.",
   "paleta.ladeny.cil.most": "Without dampers the bridge vibrates at {f} Hz. Tune the damper to that frequency.",
+  "paleta.ladeny.cil.zbyly": "With the other dampers, what shakes the bridge most: the {kdo}, {slozka}: {f} Hz. Tune this one to that rhythm.",
   "paleta.ladeny.naladeno": "The damper is tuned to that frequency.",
   "paleta.ladeny.mimoRozsah": "The damper can only be tuned from {od} to {do} Hz.",
   "paleta.ladeny.naladit": "Tune to the rhythm",
@@ -525,6 +534,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.vlak.nemereno": "not measured: the coach did not cross the whole bridge",
   "vysledek.cestujici": "Passenger comfort",
   "vysledek.cestujici.nemereno": "not measured: neither the bus nor the coach crossed the whole bridge",
+  "vysledek.cestujici.mez": "the Master medal needs at most {limit} m/s²",
   "vysledek.prvni.sjeti": "First, the end of the bridge slid off its sliding support.",
   "vysledek.prehratPoruseni": "Replay failure in slow motion",
   "frekvence.nadpis": "Frequencies",
@@ -586,7 +596,13 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.pohyb.pricina.kridloBezPistu.prave": "The right leaf has no cylinder: once the lock opened, nothing held it and it fell. Give it a cylinder too.",
   "vysledek.pohyb.pricina.bezPistu": "The bridge has no cylinder, so it did not rise and the ship hit it. A cylinder runs from an anchor below the pivot to the leaf.",
   "vysledek.pohyb.pricina.bezZamku": "The bridge did not unlock: it has no lock to release the end of the leaf, so the cylinders only pushed against it. Put a lock at the end of the leaf: on the bearing, or between the leaves.",
-  "vysledek.pohyb.pricina.malyZdvih": "The leaf rose by only {uhel}° and the ship did not fit under it. The cylinders reached the end of their stroke: increase the stroke, or move the cylinder mount closer to the pivot.",
+  "vysledek.pohyb.pricina.malyZdvih": "The leaf rose by only {uhel}° and the ship did not fit under it. The cylinders reached the end of their stroke: increase the stroke. A mount closer to the pivot also raises the leaf higher, but then the cylinder needs more force.",
+  "vysledek.pohyb.pricina.malyZdvih.leve": "The left leaf rose by only {uhel}° and the ship did not fit under it. Its cylinder reached the end of its stroke: increase the stroke. A mount closer to the pivot also raises the leaf higher, but then the cylinder needs more force.",
+  "vysledek.pohyb.pricina.malyZdvih.prave": "The right leaf rose by only {uhel}° and the ship did not fit under it. Its cylinder reached the end of its stroke: increase the stroke. A mount closer to the pivot also raises the leaf higher, but then the cylinder needs more force.",
+  "vysledek.pohyb.pricina.nehnuloSe": "The cylinders extended fully, but the leaf barely rose and the ship hit it. The cylinder pushes against something that gives way, or into a part of the bridge that does not turn with the leaf: put its base in an anchor and its mount on the leaf.",
+  "vysledek.pohyb.pricina.tahneDolu": "The cylinder pulls the end of the leaf down instead of up: its stroke has the opposite sign to what the leaf needs. Give it a stroke with the opposite sign.",
+  "vysledek.pohyb.pricina.zalomeno": "The leaf folded: its end dropped at an unwelded deck joint and turned by more than a quarter circle. Weld the deck joints inside the leaf, or support its end.",
+  "vysledek.pohyb.pricina.poruseno": "The bridge was damaged before it could rise and lock again; what the leaf did afterwards is a consequence. Fix what gave way first.",
   "vysledek.pohyb.pricina.neudrzel": "The cylinder raised the leaf but could not hold it: at the top it pushed at the limit of its force ({sila}), the relief valve opened and the leaf dropped into the ship's path. Give the cylinder a longer lever arm: a deeper anchor, or a mount farther from the pivot.",
   "vysledek.pohyb.pricina.minulySe.vyska": "The bridge did not lock after lowering: the ends of the lock missed each other by {cm} cm in height (the lock engages within {vule} cm). A longer or heavier leaf hangs lower on its cylinder: make the leaves the same length, or give the lower one a cylinder with a longer lever arm.",
   "vysledek.pohyb.pricina.minulySe.strana": "The bridge did not lock after lowering: the ends of the lock missed each other by {cm} cm sideways (the lock engages within {vule} cm). The leaves did not come back to where they started.",
@@ -646,6 +662,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "kmitani.veta.bezRytmu": "The bridge vibrated most at {f} Hz.",
   "kmitani.rada.tuzsi": "A stiffer bridge would help (a deeper truss, stronger members).",
   "kmitani.rada.tuzsi.vyrazne": "A much stiffer bridge would help (a much deeper truss).",
+  "kmitani.rada.tuzsi.tesno": "A stiffer bridge would help: stronger members, or shorter spans (the no-build zone leaves no room for a deeper truss here).",
+  "kmitani.rada.tuzsi.vyrazne.tesno": "Only a much stiffer bridge would help, and the no-build zone leaves no room for a deeper truss here.",
   "kmitani.rada.nic": "A stiffer or a heavier bridge would not help on its own.",
   "kmitani.rada.zavazi": "Weights would help: a heavier bridge would vibrate less.",
   "kmitani.rada.zavazi.vyrazne": "A lot of weights would help: a much heavier bridge would vibrate less.",
@@ -655,7 +673,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "kmitani.rada.preladit": "Damper retuned to {f} Hz: about {a} m/s².",
   "kmitani.rada.jinde": "Move the damper {x} m from the deck's left end: about {a} m/s².",
   "kmitani.rada.tezsiTlumic": "Damper with a {kg} kg weight: about {a} m/s².",
-  "kmitani.rada.tlumicVic": "Retuning the damper, a heavier weight or another spot for it would not help any more.",
+  "kmitani.rada.preladitJeden": "The damper {x} m from the left end of the deck retuned to {f} Hz: estimate about {a} m/s².",
+  "kmitani.rada.dalsiTlumic": "One more tuned damper at {f} Hz, {x} m from the left end of the deck, would help: estimate about {a} m/s².",
+  "kmitani.rada.tlumicVic": "Retuning the damper, a heavier weight, another spot or one more damper would not help any more.",
   "kmitani.rada.tlumicPomaha": "The damper brings the estimated vibration down from {bez} to {s} m/s².",
   "kmitani.vlastni": "{prazdny} Hz",
   "kmitani.vlastni.sLidmi": "{prazdny} Hz, with people {obsazeny} Hz",
@@ -1033,6 +1053,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.shrnuti.bezProvozu": "The bridge stood under its own weight only.",
   "vysledek.shrnuti.rozpad": "The simulation broke down numerically and the result is not valid. Please send me the diagnostics.",
   "vysledek.nedopnuto": "The cables are not tensioned: even before the test the deck hung {mm} mm below the drawing. Try Tension cables (N).",
+  "vysledek.dopnutoMarne":
+    "Before the test the deck already hung {mm} mm below the drawing although the cables are tensioned: the turnbuckles cannot do more.",
   "vysledek.trvaleOhnuty": "Member {prut} was utilised to {vyuziti}: the steel deformed permanently there. The bridge passed, but it gets no Budget medal and does not count towards the challenges.",
   "vysledek.opreno": "The bridge has no support of its own: it sagged and came to rest on the ground. A bridge must not lean on the ground; support it from the anchors and bearings so that it keeps its shape by itself.",
   "vysledek.bezRovnovahy":
@@ -1338,6 +1360,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Twenty-four metres without a single support in the middle: two cars one behind the other, a van coming the other way and two cyclists. The anchors in the slopes lie six metres below the deck: rest strutted frames on them.",
   "zadani.1-04.vice":
     "A truss across the whole valley works too, it just costs more. The six-metre post above an anchor is long and in compression; under the van it is at its limit. A heavy timber helps it, and so does a brace at mid-height that shortens it.",
+  "zadani.1-05": "A road across a twenty-metre valley: first two walkers and two cyclists, then two vans nose to tail, and finally a van meeting two cars. The only slope anchor is on the left; nothing may be built above the left part of the deck (timber is loaded there) or below the right part (a forest road runs underneath).",
   "zadani.2-01":
     "The first steel footbridge: twenty-four metres for pedestrians and one runner. Build it from steel section and keep an eye on the new frequency axis at the bottom.",
   "zadani.2-01.vice":
@@ -1366,6 +1389,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Forty-eight metres in two spans; a convoy of four lorries brakes on the bridge and a bus comes the other way. The braking force, over fifty tonnes, has to get from the bridge into the rock in the middle of the valley.",
   "zadani.3-04.vice":
     "Both ends of the bridge rest on sliding bearings; the only fixed point is on the rock. The convoy stands for three seconds and sets off again. Braking wheels push the roadway forwards with half their weight. The pier’s legs are long and in compression: watch out for buckling.",
+  "zadani.3-05": "Fifty-four metres across a rail yard: a convoy of five trucks will cross the bridge and brake on it while a bus comes the other way. Power lines hang just above the road, the clearance for the rail yard takes up almost the whole span below it, and the abutments are only sliding bearings: nothing holds firm but the rock down in the slopes.",
   "zadani.4-01":
     "Fifty-four metres across a river for two articulated lorries, a lorry and two cars. It is too much for a single span, but there are two footings in the river: build piers on them.",
   "zadani.4-01.vice":
@@ -1382,6 +1406,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Seventy-two metres across a ravine where there is nowhere to put a pier; a low-loader carrying a hundred and twenty tonnes will cross, followed by two lorries. Build a suspension bridge: two pylons, a main cable over their heads and hangers from it to the deck.",
   "zadani.4-04.vice":
     "The pylons stand on the footings on the banks; between them the main cable sags in a curve, and behind the pylons you fix it to the anchors in the ground. The hangers run vertically to the deck joints. The main cable is four times stronger than an ordinary one, which would snap here. Under the weight of the deck it settles into a curve by itself and the hangers must match it in length: without tensioning (N) the deck will sag by tens of centimetres.",
+  "zadani.4-05": "A seventy-two-metre road across a valley where only one pier can be founded, and not in the middle: forty-eight metres from the left bank. Nothing may be built under the longer span and all you have is the pier and cables; two articulated lorries will cross, a convoy of three trucks will meet them, and finally a lorry will meet a bus.",
   "zadani.5-01":
     "A footbridge on the embankment, forty-eight metres, and a crowd on it: a hundred and twenty people, each at their own pace of around 1.7 Hz. The promenade should be calm: vibration must not exceed 0.5 m/s².",
   "zadani.5-01.vice":
@@ -1398,6 +1423,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "A concert on the bridge: thirty people walk to the middle and jump for eight seconds at a rhythm of 2.2 Hz. The landings also excite the bridge at twice and three times the rhythm: find which of them hits your bridge and tune the damper to it.",
   "zadani.5-04.vice":
     "The landings are short and hard, which is why they also act at 4.4 and 6.6 Hz. You cannot build higher than two metres. A deck of long panels will start rattling under the landings all by itself; build it from short ones.",
+  "zadani.5-05": "A city festival on a thirty-six-metre footbridge: first a fun run, thirty-six runners at around 2.4 footfalls per second, and right behind them a parade, forty-eight people with a band marching in time at 1.8 Hz. You may build only within a metre above the deck, only tuned dampers may hang below it, and the vibration under people must not exceed 1.0 m/s².",
   "zadani.6-01":
     "Thirty metres across a river and, for the first time, rails: a locomotive and three loaded wagons will cross, 358 tonnes in all. The train is longer than the bridge and loads the whole of it at once, with six tonnes on every metre.",
   "zadani.6-01.vice":
@@ -1414,6 +1440,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Forty-eight metres and two decks: a railway below and a road nine metres above it. A locomotive with four loaded wagons will run on the rails, two lorries and a bus on the road; each deck belongs on its own grade line.",
   "zadani.6-04.vice":
     "The railway runs from tunnel to tunnel. The track deck belongs on the track, the steel-concrete deck on the road: a train will not run on a road deck, nor a car on sleepers. Two decks one above the other are like the chords of one tall truss. You only need to connect them, but beware: the verticals at the supports are in compression and nine metres long; in light section they will buckle.",
+  "zadani.6-05": "A sixty-six-metre line with a single footing in the valley, twenty-four metres from the left bank: first an express crosses at 100 km/h, then a freight train with eight loaded wagons that makes an emergency stop on the bridge. A navigation channel runs under the longer span, so nothing may be built there; both ends of the bridge rest on sliding bearings.",
   "zadani.7-01":
     "A canal twelve metres wide, with ships on it: the bridge has to rise before a ship eight metres tall arrives in the twelfth second. The leaf rotates about a pivot in the left abutment and a cylinder raises it.",
   "zadani.7-01.vice":
@@ -1430,10 +1457,12 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "The great harbour: thirty-two metres, two sixteen-metre leaves and a heavier roadway. The ship is eleven metres tall and the leaf must stay up until it has passed: only the cylinder holds it.",
   "zadani.7-04.vice":
     "The shorter the cylinder’s lever arm to the pivot, the greater the force it needs to hold the leaf: a cylinder from the shallow anchor close to the pivot cannot hold it, the relief valve opens and the leaf drops into the ship’s path. A cylinder from the deep anchor, or one attached further from the pivot, has a longer arm. A long leaf also bends a lot: a triangle above its root, holding the end of the leaf with a tie, will help.",
+  "zadani.7-05": "Twenty metres of canal and machinery in the left wall only: a pivot with two cylinder anchors below it, and nothing but a bearing on the right bank. A ship ten metres tall arrives in the sixteenth second, and once the bridge is down again a lorry and a bus meet on it.",
   "zadani.2-04":
     "A march-past: the column crosses three times, at a slow, a normal and a quick march, and each rhythm sets a bridge of a different height swinging. Either find a height that avoids all three, or damp the bridge.",
   "zadani.2-04.vice":
     "A bridge that does not mind resonance has viscous dampers between the deck and the anchors in the slopes. A damper carries no weight; it only brakes movement. Once you select it, set its strength in the palette.",
+  "zadani.2-05": "A formation of twenty-four marches across the thirty-six-metre footbridge in step at 1.8 Hz, and then a squad of nine jogs across in step at 3 Hz. You may build only within a metre above the deck and half a metre below it; the damper has a single anchor, in the slope below one third of the span.",
 };
 
 /** Anglické názvy úrovní podle id; české jsou v souborech úrovní. */
@@ -1444,28 +1473,35 @@ export const NAZVY_UROVNI_EN: Readonly<Record<string, string>> = {
   "1-02": "Cycle Path",
   "1-03": "First Car",
   "1-04": "Deep Valley",
+  "1-05": "Above the Forest Road",
   "2-01": "Steel Footbridge",
   "2-02": "Morning Warm-up",
   "2-03": "Guard of Honour",
   "2-04": "March-Past",
+  "2-05": "March and Run",
   "3-01": "District Road",
   "3-02": "Under the Wires",
   "3-03": "Ravine Bus Route",
   "3-04": "Convoy",
+  "3-05": "Over the Rail Yard",
   "4-01": "Three Spans",
   "4-02": "Not a Single Strut",
   "4-03": "On Cables",
   "4-04": "Load of the Century",
+  "4-05": "A Single Footing",
   "5-01": "Embankment",
   "5-02": "City Run",
   "5-03": "Festival",
   "5-04": "Bridge Concert",
+  "5-05": "Two Rhythms",
   "6-01": "First Train",
   "6-02": "Express",
   "6-03": "Coal Train",
   "6-04": "Two Decks",
+  "6-05": "Unequal Spans",
   "7-01": "Bascule Bridge",
   "7-02": "Two Leaves",
   "7-03": "Long Leaf",
   "7-04": "Great Harbour",
+  "7-05": "A Single Leaf",
 };

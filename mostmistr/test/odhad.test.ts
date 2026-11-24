@@ -367,6 +367,38 @@ describe("rada a ladění tlumiče z odhadu", () => {
     expect(rozeberMost(uroven("2-03"), pad("2-03", "bez závaží")).tlumic).toBeNull();
   });
 
+  it("most se dvěma rytmy: rozbor poradí další tlumič na rytmus, který zbyl, a každému tlumiči dá jeho cíl", () => {
+    // 5-05: běžci na 2,4 Hz a průvod na 1,8 Hz. Jeden tlumič zkrotí jen jeden rytmus.
+    const u = uroven("5-05");
+    const nasada = nasadaUrovne(u);
+    const naPruvod = rozeberMost(u, pad("5-05", "jeden tlumič naladěný na průvod"), nasada);
+    expect(naPruvod.odhad!.zrychleni).toBeGreaterThan(mez(u));
+    expect(naPruvod.tlumic!.cil).toBeCloseTo(1.8, 6);
+    // Tlumič na průvod naladěný je; most teď rozkmitají běžci a další tlumič patří na ně.
+    expect(naPruvod.tlumic!.preladeny).toBeNull();
+    expect(naPruvod.tlumic!.zbyly!.cil).toBeCloseTo(2.4, 6);
+    expect(naPruvod.tlumic!.dalsi!).toBeLessThan(0.7);
+    expect(naPruvod.tlumic!.dalsi! * naPruvod.odhad!.zrychleni).toBeLessThan(mez(u));
+    // Když úprava tlumičů pomůže, tužší most se neradí.
+    expect(naPruvod.smer).toBeNull();
+    // Dva tlumiče na stejném rytmu: stačí jeden přeladit.
+    const obaNaPruvod = rozeberMost(u, pad("5-05", "dva tlumiče, oba naladěné na průvod"), nasada);
+    expect(obaNaPruvod.odhad!.zrychleni).toBeGreaterThan(mez(u));
+    expect(obaNaPruvod.tlumic!.cile.map((c) => c.cil.toFixed(2))).toEqual(["2.40", "2.40"]);
+    expect(obaNaPruvod.tlumic!.jeden!.cil).toBeCloseTo(2.4, 6);
+    expect(obaNaPruvod.tlumic!.jeden!.pomer).toBeLessThan(0.7);
+    expect(obaNaPruvod.smer).toBeNull();
+    // Most autora má každý tlumič na jiném rytmu a rozbor mu je nechává.
+    const mistrovska = rozeberMost(u, RESENI["5-05"]!.mistrovska, nasada);
+    expect(mistrovska.tlumic!.cile.map((c) => c.cil.toFixed(2)).sort()).toEqual(["1.80", "2.40"]);
+    expect(mistrovska.tlumic!.jeden).toBeNull();
+    expect(mistrovska.odhad!.zrychleni).toBeLessThan(mez(u));
+    // Jediný tlumič má cíl mostu bez tlumičů (jako dřív).
+    const jediny = rozeberMost(uroven("5-02"), RESENI["5-02"]!.pruchod);
+    expect(jediny.tlumic!.cile).toHaveLength(1);
+    expect(jediny.tlumic!.cile[0]!.cil).toBeCloseTo(jediny.tlumic!.cil, 9);
+  });
+
   it("most s tlumičem: rozbor pozná, jestli pomůže přeladění, těžší závaží, nebo jiné místo", () => {
     const u = uroven("5-02");
     const navrh = RESENI["5-02"]!.pruchod;

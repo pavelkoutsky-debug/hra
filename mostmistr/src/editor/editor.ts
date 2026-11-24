@@ -779,9 +779,10 @@ export class Editor {
 
   /**
    * Zdvih vybraných pístů v metrech: zdvih prvního z nich, největší zdvih, jaký všechny
-   * vybrané dokážou, a zda se jejich zdvihy liší. Null, když není vybraný žádný píst.
+   * vybrané dokážou, a zda se jejich zdvihy liší. `dolu` říká, že některý z nich tímhle zdvihem
+   * konec křídla táhne dolů místo nahoru. Null, když není vybraný žádný píst.
    */
-  get zdvihVyberu(): { zdvih: number; nejvetsi: number; ruzne: boolean; otoceni: number | null } | null {
+  get zdvihVyberu(): { zdvih: number; nejvetsi: number; ruzne: boolean; otoceni: number | null; dolu: boolean } | null {
     const pisty = this.#vybranePisty();
     if (pisty.size === 0) return null;
     let prvni: number | null = null;
@@ -789,6 +790,7 @@ export class Editor {
     let ruzne = false;
     // Kosinus největšího otočení křídla mezi vybranými písty; null, kde čep křídla nejde určit.
     let otoceni: number | null = null;
+    let dolu = false;
     for (const p of this.#navrh.pruty) {
       const delka = pisty.get(p.id);
       if (delka === undefined) continue;
@@ -798,8 +800,9 @@ export class Editor {
       nejvetsi = Math.min(nejvetsi, nejvetsiZdvih(delka));
       const kridlo = this.uroven.pohyb ? otoceniKridla(this.#navrh, this.uroven, p) : null;
       if (kridlo !== null && (otoceni === null || kridlo.cos < otoceni)) otoceni = kridlo.cos;
+      if (kridlo?.zveda === false) dolu = true;
     }
-    return { zdvih: prvni ?? 0, nejvetsi, ruzne, otoceni };
+    return { zdvih: prvni ?? 0, nejvetsi, ruzne, otoceni, dolu };
   }
 
   /** Změní zdvih vybraných pístů o daný počet kroků; všechny dostanou stejnou hodnotu. */

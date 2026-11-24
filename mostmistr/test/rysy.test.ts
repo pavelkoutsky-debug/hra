@@ -9,6 +9,8 @@ import { nactiKampan } from "../urovne/index";
 import { RESENI } from "../urovne/reseni";
 
 const kampan = nactiKampan();
+/** Úrovně, které mají nápovědu (zkouškové ji nemají). */
+const sNapovedou = kampan.filter((u) => !u.zkouskova);
 const MOSTY = ["pruchod", "rozpocet", "mistrovska"] as const;
 
 /**
@@ -48,8 +50,9 @@ const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSous
 
 describe("rysy referenčních mostů", () => {
   it("každý most autora nese tak, jak říká tabulka", () => {
-    expect(Object.keys(SOUSTAVY).sort()).toEqual(kampan.map((u) => u.id).sort());
-    for (const uroven of kampan) {
+    // Zkouškové úrovně nápovědu nemají (hráč má lekce kapitoly spojit sám), takže v tabulce nejsou.
+    expect(Object.keys(SOUSTAVY).sort()).toEqual(sNapovedou.map((u) => u.id).sort());
+    for (const uroven of sNapovedou) {
       MOSTY.forEach((most, i) => {
         expect(rysyMostu(RESENI[uroven.id]![most], uroven).soustava, `${uroven.id} ${most}`).toBe(SOUSTAVY[uroven.id]![i]);
       });
@@ -160,7 +163,9 @@ describe("věta o principu", () => {
 
   it("laděný tlumič referenčních mostů je opravdu naladěný na rytmus, který most rozkmitá, jak věta tvrdí", () => {
     let mostu = 0;
-    for (const uroven of kampan) {
+    // Jen úrovně s nápovědou: věta o principu se u zkoušek neukazuje (a zkouška 5-05 má dva rytmy
+    // a tlumiče naladěné mezi ně).
+    for (const uroven of sNapovedou) {
       for (const most of MOSTY) {
         const navrh = RESENI[uroven.id]![most];
         const tlumice = navrh.stycniky.flatMap((s) => (s.tlumic ? [s.tlumic.frekvence] : []));

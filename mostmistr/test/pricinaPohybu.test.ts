@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
-import type { NavrhMostu } from "../src/data/navrh";
+import { KATALOG } from "../src/data/katalog";
+import { otoceniKridla, zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { pricinyPohybu, type PricinaPohybu } from "../src/zkouska/pricinaPohybu";
 import type { VysledekZkousky } from "../src/zkouska/protokol";
@@ -28,13 +29,16 @@ function zkus(u: Uroven, navrh: NavrhMostu): { vysledek: VysledekZkousky; pricin
   return { vysledek, priciny: pricinyPohybu(navrh, u, vysledek.pohyb, vysledek.lode.narazilo) };
 }
 
-/** Dvě dvanáctimetrová křídla úrovně 7-02 s písty z hlubokých kotev; `zdvih` na obou. */
-function dveKridla(zdvih: number, volby: { pravyPist?: boolean; zamek?: boolean } = {}): NavrhMostu {
+/**
+ * Dvě dvanáctimetrová křídla úrovně 7-02 s písty z hlubokých kotev; `zdvih` na obou, pokud
+ * `levyZdvih` neřekne levému jinak.
+ */
+function dveKridla(zdvih: number, volby: { levyPist?: boolean; pravyPist?: boolean; zamek?: boolean; levyZdvih?: number } = {}): NavrhMostu {
   const k = new Kreslic("7-02");
   k.prut("mostovka-ocel", [0, 0], [6, 0]);
   k.prut("mostovka-ocel", [6, 0], [12, 0]);
   k.bod(6, 0, { svar: true });
-  k.prut("pist", [0, -5], [6, 0], { zdvih });
+  if (volby.levyPist !== false) k.prut("pist", [0, -5], [6, 0], { zdvih: volby.levyZdvih ?? zdvih });
   k.prut("mostovka-ocel", [24, 0], [18, 0]);
   k.prut("mostovka-ocel", [18, 0], [12, 0]);
   k.bod(18, 0, { svar: true });
@@ -43,9 +47,22 @@ function dveKridla(zdvih: number, volby: { pravyPist?: boolean; zamek?: boolean 
   return k.navrh();
 }
 
+/** Jediné dvacetimetrové křídlo úrovně 7-05 se zámkem na pravé opěře; píst a výztuhy přidá `stav`. */
+function jedineKridlo(uzly: readonly number[], stav: (k: Kreslic) => void): NavrhMostu {
+  const k = new Kreslic("7-05");
+  const xs = [0, ...uzly, 20];
+  for (let i = 0; i + 1 < xs.length; i++) k.prut("mostovka-ocel", [xs[i]!, 0], [xs[i + 1]!, 0]);
+  for (const x of uzly) k.bod(x, 0, { svar: true });
+  k.bod(20, 0, { zamek: true });
+  stav(k);
+  return k.navrh();
+}
+
+const KAPITOLA_7 = ["7-01", "7-02", "7-03", "7-04", "7-05"];
+
 describe("proč pohyblivý most neprošel", { timeout: 120_000 }, () => {
   it("mosty autora, které projdou, žádnou příčinu nemají", () => {
-    for (const id of ["7-01", "7-02", "7-03", "7-04"]) {
+    for (const id of KAPITOLA_7) {
       const u = uroven(id);
       const { vysledek, priciny } = zkus(u, RESENI[id]!.pruchod);
       expect(vysledek.pruchod, id).toBe(true);
@@ -116,9 +133,100 @@ describe("proč pohyblivý most neprošel", { timeout: 120_000 }, () => {
     expect(svisle).toBeLessThan(1);
   });
 
+  it("dvě křídla s nestejným zdvihem: hra jmenuje křídlo, do kterého loď narazila, a jeho úhel", () => {
+    const u = uroven("7-02");
+    const { vysledek, priciny } = zkus(u, dveKridla(2.5, { levyZdvih: 1.25 }));
+    expect(vysledek.pruchod).toBe(false);
+    expect(priciny[0]).toMatchObject({ kod: "maly-zdvih", strana: "leve" });
+    // Pravé křídlo se zvedlo stejně jako u mostu, který projde; hlášený úhel je úhel levého.
+    const projde = zkus(u, dveKridla(2.5));
+    expect(projde.vysledek.pruchod).toBe(true);
+    const kosinus = (priciny[0] as { kosinus: number }).kosinus;
+    expect(vysledek.pohyb!.kosinusOtoceni).toBeCloseTo(projde.vysledek.pohyb!.kosinusOtoceni, 2);
+    expect(kosinus).toBeGreaterThan(projde.vysledek.pohyb!.kosinusOtoceni + 0.1);
+  });
+
+  it("most úplně bez pístů: křídla po odemknutí spadnou, i když se nepřeklopí", () => {
+    const { vysledek, priciny } = zkus(uroven("7-02"), dveKridla(2.5, { levyPist: false, pravyPist: false }));
+    expect(vysledek.pruchod).toBe(false);
+    expect(priciny).toEqual([{ kod: "kridlo-bez-pistu", strana: null }]);
+  });
+
+  it("prut, který při zvedání povolí: příčina je porušení, ne malý zdvih", () => {
+    // Píst tlačí do konce lehkého pahýlu pod mostovkou; pahýl povolí hned po odemknutí.
+    const u = uroven("7-05");
+    const navrh = jedineKridlo([6, 11, 16], (k) => {
+      k.prut("ocel-lehka", [6, 0], [6, -2]);
+      k.prut("pist", [0, -5], [6, -2], { zdvih: 3 });
+    });
+    expect(zkontrolujNavrh(navrh, u)).toEqual([]);
+    const { vysledek, priciny } = zkus(u, navrh);
+    expect(vysledek.pruchod).toBe(false);
+    expect(vysledek.poruseni).toBeGreaterThan(0);
+    expect(vysledek.pohyb!.poruseno).toBe("zvedani");
+    expect(priciny).toEqual([{ kod: "poruseno" }]);
+  });
+
+  it("pata pístu na prutu, který uhne: písty vyjely, křídlo se nehnulo", () => {
+    const u = uroven("7-05");
+    const navrh = jedineKridlo([4, 8, 14], (k) => {
+      k.prut("ocel-lehka", [0, -5], [3, -5]);
+      k.prut("pist", [3, -5], [8, 0], { zdvih: 3.5 });
+    });
+    expect(zkontrolujNavrh(navrh, u)).toEqual([]);
+    const { vysledek, priciny } = zkus(u, navrh);
+    expect(vysledek.pruchod).toBe(false);
+    expect(vysledek.poruseni).toBe(0);
+    expect(priciny[0]).toEqual({ kod: "nehnulo-se" });
+  });
+
+  it("zdvih nula je malý zdvih, záporný zdvih táhne křídlo dolů", () => {
+    const u = uroven("7-05");
+    const nula = zkus(u, jedineKridlo([6, 11, 16], (k) => k.prut("pist", [0, -5], [6, 0], { zdvih: 0 })));
+    expect(nula.priciny[0]).toMatchObject({ kod: "maly-zdvih", strana: null });
+    const zaporny = zkus(u, jedineKridlo([6, 11, 16], (k) => k.prut("pist", [0, -5], [6, 0], { zdvih: -1 })));
+    expect(zaporny.vysledek.pruchod).toBe(false);
+    expect(zaporny.priciny[0]).toEqual({ kod: "tahne-dolu" });
+    // Totéž ví už výkres: paleta to hráči řekne dřív než zkouška.
+    const smer = (zdvih: number): boolean | null | undefined => {
+      const navrh = jedineKridlo([6, 11, 16], (k) => k.prut("pist", [0, -5], [6, 0], { zdvih }));
+      return otoceniKridla(navrh, u, navrh.pruty.find((p) => p.prvek === "pist")!)?.zveda;
+    };
+    expect(smer(2.5)).toBe(true);
+    expect(smer(-1)).toBe(false);
+    expect(smer(0)).toBeNull();
+    // Křídlo vpravo od čepu se zvedá opačným směrem otáčení; kladný zdvih ho zvedá také.
+    const dve = dveKridla(2.5);
+    expect(dve.pruty.filter((p) => p.prvek === "pist").map((p) => otoceniKridla(dve, uroven("7-02"), p)?.zveda)).toEqual([true, true]);
+  });
+
+  it("nesvařená mostovka se zalomí: hra neříká, že má píst velký zdvih", () => {
+    for (const [id, nazev] of [["7-01", "nesvařen"], ["7-05", "nesvařen"]] as const) {
+      const u = uroven(id);
+      const pad = RESENI[id]!.pady.find((x) => x.nazev.includes(nazev));
+      expect(pad, id).toBeDefined();
+      const { vysledek, priciny } = zkus(u, pad!.navrh);
+      expect(vysledek.pohyb!.preklopeno, id).toBe(true);
+      expect(priciny, id).toEqual([{ kod: "zalomeno" }]);
+    }
+  });
+
+  it("písty mostů autora křídlo zvedají (žádný ho netáhne dolů)", () => {
+    for (const id of KAPITOLA_7) {
+      const u = uroven(id);
+      const r = RESENI[id]!;
+      for (const navrh of [r.pruchod, r.rozpocet, r.mistrovska, ...(r.vyzvy ?? []).map((v) => v.navrh)]) {
+        for (const p of navrh.pruty) {
+          if (KATALOG[p.prvek].druh !== "pist") continue;
+          expect(otoceniKridla(navrh, u, p)?.zveda ?? true, id).toBe(true);
+        }
+      }
+    }
+  });
+
   it("pády kapitoly 7 dostanou příčinu, která sedí k jejich názvu", () => {
     const radky: string[] = [];
-    for (const id of ["7-01", "7-02", "7-03", "7-04"]) {
+    for (const id of KAPITOLA_7) {
       const u = uroven(id);
       for (const pad of RESENI[id]!.pady) {
         const { vysledek, priciny } = zkus(u, pad.navrh);

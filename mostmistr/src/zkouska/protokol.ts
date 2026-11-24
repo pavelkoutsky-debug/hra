@@ -78,6 +78,30 @@ export interface RadaKTlumici {
    */
   jinde: number | null;
   jindeX: number | null;
+  /**
+   * Most s tlumiči: rytmus, který ho rozkmitá nejvíc i s nimi (Hz, na krok ladění), a čí je.
+   * Na ten se ladí další tlumič. Null u mostu bez tlumičů.
+   */
+  zbyly: { cil: number; polozka: number; nasobek: 1 | 2 | 3 | 4 } | null;
+  /**
+   * Na co ladit každý z tlumičů návrhu (`stycnik` je pořadí styčníku v návrhu), když ostatní
+   * zůstanou, jak jsou: rytmus, který most s těmi ostatními rozkmitá nejvíc. Dva tlumiče na
+   * mostě se dvěma rytmy tak dostanou každý svůj.
+   */
+  cile: { stycnik: number; cil: number; polozka: number; nasobek: 1 | 2 | 3 | 4 }[];
+  /**
+   * Most s tlumiči: odhad s dalším tlumičem největší dovolené hmotnosti naladěným na `zbyly`
+   * a zavěšeným tam, kde most kmitá teď (`dalsiX` m od levého konce mostovky). Null u mostu
+   * bez tlumičů, kde další tlumič není kam dát, a kde se rada nepočítala.
+   */
+  dalsi: number | null;
+  dalsiX: number | null;
+  /**
+   * Most s více tlumiči: jeden z nich (`x` m od levého konce mostovky) přeladěný na svůj cíl
+   * z `cile`, ostatní beze změny; ten, se kterým odhad vyjde nejníž. Null, když jsou všechny
+   * naladěné na svůj cíl.
+   */
+  jeden: { pomer: number; cil: number; x: number } | null;
 }
 
 /** Rozbor mostu ve stavebním režimu: maticový výpočet bez časové simulace. */
@@ -232,6 +256,21 @@ export interface PohybZkousky {
    * už sklápěl.
    */
   pistyPriNarazu: "zveda" | "drzi" | "klesl" | null;
+  /**
+   * Největší otočení každého prutu návrhu proti výkresu jako kosinus (1 = nehnul se, 0 = otočil
+   * se o čtvrt kruhu nebo víc). Měří se jen mostovka, ostatní pruty mají 1; do prvního porušení
+   * a do překlopení. Podle něj se pozná, které křídlo se zvedlo málo a jestli se křídlo zalomilo.
+   */
+  kosinusPrutu: number[];
+  /** Prut, do kterého narazila první loď; null, když žádná nenarazila. */
+  narazenyPrut: number | null;
+  /**
+   * Most se porušil (prut povolil, konec sjel z podpory) dřív, než zámky po sklopení zapadly:
+   * `zvedani` ještě než se rozhodlo o zvednutí (před nárazem lodi a před sklápěním), `zamykani`
+   * až potom. Co zkouška o zvedání a zamknutí změřila po porušení, je jeho následek, ne příčina.
+   * null, když se most do zamknutí neporušil.
+   */
+  poruseno: "zvedani" | "zamykani" | null;
   /**
    * Proč zámek po sklopení nezapadl: jestli písty dojely zpátky, o kolik se konce zámku na konci
    * zkoušky míjely (m; svisle kladně, když konec se zámkem visí níž) a jak rychle se vůči sobě
