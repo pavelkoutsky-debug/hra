@@ -1305,6 +1305,7 @@ const CS = {
     "Dvacet čtyři metrů bez jediné podpory uprostřed: dvě auta za sebou, proti nim dodávka a dva cyklisté. Kotvy ve svazích leží šest metrů pod mostovkou: opři o ně vzpěradla.",
   "zadani.1-04.vice":
     "Jde to i příhradou přes celé údolí, jen vyjde dráž. Šestimetrový sloup nad kotvou je dlouhý a tlačený; pod dodávkou je na hraně. Pomůže mu těžký trám, nebo rozpěra v půli výšky, která ho zkrátí.",
+  "zadani.1-05": "Silnice přes údolí široké 20 m ponese dvě dodávky těsně za sebou a po nich dodávku proti dvěma autům. Kotva ve svahu je jen vlevo; nad levou částí mostovky se stavět nesmí (nakládá se tam dřevo) a pod pravou také ne (vede tudy lesní cesta).",
   "zadani.2-01":
     "První ocelová lávka: čtyřiadvacet metrů pro chodce a jednoho běžce. Postav ji z ocelového profilu a všímej si nové osy frekvencí dole.",
   "zadani.2-01.vice":
@@ -1333,6 +1334,7 @@ const CS = {
     "Osmačtyřicet metrů ve dvou polích; kolona čtyř nákladních aut na mostě zabrzdí a proti ní jede autobus. Brzdná síla, přes padesát tun, musí z mostu do skály uprostřed údolí.",
   "zadani.3-04.vice":
     "Oba konce mostu leží na posuvných ložiskách; pevný bod je jen na skále. Kolona tři sekundy stojí a rozjede se. Brzdící kola tlačí vozovku dopředu polovinou své tíhy. Nohy pilíře jsou dlouhé a tlačené: pozor na vzpěr.",
+  "zadani.3-05": "Po mostě pojede kolona pěti nákladních aut, která na něm zabrzdí, a proti ní autobus. Nad vozovkou visí vedení, pod ní je skoro po celé délce průjezdný profil kolejiště a opěry jsou jen posuvná ložiska: pevně drží jen skála dole ve svazích.",
   "zadani.4-01":
     "Čtyřiapadesát metrů přes řeku pro dva tahače s návěsem, nákladní auto a dvě osobní. Na jedno pole je to moc, ale v řece jsou dva základy: postav na ně pilíře.",
   "zadani.4-01.vice":
@@ -1349,6 +1351,7 @@ const CS = {
     "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano a z něj závěsy k mostovce.",
   "zadani.4-04.vice":
     "Pylony stojí na základech na březích; nosné lano je mezi nimi prověšené do oblouku a za pylony ho ukotvi do kotev v zemi. Závěsy vedou svisle ke styčníkům mostovky. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
+  "zadani.4-05": "Silnice dlouhá 72 m přes údolí, ve kterém jde založit jediný pilíř, a ten nestojí uprostřed: 48 m od levého břehu. Pod delším polem se stavět nesmí; pojedou dva tahače s návěsem, proti nim kolona tří nákladních aut a nakonec tahač proti autobusu.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s².",
   "zadani.5-01.vice":
@@ -1365,6 +1368,7 @@ const CS = {
     "Koncert na mostě: třicet lidí dojde doprostřed a osm sekund skáče v rytmu 2,2 Hz. Doskoky budí most i na dvojnásobku a trojnásobku rytmu: najdi, který z nich tvůj most trefí, a nalaď tlumič na něj.",
   "zadani.5-04.vice":
     "Doskoky jsou krátké a tvrdé, proto působí i na 4,4 a 6,6 Hz. Výš než dva metry stavět nejde. Mostovka z dlouhých polí se pod doskoky rozdrnčí sama; postav ji z krátkých.",
+  "zadani.5-05": "Městské slavnosti na šestatřicetimetrové lávce: nejdřív proběhne lidový běh, šestatřicet běžců kolem 2,4 doskoku za sekundu, a hned za nimi jde průvod, osmačtyřicet lidí s kapelou v taktu 1,8 Hz. Stavět se smí jen metr nad mostovku a pod ni vůbec, a kmitání pod lidmi nesmí přesáhnout 1,0 m/s².",
   "zadani.6-01":
     "Třicet metrů přes řeku a poprvé koleje: pojede lokomotiva a tři ložené vozy, dohromady 358 tun. Vlak je delší než most a zatíží ho celý najednou, šesti tunami na každý metr.",
   "zadani.6-01.vice":
@@ -1381,6 +1385,7 @@ const CS = {
     "Osmačtyřicet metrů a dvě patra: dole trať, devět metrů nad ní silnice. Po kolejích pojede lokomotiva se čtyřmi loženými vozy, po silnici dvě nákladní auta a autobus; každá mostovka patří na svou niveletu.",
   "zadani.6-04.vice":
     "Trať vede z tunelu do tunelu. Na kolej patří kolejiště, na silnici ocelobetonová mostovka: vlak po silniční mostovce nepojede a auto po pražcích taky ne. Dvě mostovky nad sebou jsou jako pásy jedné vysoké příhrady. Stačí je spojit, ale pozor: svislice u podpor jsou tlačené a devět metrů dlouhé: z lehkého profilu vybočí.",
+  "zadani.6-05": "Trať dlouhá šestašedesát metrů a v údolí jediný základ, čtyřiadvacet metrů od levého břehu: nejdřív projede rychlík stovkou, po něm nákladní vlak s osmi loženými vozy, který na mostě nouzově zabrzdí. Pod delším polem vede plavební dráha a stavět se tam nesmí; oba konce mostu leží na posuvných ložiskách.",
   "zadani.7-01":
     "Kanál široký dvanáct metrů a po něm lodě: most se musí zvednout dřív, než ve dvanácté sekundě připluje loď vysoká osm metrů. Křídlo se otáčí kolem čepu v levé opěře a zvedá ho píst.",
   "zadani.7-01.vice":
@@ -1397,10 +1402,12 @@ const CS = {
     "Velký přístav: dvaatřicet metrů, dvě šestnáctimetrová křídla a těžší vozovka. Loď je vysoká jedenáct metrů a křídlo musí zůstat nahoře, dokud nepropluje: drží ho jen píst.",
   "zadani.7-04.vice":
     "Čím kratší má píst k čepu rameno, tím větší silou křídlo drží: píst z mělké kotvy blízko čepu to neudrží, přetlakový ventil povolí a křídlo klesne lodi do cesty. Delší rameno má píst z hluboké kotvy nebo píst uchycený dál od čepu. Dlouhé křídlo se taky hodně ohýbá: pomůže trojúhelník nad jeho kořenem, který konec křídla přidrží táhlem.",
+  "zadani.7-05": "Dvacet metrů kanálu a strojovna jen v levé zdi: čep a pod ním dvě kotvy pro píst, na pravém břehu pouhé ložisko. V šestnácté sekundě připluje loď vysoká deset metrů a po sklopení přes most přejede nákladní auto s autobusem.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem, a každý rytmus rozhoupe jinak vysoký most. Buď najdi výšku, která se vyhne všem třem, nebo most utlum.",
   "zadani.2-04.vice":
     "Most, kterému rezonance nevadí, má mezi mostovkou a kotvami ve svazích viskózní tlumiče. Tlumič nenese žádnou váhu, jen brzdí pohyb; jeho sílu nastavíš po výběru v paletě.",
+  "zadani.2-05": "Přes lávku dlouhou 36 m napochoduje útvar, 24 lidí v taktu 1,8 Hz, a po něm přeběhne devítičlenné družstvo poklusem v taktu 3 Hz. Stavět se smí jen metr nad mostovku a pod ni vůbec; tlumič má jedinou kotvu, ve svahu pod třetinou rozpětí.",
 } as const;
 
 export type KlicTextu = keyof typeof CS;

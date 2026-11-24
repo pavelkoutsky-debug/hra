@@ -213,7 +213,8 @@ describe("verze formátu úrovně", () => {
 
   it("úrovně druhé kapitoly jsou ve verzi 2 a ukazují osu frekvencí", () => {
     const druha = nactiUrovne().filter((u) => u.id.startsWith("2-"));
-    expect(druha).toHaveLength(4);
+    // Čtyři úrovně kapitoly a její zkouška.
+    expect(druha).toHaveLength(5);
     expect(druha.every((u) => u.osaFrekvenci)).toBe(true);
   });
   it("verze 3 se převede: nerovnost vozovky žádná, i když ji soubor uváděl", () => {

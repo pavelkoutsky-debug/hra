@@ -1,0 +1,139 @@
+{
+  "verze": 8,
+  "id": "7-05",
+  "nazev": "Jediné křídlo",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -10,
+    "xMax": 28,
+    "yMax": 22
+  },
+  "teren": [
+    {
+      "x": -8,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 0.5,
+      "y": -8
+    },
+    {
+      "x": 19.5,
+      "y": -8
+    },
+    {
+      "x": 20,
+      "y": 0
+    },
+    {
+      "x": 28,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 20,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 0,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -5,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 20,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 400,
+  "nerovnost": "A",
+  "rozpocet": 780000,
+  "inzenyrskyRozpocet": 682000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.4
+  },
+  "povolenePrvky": [
+    "mostovka-ocel",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pist"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "dodavka"
+    },
+    {
+      "cas": 1,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "auto",
+      "pocet": 2
+    },
+    {
+      "cas": 36,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nakladni"
+    },
+    {
+      "cas": 37,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    }
+  ],
+  "pohyb": {
+    "zvednout": 6,
+    "sklopit": 22
+  },
+  "lode": [
+    {
+      "cas": 16,
+      "trvani": 4,
+      "xMin": 6,
+      "xMax": 18,
+      "vyska": 10
+    }
+  ],
+  "zkouskova": true
+}

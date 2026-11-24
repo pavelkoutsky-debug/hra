@@ -23,7 +23,7 @@ Poslední aktualizace: 23. 11. 2026
 | M9 Zvuk načisto (ElevenLabs) | **Nedělá se.** Zadavatel 23. 11. 2026 rozhodl nechat zvuky, jak jsou (ze syntezátoru) |
 | M10 Pád a výsledek | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M11 Kmitání a nápověda | Hotovo (23. 11. 2026); nezávislé recenze viz „Nezávislé recenze M11“ a „Druhé kolo recenzí M11“ |
-| M12 Obtížnost a medaile | První část (medaile po schodech, přeladěné úrovně, šampioni výzev, klidné úseky, krátká zadání, slovníček, odemykání po kapitolách) hotová 23. 11. 2026, viz „M12 — výsledek první části“; zbývají těžké varianty úrovní a příčiny v kapitole 7 |
+| M12 Obtížnost a medaile | Hotovo: první část 23. 11. 2026 („M12 — výsledek první části“), zkouškové úrovně a příčiny u pohyblivých mostů 24. 11. 2026 („M12c — výsledek“) |
 | M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Čeká |
 | M15 Dílna a Havarijní komise | Čeká |
@@ -40,7 +40,8 @@ Poslední aktualizace: 23. 11. 2026
 - **M11 Kmitání a nápověda** je hotový (viz „M11 — výsledek“).
 - **M12 Obtížnost a medaile**: první část je hotová (viz „M12 — výsledek první části“). Zbývá M12c (těžké varianty údolí, zkouškové úrovně bez návodu, příčiny v kapitole 7) a drobnosti vypsané na konci oddílu.
 - **M13 Sdílení mostu** je hotový a po recenzích opravený (viz „M13 — výsledek“ a „Nezávislé recenze M13“).
-- **Rozpracováno (24. 11. 2026):** M12c: věty o příčině u pohyblivých mostů jsou hotové (`src/zkouska/pricinaPohybu.ts`), zkouškové úrovně 1-05, 5-05, 6-05 a 7-05 jsou navržené a leží mimo repozitář (`urovne/*-05.json`, `urovne/zkousky/`; git je dočasně ignoruje přes `.git/info/exclude`), 2-05, 3-05 a 4-05 jsou rozdělané. M14: galerie mostů a závěrečný list jsou v místní větvi `m14-priprava`, úrovně kapitoly 8 mají zadání v `recenze-docasne/m14/`. **Pomocným agentům došel 24. 11. limit modelu (obnoví se 29. 11.)**; do té doby se pracuje bez nich.
+- **M12c** (zkouškové úrovně bez návodu, příčiny u pohyblivých mostů) je hotový, viz „M12c — výsledek“.
+- **Rozpracováno (24. 11. 2026):** M14: galerie mostů a závěrečný list jsou v místní větvi `m14-priprava`, úrovně kapitoly 8 mají zadání v `recenze-docasne/m14/` a ověřeno je, že vlak na zvedacím mostě jádro unese. **Pomocným agentům došel 24. 11. limit modelu (obnoví se 29. 11.)**; do té doby se pracuje bez nich nebo s agenty jiného modelu.
 
 ## M13 — výsledek
 
@@ -93,6 +94,35 @@ Tři čerství agenti: recenze kódu, hraní v prohlížeči očima příjemce o
 - **Obrázek 7-02**: píst překrývá popisek hladiny.
 - **Dokončení třetí recenze.** Chybí její závěrečná zpráva a část pokusů v prohlížeči (psal je, když mu došel limit). Až se limit obnoví, stojí za to nechat recenzi odolnosti doběhnout na opravené verzi.
 - Neověřeno nikým: Firefox, Safari, skutečný telefon, skutečná systémová nabídka sdílení a průchod odkazu skutečnými aplikacemi.
+
+## M12c — výsledek
+
+Zbytek milníku M12 (návrh 15 z `docs/RECENZE.md`): zkouškové úrovně bez návodu a srozumitelné příčiny u pohyblivých mostů. Verze hry 0.19.0. Fyzika se nemění (verze 8, otisky regresní sady stejné).
+
+**Zkouška kapitoly.** Každá ze sedmi kapitol má pátou úroveň, která nic nového neučí: spojuje aspoň dvě lekce kapitoly v údolí, kde žádný z mostů předchozích úrovní nestačí. Nemá ukázku ani nápovědu (zadání říká jen úlohu), v přehledu má štítek „zkouška“ a rozpočet má těsnější než běžné úrovně (nejvýš 20 % nad inženýrským). Kampaň má 35 úrovní; pátá úroveň se odemyká po čtvrté a další kapitola dál po dvou projitých úrovních té předchozí, takže zkoušku nikdo dělat nemusí.
+
+| Úroveň | Co spojuje | Rozpočet / inženýrský | Bonus | Průchod | Rozpočtová | Mistrovská |
+|---|---|---|---|---|---|---|
+| 1-05 Nad lesní cestou | vzpěra z jediné kotvy, příhrada, zóny nad i pod mostovkou | 115 000 / 96 000 | rezerva 60 % | 111 393 | 88 532 | 92 990 |
+| 2-05 Pochod a běh | tlumič z jediné kotvy, závaží, krátká pole proti poklusu | 565 000 / 475 000 | kmitání 1,45 | 510 105 | 437 547 | 462 763 |
+| 3-05 Nad kolejištěm | strop pod vedením, nohy ze skály, těžký pás jen tam, kde se vzpírá | 1 800 000 / 1 515 000 | rezerva 80 % | 1 617 636 | 1 371 295 | 1 473 295 |
+| 4-05 Jediný základ | zavěšený most se dvěma nestejnými poli, nosné kotevní lano, nakloněný pylon | 2 590 000 / 2 163 000 | rezerva 60 % | 2 218 241 | 2 020 331 | 2 100 339 |
+| 5-05 Dva rytmy | běh a průvod po sobě: dva laděné tlumiče, každý na svůj rytmus | 625 000 / 566 000 | kmitání 0,8 | 623 056 | 515 056 | 549 547 |
+| 6-05 Nestejná pole | pilíř mimo střed, brzdící vlak, tlačený pás, tuhost pro rychlík | 2 400 000 / 2 144 000 | pohodlí 0,5 | 2 275 983 | 1 976 248 | 2 081 676 |
+| 7-05 Jediné křídlo | dvacetimetrové křídlo, hluboká kotva a dlouhé rameno pístu naráz | 780 000 / 682 000 | rezerva 40 % | 688 426 | 615 500 | 663 981 |
+
+Úrovně navrhli čtyři agenti podle společného zadání a kontroly (`overZkousku`: medaile po schodech na třech referenčních mostech, inženýrský rozpočet 2,5 až 3,5 % nad mostem pro mistrovskou, aspoň tři mosty, které selžou fyzikou, mezi nimi mosty předchozích úrovní kapitoly přenesené sem). Každý zkusil svou úroveň porazit stovkami až tisícem jiných mostů; co prošlo levněji, buď zavřel zónou (5-05: vzpínadlo pod mostem bez tlumiče), nebo je mezi dalšími mosty pro výzvy (`ReseniUrovne.vyzvy`). 4-05 jsem po výpadku agentů dokončil sám z jejich rozdělaných měření. Mosty jsou v `urovne/zkousky/<id>.ts`, test vyhratelnosti je hlídá jako ostatní.
+
+**Proč pohyblivý most neprošel** (`src/zkouska/pricinaPohybu.ts`; návrh z recenzí M6 a M12). Hra dřív u většiny neúspěchů v kapitole 7 řekla „píst most nezvedl nebo neudržel“, i když měl správný píst a malý zdvih. Příčina se teď čte z návrhu a z toho, co zkouška změřila: křídlo bez pístu („Pravé křídlo nemá píst: po odemknutí zámku ho nic nedrželo a spadlo“), most bez zámku, malý zdvih i s úhlem, na který se křídlo zvedlo, píst, který křídlo zvedl a neudržel, a konce zámku, které se po sklopení minuly, i s tím, o kolik. Zkouška k tomu nese tři nová pole výsledku (`PohybZkousky.kosinusOtoceni`, `pistyPriNarazu`, `nezamceno`); fyziku ani otisk nemění. Šlo ven už s M13.
+
+**Co zůstává otevřené**
+- **Nezávislé recenze M12c** (viz níže, až proběhnou).
+- **Píst s patou na konzole z prutů** (7-05, nejspíš i 7-01 až 7-04): `otoceniKridla` čep nepozná, paleta neřekne úhel zvednutí a pravidlo 70° se nehlídá, takže křídlo může přepadnout. V 7-05 je to přitom nejlevnější cesta k mistrovské (633 062 Kč).
+- **„Naladit na rytmus“ u druhého tlumiče** (5-05): cíl ladění se počítá pro most bez tlumičů, takže druhý tlumič míří na stejný rytmus jako první; na druhý rytmus ho hráč ladí ručně podle osy frekvencí.
+- **5-05: dva tlumiče naladěné mezi oba rytmy** projdou na rozpočtovou; „každý na svůj rytmus“ je vynucené až u mistrovské.
+- **7-05: nákladní auto je kulisa**; těžké je zvedání a držení křídla, ne provoz. Rozpočtová a bonus drží těsně (90,2 % rozpočtu, bonus mine o 16 %).
+- **6-05, proč pohodlí cestujících řídí krátké pole**, nikdo nezkoumal; čísla jsou ze zkoušek.
+- Žádnou zkouškovou úroveň nikdo neviděl v prohlížeči jinak než testem průchodu kampaní (zóny těsně u mostovky v 1-05, laděný tlumič kreslený uvnitř zóny v 5-05).
 
 ## M12 — výsledek první části
 

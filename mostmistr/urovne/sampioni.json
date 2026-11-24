@@ -67,6 +67,18 @@
         ]
       }
     },
+    "1-05": {
+      "cena": {
+        "z": "rozpocet",
+        "otisk": "d61b145f",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "otisk": "d61b145f",
+        "upravy": []
+      }
+    },
     "2-01": {
       "cena": {
         "z": "rozpocet",
@@ -188,6 +200,18 @@
       "hmotnost": {
         "z": "mistrovska",
         "otisk": "5972ff7e",
+        "upravy": []
+      }
+    },
+    "2-05": {
+      "cena": {
+        "z": "rozpocet",
+        "otisk": "074025e1",
+        "upravy": []
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "otisk": "074025e1",
         "upravy": []
       }
     },
@@ -339,6 +363,42 @@
         ]
       }
     },
+    "3-05": {
+      "cena": {
+        "z": "pruchod",
+        "otisk": "68581aee",
+        "upravy": [
+          {"stycnik":16,"pryc":true},
+          {"prut":11,"prvek":"ocel-lehka"},
+          {"prut":12,"prvek":"ocel-lehka"},
+          {"prut":13,"prvek":"ocel-lehka"},
+          {"prut":14,"prvek":"ocel-lehka"},
+          {"prut":16,"prvek":"ocel-lehka"},
+          {"stycnik":14,"x":18,"y":1},
+          {"stycnik":17,"x":29,"y":1},
+          {"stycnik":13,"x":41,"y":2},
+          {"stycnik":15,"x":35,"y":2},
+          {"stycnik":12,"x":13,"y":2},
+          {"stycnik":15,"x":34,"y":2},
+          {"stycnik":12,"x":14,"y":2},
+          {"stycnik":15,"x":33,"y":2},
+          {"stycnik":12,"x":15,"y":2},
+          {"stycnik":13,"x":40,"y":2}
+        ]
+      },
+      "hmotnost": {
+        "z": "vyzva-1",
+        "otisk": "154eb1aa",
+        "upravy": [
+          {"stycnik":15,"x":39,"y":1},
+          {"stycnik":12,"x":10,"y":1},
+          {"stycnik":13,"x":44,"y":1},
+          {"stycnik":19,"x":33,"y":1},
+          {"stycnik":15,"x":40,"y":1},
+          {"stycnik":14,"x":14,"y":1}
+        ]
+      }
+    },
     "4-01": {
       "cena": {
         "z": "rozpocet",
@@ -444,6 +504,96 @@
           {"stycnik":19,"x":19,"y":4},
           {"stycnik":20,"x":24,"y":3},
           {"stycnik":19,"x":18,"y":4}
+        ]
+      }
+    },
+    "4-05": {
+      "cena": {
+        "z": "vyzva-0",
+        "otisk": "59dab122",
+        "upravy": [
+          {"stycnik":1,"svar":true},
+          {"stycnik":2,"svar":true},
+          {"stycnik":3,"svar":true},
+          {"stycnik":4,"svar":true},
+          {"stycnik":5,"svar":true},
+          {"stycnik":6,"svar":true},
+          {"stycnik":7,"svar":true},
+          {"stycnik":8,"svar":true},
+          {"stycnik":9,"svar":true},
+          {"stycnik":10,"svar":true},
+          {"stycnik":11,"svar":true},
+          {"prut":20,"pryc":true},
+          {"prut":44,"pryc":true},
+          {"prut":46,"pryc":true},
+          {"stycnik":17,"x":4,"y":4},
+          {"stycnik":29,"x":44,"y":4},
+          {"stycnik":17,"x":5,"y":3},
+          {"stycnik":18,"x":9,"y":4},
+          {"stycnik":2,"svar":false},
+          {"stycnik":6,"svar":false},
+          {"stycnik":28,"x":39,"y":4},
+          {"stycnik":29,"x":44,"y":3},
+          {"stycnik":20,"x":15,"y":4},
+          {"stycnik":1,"svar":false},
+          {"stycnik":7,"svar":false},
+          {"stycnik":9,"svar":false},
+          {"stycnik":19,"x":12,"y":4},
+          {"stycnik":18,"x":9,"y":3},
+          {"stycnik":28,"x":40,"y":3},
+          {"stycnik":27,"x":36,"y":4},
+          {"stycnik":26,"x":34,"y":4},
+          {"stycnik":15,"x":60,"y":-1},
+          {"stycnik":16,"x":66,"y":-1},
+          {"stycnik":10,"svar":false},
+          {"stycnik":14,"x":49,"y":-3},
+          {"stycnik":17,"x":4,"y":2},
+          {"stycnik":22,"x":22,"y":5},
+          {"stycnik":24,"x":28,"y":5},
+          {"stycnik":29,"x":45,"y":2},
+          {"stycnik":25,"x":31,"y":4},
+          {"stycnik":26,"x":33,"y":4}
+        ]
+      },
+      "hmotnost": {
+        "z": "vyzva-0",
+        "otisk": "59dab122",
+        "upravy": [
+          {"stycnik":1,"svar":true},
+          {"stycnik":2,"svar":true},
+          {"stycnik":3,"svar":true},
+          {"stycnik":4,"svar":true},
+          {"stycnik":5,"svar":true},
+          {"stycnik":6,"svar":true},
+          {"stycnik":7,"svar":true},
+          {"stycnik":8,"svar":true},
+          {"stycnik":9,"svar":true},
+          {"stycnik":10,"svar":true},
+          {"stycnik":11,"svar":true},
+          {"prut":20,"pryc":true},
+          {"prut":44,"pryc":true},
+          {"prut":46,"pryc":true},
+          {"stycnik":17,"x":4,"y":4},
+          {"stycnik":29,"x":44,"y":4},
+          {"stycnik":17,"x":5,"y":3},
+          {"stycnik":18,"x":9,"y":4},
+          {"stycnik":28,"x":39,"y":4},
+          {"stycnik":29,"x":44,"y":3},
+          {"stycnik":20,"x":15,"y":4},
+          {"stycnik":19,"x":12,"y":4},
+          {"stycnik":18,"x":9,"y":3},
+          {"stycnik":15,"x":60,"y":-1},
+          {"stycnik":16,"x":66,"y":-1},
+          {"stycnik":17,"x":4,"y":2},
+          {"stycnik":22,"x":22,"y":5},
+          {"stycnik":24,"x":28,"y":5},
+          {"prut":50,"pryc":true},
+          {"prut":41,"pryc":true},
+          {"stycnik":26,"x":33,"y":4},
+          {"stycnik":25,"x":31,"y":4},
+          {"stycnik":17,"x":5,"y":2},
+          {"stycnik":14,"x":48,"y":-3},
+          {"stycnik":14,"x":48,"y":-2}
         ]
       }
     },
@@ -612,6 +762,30 @@
           {"stycnik":4,"pryc":true},
           {"stycnik":12,"pryc":true},
           {"stycnik":23,"x":29,"y":1}
+        ]
+      }
+    },
+    "5-05": {
+      "cena": {
+        "z": "rozpocet",
+        "otisk": "cbcb4b09",
+        "upravy": [
+          {"stycnik":5,"pryc":true},
+          {"stycnik":11,"x":5,"y":1},
+          {"stycnik":15,"x":31,"y":1},
+          {"stycnik":11,"x":6,"y":1},
+          {"stycnik":15,"x":30,"y":1}
+        ]
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "otisk": "cbcb4b09",
+        "upravy": [
+          {"stycnik":5,"pryc":true},
+          {"stycnik":11,"x":5,"y":1},
+          {"stycnik":15,"x":31,"y":1},
+          {"stycnik":15,"x":30,"y":1},
+          {"stycnik":11,"x":6,"y":1}
         ]
       }
     },
@@ -830,6 +1004,22 @@
         "z": "pruchod",
         "otisk": "404db98c",
         "upravy": []
+      }
+    },
+    "7-05": {
+      "cena": {
+        "z": "pruchod",
+        "otisk": "56c04379",
+        "upravy": [
+          {"stycnik":6,"pryc":true}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "otisk": "56c04379",
+        "upravy": [
+          {"stycnik":6,"pryc":true}
+        ]
       }
     }
   }

@@ -1,0 +1,65 @@
+{
+  "verze": 8,
+  "id": "1-05",
+  "nazev": "Nad lesní cestou",
+  "vyrez": {
+    "xMin": -8,
+    "yMin": -12,
+    "xMax": 28,
+    "yMax": 10
+  },
+  "teren": [
+    { "x": -8, "y": 0 },
+    { "x": 0, "y": 0 },
+    { "x": 4, "y": -4 },
+    { "x": 6, "y": -9 },
+    { "x": 8, "y": -9 },
+    { "x": 9, "y": -6 },
+    { "x": 19, "y": -6 },
+    { "x": 20, "y": 0 },
+    { "x": 28, "y": 0 }
+  ],
+  "hladina": -7.5,
+  "kotvy": [
+    { "x": 0, "y": 0, "typ": "pevna" },
+    { "x": 20, "y": 0, "typ": "posuvna" },
+    { "x": 4, "y": -4, "typ": "pevna" }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    { "xMin": 0, "yMin": 0.1, "xMax": 8, "yMax": 10 },
+    { "xMin": 8, "yMin": -6, "xMax": 20, "yMax": -0.1 }
+  ],
+  "trasy": [
+    {
+      "id": "cesta",
+      "druh": "silnice",
+      "zacatek": { "x": 0, "y": 0 },
+      "konec": { "x": 20, "y": 0 }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 100,
+  "nerovnost": "zadna",
+  "rozpocet": 115000,
+  "inzenyrskyRozpocet": 96000,
+  "mistrovska": { "druh": "rezerva", "limit": 0.6 },
+  "povolenePrvky": ["mostovka-drevo", "drevo-lehke", "drevo-tezke"],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    { "cas": 0, "trasa": "cesta", "smer": -1, "druh": "chodec", "pocet": 2, "kadence": 1.9 },
+    { "cas": 1, "trasa": "cesta", "smer": 1, "druh": "cyklista", "pocet": 2 },
+    { "cas": 17, "trasa": "cesta", "smer": 1, "druh": "dodavka", "pocet": 2, "rozestup": 10 },
+    { "cas": 21, "trasa": "cesta", "smer": -1, "druh": "dodavka" },
+    { "cas": 21.2, "trasa": "cesta", "smer": 1, "druh": "auto", "pocet": 2 }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": true
+}
