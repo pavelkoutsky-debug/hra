@@ -9,13 +9,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../../src/data/cena";
 import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { zakodujMost } from "../../src/data/sdileni";
-import { znackaHrace } from "../../src/data/zebricek";
+import { VERZE_ZEBRICKU, znackaHrace } from "../../src/data/zebricek";
 import { VERZE_FYZIKY } from "../../src/jadro/verze";
 import type { ProstrediServeru } from "../../src/server/obsluha";
 import { overovacKampane } from "../../src/server/overeni";
 import { SkladVPameti } from "../../src/server/sklad";
 import { spravujVse } from "../../src/server/sprava";
-import { obsluzZebricek, type ZebricekProSpravu } from "../../src/server/zebricek";
+import { obsluzZebricek, type UlozenyZebricek, type ZebricekProSpravu } from "../../src/server/zebricek";
+import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
 
@@ -28,6 +29,7 @@ let prohlizec: Browser;
 let adresa: string;
 const chyby: string[] = [];
 const kontexty: BrowserContext[] = [];
+const over = overovacKampane();
 const prostredi: ProstrediServeru = {
   sklad: new SkladVPameti(),
   ted: () => new Date(),
@@ -45,7 +47,8 @@ async function cistaStranka(volby: Parameters<Browser["newContext"]>[0] = {}): P
   stranka.on("pageerror", (chyba) => chyby.push(chyba.message));
   stranka.on("console", (zprava) => {
     // Odmítnutý zápis je odpověď 4xx: prohlížeč ji hlásí do konzole, chyba hry to není.
-    if (zprava.type() === "error" && !/status of 4\d\d/.test(zprava.text())) chyby.push(zprava.text());
+    // Server, který test schválně odřízne, taky ne.
+    if (zprava.type() === "error" && !/status of 4\d\d|net::ERR_FAILED/.test(zprava.text())) chyby.push(zprava.text());
   });
   return stranka;
 }
@@ -123,7 +126,6 @@ beforeAll(async () => {
   const mistni = server.resolvedUrls?.local[0];
   if (!mistni) throw new Error("Náhledový server neoznámil adresu.");
   adresa = mistni;
-  const over = overovacKampane();
   napoj("/api/zebricek", (zadost) => obsluzZebricek(zadost, prostredi, over));
   napoj("/api/sprava", (zadost) => spravujVse(zadost, prostredi));
   prohlizec = await chromium.launch();
@@ -149,18 +151,27 @@ describe("žebříčky", () => {
     expect(await okno(s).getAttribute("data-radku")).toBe("0");
     expect(bezMezer(await okno(s).locator("h2").innerText())).toContain("Žebříček");
     expect(await s.locator('#okno-zebricek [data-mira="cena"]').innerText()).toContain("Zatím nikdo");
-    expect(await udaj(s, "zebricek-hlaseni")).toContain("Zapsat jde most, se kterým jsi právě prošel zkouškou");
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Zapsat jde most, se kterým jsi od otevření úrovně prošel zkouškou");
     expect(await akce(s, "zebricek-zapsat").getAttribute("aria-disabled")).toBe("true");
     // Kliknutí na nepřipravené tlačítko jen poradí; nic se neposílá.
     await akce(s, "zebricek-zapsat").click({ force: true });
     expect(await okno(s).getAttribute("data-stav")).toBe("nacten");
     await s.keyboard.press("Escape");
 
+    // Most, který zkouškou neprojde, hra do žebříčku nenabídne a řekne proč.
+    await nactiMost(s, RESENI["1-01"]!.pady[0]!.navrh);
+    await zkousej(s);
+    await otevriZebricek(s);
+    expect(await udaj(s, "zebricek-hlaseni")).toBe("Tenhle most zkouškou neprošel, takže zapsat nejde.");
+    expect(await akce(s, "zebricek-zapsat").getAttribute("aria-disabled")).toBe("true");
+    await s.keyboard.press("Escape");
+    await nactiMost(s, drazsi);
+
     // Po zkoušce, která prošla bez porušení, je most připravený; bez přezdívky se nezapíše.
     prvniOtisk = await zkousej(s);
     expect(prvniOtisk).toMatch(/^[0-9a-f]{16}$/);
     await otevriZebricek(s);
-    expect(await udaj(s, "zebricek-hlaseni")).toBe("Most na výkresu prošel zkouškou: můžeš ho zapsat.");
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Most na výkresu prošel zkouškou: můžeš ho zapsat mezi nejlevnější a nejlehčí.");
     expect(await akce(s, "zebricek-zapsat").getAttribute("aria-disabled")).toBe("false");
     await akce(s, "zebricek-zapsat").click();
     expect(await udaj(s, "zebricek-hlaseni")).toContain("Napiš přezdívku");
@@ -177,16 +188,24 @@ describe("žebříčky", () => {
     expect(await radky(s, "hmotnost").count()).toBe(1);
     expect(await radky(s, "zlom").count()).toBe(0);
     expect(await udaj(s, "zebricek-hlaseni")).toContain("Nejlevnější: jsi 1.");
+    // Co z přezdívky po vyčištění zbylo, hra hráči řekne.
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Žebříček tě ukáže jako „bAnnab“");
     await s.screenshot({ path: `${SLOZKA}/z1-zebricek.png` });
     await s.keyboard.press("Escape");
 
     // Zkouška do zlomu přidá třetí měřítko.
     await zkousej(s, true);
     await otevriZebricek(s);
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("prošel zkouškou i zkouškou do zlomu");
     await akce(s, "zebricek-zapsat").click();
     await s.locator('#okno-zebricek[data-stav="zapsano"]').waitFor({ timeout: 60_000 });
     expect(await radky(s, "zlom").count()).toBe(1);
     expect(await udaj(s, "zebricek-hlaseni")).toContain("Únosnost na korunu: jsi 1.");
+    // Cena a hmotnost téhož mostu podruhé: stejná hodnota není „horší most“.
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Nejlevnější: stejnou hodnotu už zapsanou máš");
+    // Sloupec únosnosti má jednotku v nadpisu a v řádku jen číslo.
+    expect(bezMezer(await s.locator('#okno-zebricek [data-mira="zlom"] h3').innerText())).toMatch(/\[t na 100 000 Kč\]$/);
+    expect(bezMezer(await radky(s, "zlom").first().locator(".zebricek__hodnota").innerText())).toMatch(/^\d+,\d$/);
     await s.keyboard.press("Escape");
 
     // Změněný most už připravený není: zapsat nejde, dokud znovu neprojde zkouškou.
@@ -199,7 +218,7 @@ describe("žebříčky", () => {
     expect(identita.hrac).toMatch(/^[0-9a-f]{32}$/);
     const verejny = await s.evaluate(async () => (await fetch("/api/zebricek?uroven=1-01")).text());
     expect(verejny).not.toContain(identita.hrac);
-    expect(verejny).toContain(znackaHrace(identita.hrac));
+    expect(verejny).toContain(znackaHrace(identita.hrac, "1-01"));
   }, 400_000);
 
   it("podvržený zápis ze stejného prohlížeče server odmítne a žebříček se nezmění", async () => {
@@ -220,6 +239,8 @@ describe("žebříčky", () => {
     expect(await posli({ kod: zakodujMost(RESENI["1-01"]!.pady[0]!.navrh), cena: 1 })).toMatchObject({ stav: 422 });
     expect(await posli({ verze: VERZE_FYZIKY + 1 })).toEqual({ stav: 409, kod: "verze" });
     expect(await posli({ kod: "AAAA" })).toEqual({ stav: 422, kod: "most" });
+    // Zkouška do zlomu u mostu, který server nezná z běžné zkoušky, se ani nepustí.
+    expect(await posli({ uroven: "1-02", kod: zakodujMost(RESENI["1-02"]!.pruchod), zkouska: "zlom" })).toEqual({ stav: 409, kod: "nejdriv" });
     await otevriZebricek(s);
     expect(await radky(s, "cena").count()).toBe(1);
     expect(bezMezer(await okno(s).innerText())).not.toContain("Podvodník");
@@ -244,14 +265,15 @@ describe("žebříčky", () => {
     expect(await radky(s, "cena").nth(1).getAttribute("data-ja")).toBeNull();
     await s.screenshot({ path: `${SLOZKA}/z2-dva-hraci.png` });
     await s.keyboard.press("Escape");
-    // Dražší most téhož hráče jeho zápis nezhorší a hra to řekne.
+    // Most, který už zapsal někdo jiný, druhý řádek nedostane (ani nezhorší vlastní zápis) a hra to řekne.
     await nactiMost(s, drazsi);
     await zkousej(s);
     await otevriZebricek(s);
     await akce(s, "zebricek-zapsat").click();
     await s.locator('#okno-zebricek[data-stav="zapsano"]').waitFor({ timeout: 60_000 });
-    expect(await udaj(s, "zebricek-hlaseni")).toContain("tvůj zapsaný most je pořád lepší");
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Nejlevnější: úplně stejný most už zapsal někdo před tebou");
     expect((await radky(s, "cena").locator(".zebricek__jmeno").allInnerTexts()).map(bezMezer)).toEqual(["Boris", "bAnnab"]);
+    expect(await radky(s, "hmotnost").count()).toBe(2);
   }, 400_000);
 
   it("pískoviště a případy komise žebříček nemají; anglicky a na telefonu se okno vejde", async () => {
@@ -262,6 +284,11 @@ describe("žebříčky", () => {
     await s.goto(`${adresa}?uroven=9-01`);
     await s.locator(PLATNO).waitFor();
     expect(await s.locator('.paleta [data-akce="zebricek"]').isVisible()).toBe(false);
+    // Zkušební výkres do kampaně nepatří a server pro něj žebříček nevede: tlačítko tam není.
+    await otevriUroven(s, "0-00");
+    expect(await s.locator('.paleta [data-akce="zebricek"]').isVisible()).toBe(false);
+    await otevriUroven(s, "1-02");
+    expect(await s.locator('.paleta [data-akce="zebricek"]').isVisible()).toBe(true);
 
     const en = await cistaStranka({ locale: "en-US" });
     await otevriUroven(en, "1-01");
@@ -286,6 +313,75 @@ describe("žebříčky", () => {
     await telefon.screenshot({ path: `${SLOZKA}/z3-telefon.png` });
   }, 200_000);
 
+  it("plný žebříček: dvacet řádků s dlouhými přezdívkami se nerozsype a zápis zůstává vidět", async () => {
+    // Žebříček úrovně 1-03 naplněný rovnou v úložišti: nejdelší přezdívky, pořadí do dvaceti.
+    const uroven = nactiKampan().find((u) => u.id === "1-03")!;
+    const zapisy = (zaklad: number, krok: number): UlozenyZebricek["cena"] =>
+      Array.from({ length: 25 }, (_, i) => ({ hrac: i.toString(16).padStart(32, "e"), jmeno: i % 2 === 0 ? "WWWWWWWWWWWWWWWW" : `Hráč číslo ${i + 1}`, hodnota: zaklad + i * krok, cas: 1_795_000_000_000 + i, most: "0".repeat(32), tvar: `t${i}` }));
+    const plny: UlozenyZebricek = { cena: zapisy(123_456, 1111), hmotnost: zapisy(12_345, 321), zlom: zapisy(0.5, 0.31).reverse() };
+    await prostredi.sklad.zapis(`zebricek/v${VERZE_FYZIKY}.${VERZE_ZEBRICKU}/${over.klicUrovne(uroven)}.json`, plny);
+
+    /** Řádky se nesmějí lámat ani přetékat: pořadí, jméno a hodnota jsou vedle sebe uvnitř sloupce. */
+    const rozlozeni = (s: Page) =>
+      s.evaluate(() => {
+        const chyby: string[] = [];
+        for (const sloupec of document.querySelectorAll<HTMLElement>("#okno-zebricek [data-mira]")) {
+          const meze = sloupec.getBoundingClientRect();
+          for (const [i, radek] of [...sloupec.querySelectorAll<HTMLElement>(".zebricek__radky li")].entries()) {
+            const [poradi, jmeno, hodnota] = [".zebricek__poradi", ".zebricek__jmeno", ".zebricek__hodnota"].map((trida) => radek.querySelector<HTMLElement>(trida)!.getBoundingClientRect());
+            const kde = `${sloupec.dataset.mira} ${i + 1}`;
+            if (Math.abs(poradi!.top - hodnota!.top) > 3 || Math.abs(jmeno!.top - hodnota!.top) > 3) chyby.push(`${kde}: řádek se zalomil`);
+            if (poradi!.left < meze.left - 0.5 || hodnota!.right > meze.right + 0.5) chyby.push(`${kde}: přetéká sloupec`);
+            if (poradi!.right > jmeno!.left + 0.5 || jmeno!.right > hodnota!.left + 0.5) chyby.push(`${kde}: části řádku se překrývají`);
+            if (radek.querySelector<HTMLElement>(".zebricek__poradi")!.scrollWidth > poradi!.width + 1) chyby.push(`${kde}: pořadí je oříznuté`);
+          }
+        }
+        const okno = document.querySelector("#okno-zebricek")!.getBoundingClientRect();
+        const vOkne = (vyber: string): boolean => {
+          const p = document.querySelector(vyber)!.getBoundingClientRect();
+          return p.top >= okno.top && p.bottom <= okno.bottom && p.bottom <= window.innerHeight && p.height > 0;
+        };
+        return { chyby, zapsat: vOkne('[data-akce="zebricek-zapsat"]'), jmeno: vOkne("#zebricek-jmeno"), hlaseni: vOkne('[data-udaj="zebricek-hlaseni"]'), zavrit: vOkne('#okno-zebricek button[value="zavrit"]') };
+      });
+
+    const s = await cistaStranka();
+    await otevriUroven(s, "1-03");
+    await otevriZebricek(s);
+    expect(await okno(s).getAttribute("data-radku")).toBe("60");
+    expect(await radky(s, "cena").count()).toBe(20);
+    expect(bezMezer(await s.locator('#okno-zebricek [data-mira="cena"]').innerText())).toContain("a dalších 5");
+    expect(bezMezer(await radky(s, "cena").nth(19).locator(".zebricek__poradi").innerText())).toBe("20.");
+    expect(await rozlozeni(s)).toEqual({ chyby: [], zapsat: true, jmeno: true, hlaseni: true, zavrit: true });
+    await s.screenshot({ path: `${SLOZKA}/z6-plny-zebricek.png` });
+
+    for (const [jmeno, volby] of [
+      ["telefon", { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }],
+      ["uzke", { viewport: { width: 1000, height: 700 } }],
+      ["en", { locale: "en-US" }],
+    ] as const) {
+      const dalsi = await cistaStranka(volby);
+      await otevriUroven(dalsi, "1-03");
+      await dalsi.evaluate(() => document.querySelector<HTMLElement>('.paleta [data-akce="zebricek"]')!.click());
+      await dalsi.locator('#okno-zebricek[data-stav="nacten"]').waitFor();
+      expect(await rozlozeni(dalsi), jmeno).toEqual({ chyby: [], zapsat: true, jmeno: true, hlaseni: true, zavrit: true });
+      await dalsi.screenshot({ path: `${SLOZKA}/z6-plny-zebricek-${jmeno}.png` });
+    }
+  }, 200_000);
+
+  it("když server neodpovídá, okno to řekne a zapsat nenabízí", async () => {
+    const s = await cistaStranka();
+    await s.route("**/api/zebricek**", (cesta) => cesta.abort());
+    await otevriUroven(s, "1-01");
+    await nactiMost(s, levnejsi);
+    await zkousej(s);
+    await otevriZebricek(s);
+    expect(await okno(s).getAttribute("data-stav")).toBe("nedostupny");
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Žebříček teď není dostupný");
+    expect(await akce(s, "zebricek-zapsat").getAttribute("aria-disabled")).toBe("true");
+    await akce(s, "zebricek-zapsat").click({ force: true });
+    expect(await okno(s).getAttribute("data-stav")).toBe("nedostupny");
+  }, 200_000);
+
   it("správce vidí zápisy i s mostem a umí smazat nevhodnou přezdívku", async () => {
     const hlavicky = { authorization: `Bearer ${HESLO}` };
     const prehled = (await (await fetch(`${adresa}api/sprava?co=zebricky`, { headers: hlavicky })).json()) as { zebricky: ZebricekProSpravu[] };
@@ -293,7 +389,7 @@ describe("žebříčky", () => {
     expect(radek.zobrazeno).toBe(cenaNavrhu(drazsi));
     const most = (await (await fetch(`${adresa}api/sprava?co=zebricek-most&klic=${encodeURIComponent(prehled.zebricky[0]!.klic)}&most=${radek.most}`, { headers: hlavicky })).json()) as { kod: string };
     expect(most.kod).toBe(zakodujMost(drazsi));
-    const smazani = await fetch(`${adresa}api/sprava?co=zebricek-smazat`, { method: "POST", headers: { ...hlavicky, "content-type": "application/json" }, body: JSON.stringify({ znacka: radek.znacka }) });
+    const smazani = await fetch(`${adresa}api/sprava?co=zebricek-smazat`, { method: "POST", headers: { ...hlavicky, "content-type": "application/json" }, body: JSON.stringify({ znacka: radek.znacka, uroven: "1-01" }) });
     expect(((await smazani.json()) as { smazano: number }).smazano).toBe(3);
     expect((await fetch(`${adresa}api/sprava?co=zebricky`)).status).toBe(401);
     const s = await cistaStranka();
@@ -342,13 +438,15 @@ describe("žebříčky", () => {
     await s.screenshot({ path: `${SLOZKA}/z4-sprava-rozbor.png`, fullPage: true });
 
     await s.locator('[data-zalozka="zebricky"]').click();
-    expect(await s.locator("#zebricky tbody tr").count()).toBe(2);
+    // Úroveň 1-01 (Boris: cena a hmotnost) a úroveň 1-03 naplněná testem rozložení.
+    expect(await s.locator("#zebricky tbody tr", { hasText: "Boris" }).count()).toBe(2);
     expect(await s.locator("#zebricky tbody tr").first().innerText()).toContain("Boris");
     await s.screenshot({ path: `${SLOZKA}/z5-sprava-zebricky.png`, fullPage: true });
     s.once("dialog", (dialog) => void dialog.accept());
     await s.locator("#zebricky tbody tr").first().locator("button", { hasText: "Smazat hráče" }).click();
-    await s.locator('body[data-zebricku="0"]').waitFor();
+    await s.locator("#hlaseni", { hasText: "Smazáno zápisů" }).waitFor();
     expect(await s.locator("#hlaseni").innerText()).toBe("Smazáno zápisů: 2.");
+    expect(await s.locator("#zebricky tbody tr", { hasText: "Boris" }).count()).toBe(0);
   }, 120_000);
 
   it("během práce se žebříčkem prohlížeč nehlásil žádnou chybu", () => {

@@ -3,7 +3,17 @@
 // bez prohlížeče. Výsledek do žebříčku nezapisuje hra, ale server: most si sám přepočítá
 // (`src/server/zebricek.ts`) a zapíše jen to, co mu vyšlo.
 
+import type { NavrhMostu } from "./navrh";
 import { DRUHY_VYZEV, zobrazenaHodnota, type DruhVyzvy } from "./vyzvy";
+
+/**
+ * Verze pravidel žebříčků. Zvyš ji, kdykoli se změní něco, co mění hodnoty nebo platnost už
+ * zapsaných mostů a verze fyziky to nepozná: ceny a hmotnosti v katalogu, pravidla návrhu
+ * (`zkontrolujNavrh`), co se počítá za „prošel bez porušení“, vzorec únosnosti na korunu.
+ * Žebříčky i paměť ověřených mostů pak začnou od nuly. Na katalog pamatuje test
+ * (`test/zebricek.test.ts` drží jeho otisk vedle téhle verze).
+ */
+export const VERZE_ZEBRICKU = 1;
 
 /** Měřítka žebříčku jsou tatáž jako u výzev o efektivitu. */
 export const MIRY_ZEBRICKU = DRUHY_VYZEV;
@@ -56,13 +66,15 @@ export interface ZebricekUrovne {
 
 /** Kde hráč v měřítku stojí po zápisu. */
 export interface MistoHrace {
-  /** Pořadí od jedné; null, když se do uložených zápisů nevešel. */
+  /** Pořadí od jedné; null, když v žebříčku řádek nemá (nevešel se, nebo jeho most už zapsal jiný). */
   poradi: number | null;
   /** Hodnota mostu, který hráč právě poslal, a jeho nejlepší zapsaná. */
   hodnota: number;
   nejlepsi: number;
   /** Tenhle most je jeho nový nejlepší zápis. */
   zlepseni: boolean;
+  /** Úplně stejný most už v žebříčku zapsal dřív někdo jiný: řádek má jen ten první. */
+  obsazeno?: boolean;
 }
 
 export interface OdpovedNaZapis {
@@ -74,9 +86,11 @@ export interface OdpovedNaZapis {
  * Proč server zápis odmítl. `verze`: hra v prohlížeči je starší než server (pomůže načíst
  * stránku). `otisk`: zkouška na serveru dopadla jinak než u hráče. `neprosel`: most na serveru
  * neprošel nebo se na něm něco porušilo. `pravidla`: most porušuje pravidla úrovně. `most`: kód
- * mostu nejde přečíst. `plno`: server dnes už ověřil tolik mostů, kolik smí.
+ * mostu nejde přečíst. `plno`: server dnes už ověřil tolik mostů, kolik smí; `adresa`: tolik,
+ * kolik smí z jedné adresy. `nejdriv`: zápis ze zkoušky do zlomu přišel dřív než zápis z běžné
+ * zkoušky téhož mostu. `soubeh`: žebříček se zrovna měnil a zápis se nepovedl (zkusit znovu).
  */
-export const KODY_ODMITNUTI = ["tvar", "uroven", "verze", "most", "pravidla", "otisk", "neprosel", "plno"] as const;
+export const KODY_ODMITNUTI = ["tvar", "uroven", "verze", "most", "pravidla", "otisk", "neprosel", "plno", "adresa", "nejdriv", "soubeh"] as const;
 export type KodOdmitnuti = (typeof KODY_ODMITNUTI)[number];
 
 const ID_HRACE = /^[0-9a-f]{32}$/;
@@ -91,16 +105,19 @@ export function jeOtiskZkousky(text: unknown): text is string {
 }
 
 /**
- * Přezdívka, jak se smí zapsat: písmena a číslice kterékoli abecedy, mezera, tečka, pomlčka
- * a podtržítko; bez řídicích znaků a bez všeho, z čeho by šla složit značka nebo odkaz. Mezery
- * na krajích pryč, víc mezer za sebou je jedna, nejvýš `NEJDELSI_PREZDIVKA` znaků. Null, když
- * z textu nic nezbude.
+ * Přezdívka, jak se smí zapsat: písmena latinky (i s diakritikou), číslice, mezera, tečka,
+ * pomlčka a podtržítko. Nejdřív se převede na základní tvar znaků (plné šířky, „matematická“
+ * písmena a podobné ozdoby jsou pak obyčejná písmena), takže zmizí řídicí, neviditelné a výplňové
+ * znaky i všechno, z čeho by šla složit značka nebo odkaz; písmena jiných abeced taky, jinak by
+ * šlo vydávat se za jiného hráče znaky, které vypadají stejně. Mezery na krajích pryč, víc mezer
+ * za sebou je jedna, nejvýš `NEJDELSI_PREZDIVKA` znaků. Null, když z textu nic nezbude.
  */
 export function upravPrezdivku(text: unknown): string | null {
   if (typeof text !== "string") return null;
-  const cista = Array.from(text.normalize("NFC"))
-    .filter((znak) => /[\p{L}\p{N} ._-]/u.test(znak))
+  const cista = Array.from(text.normalize("NFKC"))
+    .filter((znak) => /[\p{Script=Latin}0-9 ._-]/u.test(znak) && !/[\p{M}\p{Default_Ignorable_Code_Point}]/u.test(znak))
     .join("")
+    .normalize("NFC")
     .replace(/\s+/g, " ")
     .trim();
   const zkracena = Array.from(cista).slice(0, NEJDELSI_PREZDIVKA).join("").trim();
@@ -114,13 +131,34 @@ function fnv(text: string, zaklad: number, nasobitel: number): number {
 }
 
 /**
- * Veřejná značka hráče z jeho čísla: 16 šestnáctkových znaků. Číslo hráče má 128 bitů a značka
- * 64, takže z ní číslo zjistit nejde; a kdo by trefil jiné číslo se stejnou značkou, nic nezíská,
- * protože server zápisy páruje podle celého čísla.
+ * Veřejná značka hráče v žebříčku jedné úrovně: 16 šestnáctkových znaků z jeho čísla a id
+ * úrovně. Číslo hráče má 128 bitů a značka 64, takže z ní číslo zjistit nejde; a kdo by trefil
+ * jiné číslo se stejnou značkou, nic nezíská, protože server zápisy páruje podle celého čísla.
+ * Úroveň je ve značce proto, aby podle ní nešlo spojit téhož hráče napříč úrovněmi.
  */
-export function znackaHrace(hrac: string): string {
+export function znackaHrace(hrac: string, uroven: string): string {
   const hex = (n: number): string => n.toString(16).padStart(8, "0");
-  return hex(fnv(`a:${hrac}`, 0x811c9dc5, 0x01000193)) + hex(fnv(`b:${hrac}`, 0x9747b28c, 0x85ebca6b));
+  return hex(fnv(`a:${uroven}:${hrac}`, 0x811c9dc5, 0x01000193)) + hex(fnv(`b:${uroven}:${hrac}`, 0x9747b28c, 0x85ebca6b));
+}
+
+/**
+ * Most zapsaný tak, aby dva zápisy téhož mostu vyšly stejně: styčníky podle místa, pruty podle
+ * míst svých konců, všechno seřazené. Id ani pořadí kreslení v něm nejsou. Server podle toho
+ * pozná, že most v žebříčku už je (jeden řádek na most, ne na jeho zápis).
+ */
+export function kanonMostu(navrh: NavrhMostu): string {
+  const misto = new Map(navrh.stycniky.map((s) => [s.id, `${s.x};${s.y}`]));
+  const stycniky = navrh.stycniky
+    .map((s) => [`${s.x};${s.y}`, s.svar ? 1 : 0, s.zamek ? 1 : 0, s.zavazi ?? 0, s.tlumic ? `${s.tlumic.hmota}:${s.tlumic.frekvence}` : ""].join(","))
+    .sort();
+  const pruty = navrh.pruty
+    .map((p) => {
+      const a = misto.get(p.a) ?? "?";
+      const b = misto.get(p.b) ?? "?";
+      return [a < b ? a : b, a < b ? b : a, p.prvek, p.predpeti ?? "", p.tuhost ?? "", p.tlumeni ?? "", p.zdvih ?? ""].join(",");
+    })
+    .sort();
+  return `${stycniky.join("|")}#${pruty.join("|")}`;
 }
 
 /** Je menší hodnota lepší? Cena a hmotnost ano, únosnost na korunu naopak. */
@@ -189,7 +227,8 @@ function jeMisto(h: unknown): h is MistoHrace {
     (m.poradi === null || (typeof m.poradi === "number" && m.poradi >= 1)) &&
     typeof m.hodnota === "number" &&
     typeof m.nejlepsi === "number" &&
-    typeof m.zlepseni === "boolean"
+    typeof m.zlepseni === "boolean" &&
+    (m.obsazeno === undefined || typeof m.obsazeno === "boolean")
   );
 }
 

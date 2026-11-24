@@ -189,17 +189,18 @@
       <section data-panel="rozbory" hidden>
         <p>
           Jednou za den projde naplánovaná úloha zpětnou vazbu a deník hraní za včerejšek, sepíše, co se dělo, a navrhne,
-          co ve hře změnit. Tady jsou její rozbory od nejnovějšího.
+          co ve hře změnit. Tady jsou její rozbory od nejnovějšího. Úloha běží mimo hru a zakládá se zvlášť (postup je
+          v <code>docs/ROZBOR.md</code>): potřebuje vlastní heslo <code>MM_ROZBOR_HESLO</code>, které otevírá jen podklady a rozbory.
         </p>
         <div class="rada">
           <label for="rozbor-den">Rozbor dne (UTC)</label>
           <select id="rozbor-den"></select>
           <span id="rozbor-vznikl"></span>
         </div>
-        <p id="rozbor-prazdno" hidden>Zatím tu žádný rozbor není. První vznikne po prvním běhu naplánované úlohy.</p>
+        <p id="rozbor-prazdno" hidden>Zatím tu žádný rozbor není. První vznikne po prvním běhu naplánované úlohy; dokud úloha není založená, nevznikne žádný.</p>
         <div id="rozbor" hidden>
           <h2>Shrnutí</h2>
-          <p id="rozbor-shrnuti"></p>
+          <p id="rozbor-shrnuti" class="rozbor-text"></p>
           <h2>Návrhy</h2>
           <ol id="rozbor-navrhy" class="navrhy"></ol>
           <h2>Celý rozbor</h2>

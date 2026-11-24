@@ -386,19 +386,28 @@ export class Uloziste {
   }
 
   /**
+   * Identita pro žebříček v paměti stránky: platí, když ji prohlížeč neuloží (anonymní okno,
+   * plná paměť). Bez ní by každý zápis téže návštěvy dostal nové číslo hráče a jeden hráč by
+   * měl v žebříčku víc řádků.
+   */
+  #identitaZebricku: { hrac: string; jmeno: string } | null = null;
+
+  /**
    * Kdo hráč v žebříčcích je: číslo a přezdívka. Null, dokud se do žebříčku nezapsal. Nečitelný
    * zápis je „ještě se nezapsal“: dostane nové číslo a jeho starší řádky zůstanou cizí.
    */
   get zebricek(): { hrac: string; jmeno: string } | null {
     const zapis = this.#cti(KLIC_ZEBRICKU);
-    if (zapis === null) return null;
-    try {
-      const data = JSON.parse(zapis) as { hrac?: unknown; jmeno?: unknown };
-      const jmeno = upravPrezdivku(data.jmeno);
-      return jeIdHraceZebricku(data.hrac) && jmeno !== null ? { hrac: data.hrac, jmeno } : null;
-    } catch {
-      return null;
+    if (zapis !== null) {
+      try {
+        const data = JSON.parse(zapis) as { hrac?: unknown; jmeno?: unknown };
+        const jmeno = upravPrezdivku(data.jmeno);
+        if (jeIdHraceZebricku(data.hrac) && jmeno !== null) return { hrac: data.hrac, jmeno };
+      } catch {
+        // Nečitelný zápis: platí to, co si pamatuje stránka (nebo nic).
+      }
     }
+    return this.#identitaZebricku;
   }
 
   /** Zapamatuje přezdívku; číslo hráče vznikne při prvním zápisu a pak už se nemění. */
@@ -406,6 +415,7 @@ export class Uloziste {
     const dosud = this.zebricek;
     const hrac = dosud?.hrac ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
     const identita = { hrac, jmeno };
+    this.#identitaZebricku = identita;
     this.#pis(KLIC_ZEBRICKU, JSON.stringify(identita));
     return identita;
   }

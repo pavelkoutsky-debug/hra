@@ -129,7 +129,7 @@ import { sandboxNaText, type NastaveniSandboxu } from "../data/sandbox";
 import { RESENI } from "../../urovne/reseni";
 import { pripojNapovedu, type Napoveda } from "./napoveda";
 import { pripojDilnu } from "./dilna";
-import { pripojZebricek } from "./zebricek";
+import { pripojZebricek, type DuvodBezZapisu } from "./zebricek";
 import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
@@ -650,6 +650,8 @@ export function spustUroven(
    * a otisk musí sedět, takže se pamatuje jen to, co zkouška opravdu vrátila.
    */
   const otiskyProZebricek = new Map<string, { bezna?: string; zlom?: string }>();
+  /** Proč most po běžné zkoušce téhle návštěvy do žebříčku nesmí: neprošel, nebo se na něm něco porušilo. */
+  const nezdaryProZebricek = new Map<string, "neprosel" | "poruseny">();
   /** Výzva z odkazu: soupeřův most, který má hráč v téhle úrovni překonat cenou. */
   let vyzvaOdkazu: { kod: string; cena: number } | null = sandbox === null ? vyzvaZKodu(uloziste.vyzvaOdkazu(uroven.id)) : null;
   // Případ Havarijní komise začíná mostem, který spadl; rozdělaná oprava má přednost.
@@ -3130,6 +3132,8 @@ export function spustUroven(
           // Platí pro cenu a hmotnost i pro zkoušku do zlomu.
           const neporuseny = vysledek.neporuseny;
           zkouseneMosty.set(navrhNaText(b.navrh), vysledek.pruchod && !vysledek.rozpad && neporuseny);
+          if (vysledek.pruchod && !vysledek.rozpad && neporuseny) nezdaryProZebricek.delete(navrhNaText(b.navrh));
+          else nezdaryProZebricek.set(navrhNaText(b.navrh), vysledek.pruchod && !vysledek.rozpad ? "poruseny" : "neprosel");
           if (vysledek.pruchod && !vysledek.rozpad && neporuseny) {
             prosleMosty.add(navrhNaText(b.navrh));
             // Do žebříčku jen vlastní most v kampani (cizí most z odkazu až po rozhodnutí hráče).
@@ -5787,23 +5791,34 @@ export function spustUroven(
   priKliknuti("import", () => rezim === "stavba" && otevriOkno("import", ""));
   // Sdílet jde z palety i z podrobností výsledku.
   for (const tlacitko of document.querySelectorAll<HTMLElement>('[data-akce="sdilet"]')) tlacitko.addEventListener("click", otevriSdileni);
-  // Žebříček úrovně (jen v kampani): zapsat jde most na výkresu, pokud s ním hráč právě prošel.
-  if (!mimoSoutez) {
+  // Žebříček úrovně: jen v kampani (pískoviště, komise ani zkušební úroveň mimo kampaň ho nemají).
+  // Zapsat jde most na výkresu, pokud s ním hráč v téhle návštěvě prošel bez porušení.
+  const tlacitkaZebricku = document.querySelectorAll<HTMLElement>('[data-akce="zebricek"]');
+  if (!mimoSoutez && kampan.some((u) => u.id === uroven.id)) {
     const oknoZebricku = pripojZebricek({
       uroven: uroven.id,
       nazev: nazevUrovne(uroven),
       uloziste,
       kZapisu: () => {
-        const otisky = host ? undefined : otiskyProZebricek.get(navrhNaText(editor.navrh));
-        if (!otisky) return { bezna: null, zlom: null };
+        const nic = (duvod: DuvodBezZapisu): { bezna: null; zlom: null; duvod: DuvodBezZapisu } => ({ bezna: null, zlom: null, duvod });
+        if (host) return nic("host");
+        const navrh = editor.navrh;
+        // Zkouška, jejíž přehrávání ještě běží, se nepočítá: okno nesmí výsledek prozradit dřív než hra.
+        if (beh && !beh.pokus && beh.navrh === navrh && !beh.vysledekUkazan) return nic("nezkouseno");
+        const klic = navrhNaText(navrh);
+        const otisky = otiskyProZebricek.get(klic);
+        // Zlom bez běžné zkoušky téže návštěvy se neposílá: server ho bez ověřené běžné nepřijme.
+        if (otisky?.bezna === undefined) return nic(nezdaryProZebricek.get(klic) ?? "nezkouseno");
         // Most, který se nevejde do odkazu, se nevejde ani do zápisu (server čte stejný kód).
-        if (!vejdeSeDoOdkazu(editor.navrh)) return { bezna: null, zlom: null };
-        const kod = zakodujMost(editor.navrh);
-        return { bezna: otisky.bezna === undefined ? null : { kod, otisk: otisky.bezna }, zlom: otisky.zlom === undefined ? null : { kod, otisk: otisky.zlom } };
+        if (!vejdeSeDoOdkazu(navrh)) return nic("velky");
+        const kod = zakodujMost(navrh);
+        return { bezna: { kod, otisk: otisky.bezna }, zlom: otisky.zlom === undefined ? null : { kod, otisk: otisky.zlom }, duvod: null };
       },
       zapis: (data) => zapis("zebricek", data),
     });
-    for (const tlacitko of document.querySelectorAll<HTMLElement>('[data-akce="zebricek"]')) tlacitko.addEventListener("click", () => oknoZebricku.otevri());
+    for (const tlacitko of tlacitkaZebricku) tlacitko.addEventListener("click", () => oknoZebricku.otevri());
+  } else {
+    for (const tlacitko of tlacitkaZebricku) tlacitko.hidden = true;
   }
   priKliknuti("sdileni-odkaz", () => void zkopirujKeSdileni(poleOdkazu, "odkaz"));
   priKliknuti("sdileni-zprava", () => void zkopirujKeSdileni(poleZpravy, "zprava"));

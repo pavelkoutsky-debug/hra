@@ -3,7 +3,7 @@
 //
 //   GET  /api/sprava?co=zebricky                     žebříčky nynější verze fyziky (řádky každého měřítka)
 //   GET  /api/sprava?co=zebricek-most&klic=…&most=…  kód mostu ze zápisu (k otevření ve hře)
-//   POST /api/sprava?co=zebricek-smazat              { znacka, uroven? } smaže zápisy hráče
+//   POST /api/sprava?co=zebricek-smazat              { znacka, uroven } smaže zápisy hráče v úrovni
 //   GET  /api/sprava?co=zebricek-pocty&den=…         počty dne (ověření, zápisy, odmítnutí)
 //
 // Vedle hesla správce (`MM_SPRAVCE_HESLO`) existuje heslo jen pro denní rozbor
@@ -37,8 +37,14 @@ async function spravujZebricky(zadost: Request, p: ProstrediServeru): Promise<Re
     if (telo instanceof Response) return telo;
     const co2 = telo.data as { znacka?: unknown; uroven?: unknown } | null;
     if (typeof co2 !== "object" || co2 === null || typeof co2.znacka !== "string" || !ZNACKA.test(co2.znacka)) return chyba(400, "chybí značka hráče");
-    if (co2.uroven !== undefined && (typeof co2.uroven !== "string" || !ID_UROVNE.test(co2.uroven))) return chyba(400, "neplatná úroveň");
-    return odpoved(200, { smazano: await smazZeZebricku(p.sklad, VERZE_FYZIKY, co2.znacka, (co2.uroven as string | undefined) ?? null) });
+    // Značka hráče platí jen pro svou úroveň, takže bez úrovně by nebylo co mazat.
+    if (typeof co2.uroven !== "string" || !ID_UROVNE.test(co2.uroven)) return chyba(400, "chybí úroveň");
+    try {
+      return odpoved(200, { smazano: await smazZeZebricku(p.sklad, VERZE_FYZIKY, co2.znacka, co2.uroven) });
+    } catch {
+      // Žebříček se při mazání pořád měnil (zápis s podmínkou se nepovedl): nic se nepřepsalo.
+      return chyba(503, "žebříček se zrovna měnil a smazání se nepovedlo; zkus to znovu");
+    }
   }
   return null;
 }
@@ -61,9 +67,9 @@ async function jeAnalytik(zadost: Request, p: ProstrediServeru): Promise<boolean
 /** Celá správa: ověří heslo a žádost předá tomu, komu patří. */
 export async function spravujVse(zadost: Request, p: ProstrediServeru): Promise<Response> {
   if (await jeAnalytik(zadost, p)) {
-    return (await spravujRozbor(zadost, p)) ?? chyba(403, "tohle heslo smí jen číst podklady a ukládat denní rozbor");
+    return (await spravujRozbor(zadost, p, true)) ?? chyba(403, "tohle heslo smí jen číst podklady a ukládat denní rozbor");
   }
   const odmitnuti = await overSpravce(zadost, p);
   if (odmitnuti) return odmitnuti;
-  return (await spravujRozbor(zadost, p)) ?? (await spravujZebricky(zadost, p)) ?? spravuj(zadost, p);
+  return (await spravujRozbor(zadost, p, false)) ?? (await spravujZebricky(zadost, p)) ?? spravuj(zadost, p);
 }
