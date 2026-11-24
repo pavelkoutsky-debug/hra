@@ -95,8 +95,8 @@ function nakresliPopiskyVyhrazenychKotev(ctx: Kontext, s: StavVykresu): void {
   ctx.font = `10px ${PISMO}`;
   ctx.textBaseline = "middle";
   for (const kotva of s.uroven.kotvy) {
-    if (kotva.jen !== "tlumic") continue;
-    const text = t("vykres.kotvaTlumic");
+    if (kotva.jen === undefined) continue;
+    const text = t(kotva.jen === "tlumic" ? "vykres.kotvaTlumic" : "vykres.kotvaLano");
     const p = svetNaObraz(s.kamera, s.rozmer, kotva);
     const vlevo = kotva.x <= stred;
     const odstup = mezi(0.55 * m, 9, 22) + 8;

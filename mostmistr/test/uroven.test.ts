@@ -306,6 +306,8 @@ describe("verze formátu úrovně", () => {
     const kotvy = (zaklad.kotvy as { x: number; y: number; typ: string }[]).map((k, i) => (i === 0 ? { ...k, jen: "tlumic" } : k));
     const sedma = nactiUroven({ ...zaklad, verze: 7, kotvy });
     expect(sedma.kotvy[0]!.jen).toBe("tlumic");
+    // Kotva smí být vyhrazená i lanu (kotevní blok zavěšeného mostu, 8-01).
+    expect(nactiUroven({ ...zaklad, verze: 7, kotvy: kotvy.map((k, i) => (i === 0 ? { ...k, jen: "lano" } : k)) }).kotvy[0]!.jen).toBe("lano");
     expect(sedma.kotvy[1]!.jen).toBeUndefined();
     ocekavejChybu({ ...zaklad, verze: 7, kotvy: kotvy.map((k, i) => (i === 0 ? { ...k, jen: "pilir" } : k)) }, "uroven.kotvy[0].jen");
   });

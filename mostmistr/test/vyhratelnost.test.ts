@@ -270,6 +270,31 @@ describe("lekce, které nejde obejít", () => {
     for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["8-01"]![klic], uroven), klic).toEqual([]);
   });
 
+  it("8-01: konzolová příhrada bez lan se o kotevní bloky ocelovým táhlem neopře", () => {
+    // Po přeladění M14: konzolová příhrada z dříků pylonů s ocelovým táhlem do kotvy za opěrou
+    // prošla bez jediného lana pod rozpočtem úrovně (hladové zlevňování: 4,28 milionu, medaile za
+    // průchod). Bez táhla se složí vlastní vahou (je mezi mosty, které projít nesmějí), takže
+    // stačí kotevní bloky vyhradit lanům.
+    const uroven = kampan.find((u) => u.id === "8-01")!;
+    expect(uroven.kotvy.filter((k) => k.jen === "lano").map((k) => [k.x, k.y])).toEqual([
+      [-30, 0],
+      [126, 0],
+    ]);
+    const sTahlem = (prvek: "ocel-lehka" | "ocel-tezka" | "lano-nosne"): string[] => {
+      const k = new Kreslic("8-01");
+      for (let x = 0; x < 96; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
+      k.prut("pilir", [-6, 0], [-6, 12]);
+      k.prut("pilir", [-6, 12], [-6, 24]);
+      // Táhlo z hlavy pylonu do kotevního bloku: řetěz čtyř dílů po přímce, poslední končí v kotvě.
+      if (prvek === "lano-nosne") k.prut(prvek, [-6, 24], [-30, 0]);
+      else for (let i = 0; i < 4; i++) k.prut(prvek, [-6 - 6 * i, 24 - 6 * i], [-12 - 6 * i, 18 - 6 * i]);
+      return zkontrolujNavrh(k.navrh(), uroven).map((p) => p.druh).filter((druh) => druh === "kotva-jen-lano");
+    };
+    expect(sTahlem("ocel-lehka")).toEqual(["kotva-jen-lano"]);
+    expect(sTahlem("ocel-tezka")).toEqual(["kotva-jen-lano"]);
+    expect(sTahlem("lano-nosne")).toEqual([]);
+  });
+
   it("8-02: lávka na lanech bez laděného tlumiče: paleta nemá ocel a vedení drží pylony nízko", () => {
     // Recenze obtížnosti M14 (nález 1): krátký šikmý ocelový stožár s hlavou nad mostovkou posunul
     // vlastní frekvence lávky mezi rytmy útvaru a procesí a lávka bez jediného tlumiče dostala

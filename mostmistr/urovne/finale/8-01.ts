@@ -15,8 +15,10 @@
 // mířit pod plošší přímku, než jakou dají lana z pylonu nad 18 m, takže ho drží jen lano do
 // mostovky u břehu, a to s mnohonásobným tahem (zkoušeno 20 takových mostů, žádný neprošel).
 // Bez příhrady tak zbude 22 m kolejiště bez lan a ani svařené ho vlak nepřejede; příhrada bez lan
-// takové pole nepřeklene a konzola z pylonů bez lan, která by vlak unesla, stojí přes 5,3 milionu. Zóny u opěr berou
-// oporu konzolové příhradě, která by jinak lana nahradila ocelovým táhlem do kotev.
+// takové pole nepřeklene. Konzolová příhrada z pylonů potřebuje táhlo do kotevního bloku za
+// opěrou (bez něj se složí vlastní vahou) a s ocelovým táhlem by prošla i pod rozpočtem; kotevní
+// bloky jsou proto vyhrazené lanům (`jen: "lano"`), takže most, který projde, má aspoň kotevní
+// lana. Zóny u opěr berou konzolové příhradě oporu o opěry.
 // Recenze M14 našla, že s dřívějším stropem 4,5 m a bez zóny u pylonu lana z 15 a 12 m dosáhla
 // do styčníků 42 a 48 a most bez příhrady dostal rozpočtovou medaili; takový most dnes neprojde
 // kontrolou návrhu (lana pod 18 m vedou do zóny u pylonu).
@@ -186,11 +188,12 @@ export const reseni: ReseniUrovne = {
         }
       }),
     },
-    // Konzolová příhrada z pylonů bez lan: horní pás z dříku pylonu (20 m) klesá ke středu,
-    // pylon drží ocelové táhlo do kotvy a střed nese Prattova příhrada 30–66. Pod rychlíkem
-    // se vzepře diagonála u břehu a most se zborcí.
+    // Konzolová příhrada z pylonů bez jediného lana a bez táhla do kotevního bloku: pylon ji
+    // sám neudrží a most se složí už vlastní vahou. S ocelovým táhlem do kotvy by taková
+    // konzola prošla (hladové zlevňování ji dostalo na 4,28 milionu, pod rozpočet úrovně),
+    // proto jsou kotevní bloky vyhrazené lanům (`jen: "lano"`) a táhlo kontrola návrhu odmítne.
     {
-      nazev: "konzolová příhrada z pylonů, bez lan",
+      nazev: "konzolová příhrada z pylonů, bez lan a bez táhla",
       navrh: navrh((k) => {
         kolej(k);
         for (const s of [0, 1]) {
@@ -198,7 +201,6 @@ export const reseni: ReseniUrovne = {
           for (let i = 0; i + 1 < horni.length; i++) k.prut(O, [X(s, horni[i]![0]), horni[i]![1]], [X(s, horni[i + 1]![0]), horni[i + 1]![1]]);
           for (const [x, y] of horni.slice(2)) k.prut(O, [X(s, x), 0], [X(s, x), y]);
           for (const [x, y] of horni.slice(3)) k.prut(O, [X(s, x), y], [X(s, x - 6), 0]);
-          for (let i = 0; i < 4; i++) k.prut(O, [X(s, -6 - 6 * i), 20 - 5 * i], [X(s, -12 - 6 * i), 15 - 5 * i]);
           pylon(k, PYLON[s]!, 21, [20]);
         }
         for (let x = 30; x < 66; x += 6) k.prut(TO, [x, 4], [x + 6, 4]);

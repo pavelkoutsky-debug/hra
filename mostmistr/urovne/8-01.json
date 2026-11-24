@@ -65,12 +65,14 @@
     {
       "x": -30,
       "y": 0,
-      "typ": "pevna"
+      "typ": "pevna",
+      "jen": "lano"
     },
     {
       "x": 126,
       "y": 0,
-      "typ": "pevna"
+      "typ": "pevna",
+      "jen": "lano"
     }
   ],
   "zaklady": [
