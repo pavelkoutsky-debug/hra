@@ -42,7 +42,7 @@ Poslední aktualizace: 23. 11. 2026
 
 ## M13 — výsledek
 
-Sdílení mostu odkazem (návrh 13 z `docs/RECENZE.md`): důvod se ke hře vrátit a poslat ji dál. Fyzika, úrovně ani formáty dat se nemění.
+Sdílení mostu odkazem (návrh 13 z `docs/RECENZE.md`): důvod se ke hře vrátit a poslat ji dál. Verze hry 0.18.0. Fyzika ani úrovně se nemění. S milníkem jde ven i příprava zkouškových úrovní (formát úrovně 8 s polem `zkouskova`: úroveň bez ukázky a bez nápovědy, se štítkem v přehledu); samotné zkouškové úrovně přijdou se zbytkem M12 a do té doby se nic z toho neprojeví.
 
 **Odkaz na most** (`src/data/sdileni.ts`). Tlačítko „Sdílet most…“ v paletě a v podrobnostech výsledku otevře okno s odkazem `?uroven=1-03&most=…`, který most otevře komukoli v jeho úrovni. Kód mostu je vlastní úsporný zápis (celá čísla po sedmi bitech, ostatní přesně jako osm bajtů, abeceda bezpečná pro adresu): most pro mistrovskou 1-03 má odkaz dlouhý 211 znaků, největší most kampaně pod 1 500. Zápis JSON z Exportu by byl třikrát až osmkrát delší a samé procento. Kód nese pořadí i čísla prutů a styčníků, takže **most z odkazu dá ve zkoušce stejný otisk jako originál** (kritérium milníku; hlídá jednotkový test na čtyřech úrovních a test v prohlížeči na 1-03). Na konci má kontrolní součet: odkaz zkrácený cestou (zalomení v e-mailu, limit zprávy) se odmítne s větou „odkaz je poškozený nebo neúplný“, místo aby otevřel půlku mostu. Import čte i odkaz nebo samotný kód.
 
