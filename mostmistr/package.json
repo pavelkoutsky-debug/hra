@@ -18,7 +18,8 @@
     "mereni": "vite build && vitest run --config vitest.e2e.config.ts test/e2e/mereni.e2e.ts",
     "otisky": "MM_ZAPIS_OTISKU=1 vitest run test/regrese.test.ts -t \"otisky referenčních mostů\"",
     "sampioni": "MM_ZAPIS_SAMPIONU=1 vitest run test/sampioni.test.ts -t \"uložení šampioni\"",
-    "vyzvy": "MM_ZAPIS_VYZEV=1 vitest run test/vyzvy.test.ts -t \"uložená únosnost na korunu\""
+    "vyzvy": "MM_ZAPIS_VYZEV=1 vitest run test/vyzvy.test.ts -t \"uložená únosnost na korunu\"",
+    "stroje": "vite build --config mereni/stroje/vite.config.ts && node mereni/stroje/porovnej.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
