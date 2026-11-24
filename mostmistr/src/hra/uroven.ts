@@ -4705,8 +4705,17 @@ export function spustUroven(
       if (sandbox.rozpocet !== null) castiCile.push(t("sandbox.cil.rozpocet", { castka: koruny(sandbox.rozpocet) }));
       if (sandbox.komfort < 3 && vysledek.komfort) castiCile.push(t("sandbox.cil.komfort", { mez: cislo(MEZE_KOMFORTU[sandbox.komfort - 1]!, 1) }));
     }
-    const vetaCile = castiCile.length > 0 ? t("sandbox.cil.splnen", { cil: castiCile.join(t("sandbox.cil.a")) }) : null;
-    document.body.dataset.cilSandboxu = sandbox && (sandbox.rozpocet !== null || sandbox.komfort < 3) ? (vetaCile ? "splnen" : "nesplnen") : "";
+    // Mez kmitání se měří jen pod lidmi: na mostě, po kterém nikdo nešel, se cíl nevyhodnotí
+    // (není ani splněný, ani nesplněný) a výsledek to řekne.
+    const bezLidi = sandbox !== null && sandbox.komfort < 3 && !vysledek.komfort && vysledek.pruchod && !jePokus;
+    const vetaCile =
+      castiCile.length > 0
+        ? t("sandbox.cil.splnen", { cil: castiCile.join(t("sandbox.cil.a")) }) + (bezLidi ? ` ${t("sandbox.cil.bezLidi")}` : "")
+        : bezLidi
+          ? t("sandbox.cil.bezLidi")
+          : null;
+    const maCil = sandbox !== null && (sandbox.rozpocet !== null || sandbox.komfort < 3) && !jePokus;
+    document.body.dataset.cilSandboxu = !maCil ? "" : castiCile.length > 0 ? "splnen" : bezLidi ? "nemereno" : "nesplnen";
     // Havarijní komise: uzavřený případ, nebo připomenutí, že tohle byl ještě spadlý most.
     let vetaKomise: string | null = null;
     if (havarie && !jePokus) {
@@ -5071,6 +5080,33 @@ export function spustUroven(
   }
 
   /**
+   * Na návštěvě ve scénáři má hráč vlastní pískoviště uložené stranou. Než ho něco přepíše
+   * (otevření scénáře ve svém pískovišti, otevření práce z dílny), jeho rozestavěný most se
+   * uloží do dílny. Vrací false, když to nejde (plná dílna, plná paměť prohlížeče): volající
+   * pak nic nepřepisuje. Že se zápis povedl, se čte zpátky z paměti: úložiště chybu zápisu
+   * spolkne, a most by zmizel bez stopy.
+   */
+  function schovejVlastniDoDilny(): boolean {
+    const vlastni = ulozenyMost();
+    if (!vlastni || vlastni.pruty.length === 0) return true;
+    let kod: string | null = null;
+    try {
+      kod = zakodujMost(vlastni);
+    } catch {
+      kod = null;
+    }
+    if (kod === null) return false;
+    const mojeUdoli = uloziste.sandbox;
+    const jeVDilne = (): boolean => uloziste.dilna.prace.some((p) => jeStejnaPrace(p, mojeUdoli, kod));
+    if (jeVDilne()) return true;
+    const dilna = uloziste.dilna;
+    const ulozeni = ulozPraci(dilna, volnyNazevPrace(dilna, t("dilna.nazev.rozestaveny")), mojeUdoli, vlastni, Date.now());
+    if (ulozeni.stav !== "ulozeno") return false;
+    uloziste.dilna = ulozeni.dilna;
+    return jeVDilne();
+  }
+
+  /**
    * Hráč se rozhodl, co se scénářem z odkazu (pískoviště): uložit ho do dílny, otevřít ho ve
    * svém pískovišti (jeho rozestavěný most se nejdřív sám uloží do dílny), nebo se vrátit.
    */
@@ -5085,31 +5121,21 @@ export function spustUroven(
         return;
       }
       uloziste.dilna = vysledek.dilna;
-      ukazHlaseni(t("dilna.host.ulozeno", { nazev: vysledek.dilna.prace[0]!.nazev }), "info", true);
+      // Zápis se čte zpátky: plná paměť prohlížeče by jinak dala „uloženo“ bez uložení.
+      const ulozena = vysledek.dilna.prace[0]!;
+      if (!uloziste.dilna.prace.some((p) => p.nazev === ulozena.nazev && p.kod === ulozena.kod)) {
+        ukazHlaseni(t("dilna.ulozit.nejde"), "varovani", true);
+        return;
+      }
+      ukazHlaseni(t("dilna.host.ulozeno", { nazev: ulozena.nazev }), "info", true);
       return;
     }
     if (jak === "nechat") {
       // Rozestavěný most hráče nesmí zmizet bez stopy: co není v dílně, tam se uloží samo.
-      const vlastni = ulozenyMost();
-      let prace = dilna;
-      if (vlastni && vlastni.pruty.length > 0) {
-        let kod: string | null = null;
-        try {
-          kod = zakodujMost(vlastni);
-        } catch {
-          kod = null;
-        }
-        const mojeUdoli = uloziste.sandbox;
-        if (kod === null || !prace.prace.some((p) => jeStejnaPrace(p, mojeUdoli, kod))) {
-          const ulozeni = ulozPraci(prace, volnyNazevPrace(prace, t("dilna.nazev.rozestaveny")), mojeUdoli, vlastni, Date.now());
-          if (ulozeni.stav !== "ulozeno") {
-            ukazHlaseni(t("dilna.host.neniKam"), "varovani", true);
-            zapis("dilna", { co: "scenar-otevrit", stav: "neni-kam" });
-            return;
-          }
-          prace = ulozeni.dilna;
-          uloziste.dilna = prace;
-        }
+      if (!schovejVlastniDoDilny()) {
+        ukazHlaseni(t("dilna.host.neniKam"), "varovani", true);
+        zapis("dilna", { co: "scenar-otevrit", stav: "neni-kam" });
+        return;
       }
       zapis("dilna", { co: "scenar-otevrit", stav: "ok", upraveny: editor.navrh !== host.navrh });
       const scenar = editor.navrh;
@@ -5593,14 +5619,18 @@ export function spustUroven(
         if (!uloziste.trvale) {
           // Bez paměti prohlížeče nese práci adresa: otevře se jako scénář z odkazu.
           window.location.href = odkazNaScenar(window.location.origin + window.location.pathname, prace.nastaveni, prace.kod);
-          return;
+          return true;
         }
+        // Na návštěvě je vlastní pískoviště hráče uložené stranou a otevření práce ho přepíše:
+        // jeho rozestavěný most se nejdřív uloží do dílny, jinak se nic neotevře.
+        if (host !== null && !schovejVlastniDoDilny()) return false;
         // Od téhle chvíle se výkres neukládá: stůl patří otevírané práci.
         host = null;
         neukladat = true;
         uloziste.sandbox = prace.nastaveni;
         uloziste.ulozNavrh(rozkodujMost(prace.kod));
         window.location.search = "?sandbox";
+        return true;
       },
       zapis: (data) => zapis("dilna", data),
     });

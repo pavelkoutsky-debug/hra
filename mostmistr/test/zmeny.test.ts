@@ -1,10 +1,11 @@
-// Počítání změn mezi původním a opraveným mostem (Havarijní komise): změna je jeden tah
-// nástroje, pruty se porovnávají podle místa a posunutý styčník je jedna změna.
+// Počítání změn mezi původním a opraveným mostem (Havarijní komise): pruty se porovnávají podle
+// místa, posunutý styčník je jedna změna a počet nezávisí na cestě, kterou hráč k mostu došel.
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
 import { zmenyMostu } from "../src/data/zmeny";
 import { nastavLadenyTlumic, nastavPredpeti, nastavSvar, nastavZamek, nastavZavazi, nastavZdvih, posunStycnik, pridejPrut, smaz, zmenPrvek } from "../src/editor/upravy";
+import { zdvihPistu } from "../src/data/katalog";
 import { RESENI } from "../urovne/reseni";
 
 /** Příhrada 1-03: dřevěná mostovka a trámy nad ní. */
@@ -129,5 +130,62 @@ describe("změny mezi dvěma návrhy mostu", () => {
     const pist = zvedaci.pruty.find((p) => p.prvek === "pist")!;
     const vetsiZdvih = nastavZdvih(zvedaci, new Set([pist.id]), () => 2);
     expect(zmenyMostu(zvedaci, vetsiZdvih)).toEqual([{ druh: "nastaveni", prut: pist.id }]);
+  });
+  it("počet změn nezávisí na cestě: tažení, smazání a nové nakreslení i řetěz tažení dají totéž", () => {
+    // Styčník A se třemi pruty; výsledek je A o metr výš bez svislice. Jednou tažením a
+    // smazáním svislice, podruhé smazáním styčníku a nakreslením dvou prutů (nová id).
+    for (const aPosledni of [true, false]) {
+      const k = new Kreslic("1-03");
+      if (!aPosledni) k.bod(4, 3);
+      k.prut("mostovka-drevo", [0, 0], [4, 0]);
+      k.prut("mostovka-drevo", [4, 0], [8, 0]);
+      k.prut("drevo-lehke", [0, 0], [4, 3]);
+      k.prut("drevo-lehke", [4, 0], [4, 3]);
+      k.prut("drevo-lehke", [8, 0], [4, 3]);
+      const puvodni = k.navrh();
+      const a = idV(puvodni, 4, 3);
+      const tazeny = posunStycnik(puvodni, a, { x: 4, y: 4 })!;
+      const svislice = tazeny.pruty.find((p) => [p.a, p.b].includes(idV(tazeny, 4, 0)) && [p.a, p.b].includes(idV(tazeny, 4, 4)))!;
+      const cesta1 = smaz(tazeny, new Set([svislice.id]), new Set());
+      const bez = smaz(puvodni, new Set(), new Set([a]));
+      const cesta2 = pridejPrut(pridejPrut(bez, { x: 0, y: 0 }, { x: 4, y: 4 }, "drevo-lehke"), { x: 4, y: 4 }, { x: 8, y: 0 }, "drevo-lehke");
+      expect(druhy(zmenyMostu(puvodni, cesta1)).sort()).toEqual(["prut-odebran", "stycnik-posunut"]);
+      expect(druhy(zmenyMostu(puvodni, cesta2)).sort()).toEqual(["prut-odebran", "stycnik-posunut"]);
+    }
+    // Dvě tažení po sobě, druhé na místo, kde stál první styčník: dvě změny, ne přestavba.
+    const k = new Kreslic("1-03");
+    for (let x = 0; x < 12; x += 4) k.prut("mostovka-drevo", [x, 0], [x + 4, 0]);
+    k.prut("drevo-lehke", [0, 0], [2, 2]);
+    k.prut("drevo-lehke", [2, 2], [4, 0]);
+    k.prut("drevo-lehke", [4, 0], [6, 2]);
+    k.prut("drevo-lehke", [6, 2], [8, 0]);
+    const p = k.navrh();
+    const prvni = posunStycnik(p, idV(p, 6, 2), { x: 10, y: 2 })!;
+    const druhy2 = posunStycnik(prvni, idV(prvni, 2, 2), { x: 6, y: 2 })!;
+    expect(druhy(zmenyMostu(p, prvni))).toEqual(["stycnik-posunut"]);
+    expect(druhy(zmenyMostu(p, druhy2))).toEqual(["stycnik-posunut", "stycnik-posunut"]);
+    // Totéž s přečíslovanými styčníky a pruty v jiném pořadí (id o výsledku nic neříkají).
+    const jinak: NavrhMostu = {
+      ...druhy2,
+      stycniky: druhy2.stycniky.map((s) => ({ ...s, id: 900 - s.id })).reverse(),
+      pruty: druhy2.pruty.map((q) => ({ ...q, id: 700 - q.id, a: 900 - q.b, b: 900 - q.a })).reverse(),
+    };
+    expect(druhy(zmenyMostu(p, jinak))).toEqual(["stycnik-posunut", "stycnik-posunut"]);
+    // A zpátky: oba styčníky vrácené na místo nejsou změna.
+    const zpet = posunStycnik(posunStycnik(druhy2, idV(druhy2, 6, 2), { x: 2, y: 2 })!, idV(druhy2, 10, 2), { x: 6, y: 2 })!;
+    expect(zmenyMostu(p, zpet)).toEqual([]);
+  });
+
+  it("nastavení na výchozí hodnotu změna není", () => {
+    const k = new Kreslic("7-01");
+    k.prut("mostovka-ocel", [0, 0], [6, 0]);
+    k.prut("pist", [0, -3], [4, 0]);
+    const p = k.navrh();
+    const pist = p.pruty.find((q) => q.prvek === "pist")!;
+    expect(pist.zdvih).toBeUndefined();
+    const vychozi = nastavZdvih(p, new Set([pist.id]), (_id, delka) => zdvihPistu(undefined, delka));
+    expect(zmenyMostu(p, vychozi)).toEqual([]);
+    const jiny = nastavZdvih(p, new Set([pist.id]), (_id, delka) => zdvihPistu(undefined, delka) + 0.5);
+    expect(zmenyMostu(p, jiny)).toEqual([{ druh: "nastaveni", prut: pist.id }]);
   });
 });

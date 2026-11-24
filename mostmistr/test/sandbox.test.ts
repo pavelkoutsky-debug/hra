@@ -230,8 +230,7 @@ describe("úroveň sandboxu", () => {
     for (const druh of DRUHY_TRAS) {
       for (let rozpeti = MEZE_SANDBOXU.rozpeti.min; rozpeti <= MEZE_SANDBOXU.rozpeti.max; rozpeti += 3) {
         for (const hloubka of [MEZE_SANDBOXU.hloubka.min, 4, 5, 8, MEZE_SANDBOXU.hloubka.max]) {
-          for (const lod of [0, 9]) {
-            const kridla = lod > 0 ? 2 : 1;
+          for (const [lod, kridla] of [[0, 1], [9, 1], [9, 2]] as const) {
             const u = urovenSandboxu({ ...vychoziSandbox(), rozpeti, hloubka, druh, zaklady: 0, provoz: [], zvedani: { cas: 6, lod, kridla } });
             expect(u.povolenePrvky).toContain("pist");
             // Kotvy pro paty pístů: pod opěrou s čepem (u dvou křídel pod oběma), nad dnem, na rastru.
@@ -255,6 +254,11 @@ describe("úroveň sandboxu", () => {
               expect(plavba!.xMax).toBeLessThan(rozpeti);
               expect(plavba!.xMax).toBeGreaterThan(plavba!.xMin);
               expect(plavba!.cas + plavba!.trvani).toBeLessThanOrEqual(u.pohyb!.sklopit);
+              // Jakkoli vysokou loď musí jít pustit: profil začíná až za koncem křídla zvednutého
+              // na doraz (70°), u dvou křídel za koncem každého z nich.
+              const dosah = (kridla === 1 ? rozpeti : rozpeti / 2) * Math.cos((70 * Math.PI) / 180);
+              expect(plavba!.xMin, `${rozpeti} m, křídel ${kridla}`).toBeGreaterThanOrEqual(dosah + 0.4);
+              if (kridla === 2) expect(rozpeti - plavba!.xMax).toBeGreaterThanOrEqual(dosah + 0.4);
             } else expect(u.lode).toEqual([]);
           }
         }

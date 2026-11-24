@@ -30,12 +30,16 @@ export interface MoznostiDilny {
   nastaveni: () => NastaveniSandboxu;
   navrh: () => NavrhMostu;
   /**
-   * Hráč je na návštěvě ve scénáři z odkazu: stůl není jeho (jeho vlastní pískoviště zůstává
-   * uložené), takže otevření jiné práce nic jeho nepřepíše.
+   * Hráč je na návštěvě ve scénáři z odkazu: na stole je cizí most, na který se okno neptá.
+   * Jeho vlastní pískoviště je uložené stranou a před přepsáním ho hlídá `otevri`.
    */
   naNavsteve: () => boolean;
-  /** Položí práci na stůl (uloží nastavení i most jako pískoviště hráče a načte ho znovu). */
-  otevri: (prace: PraceDilny) => void;
+  /**
+   * Položí práci na stůl (uloží nastavení i most jako pískoviště hráče a načte ho znovu). Vrací
+   * false, když to odmítlo: hráč je na návštěvě a jeho vlastní rozestavěný most se nepodařilo
+   * uložit do dílny (plná dílna nebo paměť prohlížeče), takže se nic nepřepsalo.
+   */
+  otevri: (prace: PraceDilny) => boolean;
   /** Zápis do deníku hraní: jen kódy a čísla, nikdy jméno práce. */
   zapis: (data: Record<string, string | number | boolean>) => void;
 }
@@ -150,8 +154,13 @@ export function pripojDilnu(m: MoznostiDilny): { otevri(): void } {
         return;
       }
       m.zapis({ co: "otevrit", praci: m.uloziste.dilna.prace.length, prutu: navrh.pruty.length });
+      if (!m.otevri(prace)) {
+        // Vlastní most hráče se nevešel do dílny: nic se nepřepsalo a okno řekne proč.
+        obnov();
+        rekni(t("dilna.host.neniKam"), "varovani");
+        return;
+      }
       okno.close();
-      m.otevri(prace);
     });
     const poslat = tlacitko("dilna-odkaz-prace", t("dilna.karta.odkaz"), () => {
       m.zapis({ co: "odkaz", prutu: navrh.pruty.length, ze: "prace" });

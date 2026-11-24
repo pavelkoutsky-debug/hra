@@ -403,16 +403,21 @@ function hloubkyKotevPistu(hloubka: number): number[] {
   return [...new Set([Math.min(3, hloubka - 1), Math.min(5, hloubka - 1)])];
 }
 
+/** Kosinus největšího úhlu, o který píst smí křídlo zvednout (70°, `otoceniKridla`). */
+const KOSINUS_NEJVETSIHO_ZVEDNUTI = 0.3421;
+
 /**
- * Kudy pod mostem pluje loď (jako v kapitole 7): u jednoho křídla dál od čepu, kde je zvednuté
- * křídlo nejvýš, a skoro až k protější opěře; u dvou křídel středem mezi nimi.
+ * Kudy pod mostem pluje loď (jako v kapitole 7): u jednoho křídla dál od čepu a skoro až
+ * k protější opěře; u dvou křídel středem mezi nimi. Profil začíná až za místem, kam dosáhne
+ * konec křídla zvednutého na doraz (s půlmetrovou vůlí): jakkoli vysokou loď tak jde pustit,
+ * jinak by vysoká loď do křídla vrazila vždycky a hráč by neměl jak úlohu splnit.
  */
 function plavebniProfil(rozpeti: number, kridla: 1 | 2): { xMin: number; xMax: number } {
   if (kridla === 2) {
     const odstup = Math.max(2, Math.round(0.29 * rozpeti));
     return { xMin: odstup, xMax: rozpeti - odstup };
   }
-  return { xMin: Math.ceil(rozpeti / 3), xMax: rozpeti - Math.max(1, Math.round(rozpeti / 12)) };
+  return { xMin: Math.ceil(rozpeti * KOSINUS_NEJVETSIHO_ZVEDNUTI + 0.5), xMax: rozpeti - Math.max(1, Math.round(rozpeti / 12)) };
 }
 
 /**

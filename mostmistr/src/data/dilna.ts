@@ -147,16 +147,19 @@ const ZNAK_TRASY: Record<DruhTrasy, string> = { lavka: "l", silnice: "s", kolej:
  */
 export function sandboxDoAdresy(nastaveni: NastaveniSandboxu): string {
   const n = nactiSandbox(nastaveni);
+  // Čísla přesně, jen nikdy s exponentem: zápis „1e-7“ by čtení odmítlo jako poškozený odkaz
+  // (a čas pod miliontinu sekundy je nula). Meze nastavení drží čísla daleko od velkých řádů.
+  const c = (x: number): string => (Math.abs(x) < 1e-6 ? "0" : String(x));
   return [
     VERZE_SANDBOXU,
-    n.rozpeti,
-    n.hloubka,
+    c(n.rozpeti),
+    c(n.hloubka),
     ZNAK_TRASY[n.druh],
     n.voda ? 1 : 0,
-    n.zaklady,
-    n.provoz.map((p) => [p.druh, p.pocet, p.smer === 1 ? 1 : 0, p.cas].join(":")).join("_"),
-    n.zvedani ? [n.zvedani.kridla, n.zvedani.cas, n.zvedani.lod].join(":") : "",
-    n.rozpocet ?? "",
+    c(n.zaklady),
+    n.provoz.map((p) => [p.druh, c(p.pocet), p.smer === 1 ? 1 : 0, c(p.cas)].join(":")).join("_"),
+    n.zvedani ? [n.zvedani.kridla, c(n.zvedani.cas), c(n.zvedani.lod)].join(":") : "",
+    n.rozpocet === null ? "" : c(n.rozpocet),
     n.komfort,
   ].join("~");
 }

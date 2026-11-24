@@ -123,6 +123,10 @@ describe("nastavení pískoviště v adrese", () => {
       expect(zapis.length).toBeLessThan(encodeURIComponent(sandboxNaText(nastaveni)).length / 2);
     }
     expect(sandboxDoAdresy(vychoziSandbox())).toBe("2~24~8~s~1~1~auto:2:1:0_nakladni:1:0:4~~~3");
+    // Čas, který by se vypsal s exponentem, je v adrese nula a odkaz zůstává čitelný.
+    const drobny = sandboxDoAdresy({ ...vychoziSandbox(), provoz: [{ druh: "auto", pocet: 1, smer: 1, cas: 1e-7 }] });
+    expect(drobny).not.toMatch(/e-/);
+    expect(sandboxZAdresy(drobny).provoz[0]!.cas).toBe(0);
     expect(sandboxDoAdresy(PREDLOHY_SANDBOXU.find((p) => p.id === "kanal")!.nastaveni)).toBe("2~16~8~s~1~0~auto:2:1:0_autobus:1:0:22~2:6:9~~3");
   });
 
