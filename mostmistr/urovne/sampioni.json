@@ -476,34 +476,16 @@
     "4-04": {
       "cena": {
         "z": "rozpocet",
-        "otisk": "ffe6cfdd",
+        "otisk": "63a278a1",
         "upravy": [
-          {"stycnik":14,"x":-3,"y":11},
-          {"stycnik":17,"x":6,"y":8},
-          {"stycnik":18,"x":13,"y":6},
-          {"stycnik":27,"x":65,"y":8},
-          {"stycnik":26,"x":59,"y":6},
-          {"stycnik":27,"x":64,"y":7},
-          {"stycnik":26,"x":60,"y":6}
+          {"stycnik":16,"x":76,"y":10}
         ]
       },
       "hmotnost": {
         "z": "rozpocet",
-        "otisk": "ffe6cfdd",
+        "otisk": "63a278a1",
         "upravy": [
-          {"stycnik":16,"x":76,"y":11},
-          {"stycnik":27,"x":65,"y":8},
-          {"stycnik":26,"x":59,"y":6},
-          {"stycnik":17,"x":7,"y":8},
-          {"stycnik":18,"x":13,"y":6},
-          {"stycnik":27,"x":65,"y":7},
-          {"stycnik":17,"x":8,"y":7},
-          {"stycnik":26,"x":60,"y":6},
-          {"stycnik":18,"x":12,"y":6},
-          {"stycnik":14,"x":-4,"y":11},
-          {"stycnik":19,"x":19,"y":4},
-          {"stycnik":20,"x":24,"y":3},
-          {"stycnik":19,"x":18,"y":4}
+          {"stycnik":16,"x":76,"y":10}
         ]
       }
     },
@@ -1116,45 +1098,15 @@
     },
     "8-02": {
       "cena": {
-        "z": "rozpocet",
-        "otisk": "a1bc187e",
+        "z": "pruchod",
+        "otisk": "48a013dd",
         "upravy": [
-          {"prut":15,"pryc":true},
-          {"prut":13,"pryc":true},
-          {"prut":20,"pryc":true},
-          {"prut":16,"pryc":true},
-          {"prut":11,"pryc":true},
-          {"stycnik":15,"x":61,"y":9},
-          {"stycnik":15,"x":60,"y":8},
-          {"stycnik":12,"x":-2,"y":9},
-          {"stycnik":12,"x":-2,"y":8},
-          {"stycnik":12,"x":-2,"y":7},
-          {"stycnik":12,"x":-3,"y":6},
-          {"stycnik":12,"x":-3,"y":5},
-          {"stycnik":12,"x":-3,"y":4},
-          {"stycnik":12,"x":-3,"y":3},
-          {"stycnik":12,"x":-3,"y":2},
-          {"stycnik":12,"x":-4,"y":1},
-          {"stycnik":3,"tlumic":400},
-          {"stycnik":5,"tlumic":400},
-          {"stycnik":3,"tlumic":200},
-          {"stycnik":15,"x":61,"y":7},
-          {"stycnik":4,"tlumic":400},
-          {"stycnik":6,"tlumic":400},
-          {"stycnik":7,"tlumic":400},
-          {"stycnik":6,"tlumic":200},
-          {"stycnik":7,"tlumic":200},
-          {"stycnik":6,"tlumic":100},
-          {"stycnik":7,"tlumic":100},
-          {"stycnik":7,"tlumic":50},
-          {"prut":22,"pryc":true},
-          {"prut":14,"pryc":true},
+          {"stycnik":2,"tlumic":0},
           {"stycnik":3,"tlumic":0},
-          {"stycnik":6,"tlumic":0},
           {"stycnik":7,"tlumic":0},
-          {"prut":12,"pryc":true},
-          {"prut":10,"pryc":true},
-          {"stycnik":4,"tlumic":200}
+          {"stycnik":8,"tlumic":0},
+          {"stycnik":12,"x":0,"y":9},
+          {"stycnik":15,"x":60,"y":9}
         ]
       },
       "hmotnost": {
@@ -1166,24 +1118,17 @@
           {"stycnik":12,"x":0,"y":8},
           {"stycnik":15,"x":60,"y":8},
           {"stycnik":15,"x":61,"y":7},
-          {"stycnik":15,"x":62,"y":6},
           {"stycnik":3,"tlumic":600},
           {"stycnik":4,"tlumic":600},
+          {"stycnik":12,"x":-1,"y":7},
           {"stycnik":5,"tlumic":600},
           {"stycnik":6,"tlumic":600},
-          {"prut":22,"pryc":true},
-          {"stycnik":6,"tlumic":300},
-          {"stycnik":12,"pryc":true},
-          {"stycnik":15,"x":62,"y":5},
-          {"stycnik":5,"tlumic":0},
           {"stycnik":4,"tlumic":300},
-          {"prut":19,"pryc":true},
-          {"stycnik":4,"tlumic":150},
+          {"stycnik":5,"tlumic":300},
+          {"stycnik":6,"tlumic":300},
+          {"stycnik":5,"tlumic":150},
           {"stycnik":6,"tlumic":150},
-          {"stycnik":4,"tlumic":50},
-          {"stycnik":15,"x":63,"y":5},
-          {"stycnik":15,"x":64,"y":5},
-          {"stycnik":6,"tlumic":50}
+          {"stycnik":5,"tlumic":50}
         ]
       }
     },

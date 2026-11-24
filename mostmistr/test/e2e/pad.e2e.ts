@@ -653,6 +653,105 @@ describe("pád mostu na telefonu", () => {
   }, 240_000);
 });
 
+describe("nálezy recenze hraní M17", () => {
+  /** Text údaje i ze sbalené části výsledku, s obyčejnými mezerami. */
+  const celyText = async (jmeno: string): Promise<string> =>
+    ((await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "").replace(/[\u00a0\u202f]/g, " ");
+
+  it("4-03: most s nedopnutými lany neslyší o kotevním laně ani o naklonění pylonu, ale že má nejdřív dopnout; po dopnutí projde", async () => {
+    await otevri("4-03");
+    await nactiMost(pad("4-03", 4));
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    const prvni = await celyText("vysledek-prvni");
+    expect(prvni).toMatch(/^Jako první povolil prut \d+ \(pilíř\)/);
+    expect(prvni).toContain("nejdřív je dopni");
+    expect(prvni).not.toContain("kotevní");
+    expect(prvni).not.toContain("nakloň");
+    await akce("upravit").click();
+    await akce("dopnout").click();
+    await stranka.locator('body[data-dopnuti="hotovo"]').waitFor({ timeout: 60_000 });
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    // Pohodlí v autobusu se tady nehodnotí: řádek nesmí vedle medaile říkat „nepřijatelné“.
+    const autobus = await celyText("vysledek-autobus");
+    expect(autobus).toContain("tady se nehodnotí");
+    expect(autobus).not.toMatch(/nepřijateln|komfort/);
+  }, 400_000);
+
+  it("6-03: pilíř ohnutý brzděním dostane radu, kterou úroveň dovoluje (vzpěra, svar), ne „silnější prvek“", async () => {
+    await otevri("6-03");
+    await nactiMost(pad("6-03", 3));
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    const prvni = await celyText("vysledek-prvni");
+    expect(prvni).toContain("(pilíř)");
+    expect(prvni).toContain("šikmou vzpěru");
+    expect(prvni).toContain("svař jeho hlavu s mostovkou");
+    expect(prvni).not.toContain("silnější");
+    expect(prvni).not.toContain("Podepři ho uprostřed");
+  }, 400_000);
+
+  it("1-01: výsledek u nezískaných medailí řekne proč, s čísly", async () => {
+    await otevri("1-01");
+    await nactiMost(navrhNaText(RESENI["1-01"]!.rozpocet));
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST OBSTÁL");
+    const radky = stranka.locator('[data-udaj="vysledek-medaile"] li');
+    expect(await radky.evaluateAll((uzly) => uzly.map((u) => u.getAttribute("data-ziskana")))).toEqual(["true", "true", "false"]);
+    const proc = ((await radky.nth(2).getAttribute("data-proc")) ?? "").replace(/\u00a0/g, " ");
+    expect(proc).toMatch(/^využití \d+ %, smí nejvýš 30 %$/);
+    expect(await radky.nth(2).locator(".medaile__proc").textContent()).toBe(`Proč ne: ${await radky.nth(2).getAttribute("data-proc")}.`);
+    expect(await radky.nth(0).getAttribute("data-proc")).toBeNull();
+  }, 300_000);
+
+  it("1-02: na konci přehrávání ukazují čísla a barvy prutů obálku celé zkoušky a legenda to říká", async () => {
+    await otevri("1-02");
+    await nactiMost(navrhNaText(RESENI["1-02"]!.mistrovska));
+    await pust();
+    // Během děje okamžité využití.
+    await stranka.locator('body[data-vyuziti-ukazuje="ted"]').waitFor({ timeout: 30_000 });
+    expect(await udaj("legenda-vyuziti")).toBe("Využití teď");
+    await dopocitej();
+    await naKonec();
+    await stranka.locator('body[data-vyuziti-ukazuje="obalka"]').waitFor({ timeout: 10_000 });
+    expect(await udaj("legenda-vyuziti")).toBe("Využití za celou zkoušku");
+    await stranka.screenshot({ path: `${SLOZKA}/p8-obalka-na-konci.png` });
+    // Krok zpět: zase okamžité využití.
+    await akce("krok-zpet").click();
+    await stranka.locator('body[data-vyuziti-ukazuje="ted"]').waitFor({ timeout: 10_000 });
+    await akce("upravit").click();
+    await expect.poll(() => telo("vyuziti-ukazuje")).toBeNull();
+    expect(await udaj("legenda-vyuziti")).toBe("Využití");
+  }, 300_000);
+
+  it("1-03: rozbalené podrobnosti zaberou nejvýš polovinu výkresu, věta v pruhu není useknutá a označený prut zůstane vidět", async () => {
+    await otevri("1-03");
+    await nactiMost(pad("1-03", 2));
+    await pust();
+    await dopocitej();
+    expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    const veta = stranka.locator('[data-udaj="vysledek-veta"]');
+    expect(await veta.evaluate((u) => u.scrollHeight <= u.clientHeight + 1)).toBe(true);
+    await akce("vysledek-sbalit").click();
+    const platno = (await stranka.locator(PLATNO).boundingBox())!;
+    const panel = (await stranka.locator(".vysledek").boundingBox())!;
+    expect(panel.y + panel.height - platno.y).toBeLessThanOrEqual(0.55 * platno.height);
+    // Prut, o kterém pruh mluví, leží pod panelem, ne za ním.
+    const misto = await telo("oznaceny-misto");
+    expect(misto).toBeTruthy();
+    const [, y] = misto!.split(";").map(Number) as [number, number];
+    const naStrance = await vyskaNaStrance(y);
+    expect(naStrance).toBeGreaterThan(panel.y + panel.height);
+    expect(naStrance).toBeLessThan(platno.y + platno.height);
+    await stranka.screenshot({ path: `${SLOZKA}/p9-podrobnosti-polovina.png` });
+  }, 300_000);
+});
+
 describe("stránka", () => {
   it("za celý průchod nenahlásila žádnou chybu", () => {
     expect(chyby).toEqual([]);

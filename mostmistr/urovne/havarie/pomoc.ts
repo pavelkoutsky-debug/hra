@@ -23,6 +23,7 @@ export function urovenPripadu(cislo: number, nazev: string, zaklad: string, zmen
     inzenyrskyRozpocet: null,
     mistrovska: null,
     zkouskova: false,
+    nejvetsiPruhyb: null,
   });
 }
 

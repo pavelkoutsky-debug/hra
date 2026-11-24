@@ -56,7 +56,8 @@ it("všechny otisky referenčních mostů vyjdou v prohlížeči stejně jako v 
 it("ze zkušebny na stránku vede odkaz", async () => {
   const adresa = server.resolvedUrls?.local[0]!;
   const stranka = await prohlizec.newPage();
-  await stranka.goto(`${adresa}zkusebna.html`);
+  // Odkazy na nástroje autorů ukazuje zkušebna jen s ?vyvoj=1 (hráči na oči nepatří).
+  await stranka.goto(`${adresa}zkusebna.html?vyvoj=1`);
   await stranka.locator('a[href="/otisky.html"]').click();
   await stranka.waitForURL(/otisky\.html/);
   expect(await stranka.title()).toBe("Mostmistr – shoda výpočtu");

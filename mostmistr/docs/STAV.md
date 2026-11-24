@@ -27,7 +27,8 @@ Poslední aktualizace: 24. 11. 2026
 | M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Hotovo (24. 11. 2026): závěrečná kapitola se třemi úrovněmi, galerie mostů a závěrečný list; viz „M14 — výsledek“ |
 | M15 Dílna a Havarijní komise | Hotovo (24. 11. 2026): pískoviště jako dílna a režim Havarijní komise; viz „M15 — výsledek“ |
-| M16 Žebříčky a denní rozbor | Kód hotový a po třech recenzích opravený (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. **Naplánovaná úloha ještě neběží:** zakládá se po nasazení a potřebuje od zadavatele heslo pro rozbor (`MM_ROZBOR_HESLO` v Netlify a jako síťový tajný údaj prostředí úlohy, viz `docs/ROZBOR.md`) |
+| M16 Žebříčky a denní rozbor | Kód hotový a po třech recenzích opravený (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. **Naplánovaná úloha se zakládá až po zveřejnění hry** (rozhodnutí zadavatele 24. 11. 2026; postup je v `docs/ZVEREJNENI.md`) |
+| M17 Před zveřejněním | Hotovo (24. 11. 2026): závěrečná recenze celku třemi nezávislými recenzenty, známé slabiny (8-02, 4-04), okno Soukromí a kontakt, zpevnění serveru, web připravený na zveřejnění, shoda výpočtu ve třech strojích JavaScriptu; viz „M17 — výsledek“ |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -44,7 +45,69 @@ Poslední aktualizace: 24. 11. 2026
 - **M14 Finále kampaně** je hotový, viz „M14 — výsledek“.
 - **Pomocným agentům došel 24. 11. limit hlavního modelu (obnoví se 29. 11.)**; návrhy úrovní a recenze od té doby běží na záložním modelu (Opus).
 - **M15 Dílna a Havarijní komise** je hotový, viz „M15 — výsledek“.
-- **M16 Žebříčky a denní rozbor**: kód je hotový a po recenzích opravený, viz „M16 — výsledek“ a „Nezávislé recenze M16“. Zbývá jediné a neudělá se bez zadavatele: založit naplánovanou úlohu denního rozboru (až bude M16 na ostrém webu a zadavatel nastaví `MM_ROZBOR_HESLO`) a jedním ručním během ověřit, že se rozbor objeví na stránce správce. Do té doby druhá půlka kritéria M16 („rozbor za poslední den vznikne bez zásahu člověka“) splněná není. Jinak jsou hotové všechny milníky z koncepce (kap. 12).
+- **M16 Žebříčky a denní rozbor**: kód je hotový a po recenzích opravený, viz „M16 — výsledek“ a „Nezávislé recenze M16“. Naplánovaná úloha denního rozboru se zakládá až po zveřejnění (viz M17), takže druhá půlka kritéria M16 („rozbor za poslední den vznikne bez zásahu člověka“) do té doby splněná není.
+- **Hra není veřejná.** Web `mostmistr.netlify.app` je za přihlášením Netlify a vidí ho jen zadavatel; zveřejní ho, až se řekne, že je hotovo. Co k tomu udělat a co potom ověřit, je v `docs/ZVEREJNENI.md`.
+- **M17 Před zveřejněním** (zadavatel 24. 11. 2026: dořešit známé slabiny a pustit závěrečnou recenzi celku) je hotový, viz „M17 — výsledek“. Zbývá to, co bez zadavatele nejde: zveřejnění samo, hesla na Netlify, kontrola `/otisky.html` ve skutečném Firefoxu a Safari a po zveřejnění založení denní úlohy.
+
+## M17 — výsledek
+
+Poslední milník před zveřejněním. Verze hry 0.23.0. Fyzika se nemění (verze 9, otisky stejné); formát úrovně má verzi 9 (mez průhybu mostovky), uložený postup ani formát návrhu se nemění.
+
+**Proč vznikl.** Při zakládání denní úlohy se ukázalo, že web hry je za přihlášením Netlify (úloze odpovídá chybou 401 už Netlify): zadavatel hru zveřejní, až bude hotová. Úloha denního rozboru se proto zakládá až po zveřejnění a zadavatel před ním chtěl dvě věci: dořešit známé slabiny a nechat hru jako celek projít nezávislou recenzí.
+
+**Průhyb mostovky a úroveň 8-02.** Úroveň smí omezit, o kolik se mostovka při zkoušce odchýlí od výkresu (`nejvetsiPruhyb`, formát úrovně 9). 8-02 má mez 10 cm: měkká lávka s jedním pylonem a třemi lany, která mezi lany visela jako pás (1,2 až 1,5 m pod výkresem) a dávala rozpočtovou medaili za 1,03 milionu (most autora 1,76 milionu), teď neobstojí a hra to řekne hned po spuštění zkoušky. Mosty autora se prohnou nejvýš o 2,8 cm; bez dopnutí lan visí 21 cm a neprojdou, takže lekce o napínácích ze 4-03 platí i tady. Šampioni výzev 8-02 jsou nalezení znovu: cena 1 583 972 Kč (dva pylony, dvanáct lan, dva tlumiče; o 10 % pod mostem autora pro rozpočtovou), hmotnost z mostu pro mistrovskou. Úrovně bez meze se nemění (otisky úrovní, klíče žebříčků i paměť prošlých mostů zůstávají).
+
+**Úroveň 4-04 jde projít jen visutým mostem.** Recenze obtížnosti našla dvě levnější cesty bez nosného lana mezi pylony, obě s rozpočtovou medailí a zlatem všech tří výzev: příhradu z lehké oceli pod mostovkou (2 003 207 Kč) a zavěšený most s vějířem obyčejných lan (po zeštíhlení 1 681 784 Kč; most autora pro rozpočtovou stál 2 046 528 Kč). Strojové hledání při přeladění našlo třetí: kloubová mostovka visí mezi několika lany z nízkých pylonů jako řetěz a její tah drží pevná opěra (1 756 706 Kč s rozpočtovou medailí). Úroveň proto nemá ocel a nad roklí má 26 zakázaných zón: volný zůstává pás, kudy vede nosné lano (8, 5, 3, 2 a 1 m nad styčníky mostovky, s půlmetrovou vůlí nahoru), svislé štěrbiny pro závěsy ve styčnících a místo pro pylony na březích. Šikmé lano z pylonu do mostovky ani k závěsu pásem neprojde.
+
+- **Co jednodušího nedrží (změřeno):** jen paleta bez oceli (vějíř obyčejných lan 1 885 126 Kč s rozpočtovou), jen nosné lano (řetěz na třech lanech z každého pylonu 1 962 647 Kč), k tomu mez průhybu 1,25 m (1 804 142 Kč; visutý most se pod 120 t sám prohne až o 1,2 m, takže mez obejití neoddělí), strop pylonů 10 m, tenké pásy nad vozovkou (řetěz s krátkými závěsy a napínáky na mezi). Posuvné opěry a svařená mostovka shazují i poctivé visuté mosty.
+- **Co hráči zůstává:** výška pylonů (návrh projde s pylony 9 až 16 m; s lanem podle pásu se most s pylony 9 a 10 m poruší, 11 a 12 m dají rozpočtovou, 13 a 14 m mistrovskou, 15 a 16 m jen průchod), z čeho budou závěsy, dopnutí a posun bodů lana o půl metru. **Tvar nosného lana úroveň skoro předepisuje**; to je cena za uzávěr a patří k tomu, co má po zveřejnění ukázat deník hraní (jestli se tu hráči nezasekávají).
+- **Mosty autora:** průchod 2 225 803 Kč (pylony 13 m, závěsy z nosného lana; nad inženýrským rozpočtem), rozpočtová 1 998 305 Kč (pylony 12 a 11 m, využití 94 %, 94,3 % inženýrského rozpočtu), mistrovská 2 062 003 Kč beze změny (využití 52 %). Rozpočty se nemění (2 600 000 a 2 120 000 Kč). Šampion výzvy o cenu je most pro rozpočtovou s pravým pylonem 10 m; únosnost na korunu se nezměnila (dává ji most pro mistrovskou).
+- **Ověření:** strojové hledání na přeladěné úrovni prošlo 1 073 tvarů (288 příhrad, 300 vějířů z obyčejných a 138 z nosných lan, 92 harf, 135 vějířů se svislými závěsy, 72 smíšených, 48 tvarů uvnitř pásu). Kontrolou návrhu neprošel žádný most bez nosného lana přes hlavy pylonů; v pásu prošly jen visuté mosty a jeden bez nosného lana ve středu pole, porušený a dražší než inženýrský rozpočet. Test obejití je v `test/vyhratelnost.test.ts`, čtyři mosty v `test/data/4-04-obejiti.json`.
+- **Vedlejší změny:** zadání, „Více o úloze“ a ukázka v obou jazycích (ukázka: mostovka klesne až o tři čtvrtě metru, změřeno 745 mm); most, který spadnout má, se jmenuje „obyčejné lano místo nosného“; případ 9-04 Havarijní komise (zavěšený most ve stejném údolí) a testy editoru v `test/lana.test.ts` si berou údolí s původní paletou a bez zón.
+
+**Soukromí.** Hra má okno Soukromí a kontakt (odkaz v patičce přehledu, u každého upozornění na záznam, v oknech zpětné vazby a žebříčku; adresa `?soukromi`): co sbírá, kam to jde, že zprávy čte i automatický denní rozbor, jak dlouho to server drží a jak požádat o smazání; ukazuje číslo hráče (i druhé, pod kterým ho vedou žebříčky) a vypínač záznamu. Z textů zmizelo slovo „anonymně“ (záznam je pod trvalým náhodným číslem prohlížeče). **Rozhodnutí zadavatele (24. 11. 2026):** záznam hraní zůstává zapnutý od prvního otevření s upozorněním a vypínačem (recenze doporučovala souhlas předem); provozovatel se nejmenuje, kontakt je okno Napiš nám; deník se drží 12 měsíců, zprávy 24.
+
+**Server** (pomocný agent podle recenze kódu). Adresa hráče jen z hlavičky Netlify, u IPv6 předpona /64, a jen jako otisk se solí dne (počitadla a sůl se po dvou dnech mažou); žebříček bez rozpoznané adresy zápis odmítne; deník má strop 5 000 dávek na adresu a den a 30 žádostí za minutu, zpětná vazba 20 zpráv na adresu a den; denní strop zkoušek žebříčku je 1 000; heslo správce aspoň 16 znaků; podklady rozboru nahrazují e-maily a telefony v textu zpráv značkami; správa umí smazat data jednoho hráče (deník, zprávy, řádky žebříčků); server sám maže deník starší než rok a zprávy starší než dva roky; žebříček odmítá přezdívky z krátkého seznamu hrubých výrazů.
+
+**Web** (pomocný agent). Bezpečnostní hlavičky včetně CSP bez cizích zdrojů (testy v prohlížeči běží se stejnou politikou jako ostrý web), náhled odkazu při sdílení (obrázek ze hry, značky Open Graph), ikona pro telefony, stránka 404, mapy zdrojů se nepublikují, a když se po novém nasazení nepodaří načíst soubor výpočtu, hra řekne, že stačí načíst stránku.
+
+**Shoda výpočtu mezi prohlížeči.** `npm run stroje` pouští regresní sadu a zkoušku mostů autora všech 38 úrovní (99 otisků) ve V8 (Node 22), v JavaScriptCore (WebKitGTK 2.52) a ve SpiderMonkey 115: všechny tři dávají stejné otisky do posledního bitu. Je to první ověření mimo Chromium od M0; skutečný Firefox, Safari a telefon zůstávají na zadavateli (`/otisky.html`).
+
+**Testy.** `test/vyhratelnost.test.ts` (měkké lávky 8-02 a čtyři mosty bez nosného lana ve 4-04 jako obejití), `test/uroven.test.ts` (formát 9), `test/zebricek-otisky.test.ts` (klíče úrovní bez meze se nemění), `test/server-ochrana.test.ts` (stropy, adresa, sůl, mazání hráče, úklid, filtr přezdívek), `test/hlavicky.test.ts` (hlavičky v `netlify.toml` a v testech jsou stejné), `test/e2e/web.e2e.ts` (stará záložka, 404, stránka bez skriptů), `test/e2e/denik.e2e.ts` (okno Soukromí), `test/e2e/finale.e2e.ts` (měkká lávka neobstojí hned a hra řekne proč) a testy oprav z recenze hraní (`pad`, `komise`, `mesto`, `dotyk`, `zkusebna`).
+
+### Závěrečná recenze celku (24. 11. 2026)
+
+Tři čerství agenti na záložním modelu, každý na čisté kopii `main` (0.22.0): hraní od začátku očima nového hráče, obtížnost a obejití lekcí napříč kampaní (asi 2 300 zkoušek) a kód se serverem očima člověka, který ručí za zveřejnění. Zprávy jsou v pracovní složce relace (`m17/recenze-*/zprava.md`; do repozitáře nepatří).
+
+**Zapracováno z recenze kódu a serveru** (2 zásadní, 8 středních, 10 drobných; cestu, jak bez hesla číst nebo mazat data, recenzent nenašel)
+- **Zásadní: hra neříkala, kdo a co sbírá, a neuměla data hráče smazat.** Okno Soukromí a kontakt, číslo hráče na očích, smazání dat hráče ve správě, doby uchování a samočinný úklid.
+- **Zásadní: záznam hraní odchází dřív, než hráč upozornění uvidí.** Recenzent doporučil souhlas předem; **zadavatel rozhodl nechat záznam, jak je** (viz výše). Okno Soukromí to říká výslovně („už od prvního otevření“).
+- **Veřejné adresy šly zahltit:** deník neměl žádný denní strop (jedna adresa uložila 45 MB za pokus), společný strop zpráv vyčerpal jeden člověk za půl hodiny a strop žebříčku šel obejít hlavičkou `x-forwarded-for`, kterou si klient napíše sám. Stropy na adresu, adresa jen z hlavičky Netlify, zápis bez adresy se odmítá.
+- **Otisk adresy šel zvrátit hrubou silou** (celý prostor IPv4 za 40 minut): sůl dne, která se s počitadly po dvou dnech maže.
+- Bezpečnostní hlavičky, náhled odkazu, stránka 404, mapy zdrojů, hlášení staré záložky, delší heslo správce, zpráva bez sirotka při výpadku úložiště, maskování kontaktů v podkladech rozboru.
+
+**Zapracováno z hraní** (zásadní žádný, 5 středních, 10 drobných; za celou recenzi žádná chyba v konzoli a žádný pád hry)
+- **4-03: most s nedopnutými lany dostal radu o druhém kotevním laně**, ačkoli mu stačilo dopnout lana. Dokud hráč lana nedopínal, radí hra jen dopnutí.
+- **Ukázky v zadání ukazovaly okamžité kmitání** (v 2-03 podle chvíle čtení 0,8 / 0,7, pak 3,9 / 1,4, nakonec 0,2 / 0,2 m/s²): popisek ukazuje největší dosavadní hodnotu a na konci výsledek; u ukázek, které o kmitání nejsou, číslo není.
+- **Výsledek neříkal, proč medaile nepřišla:** každá nezískaná medaile má důvod s čísly.
+- **Rozbalené podrobnosti zakryly most:** nejvýš polovina výkresu a pohled se posune k prutu, o kterém je řeč.
+- **Čísla využití na konci zkoušky neodpovídala výsledku:** po doběhnutí ukazují největší využití za celou zkoušku a legenda říká, co se ukazuje.
+- Třída pohodlí u mostu nad mezí úrovně, rada u pilíře v 6-03 (silnější pilíř neexistuje), „koruna“ v angličtině jednotně, cíle pro prst v patičce přehledu, paleta a lišta na tabletu na výšku, hlášení po „Vše pryč“, nástroje autorů ve zkušebně jen s `?vyvoj=1`.
+
+**Zapracováno z kontroly obtížnosti** (2 zásadní, 3 střední, 3 drobné)
+- **Zásadní: 4-04 šla projít příhradou bez lan** s rozpočtovou medailí a zlatem všech tří výzev, levněji než most autora. Paleta úrovně nemá ocel.
+- **Zásadní: 4-04 šla projít zavěšeným mostem bez nosného lana**, po zeštíhlení o 18 % levněji než most autora. Pás zakázaných zón kolem nosného lana (viz výše); při přeladění se našla a zavřela ještě třetí cesta, mostovka jako řetěz.
+- Tři střední a tři drobné nálezy zapracované nejsou, viz níže. Úroveň 8-02 recenzent vynechal (právě se přelaďovala); její nová mez průhybu tak nezávislou kontrolou neprošla, jen strojovým hledáním šampionů a testem obejití.
+
+**Nezapracováno**
+- **Souhlas se záznamem hraní předem** (rozhodnutí zadavatele, viz výše).
+- **8-01: konzolová příhrada z dříků pylonů s kotevními lany, ale bez lana k mostovce, projde** za 4 470 978 Kč (rozpočet úrovně 4,5 milionu), s dvanácti porušeními a jen s medailí za průchod. Má lana i příhradu, obejití jedné mechaniky to není; zavřít by ji šlo jen nižším rozpočtem úrovně, který by sebral místo i poctivým mostům.
+- **6-01 má inženýrský rozpočet jen 2,0 % nad mostem pro mistrovskou** (pravidlo chce 2,5 až 3 %). Zvednout ho nejde, dokud most pro rozpočtovou stojí 765 935 Kč: přestal by být „těsně“ (test chce nad 90 % inženýrského rozpočtu). Chtělo by to dražší most pro rozpočtovou; drobnost.
+- **Zlato výzvy o cenu dá ve 20 úrovních most obkreslený z Nápovědy** (kde strojové hledání most autora nepřekonalo, je zlatem most autora, a Nápověda jeho obrys po projití úrovně ukáže). Je to vlastnost žebříku výzev od M12; žebříčků mezi hráči se netýká jinak než tím, že první řádky obsadí mosty z Nápovědy.
+- **3-03 dá mistrovskou i s příhradou nad mostovkou** (o 1,9 % dráž než most autora), ve 3-04 a 5-04 je most pro mistrovskou levnější než pro rozpočtovou a ve 3-04 projdou tři nohy z lehkého profilu (jen na průchod, s porušením).
+- **Stropy jdou pořád vyčerpat z mnoha adres** a souběžný zápis v Netlify Blobs, hlavičku s adresou a čas funkcí ověří až ostrý web (`docs/ZVEREJNENI.md`).
+- Z hraní: značka prvního porušení po obnovení stránky zmizí, ukázky 4-03 a 7-02 se počítají přes dvě sekundy, přezdívka se ořízne a hra to řekne až po zápisu. Kapitola 1 je velmi snadná (známé).
+- **Recenzenti nestihli:** hraní 1-04, 1-05, 8-01, 8-03 a zkouškových úrovní, třetí krok nápovědy, odkaz na scénář u příjemce, zvuk; v obtížnosti zeštíhlení příhrad 6-03, úhel 70° u pístu na konzole a kmitání po porušení ve starších kapitolách; v kódu obrazovku úrovně jinde než u vláken, odkazů a paměti. Firefox, Safari a skutečná zařízení nezkoušel nikdo.
 
 ## M16 — výsledek
 
@@ -1622,7 +1685,7 @@ Průchod v prohlížeči při vývoji odhalil dvě chyby, které jiné testy nev
 
 ## Co je potřeba od zadavatele
 
-1. **Nastavit heslo správce v Netlify** (proměnná prostředí `MM_SPRAVCE_HESLO`, rozsah Functions, pak nové nasazení); postup je v `docs/ZPETNA-VAZBA.md`. Bez něj se zpětná vazba i deník ukládají, ale nejdou číst. Po nastavení otevřít `/sprava.html` a říct, jestli se přihlášení a první data ukázala.
+1. **Zveřejnění hry** podle `docs/ZVEREJNENI.md`: hesla `MM_SPRAVCE_HESLO` a `MM_ROZBOR_HESLO` na Netlify (obě aspoň 16 znaků), nové nasazení, vypnout přihlášení Netlify, zkouška v anonymním okně, `/otisky.html` ve Firefoxu, v Safari a na telefonu. Potom říct, že je web veřejný: založí se naplánovaná úloha denního rozboru a ověří se jedním ručním během.
 2. Když se něco chová divně: po zkoušce tlačítko Diagnostika a poslat zkopírovaný text.
 
 Stále neověřeno: shoda výpočtu ve Firefoxu a Safari (`/otisky.html`); zadavatel ji odložil.

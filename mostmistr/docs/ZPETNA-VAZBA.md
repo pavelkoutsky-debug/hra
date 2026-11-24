@@ -5,7 +5,7 @@ Od milníku M4c hra sbírá dvě věci: zprávy, které jí hráči sami napíš
 ## Co je potřeba nastavit (jednou)
 
 1. V Netlify otevři projekt `mostmistr` → **Project configuration → Environment variables → Add a variable**.
-2. Klíč `MM_SPRAVCE_HESLO`, hodnota je heslo správce: aspoň 8 znaků, bez diakritiky, nejlépe dlouhé a náhodné (je to jediná ochrana zpráv hráčů). Rozsah (scope) musí zahrnovat **Functions**.
+2. Klíč `MM_SPRAVCE_HESLO`, hodnota je heslo správce: aspoň 16 znaků, bez diakritiky, nejlépe dlouhé a náhodné (je to jediná ochrana zpráv hráčů). Rozsah (scope) musí zahrnovat **Functions**.
 3. Web znovu nasaď (**Deploys → Trigger deploy**), aby funkce heslo dostaly.
 4. Otevři `https://mostmistr.netlify.app/sprava.html` a přihlas se heslem.
 
@@ -49,12 +49,20 @@ Den jde stáhnout jako JSON k vlastnímu rozboru a smazat.
 
 Adresy, na které hra posílá deník a zpětnou vazbu, jsou veřejné; jinak by na ně hra nemohla. Proti zahlcení mají:
 
-- omezení počtu žádostí z jedné adresy (deník 120 za minutu, zpětná vazba 10 za minutu, správa 120 za minutu; nastavení je u funkcí v `netlify/functions/`),
-- strop 300 zpráv zpětné vazby za den,
+- omezení počtu žádostí z jedné adresy (deník 30 za minutu, zpětná vazba 10 za minutu, správa 120 za minutu; nastavení je u funkcí v `netlify/functions/`),
+- strop na síťovou adresu a den: deník 5 000 dávek, zpětná vazba 20 zpráv, žebříček 60 zkoušek (adresa se bere jen z hlavičky Netlify `x-nf-client-connection-ip`, u IPv6 jen předpona /64; neukládá se, počitadla jsou pod jejím otiskem se solí dne a po dvou dnech se mažou i se solí),
+- společný strop 300 zpráv zpětné vazby a 1 000 zkoušek žebříčku za den,
+- žebříček navíc odmítne zápis, u kterého adresu nepozná, a přezdívku z krátkého seznamu hrubých výrazů,
 - kontrolu velikosti a tvaru dat a hlavičky Origin (cizí weby a nahodilé roboty odmítne; kdo si hlavičku napíše sám, projde),
 - souhrn, který bere jen hodnoty, jaké hra opravdu posílá (známé prvky, rozumné časy a ceny).
 
 Kdyby někdo deník přesto zaplnil nesmysly, den jde na stránce správce smazat.
+
+## Uchování a smazání dat (od M17)
+
+- **Doba uchování:** deník hraní 365 dní, zprávy zpětné vazby 730 dní; starší záznamy server maže sám (úklid běží s denním rozborem a s výpisem dnů ve správě, pokaždé nejvýš pár set záznamů).
+- **Smazání dat jednoho hráče:** formulář „Smazat data hráče“ na stránce správce smaže jeho deník ze všech dnů, jeho zprávy a jeho řádky v žebříčcích. Hráč své číslo vidí v okně Soukromí a kontakt; žebříčky ho vedou pod druhým, delším číslem (okno ukazuje obě a tlačítko Zkopírovat je vezme obě), a mazat se musí obě. Souhrny dnů, které už jsou spočítané, se nepřepočítávají.
+- Co hra hráči o tomhle všem říká, je v okně Soukromí a kontakt (`soukromi.*`); rozhodnutí zadavatele jsou v `docs/ZVEREJNENI.md`.
 
 ## Kde to je v kódu
 

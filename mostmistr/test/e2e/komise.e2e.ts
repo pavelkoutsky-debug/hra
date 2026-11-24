@@ -155,6 +155,20 @@ describe("Havarijní komise", () => {
     expect(oPrvnim).not.toMatch(/silnější prvek|Zkrať ho|Podepři ho/);
     expect(await akce(s, "dalsi").isVisible()).toBe(false);
     expect(await telo(s, "pripad-uzavren")).toBe("");
+    // Věta v pruhu se vejde celá (žádné „…“) a rozbalené podrobnosti zaberou nejvýš polovinu
+    // výkresu: prut „označený na výkresu“, jediné vodítko komise, zůstane vidět pod nimi.
+    const veta = s.locator('[data-udaj="vysledek-veta"]');
+    expect(await veta.evaluate((u) => u.scrollHeight <= u.clientHeight + 1)).toBe(true);
+    if ((await s.locator(".vysledek").getAttribute("data-sbaleno")) === "ano") await akce(s, "vysledek-sbalit").click();
+    const platno = (await s.locator(PLATNO).boundingBox())!;
+    const panel = (await s.locator(".vysledek").boundingBox())!;
+    expect(panel.y + panel.height - platno.y).toBeLessThanOrEqual(0.55 * platno.height);
+    const [, y] = ((await telo(s, "oznaceny-misto")) ?? "").split(";").map(Number) as [number, number];
+    const [, kameraY, meritko] = ((await s.locator(PLATNO).getAttribute("data-kamera")) ?? "").split(";").map(Number) as [number, number, number];
+    const naStrance = platno.y + platno.height / 2 - (y - kameraY) * meritko;
+    expect(naStrance).toBeGreaterThan(panel.y + panel.height);
+    expect(naStrance).toBeLessThan(platno.y + platno.height);
+    await s.screenshot({ path: `${SLOZKA}/k3b-podrobnosti.png` });
     await akce(s, "upravit").click();
 
     // Oprava komise: počet změn je v pruhu i v háčku a zkouška případ uzavře.

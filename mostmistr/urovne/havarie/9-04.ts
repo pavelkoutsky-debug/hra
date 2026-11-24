@@ -44,7 +44,13 @@ const VEJIR = [
   [36, 42, 48, 54, 60, 66],
 ] as const;
 
-const uroven = urovenPripadu(4, "Most se dvěma pylony", "4-04");
+// Paleta a zóny jsou z úrovně 4-04, jak byla do M17: případ je zavěšený most a úroveň 4-04 od
+// přeladění (recenze obtížnosti M17) nemá ocel a nad roklí jí zakázané zóny nechávají volný jen
+// pás pro nosné lano visutého mostu, kterým šikmé lano z pylonu neprojde. Případu se to netýká.
+const uroven = urovenPripadu(4, "Most se dvěma pylony", "4-04", {
+  povolenePrvky: ["mostovka-ocelobeton", "ocel-lehka", "ocel-tezka", "lano", "lano-nosne", "pilir"],
+  zakazaneZony: [],
+});
 
 interface Volby {
   /** Kotevní lana levého a pravého pylonu: výšky, ze kterých vedou do kotvy. */

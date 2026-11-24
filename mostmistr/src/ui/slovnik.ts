@@ -74,7 +74,7 @@ const CS = {
   "pojem.vzper": "Vzpěr",
   "pojem.vzper.text": "Dlouhý tlačený prut se nerozdrtí, ale vybočí do strany, a to při mnohem menší síle. Pomáhá kratší prut, těžší prvek nebo podepření v půli délky.",
   "pojem.vyuziti": "Využití",
-  "pojem.vyuziti.text": "Kolik procent své únosnosti prut nese. Při 100 % povolí. Čísla a barva prutů ukazují největší využití za celou zkoušku.",
+  "pojem.vyuziti.text": "Kolik procent své únosnosti prut nese. Při 100 % povolí. Při přehrávání zkoušky ukazují čísla a barva prutů využití v tu chvíli; na konci zkoušky a při stavbě po ní největší využití za celou zkoušku.",
   "pojem.svar": "Svar",
   "pojem.svar.text": "Tuhé spojení prutů ve styčníku: nenatočí se a přenáší ohyb. Platí se za každý prut, který do svařeného styčníku vede.",
   "pojem.plasticky-kloub": "Plastický kloub",
@@ -124,6 +124,8 @@ const CS = {
   "zkusebna.vypocetUdaj": "{kroku} kroků za {ms} ms · {nasobek}× rychleji než děj",
   "zkusebna.krok": "Krok {mikro} µs · {naSekundu} kroků na sekundu děje",
   "zkusebna.legenda.vyuziti": "Využití",
+  "legenda.vyuziti.ted": "Využití teď",
+  "legenda.vyuziti.obalka": "Využití za celou zkoušku",
   "zkusebna.legenda.tlak": "tlak",
   "zkusebna.legenda.tah": "tah",
   "zkusebna.chyba": "Výpočet selhal: {duvod}",
@@ -240,6 +242,7 @@ const CS = {
   "slozeni.rada.pilir": "Nebo pod něj postav pilíř.",
   "pruves.nadpis": "Mostovka tu visí {mm} mm pod výkresem",
   "pruves.rada": "už vlastní vahou: dopni lana (N)",
+  "pruves.mez": "Tady smí nejvýš {mez} mm.",
   "pruves.rada.marne": "i s dopnutými lany: něco pod jejich tahem uhýbá",
   "pruves.nadpis.nad": "Mostovka je tu {mm} mm nad výkresem",
   "pruves.rada.nad": "lana jsou přetažená: dopni je znovu (N)",
@@ -260,6 +263,10 @@ const CS = {
   "rada.tah": "Byl natažený víc, než snese. Dej silnější prvek, nebo sílu rozlož do víc prutů.",
   "rada.nedopnuto": "Lana nejsou dopnutá: mostovka visela už před zkouškou {mm} mm pod výkresem. Zkus Dopnout lana (N).",
   "rada.ohyb": "Prohnul se víc, než snese. Podepři ho uprostřed dalším styčníkem, nebo dej silnější prvek.",
+  "rada.ohyb.pilir.vzpera": "Ohnul se jako prut zapíchnutý do země. Veď z půlky pilíře šikmou vzpěru k mostovce: s ní je z pilíře trojúhelník, který se neohýbá.",
+  "rada.ohyb.pilir.svar": "Ohnul se jako prut zapíchnutý do země. Svař jeho hlavu s mostovkou.",
+  "rada.ohyb.pilir.svar.nebo": "Nebo svař jeho hlavu s mostovkou.",
+  "rada.ohyb.pilir.silnejsi": "Nebo dej silnější pilíř.",
   "rada.ohyb.pylon": "Ohnula ho lana, která ho táhnou víc na jednu stranu. Vyvaž je: dej mu kotevní lano na druhou stranu (do opěry nebo do kotvy), nebo pylon nakloň proti tahu.",
   "rada.smyk": "U konce ho přestřihla příčná síla. Dej silnější prvek, nebo ho podepři blíž k zatížení.",
   "stavba.porucha.nadpis": "Tady to povolilo první",
@@ -269,6 +276,8 @@ const CS = {
   "frekvence.slozeni": "most se složí – viz značka na výkresu",
   "vysledek.kratce.slozeni": "Složil se vlastní vahou: {duvod}.",
   "vysledek.kratce.nedopnuto": "Lana nejsou dopnutá: zkus Dopnout lana (N).",
+  "rada.prvni.nedopnuto": "Příčina je ale v lanech: nejdřív je dopni (Dopnout lana, N) a zkoušku pusť znovu; teprve potom má smysl most měnit.",
+  "vysledek.kratce.pruhyb": "Mostovka se od výkresu odchýlila o {mm} mm; smí nejvýš o {mez} mm.",
   "vysledek.kratce.prvni": "Jako první povolil prut {prut} (označený na výkresu): {zpusob}.",
   "vysledek.prehratPoruseni.popis": "Přehraje první porušení znovu, zpomaleně a zblízka",
   "vysledek.prehratPoruseni.kratce": "Zpomaleně",
@@ -299,6 +308,8 @@ const CS = {
   "zkouska.chyba.jina-verze-fyziky": "hra a simulace mají různou verzi; obnov stránku",
   "zkouska.chyba.neplatny-vstup": "most nevyhovuje pravidlům úrovně",
   "zkouska.chyba.vypocet-selhal": "výpočet selhal",
+  "zkouska.chyba.skript-nenacten": "Hra se mezitím aktualizovala na novou verzi. Stačí načíst stránku znovu.",
+  "zkouska.chyba.nacistZnovu": "Načíst znovu",
 
   // Zpětná vazba hráče a deník hraní
   "vazba.tlacitko": "Napiš nám",
@@ -321,24 +332,51 @@ const CS = {
   "vazba.pocet": "{pocet} / {nejvic} znaků",
   "vazba.kontakt": "E-mail, pokud chceš odpověď (nepovinné)",
   "vazba.kontakt.poznamka":
-    "E-mail uvidíme jen u této zprávy. Zpráva nese i číslo, pod kterým si hra vede tvůj anonymní záznam hraní, takže podle něj poznáme, co jsi ve hře zkoušel.",
+    "E-mail uvidíme jen u této zprávy. Zpráva nese i číslo, pod kterým si hra vede tvůj záznam hraní, takže podle něj poznáme, co jsi ve hře zkoušel. Text zprávy čte i automatický denní rozbor.",
   "denik.bezPameti": "Prohlížeč hře nedovolí nic si zapamatovat, proto se záznam hraní nevede.",
   "vazba.odeslat": "Odeslat",
   "vazba.odesilaSe": "Odesílám…",
   "vazba.diky": "Díky, zpráva dorazila.",
   "vazba.diky.kontakt": "Díky, zpráva dorazila. Odpovědět ti můžeme na uvedený e-mail.",
   "vazba.nepodarilo": "Odeslat se nepodařilo. Zkus to prosím za chvíli znovu; text tu zůstane, dokud neodejdeš z této stránky.",
-  "vazba.zaznam.zapnuty": "Hra anonymně odesílá autorům záznam hraní, abychom ji mohli vylepšovat.",
-  "vazba.zaznam.vypnuty": "Anonymní záznam hraní je vypnutý.",
+  "vazba.zaznam.zapnuty": "Hra odesílá autorům záznam hraní pod náhodným číslem, abychom ji mohli vylepšovat.",
+  "vazba.zaznam.vypnuty": "Záznam hraní je vypnutý.",
   "vazba.zaznam.vypnout": "Vypnout záznam",
   "vazba.zaznam.zapnout": "Zapnout záznam",
   "vazba.zVysledku": "Něco nesedí? Napiš nám",
   "denik.upozorneni":
-    "Hra anonymně odesílá autorům záznam hraní: které úrovně otevřeš, jak stavíš a jak dopadnou zkoušky. Žádná jména ani e-maily, jen náhodné číslo tohoto prohlížeče. Záznam jde kdykoli vypnout.",
+    "Hra odesílá autorům záznam hraní: které úrovně otevřeš, jak stavíš a jak dopadnou zkoušky. Bez jména a e-mailu, jen pod náhodným číslem tohoto prohlížeče. Záznam jde kdykoli vypnout.",
   "denik.vypnuto": "Záznam hraní je vypnutý a nic dalšího se neodesílá. Zapnout ho můžeš kdykoli v přehledu kampaně.",
+  "soukromi.odkaz": "Soukromí a kontakt",
+  "soukromi.vice": "Více o soukromí",
+  "soukromi.nadpis": "Soukromí a kontakt",
+  "soukromi.uvod": "Mostmistr nemá reklamy, účty ani měřicí kódy cizích firem. Tady je všechno, co o tobě hra ví, a co s tím můžeš udělat.",
+  "soukromi.prohlizec.nadpis": "V tvém prohlížeči",
+  "soukromi.prohlizec":
+    "Postup kampaní, tvoje mosty, nastavení a náhodné číslo hráče si hra ukládá do paměti tohoto prohlížeče (nejsou to cookies). Když paměť stránky v prohlížeči smažeš, je všechno pryč.",
+  "soukromi.denik.nadpis": "Záznam hraní",
+  "soukromi.denik":
+    "Dokud ho nevypneš, hra odesílá autorům záznam hraní pod náhodným číslem tohoto prohlížeče, a to už od prvního otevření: které úrovně otevřeš, jak stavíš (i tvar mostu), jak dopadnou zkoušky, velikost okna, jazyk a chyby prohlížeče. Žádné jméno, e-mail ani poloha. Slouží jen k ladění hry.",
+  "soukromi.vazba.nadpis": "Zprávy autorům",
+  "soukromi.vazba":
+    "Zpráva z okna Napiš nám nese text, druh, hodnocení a číslo hráče, případně přiložený most a poslední kroky ve hře, a e-mail, jen když ho vyplníš. Texty zpráv bez pole s e-mailem denně čte i automatický rozbor (jazykový model), který autorům navrhuje úpravy hry; e-maily a telefonní čísla napsané přímo do textu se pro něj začerní.",
+  "soukromi.zebricek.nadpis": "Žebříčky",
+  "soukromi.zebricek":
+    "Do žebříčku jde přezdívka, most a jeho výsledek; přezdívku a výsledek uvidí všichni. Aby žebříčky, zprávy a záznam nešly zahltit, pamatuje si server nejvýš dva dny otisk síťové adresy, ze kterého adresu zpátky získat nejde.",
+  "soukromi.kde.nadpis": "Kde to leží a jak dlouho",
+  "soukromi.kde":
+    "Data leží u služby Netlify, na které hra běží (jako každý webový server si vede i vlastní provozní záznamy přístupů). Záznam hraní se maže po 12 měsících, zprávy po 24 měsících. Nikomu dalšímu je nepředáváme a neprodáváme.",
+  "soukromi.smazani.nadpis": "Smazání a dotazy",
+  "soukromi.smazani":
+    "Chceš svá data smazat, nebo se na něco zeptat? Napiš nám přes okno Napiš nám a uveď číslo hráče, které vidíš níž (tlačítko Zkopírovat vezme i číslo ze žebříčků, pokud ho máš); odpovědět ti můžeme, jen když připojíš e-mail. Hru provozují její autoři.",
+  "soukromi.hrac": "Tvoje číslo hráče:",
+  "soukromi.hrac.zebricek": "V žebříčcích tě hra vede pod jiným číslem:",
+  "soukromi.kopirovat": "Zkopírovat",
+  "soukromi.zkopirovano": "Zkopírováno",
+  "soukromi.napis": "Napiš nám",
   "denik.rozumim": "Rozumím",
   "denik.vypnout": "Vypnout záznam",
-  "denik.volba": "Odesílat autorům anonymní záznam hraní (pomáhá hru vylepšovat)",
+  "denik.volba": "Odesílat autorům záznam hraní pod náhodným číslem (pomáhá hru vylepšovat)",
 
   // Paleta
   "paleta.prvky": "Prvky",
@@ -529,7 +567,7 @@ const CS = {
   "vysledek.prvni.napinani":
     "Prut {prut} ({prvek}) se přetrhl už při napínání: napínák ho dotáhl na {nasobek}násobek pevnosti. Povol ho, nebo nech lana dopnout znovu (N).",
   "vysledek.nasledek.lano": "lano se přetrhlo",
-  "vysledek.autobus.bezHodnoceni": "{zrychleni} m/s² · {trida} · v čase {cas} · tady se nehodnotí",
+  "vysledek.autobus.bezHodnoceni": "{zrychleni} m/s² · v čase {cas} · tady se nehodnotí",
   "vysledek.autobus.nemereno": "neměřeno: autobus po celém mostě nepřejel",
   "vysledek.vlak": "Pohodlí ve vlaku",
   "vysledek.vlak.nemereno": "neměřeno: osobní vůz po celém mostě nepřejel",
@@ -582,6 +620,7 @@ const CS = {
   "legenda.kmitani.popis": "Okamžité zrychlení mostovky, podle kterého se hodnotí pohodlí chodců; počítá se, jen když po mostě někdo jde",
   "vysledek.kmitani": "Kmitání mostovky",
   "vysledek.kmitaniHodnota": "{zrychleni} m/s² · {trida} · v čase {cas}",
+  "vysledek.kmitani.nadMezi": "nad mezí úrovně {limit} m/s²",
   "vysledek.kmitaniZadne": "žádné",
   "vysledek.autobus": "Pohodlí v autobusu",
   "vysledek.pohyb": "Zvedání mostu",
@@ -731,12 +770,14 @@ const CS = {
   "ukazka.nadpis": "Ukázka",
   "ukazka.pocitaSe": "počítá se…",
   "ukazka.nejde": "ukázku se nepodařilo spočítat",
-  "ukazka.kmitani": "kmitání {zrychleni} m/s²",
+  "ukazka.kmitani": "kmitání zatím nejvýš {zrychleni} m/s²",
   "ukazka.obstal": "obstál",
   "ukazka.neobstal": "neobstál",
-  "ukazka.nejvic": "kmitání až {zrychleni} m/s²",
-  "ukazka.cestujici": "cestující cítí až {zrychleni} m/s²",
-  "ukazka.spadlo": "spadli {spadlo} z {pocet}",
+  "ukazka.nejvic": "nejvýš {zrychleni} m/s²",
+  "ukazka.nejvic.neobstal": "kmitání nejvýš {zrychleni} m/s²",
+  "ukazka.cestujici": "cestující cítí nejvýš {zrychleni} m/s²",
+  "ukazka.spadl": "spadl",
+  "ukazka.povolilo": "něco povolilo",
   "ukazka.zvetseni": "Pohyb mostu je {nasobek}× zvětšený, aby byl vidět.",
   "ukazka.1-01.a": "Jen mostovka",
   "ukazka.1-01.b": "Mostovka s trojúhelníkem",
@@ -805,7 +846,7 @@ const CS = {
     "Delší pole mostu táhne hlavu pylonu doprava a nic ji nedrží: betonový pylon se ohne a zlomí už pod vlastní tíhou mostu. Kotevní lana vedou z hlavy pylonu do opěr na koncích mostu a ten tah zachytí.",
   "ukazka.4-04.a": "Lana, jak je položil výkres",
   "ukazka.4-04.b": "Po automatickém dopnutí",
-  "ukazka.4-04.popis": "Stejný most, stejná lana. Nosné lano se pod tíhou mostovky vyrovná do oblouku, jaký odpovídá zatížení, a nedbá na to, jak je nakreslené. Závěsy dlouhé podle výkresu pak mostovku někde nadzvednou a jinde nechají klesnout skoro o metr. Dopnutí upraví každému závěsu délku tak, aby mostovka zůstala rovná.",
+  "ukazka.4-04.popis": "Stejný most, stejná lana. Nosné lano se pod tíhou mostovky vyrovná do oblouku, jaký odpovídá zatížení, a nedbá na to, jak je nakreslené. Závěsy dlouhé podle výkresu pak nechají mostovku klesnout až o tři čtvrtě metru. Dopnutí upraví každému závěsu délku tak, aby mostovka zůstala rovná.",
   "skutecnost.4-01":
     "viadukt Millau v jižní Francii nese dálnici přes údolí řeky Tarn na sedmi betonových pilířích. Nejvyšší z nich měří 245 metrů a s pylonem nad vozovkou 343 metrů, víc než Eiffelova věž. Otevřeli ho v prosinci 2004.",
   "skutecnost.4-02":
@@ -891,6 +932,7 @@ const CS = {
   "paleta.smazatVse": "Vše pryč",
   "paleta.smazat.popis": "Smazat vybrané pruty a styčníky (Delete)",
   "paleta.smazatVse.popis": "Smazat celý most; jde to vrátit přes Zpět",
+  "hlaseni.smazanoVse": "Celý most je pryč. Kdo to nechtěl, vrátí ho tlačítkem Zpět nebo Ctrl+Z.",
   "paleta.zpet.popis": "Vrátit poslední úpravu (Ctrl+Z)",
   "paleta.znovu.popis": "Zopakovat vrácenou úpravu (Ctrl+Y)",
   "paleta.export": "Export",
@@ -985,6 +1027,7 @@ const CS = {
   "medaile.mistrovska": "Mistrovská",
   "medaile.pruchod.podminka": "všichni přejdou, nikdo nespadne",
   "medaile.pruchod.podminkaSKmitanim": "všichni přejdou a most se pod nimi nerozkmitá nad {limit} m/s²",
+  "medaile.pruchod.pruhyb": "mostovka se od výkresu neodchýlí o víc než {mm} mm",
   "medaile.mistrovska.komfort": "rozpočtová medaile a k ní kmitání mostovky nejvýš {limit} m/s²",
   "medaile.rozpocet.podminka": "průchod s mostem do {castka}, na kterém nic nepovolilo ani se trvale neohnulo",
   "medaile.mistrovska.rezerva": "rozpočtová medaile a k ní žádný prut využitý nad {limit}",
@@ -1019,6 +1062,20 @@ const CS = {
   "vyzvy.zadani.zlom": "Únosnost na korunu (zkouška Do zlomu): zlato od {zlato}.",
   "medaile.drive": "získaná dřív jiným mostem",
   "medaile.drive.poznamka": "(tenhle most ji nesplnil, ale už ji máš z dřívějška)",
+  "medaile.proc.uvod": "Proč ne: {duvod}.",
+  "medaile.proc.pruchod": "most zkouškou neprošel (proč, říká věta nahoře)",
+  "medaile.proc.nejdrivPruchod": "nejdřív musí most projít",
+  "medaile.proc.nejdrivRozpocet": "nejdřív rozpočtová medaile",
+  "medaile.proc.povolilo": "na mostě se něco porušilo (povolil prut)",
+  "medaile.proc.pretizeno": "na mostě se něco porušilo (prut {prut} využitý na {vyuziti}, přes 100 %)",
+  "medaile.proc.sjelo": "na mostě se něco porušilo (konec mostu sjel z podpory)",
+  "medaile.proc.drazsi": "o {castka} dražší než inženýrský rozpočet",
+  "medaile.proc.vyuziti": "využití {hodnota}, smí nejvýš {mez}",
+  "medaile.proc.kmitani": "kmitání {hodnota} m/s², smí nejvýš {mez} m/s²",
+  "medaile.proc.cestujici": "pohodlí cestujících {hodnota} m/s², smí nejvýš {mez} m/s²",
+  "medaile.proc.dosednuti": "ráz dosednutí {hodnota}, smí nejvýš {mez}",
+  "medaile.proc.nedosedl": "most na opěru nedosedl",
+  "medaile.proc.nemereno": "zkouška to nezměřila (nikdo most celý nepřejel)",
 
   // Výsledek zkoušky
   "vysledek.obstal": "Most obstál",
@@ -1033,6 +1090,10 @@ const CS = {
   "vysledek.dopnutoMarne":
     "Mostovka už před zkouškou visela {mm} mm pod výkresem, i když jsou lana dopnutá: napínáky víc nespraví.",
   "vysledek.trvaleOhnuty": "Prut {prut} byl využitý na {vyuziti}: ocel se tam trvale přetvořila. Most prošel, ale rozpočtovou medaili nedostane a do výzev se nepočítá.",
+  "vysledek.pruhyb":
+    "Mostovka se při zkoušce odchýlila od výkresu o {mm} mm; tahle úroveň dovoluje nejvýš {mez} mm. Všichni přešli, ale most, který se pod lidmi takhle prohýbá, neobstál: podepři mostovku hustěji, aby držela tvar.",
+  "vysledek.pruhyb.klid":
+    "Mostovka se už pod vlastní tíhou liší od výkresu o {mm} mm; tahle úroveň dovoluje nejvýš {mez} mm. Most, jehož mostovka nedrží tvar, tu neobstojí: podepři ji v každém styčníku.",
   "vysledek.opreno": "Most nemá vlastní oporu: propadl se a zůstal ležet na terénu. O zem se most opírat nesmí; podepři ho z kotev a podpor tak, aby držel tvar sám.",
   "vysledek.bezRovnovahy":
     "Most neunesl ani vlastní váhu: povolil hned, dřív než na něj kdokoli vjel.",
@@ -1411,6 +1472,8 @@ const CS = {
   "zebricek.odmitnuto.adresa": "Z tvého připojení dnes server přepočítal už tolik mostů, kolik z jednoho smí. Zkus to prosím zítra.",
   "zebricek.odmitnuto.nejdriv": "Server tenhle most ještě nezná z běžné zkoušky. Projdi s ním běžnou zkouškou a zapiš ho znovu.",
   "zebricek.odmitnuto.soubeh": "Žebříček se zrovna měnil a zápis se nepovedl. Zkus to prosím znovu.",
+  "zebricek.odmitnuto.bez-adresy": "Server teď nepozná, odkud zápis přichází, a žebříček proto nepřijímá. Zkus to později.",
+  "zebricek.odmitnuto.prezdivka": "Tuhle přezdívku žebříček nepřijme. Zvol si jinou.",
   "dilna.tlacitko": "Dílna",
   "dilna.tlacitko.popis": "Uložené mosty z pískoviště: uložit tenhle, otevřít jiný, poslat scénář odkazem",
   "dilna.nadpis": "Dílna: uložené mosty",
@@ -1600,9 +1663,9 @@ const CS = {
   "zadani.4-03.vice":
     "Pylon s lany do mostovky je zavěšený most. Lano umí jen táhnout a smí měřit až šedesát metrů. Delší pole táhne hlavu pylonu k sobě a drží ji jen kotevní lano do levé opěry: nedotažené se nejdřív protáhne, pylon se mezitím ohne a pod kolonou zlomí. Tlačítko Dopnout lana (N) nastaví napínáky tak, aby mostovka pod vlastní tíhou zůstala rovná; jednotlivá lana doladíš položkou Napínák lana.",
   "zadani.4-04":
-    "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano a z něj závěsy k mostovce.",
+    "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano volným pásem nad roklí a z něj svislé závěsy k mostovce.",
   "zadani.4-04.vice":
-    "Pylony stojí na základech na březích; nosné lano je mezi nimi prověšené do oblouku a za pylony ho ukotvi do kotev v zemi. Závěsy vedou svisle ke styčníkům mostovky. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
+    "Pylony stojí na základech na březích; nosné lano je mezi nimi prověšené do oblouku a za pylony ho ukotvi do kotev v zemi. Nad roklí je pro ně volný jen pás mezi zakázanými zónami a závěsy vedou svisle štěrbinami ke styčníkům mostovky: šikmá lana z pylonů rovnou do mostovky tu nejdou, stejně jako ocelové pruty. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo; na závěsy obyčejné stačí. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
   "zadani.4-05": "Silnice dlouhá dvaasedmdesát metrů přes údolí, ve kterém jde založit jediný pilíř, a ten nestojí uprostřed: osmačtyřicet metrů od levého břehu. Pod delším polem se stavět nesmí a k ruce jsou jen pilíř a lana; pojedou dva tahače s návěsem, proti nim kolona tří nákladních aut a nakonec tahač proti autobusu.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s².",
@@ -1660,9 +1723,9 @@ const CS = {
   "zadani.8-01.vice":
     "Vlak je několikrát těžší než silniční provoz. Na straně k řece vede po pylonech do výšky osmnácti metrů schodiště pro údržbu, takže lana k řece smějí z pylonu vycházet až nad ním. Pod nízký strop nad středem řeky odtamtud dosáhnou z každého břehu jen do necelých dvou pětin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
   "zadani.8-02":
-    "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést, a nad celým údolím visí ve výšce 10,5 m elektrické vedení. Lana na betonových pylonech lávku unesou, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s².",
+    "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést, a nad celým údolím visí ve výšce 10,5 m elektrické vedení. Lana na betonových pylonech lávku unesou, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s² a mostovka se nesmí od výkresu odchýlit o víc než 10 cm.",
   "zadani.8-02.vice":
-    "Zavěšená lávka je lehká, ale měkká: krok čtyřiceti lidí ji rozkmitá, i když žádnou její vlastní frekvenci přesně netrefí, a pomalé procesí chytí lávku, která útvaru uteče. Pylony tu jdou postavit jen z pilířů na základech za opěrami a pod vedení se vejdou nejvýš desetimetrové. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí, a tlumičů několik, jeden na šedesát metrů lávky nestačí.",
+    "Zavěšená lávka je lehká, ale měkká: krok čtyřiceti lidí ji rozkmitá, i když žádnou její vlastní frekvenci přesně netrefí, a pomalé procesí chytí lávku, která útvaru uteče. Pylony tu jdou postavit jen z pilířů na základech za opěrami a pod vedení se vejdou nejvýš desetimetrové. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí, a tlumičů několik, jeden na šedesát metrů lávky nestačí. Mostovka navíc musí držet tvar z výkresu na deset centimetrů: lávka, která by mezi lany visela jako pás, tu neobstojí, takže chce lano do každého styčníku a dopnuté napínáky.",
   "zadani.8-03":
     "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
   "zadani.8-03.vice":

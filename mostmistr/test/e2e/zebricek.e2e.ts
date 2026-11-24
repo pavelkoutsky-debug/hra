@@ -36,6 +36,8 @@ const prostredi: ProstrediServeru = {
   nahoda: () => "abcdef",
   prostredi: "test",
   hesloSpravce: HESLO,
+  // Náhledový server hlavičku Netlify s adresou nepřidá; bez adresy by žebříček zápis odmítl.
+  adresa: () => "203.0.113.7",
 };
 
 const bezMezer = (text: string): string => text.replace(/[  ]/g, " ");

@@ -7,9 +7,33 @@
     <meta name="description" content="Mostmistr: stavění mostů na technickém výkresu s poctivou fyzikou." />
     <title>Mostmistr</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      Náhled odkazu při sdílení. Stránka je jedna pro oba jazyky, proto je popis česky i anglicky.
+      %ADRESA_WEBU% doplní sestavení z proměnné URL na Netlify (og:image musí být absolutní adresa).
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mostmistr" />
+    <meta property="og:title" content="Mostmistr" />
+    <meta property="og:description" content="Stavěj mosty na technickém výkresu a vyzkoušej je poctivou fyzikou. · Build bridges on a technical drawing and test them with honest physics." />
+    <meta property="og:url" content="%ADRESA_WEBU%/" />
+    <meta property="og:image" content="%ADRESA_WEBU%/nahled.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Příhradový most na technickém výkresu ve hře Mostmistr" />
+    <meta property="og:locale" content="cs_CZ" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="/src/styly.css" />
   </head>
   <body>
+    <noscript>
+      <p class="bez-skriptu">
+        Mostmistr je hra o stavění mostů a bez JavaScriptu se nespustí: povol ho prosím a načti stránku znovu.
+        <span lang="en">Mostmistr is a bridge-building game and needs JavaScript: please enable it and reload the page.</span>
+      </p>
+    </noscript>
     <!-- Přehled kampaně -->
     <div class="hra hra--prehled" id="obrazovka-prehled" hidden>
       <header class="lista">
@@ -27,6 +51,7 @@
         <p class="prehled__list"><a href="?list" data-akce="otevrit-list" data-udaj="prehled-list"></a></p>
         <div class="zaznam" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
@@ -45,6 +70,7 @@
         <p class="prehled__verze">
           <span data-udaj="prehled-verze"></span>
           · <a href="/zkusebna.html" data-text="lista.zkusebna" data-popis="lista.zkusebna.popis"></a>
+          · <a href="?soukromi" data-akce="soukromi" data-text="soukromi.odkaz"></a>
         </p>
       </main>
     </div>
@@ -76,6 +102,7 @@
       <header class="lista">
         <a class="lista__nazev" href="/" data-text="hra.nazev"></a>
         <span class="lista__uroven" data-udaj="uroven"></span>
+        <span class="lista__id" data-udaj="uroven-id"></span>
 
         <div class="rozpocet">
           <span class="rozpocet__popis" data-udaj="rozpocet-popis"></span>
@@ -133,6 +160,7 @@
         <!-- Kdo přijde odkazem, zadání neotevírá: upozornění na záznam hraní má vidět tady. -->
         <div class="zaznam zaznam--host" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
@@ -320,6 +348,7 @@
           <!-- Upozornění o záznamu hraní je až pod nástroji: hráč ho uvidí, ale nezabírá mu místo na stavbu. -->
           <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
             <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
             <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
             <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
           </div>
@@ -334,7 +363,7 @@
           <p class="vykres__chyba" data-udaj="chyba" role="alert" hidden></p>
 
           <div class="legenda">
-            <span data-text="zkusebna.legenda.vyuziti"></span>
+            <span data-udaj="legenda-vyuziti" data-text="zkusebna.legenda.vyuziti"></span>
             <span data-procenta="0">0 %</span>
             <span class="legenda__skala"></span>
             <span data-procenta="1">100 %</span>
@@ -684,7 +713,10 @@
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="zebricek-zapsat" data-text="zebricek.zapsat"></button>
         </div>
         <p class="okno__hlaseni" data-udaj="zebricek-hlaseni" role="status"></p>
-        <p class="okno__poznamka" data-text="zebricek.soukromi"></p>
+        <p class="okno__poznamka">
+          <span data-text="zebricek.soukromi"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+        </p>
         <div class="okno__tlacitka">
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
         </div>
@@ -722,7 +754,10 @@
         </label>
         <label class="vazba__popisek" for="vazba-kontakt" data-text="vazba.kontakt"></label>
         <input id="vazba-kontakt" type="email" maxlength="200" autocomplete="email" />
-        <p class="vazba__poznamka" data-text="vazba.kontakt.poznamka"></p>
+        <p class="vazba__poznamka">
+          <span data-text="vazba.kontakt.poznamka"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+        </p>
         <input id="vazba-web" class="vazba__past" type="text" name="potvrzeni-zpravy" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <p class="vazba__zaznam">
           <span data-udaj="vazba-zaznam"></span>
@@ -785,12 +820,49 @@
         </div>
         <div class="zaznam zaznam--vOkne" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
+          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <p class="okno__napoveda" data-udaj="zadani-ovladani" data-text="zadani.ovladani"></p>
         <div class="okno__tlacitka">
           <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="zadani.zacit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--pojmy okno--soukromi" id="okno-soukromi">
+      <form method="dialog">
+        <h2 data-text="soukromi.nadpis"></h2>
+        <p data-text="soukromi.uvod"></p>
+        <h3 data-text="soukromi.prohlizec.nadpis"></h3>
+        <p data-text="soukromi.prohlizec"></p>
+        <h3 data-text="soukromi.denik.nadpis"></h3>
+        <p data-text="soukromi.denik"></p>
+        <p class="soukromi__radek">
+          <span data-udaj="soukromi-zaznam"></span>
+          <button type="button" class="tlacitko" data-akce="soukromi-zaznam"></button>
+        </p>
+        <h3 data-text="soukromi.vazba.nadpis"></h3>
+        <p data-text="soukromi.vazba"></p>
+        <h3 data-text="soukromi.zebricek.nadpis"></h3>
+        <p data-text="soukromi.zebricek"></p>
+        <h3 data-text="soukromi.kde.nadpis"></h3>
+        <p data-text="soukromi.kde"></p>
+        <h3 data-text="soukromi.smazani.nadpis"></h3>
+        <p data-text="soukromi.smazani"></p>
+        <p class="soukromi__radek">
+          <span data-text="soukromi.hrac"></span>
+          <code class="soukromi__hrac" data-udaj="soukromi-hrac"></code>
+          <button type="button" class="tlacitko" data-akce="soukromi-kopirovat"></button>
+        </p>
+        <p class="soukromi__radek" data-udaj="soukromi-zebricek-radek" hidden>
+          <span data-text="soukromi.hrac.zebricek"></span>
+          <code class="soukromi__hrac" data-udaj="soukromi-zebricek"></code>
+        </p>
+        <div class="okno__tlacitka">
+          <button type="button" class="tlacitko" data-akce="soukromi-napis" data-text="soukromi.napis"></button>
+          <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>
     </dialog>
@@ -812,7 +884,6 @@
       <span data-udaj="pojem-text"></span>
     </div>
 
-    <noscript>Mostmistr potřebuje zapnutý JavaScript. / Mostmistr needs JavaScript turned on.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

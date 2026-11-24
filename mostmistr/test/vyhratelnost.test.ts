@@ -1,10 +1,12 @@
 // Každá úroveň kampaně jde vyhrát, každou medaili lze získat a triviální most neprojde.
 // Medaile jdou po schodech (rozpočtová je průchod do inženýrského rozpočtu bez porušení,
 // mistrovská je rozpočtová a k ní bonus úrovně) a referenční mosty to ukazují.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../src/data/cena";
 import { KATALOG } from "../src/data/katalog";
 import { zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
+import { rysyMostu } from "../src/data/rysy";
 import type { Uroven } from "../src/data/uroven";
 import type { VysledekZkousky } from "../src/zkouska/protokol";
 import { Kreslic } from "../src/zkouska/regrese";
@@ -223,6 +225,39 @@ describe("lekce, které nejde obejít", () => {
     for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["4-05"]![klic], uroven), klic).toEqual([]);
   });
 
+  it("4-04: visutý most nejde nahradit příhradou ani lany z pylonů rovnou do mostovky", () => {
+    // Recenze obtížnosti M17 našla dvě levnější cesty bez nosného lana mezi pylony, obě s rozpočtovou
+    // medailí a zlatem všech tří výzev: příhradu z lehké oceli pod mostovkou (Z1, 2 003 207 Kč) a
+    // zavěšený most, vějíř obyčejných lan z dvanáctimetrových pylonů (Z2, 1 903 186 Kč; most autora
+    // pro rozpočtovou stál 2 046 528 Kč). Strojové hledání při přeladění našlo ještě levnější cestu,
+    // kterou samotná paleta nezavře: kloubová mostovka visí mezi několika nosnými lany z nízkých
+    // pylonů jako řetěz a její tah drží pevná opěra (1 962 647 Kč s rozpočtovou medailí, tři lana
+    // z každého pylonu); se svislými závěsy na koncích lan a napínáky na krajní mezi 1 756 706 Kč.
+    // Úroveň proto nemá ocel a nad roklí jí zakázané zóny nechávají volný jen pás, kudy vede nosné
+    // lano, a svislé štěrbiny pro závěsy ve styčnících: šikmé lano do mostovky ani k závěsu z pylonu
+    // neprojde (při přeladění ověřeno na stovkách tvarů).
+    const uroven = kampan.find((u) => u.id === "4-04")!;
+    expect(uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut")).toEqual([]);
+    const mosty = JSON.parse(readFileSync(new URL("./data/4-04-obejiti.json", import.meta.url), "utf8")) as Record<string, NavrhMostu>;
+    expect(Object.keys(mosty).length).toBe(4);
+    const druhy = (navrh: NavrhMostu): Set<string> => new Set(zkontrolujNavrh(navrh, uroven).map((p) => p.druh));
+    for (const [nazev, most] of Object.entries(mosty)) {
+      // Všechny by se do rozpočtu úrovně vešly; odmítne je pravidlo, ne cena.
+      expect(cenaNavrhu(most), nazev).toBeLessThan(uroven.inzenyrskyRozpocet!);
+      expect(druhy(most).has("nad-rozpocet"), nazev).toBe(false);
+    }
+    expect(druhy(mosty["příhrada pod mostovkou (recenze M17, Z1)"]!)).toEqual(new Set(["prvek-nepovoleny"]));
+    for (const nazev of ["zavěšený most z obyčejných lan (recenze M17, Z2)", "mostovka jako řetěz na šesti nosných lanech", "řetěz na nosných lanech se závěsy"]) {
+      expect(druhy(mosty[nazev]!).has("prut-v-zakazane-zone"), nazev).toBe(true);
+      expect([...druhy(mosty[nazev]!)].every((d) => d === "prut-v-zakazane-zone" || d === "stycnik-v-zakazane-zone"), nazev).toBe(true);
+    }
+    // Mosty autora pásem projdou a jsou visuté (nosné lano přes hlavy pylonů a svislé závěsy).
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) {
+      expect(zkontrolujNavrh(RESENI["4-04"]![klic], uroven), klic).toEqual([]);
+      expect(rysyMostu(RESENI["4-04"]![klic], uroven).soustava, klic).toBe("visuty");
+    }
+  });
+
   it("8-01: zavěšený most bez ztužující příhrady nejde postavit; lana dosáhnou jen do styčníku 37", () => {
     // Recenze obtížnosti M14 (nález 2): s pylonem 20 m a lany z 15 a 12 m do styčníků 42 a 48
     // dostal most bez příhrady rozpočtovou medaili. Zóna u pylonu (do 18 m) spolu se stropem
@@ -344,6 +379,42 @@ describe("lekce, které nejde obejít", () => {
       expect(most.pruty.filter((p) => p.prvek === "lano" || p.prvek === "lano-nosne").length, klic).toBeGreaterThanOrEqual(4);
     }
   });
+
+  it("8-02: měkká lávka, která mezi lany visí jako pás, neobstojí: úroveň hlídá průhyb mostovky", () => {
+    // Hledání šampionů výzev po M14 došlo k lávce s jediným pylonem, třemi lany a malými tlumiči,
+    // jejíž mostovka visela 1,2 až 1,5 m pod výkresem: rozpočtová medaile za 1,03 milionu (most
+    // autora 1,76 milionu) a se sedmi tlumiči i mistrovská za 1,27 milionu. Lana i tlumiče měla,
+    // ale hotový most to není. Úroveň proto hlídá průhyb mostovky (`nejvetsiPruhyb`, 10 cm).
+    const uroven = kampan.find((u) => u.id === "8-02")!;
+    expect(uroven.nejvetsiPruhyb).toBe(0.1);
+    const mekke = JSON.parse(readFileSync(new URL("./data/8-02-mekke-lavky.json", import.meta.url), "utf8")) as Record<string, NavrhMostu>;
+    expect(Object.keys(mekke).length).toBe(2);
+    for (const [nazev, most] of Object.entries(mekke)) {
+      const v = zkousej(uroven, most);
+      // Nic se na ní neporuší a lidé přejdou; neobstojí jen proto, že nedrží tvar.
+      expect(v.poruseni, nazev).toBe(0);
+      expect(v.spadlo, nazev).toBe(0);
+      expect(v.pruvesVKlidu, nazev).toBeGreaterThan(1);
+      expect(v.pruhyb?.prekroceno, nazev).not.toBeNull();
+      expect(v.pruhyb!.prekroceno!, nazev).toBeLessThan(0.5);
+      expect(v.pruchod, nazev).toBe(false);
+      expect(v.medaile, nazev).toEqual({ pruchod: false, rozpocet: false, mistrovska: false });
+    }
+    // Mosty autora drží tvar s velkou rezervou (lana do každého styčníku, dopnuté napínáky)…
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) {
+      const v = zkousej(uroven, RESENI["8-02"]![klic]);
+      expect(v.pruhyb?.prekroceno, klic).toBeNull();
+      expect(v.pruhyb!.nejvetsi, klic).toBeLessThan(0.05);
+      expect(v.pruchod, klic).toBe(true);
+    }
+    // …a bez dopnutí ne: lekce o napínácích ze 4-03 tu platí taky.
+    const mistrovska = RESENI["8-02"]!.mistrovska;
+    const povoleny = zkousej(uroven, { ...mistrovska, pruty: mistrovska.pruty.map((p) => ({ ...p, predpeti: 0 })) });
+    expect(povoleny.pruvesVKlidu).toBeGreaterThan(0.1);
+    expect(povoleny.pruchod).toBe(false);
+    // Úroveň, která průhyb nehlídá, ho neměří, a pokus (zkouška do zlomu) taky ne.
+    expect(zkousej(kampan.find((u) => u.id === "4-03")!, RESENI["4-03"]!.pruchod).pruhyb).toBeNull();
+  }, 240_000);
 
   it("2-04: o kotvy pro tlumiče se neopře vzpěra; tlumič do nich vést smí", () => {
     // Kontrola obtížnosti M12: se vzpěrami z těch kotev do každého styčníku mostovky měla lávka

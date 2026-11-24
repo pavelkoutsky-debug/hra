@@ -7,6 +7,7 @@ import { nastavZaznam, odesliVazbu, priZmeneVolby } from "../denik/prohlizec";
 import { DRUHY_VAZBY, NEJDELSI_VAZBA, type DruhVazby, type ZpetnaVazba } from "../denik/udalosti";
 import { prvek, udaj } from "../ui/dom";
 import { t } from "../ui/slovnik";
+import { pripojSoukromi } from "./soukromi";
 
 /** Odkud okno bere to, co se ke zprávě přikládá. */
 export interface ZdrojVazby {
@@ -140,5 +141,8 @@ export function pripojVazbu(denik: Denik, zdroj: ZdrojVazby): OknoVazby {
   // Hráč přepnul záznam jinde (vypínač v přehledu, jiný panel prohlížeče).
   priZmeneVolby(obnov);
   obnov();
-  return { otevri };
+  const oknoVazby: OknoVazby = { otevri };
+  // Okno Soukromí a kontakt žije všude, kde okno zpětné vazby (odkazuje na něj a naopak).
+  pripojSoukromi(denik, oknoVazby);
+  return oknoVazby;
 }

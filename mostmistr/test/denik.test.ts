@@ -91,7 +91,7 @@ function server(volby: Partial<ProstrediServeru> = {}): ProstrediServeru & { skl
     ted: () => new Date("2026-11-22T20:15:30.000Z"),
     nahoda: () => (++cislo).toString(16).padStart(6, "0"),
     prostredi: "test",
-    hesloSpravce: "tajne-heslo-123",
+    hesloSpravce: "tajne-heslo-spravce-123",
     ...volby,
   };
 }
@@ -105,7 +105,7 @@ function zadost(cesta: string, telo?: unknown, hlavicky: Record<string, string> 
   });
 }
 
-const SPRAVCE = { authorization: "Bearer tajne-heslo-123" };
+const SPRAVCE = { authorization: "Bearer tajne-heslo-spravce-123" };
 
 describe("deník ve hře", () => {
   it("nové sezení dostane čísla hráče a sezení a zapíše svůj začátek; další stránka téhož sezení v nich pokračuje", async () => {
@@ -561,17 +561,22 @@ describe("server: správa", () => {
     expect((await spravuj(zadost("/api/sprava?co=overeni", undefined, { authorization: "Bearer spatne-heslo" }), p)).status).toBe(401);
   });
 
-  it("bez hesla nepustí nikoho; bez nastaveného hesla řekne, co chybí", async () => {
+  it("bez hesla nepustí nikoho; bez nastaveného nebo krátkého hesla řekne, že správa není nastavená", async () => {
     const p = await naplneny();
     expect((await spravuj(zadost("/api/sprava?co=vazby"), p)).status).toBe(401);
-    expect((await spravuj(zadost("/api/sprava?co=vazby", undefined, { authorization: "Bearer tajne-heslo-124" }), p)).status).toBe(401);
-    expect((await spravuj(zadost("/api/sprava?co=vazby", undefined, { authorization: "tajne-heslo-123" }), p)).status).toBe(401);
+    expect((await spravuj(zadost("/api/sprava?co=vazby", undefined, { authorization: "Bearer tajne-heslo-spravce-124" }), p)).status).toBe(401);
+    expect((await spravuj(zadost("/api/sprava?co=vazby", undefined, { authorization: "tajne-heslo-spravce-123" }), p)).status).toBe(401);
     expect((await spravuj(zadost("/api/sprava?co=vazby", undefined, SPRAVCE), p)).status).toBe(200);
-    for (const heslo of [null, "", "kratke"]) {
+    // Heslo kratší než 16 znaků neplatí (ani to, které by dřív stačilo). Odpověď nejmenuje
+    // proměnnou prostředí: kdokoli by se z ní dozvěděl, jak se správa nastavuje.
+    for (const heslo of [null, "", "kratke", "patnact-znaku-1"]) {
       const bez = await spravuj(zadost("/api/sprava?co=vazby", undefined, { authorization: `Bearer ${heslo ?? ""}` }), { ...p, hesloSpravce: heslo });
       expect(bez.status).toBe(503);
-      expect(((await bez.json()) as { chyba: string }).chyba).toContain("MM_SPRAVCE_HESLO");
+      const { chyba } = (await bez.json()) as { chyba: string };
+      expect(chyba).not.toContain("MM_");
+      expect(chyba).not.toMatch(/proměnn/);
     }
+    expect((await spravuj(zadost("/api/sprava?co=vazby", undefined, { authorization: "Bearer sestnact-znaku-1" }), { ...p, hesloSpravce: "sestnact-znaku-1" })).status).toBe(200);
   });
 
   it("seznam zpětných vazeb je od nejnovější, bez příloh a s ukázkou textu; detail je celý", async () => {

@@ -37,8 +37,9 @@ function obstoji(uroven: Uroven, navrh: NavrhMostu): boolean {
   let pojistka = 0;
   while (!zkouska.hotovo) {
     zkouska.pokracuj(1);
-    // První porušení nebo kmitání pod lidmi nad mezí úrovně rozhodlo; zbytek zkoušky netřeba počítat.
-    if (zkouska.simulace.udalosti.length > 0 || zkouska.kmitaniNadMezi) return false;
+    // První porušení, kmitání pod lidmi nad mezí úrovně nebo průhyb mostovky nad mezí rozhodly;
+    // zbytek zkoušky netřeba počítat.
+    if (zkouska.simulace.udalosti.length > 0 || zkouska.kmitaniNadMezi || zkouska.pruhybNadMezi) return false;
     if (pojistka++ > 400) throw new Error("zkouška neskončila");
   }
   const vysledek = zkouska.vysledek();

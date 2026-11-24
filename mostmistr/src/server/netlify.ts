@@ -1,6 +1,7 @@
 // Prostředí serveru na Netlify: úložiště v Netlify Blobs, hodiny, náhoda a nastavení
 // z proměnných prostředí. Funkce v `netlify/functions/` jsou jen tenké obálky nad obsluhou.
 
+import type { PametSoli } from "./adresa";
 import { skladNetlify } from "./blobs";
 import type { ProstrediServeru } from "./obsluha";
 
@@ -14,6 +15,12 @@ function promenna(jmeno: string): string | null {
   return hodnota === undefined || hodnota === "" ? null : hodnota;
 }
 
+/**
+ * Soli dnů v paměti instance funkce, zvlášť pro úložiště ostrého webu a náhledů: sůl se tak
+ * z úložiště čte jednou za den a instanci, ne při každé žádosti.
+ */
+const PAMETI_SOLI: Record<"ostra" | "nahled", PametSoli> = { ostra: new Map(), nahled: new Map() };
+
 /** Co funkce Netlify dostává jako druhý argument; z něj se pozná, o jaké nasazení jde. */
 export interface KontextNetlify {
   deploy?: { context?: string };
@@ -26,8 +33,11 @@ export interface KontextNetlify {
  */
 export function prostrediNetlify(kontext?: KontextNetlify): ProstrediServeru {
   const prostredi = kontext?.deploy?.context ?? promenna("CONTEXT") ?? "neznamo";
+  const ostry = prostredi === "production";
+  // Adresu hráče bere obsluha z hlavičky `x-nf-client-connection-ip` (`adresa.ts`).
   return {
-    sklad: skladNetlify(prostredi === "production"),
+    sklad: skladNetlify(ostry),
+    pametSoli: PAMETI_SOLI[ostry ? "ostra" : "nahled"],
     ted: () => new Date(),
     nahoda: () => Array.from(crypto.getRandomValues(new Uint8Array(3)), (b) => b.toString(16).padStart(2, "0")).join(""),
     prostredi,

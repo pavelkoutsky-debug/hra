@@ -50,6 +50,14 @@ describe("zkušebna", () => {
     await stranka.locator('a[href="/zkusebna.html"]').click();
     await stranka.waitForURL(/zkusebna\.html/);
     expect(await stranka.title()).toBe("Mostmistr – zkušebna");
+    // Nástroje autorů (shoda výpočtu, měření výkonu, zvuky) hráč z patičky nevidí.
+    for (const kam of ["/otisky.html", "/mereni.html", "/zvuky.html"]) expect(await stranka.locator(`a[href="${kam}"]`).isVisible()).toBe(false);
+  });
+
+  it("odkazy na nástroje autorů ukáže jen s ?vyvoj=1 v adrese", async () => {
+    await stranka.goto(`${adresa}zkusebna.html?vyvoj=1`);
+    for (const kam of ["/otisky.html", "/mereni.html", "/zvuky.html"]) expect(await stranka.locator(`a[href="${kam}"]`).isVisible()).toBe(true);
+    await stranka.goto(`${adresa}zkusebna.html`);
   });
 
   it("výchozí případ doběhne a všechna porovnání s teorií sedí", async () => {

@@ -126,8 +126,9 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(4\)\.$/);
     // Mistrovská je rozpočtová a k ní bonus: třímetrová příhrada se vejde do inženýrského rozpočtu a má všechny tři.
     expect(await ziskaneMedaile()).toBe(3);
-    // Jel autobus, takže výsledek říká i to, jak se v něm jelo.
-    expect(await udaj("vysledek-autobus")).toMatch(/^0,\d\d m\/s² · výborný komfort · v čase \d+,\d s/);
+    // Jel autobus, takže výsledek říká i to, jak se v něm jelo. Úroveň pohodlí cestujících
+    // nehodnotí, takže řádek nese jen hodnotu, ne třídu (ta by vedle medailí mátla).
+    expect(await udaj("vysledek-autobus")).toMatch(/^0,\d\d m\/s² · v čase \d+,\d s · tady se nehodnotí/);
     expect(await stranka.locator('[data-udaj="vysledek-kmitani"]').isVisible()).toBe(false);
   }, 180_000);
 });

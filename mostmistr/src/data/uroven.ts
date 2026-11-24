@@ -15,7 +15,7 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 8;
+export const VERZE_UROVNE = 9;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
@@ -39,6 +39,8 @@ const PREVODY_UROVNE: readonly Prevod[] = [
   (stara) => stara,
   // 7 → 8: zkouškové úrovně (bez ukázky a bez nápovědy). Starší úrovně zkouškové nejsou.
   (stara) => ({ ...stara, zkouskova: false }),
+  // 8 → 9: úroveň smí omezit průhyb mostovky (`nejvetsiPruhyb`). Starší úrovně ho nehlídají.
+  (stara) => ({ ...stara, nejvetsiPruhyb: null }),
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
@@ -212,6 +214,13 @@ export interface Uroven {
    * Zadání říká jen úlohu, ne řešení.
    */
   zkouskova: boolean;
+  /**
+   * O kolik metrů se mostovka při zkoušce smí nejvíc odchýlit od výkresu (pod vlastní tíhou
+   * i pod provozem); null: úroveň průhyb nehlídá. Most, který mez překročí, neobstojí, i kdyby
+   * všichni přešli: lávka, která visí jako pás, není hotový most. U pohyblivých mostů nemá
+   * smysl (mostovka se zvedá) a úroveň s `pohyb` ho mít nesmí.
+   */
+  nejvetsiPruhyb: number | null;
 }
 
 const KLICE_UROVNE = [
@@ -243,6 +252,7 @@ const KLICE_UROVNE = [
   "pohyb",
   "lode",
   "zkouskova",
+  "nejvetsiPruhyb",
 ] as const;
 
 function bod(h: unknown, cesta: string): Bod {
@@ -413,6 +423,7 @@ export function nactiUroven(data: unknown): Uroven {
       };
     }),
     zkouskova: logicka(o.zkouskova, `${c}.zkouskova`),
+    nejvetsiPruhyb: neboNull(o.nejvetsiPruhyb, (v) => cislo(v, `${c}.nejvetsiPruhyb`, { min: 0.01, max: 1.5 })),
   };
 
   zkontrolujSouvislosti(uroven, c);
@@ -479,6 +490,9 @@ function zkontrolujSouvislosti(u: Uroven, c: string): void {
     }
   });
 
+  if (u.pohyb && u.nejvetsiPruhyb !== null) {
+    throw new ChybaDat(`${c}.nejvetsiPruhyb`, "průhyb mostovky nejde hlídat u mostu, který se zvedá");
+  }
   if (u.pohyb && u.pohyb.sklopit <= u.pohyb.zvednout) {
     throw new ChybaDat(`${c}.pohyb.sklopit`, "most se musí nejdřív zvednout a pak teprve sklopit");
   }

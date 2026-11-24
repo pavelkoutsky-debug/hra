@@ -192,6 +192,27 @@ describe("ukázky v okně se zadáním", () => {
       for (const strana of ["a", "b"]) {
         expect(await ukazka.locator(`[data-strana="${strana}"] [data-stav]`).innerText()).not.toContain("nepodařilo");
       }
+      // Popisek pod mostem: během děje největší dosavadní kmitání (jen u ukázek o kmitání), po
+      // doběhnutí výsledek. U mostu, který se zřítil, „spadl“, ne kolik kmital.
+      if (id === "1-01" || id === "2-03") {
+        const stavA = ukazka.locator('[data-strana="a"] [data-stav]');
+        const stavB = ukazka.locator('[data-strana="b"] [data-stav]');
+        if (id === "2-03") {
+          await expect.poll(() => stavA.innerText(), { timeout: 20_000 }).toMatch(/^kmitání zatím nejvýš \d+,\d m\/s²$/);
+        }
+        await ukazka.locator('[data-strana="a"] [data-stav][data-verdikt]').waitFor({ timeout: 90_000 });
+        await ukazka.locator('[data-strana="b"] [data-stav][data-verdikt]').waitFor({ timeout: 90_000 });
+        const a = await stavA.innerText();
+        const b = await stavB.innerText();
+        if (id === "1-01") {
+          expect(a).toBe("neobstál: spadl");
+          expect(b).toBe("obstál");
+        } else {
+          expect(a).toMatch(/^neobstál: kmitání nejvýš \d+,\d m\/s²$/);
+          expect(b).toMatch(/^obstál: nejvýš \d+,\d m\/s²$/);
+        }
+        await stranka.screenshot({ path: `${SLOZKA}/76-ukazka-konec-${id}.png` });
+      }
       if (id === "5-04") {
         await stranka.waitForTimeout(8000);
         await stranka.screenshot({ path: `${SLOZKA}/75-ukazka-koncert.png` });

@@ -3,3 +3,5 @@ test/e2e/vystup/
 node_modules
 # Části hledání šampionů výzev, než se složí (npm run sampioni).
 urovne/sampioni.cast-*.json
+# Sestavený soubor pro porovnání strojů JavaScriptu (npm run stroje).
+mereni/stroje/vystup/
