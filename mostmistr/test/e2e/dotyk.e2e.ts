@@ -6,6 +6,7 @@ import { chromium, type Browser, type BrowserContext, type CDPSession, type Page
 import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
+import { PRIPADY } from "../../urovne/havarie/index";
 import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
@@ -312,7 +313,8 @@ describe("dotykové ovládání výkresu", () => {
   }, 200_000);
 
   it("na telefonu a tabletu se žádná úroveň ani pískoviště nerozlije do šířky, česky ani anglicky", async () => {
-    const urovne = [...nactiKampan().map((u) => `?uroven=${u.id}`), "?sandbox"];
+    // Úrovně kampaně, pískoviště a případy Havarijní komise (ty mají navíc pruh se změnami).
+    const urovne = [...nactiKampan().map((u) => `?uroven=${u.id}`), "?sandbox", ...PRIPADY.map((p) => `?uroven=${p.uroven.id}`)];
     const preteklo: string[] = [];
     for (const okno of [
       { width: 390, height: 844 },

@@ -26,7 +26,7 @@ Poslední aktualizace: 24. 11. 2026
 | M12 Obtížnost a medaile | Hotovo: první část 23. 11. 2026 („M12 — výsledek první části“), zkouškové úrovně a příčiny u pohyblivých mostů 24. 11. 2026 („M12c — výsledek“) |
 | M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Hotovo (24. 11. 2026): závěrečná kapitola se třemi úrovněmi, galerie mostů a závěrečný list; viz „M14 — výsledek“ |
-| M15 Dílna a Havarijní komise | Čeká |
+| M15 Dílna a Havarijní komise | Hotovo (24. 11. 2026): pískoviště jako dílna a režim Havarijní komise; viz „M15 — výsledek“ |
 | M16 Žebříčky a denní rozbor | Čeká; potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry |
 
 ## Kde práce stojí (24. 11. 2026)
@@ -43,7 +43,27 @@ Poslední aktualizace: 24. 11. 2026
 - **M12c** (zkouškové úrovně bez návodu, příčiny u pohyblivých mostů) je hotový, viz „M12c — výsledek“.
 - **M14 Finále kampaně** je hotový, viz „M14 — výsledek“.
 - **Pomocným agentům došel 24. 11. limit hlavního modelu (obnoví se 29. 11.)**; návrhy úrovní a recenze od té doby běží na záložním modelu (Opus).
-- **Dál:** M15 (dílna a Havarijní komise) a M16 (žebříčky a denní rozbor; ten potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry).
+- **M15 Dílna a Havarijní komise** je hotový, viz „M15 — výsledek“.
+- **Dál:** M16 (žebříčky a denní rozbor; ten potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry).
+
+## M15 — výsledek
+
+Obsah navíc ke kampani (návrhy 17 a 18 z `docs/RECENZE.md`): pískoviště jako dílna a nový režim Havarijní komise. Verze hry 0.21.0. Fyzika, formát úrovně, návrhu ani uloženého postupu se nemění; nastavení pískoviště má verzi 2 (starší se čte dál).
+
+**Pískoviště jako dílna.**
+- **Hotová údolí** na jedno kliknutí (`PREDLOHY_SANDBOXU`): potok s lávkou, silnice 24 m (výchozí), lávka 40 m s davem a běžci, hluboké údolí 60 m s těžkou dopravou, trať 36 m s nákladním vlakem a kanál 16 m se zvedacím mostem a lodí. Tlačítko jen vyplní formulář; platit začne až po „Použít“.
+- **Zvedací most a loď.** Zaškrtnutí „zvedací most“ přidá do palety píst a zámek, pod opěry kotvy pro písty a do zkoušky zvednutí a sklopení; volí se jedno křídlo (čep vlevo, zámek na ložisku pravé opěry) nebo dvě (čepy v obou opěrách, zámek uprostřed), čas zvedání a výška lodi (0 = bez lodi). Podpory, kotvy a plavební profil jsou stejné jako v kapitole 7; test staví v údolí z předlohy dvoukřídlý most, který loď pustí.
+- **Vlastní cíl**: rozpočet (most nad ním hra ke zkoušce nepustí, jako v kampani) a přísnější mez kmitání pod lidmi (1,0 nebo 0,5 m/s²). Výsledek řekne „Vlastní cíl splněn“. Medaile ani rekordy pískoviště dál nemá.
+- **Dílna: víc uložených mostů s náhledem** (`src/data/dilna.ts`, okno Dílna v paletě). Práce je údolí s provozem a most v něm; ukládá se pod jménem (nejvýš 12, stejné jméno přepíše), jde otevřít na stůl, smazat a poslat odkazem. Otevření jiné práce se ptá, když by zahodilo most, který v dílně uložený není; okno pískoviště na dílnu odkazuje tam, kde dřív radilo Export.
+- **Sdílení scénáře**: odkaz `?most=…&sandbox=…` nese most i údolí (nastavení má pro adresu úsporný zápis, třikrát kratší než JSON). Kdo ho otevře, je ve scénáři **na návštěvě**: jeho vlastní pískoviště zůstává uložené a nic se nezapisuje, dokud se nerozhodne (uložit do dílny, otevřít ve svém pískovišti, vrátit se). Otevření ve vlastním pískovišti jeho rozestavěný most nejdřív samo uloží do dílny; když je plná, neudělá nic a řekne proč. Odkaz bez údolí nebo s poškozeným údolím nic neotevře.
+
+**Havarijní komise** (`src/data/havarie.ts`, `src/data/zmeny.ts`, `urovne/havarie/`). Hráč dostane cizí most, který spadl, má zjistit proč a opravit ho **nejvýš třemi změnami**. Změna je jeden tah nástroje (přidaný, odebraný nebo vyměněný prut, posunutý styčník, svar, zámek, závaží, tlumič; napínáky všech lan dohromady jedna) a **počítá se výsledek, ne cesta**: prut smazaný a nakreslený znovu změna není, posunutý styčník je jedna změna, ne dvě za každý jeho prut. Nad výkresem je pruh s počtem a výčtem změn, spadlý most jde pustit, jak je (zpomalený záběr ukáže první porušení), zkouška s víc než třemi změnami se nespustí a „Vrátit spadlý most“ jde vzít zpět. Uzavřený případ ukáže nález komise (příčinu a poučení) a pamatuje si nejmenší počet změn. Případy jsou v přehledu pod kampaní a otevírají se s první projitou úrovní své kapitoly; medaile, rekordy ani galerie se jich netýkají.
+
+PRIPADY_TABULKA
+
+Případy navrhli tři agenti (záložní model) podle společného zadání a kontroly `posudPripad`: spadlý most musí vypadat jako most, který by postavil rozumný člověk, selhat zřetelně, oprava komise projít bez porušení a s rezervou, a to, co hráče napadne první, nesmí stačit (slepé opravy v testu). `test/havarie.test.ts` to hlídá pro každý případ.
+
+**Testy.** `test/sandbox.test.ts` (verze 2, předlohy, zvedací mosty v pískovišti, cíl), `test/dilna.test.ts` (práce, zápis nastavení do adresy), `test/zmeny.test.ts` (počítání změn), `test/havarie.test.ts` (pravidla a řešitelnost případů), `test/e2e/dilna.e2e.ts` (uložení, návrat k práci, scénář z odkazu jako návštěva, poškozený odkaz), `test/e2e/komise.e2e.ts` (přehled, spis, počitadlo, uzavření, příliš mnoho změn, angličtina, telefon), `test/e2e/rezimy.e2e.ts` (předloha s kanálem a vlastní cíl) a `test/e2e/dotyk.e2e.ts` (případy na telefonu a tabletu).
 
 ## M14 — výsledek
 
