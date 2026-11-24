@@ -33,6 +33,19 @@ export function skladNadBlobs(bezne: Store, silne: Store | null = null): SkladZa
     zapis: async (klic, hodnota) => {
       await bezne.setJSON(klic, hodnota);
     },
+    ctiSeZnackou: async (klic) => {
+      const zaznam = await cti((u) => u.getWithMetadata(klic, { type: "json" }));
+      // Úložiště, které značku nevrátí, dostane prázdnou: zápis s ní projde bez podmínky.
+      return zaznam === null ? { hodnota: null, znacka: null } : { hodnota: zaznam.data as unknown, znacka: zaznam.etag ?? "" };
+    },
+    zapisPokud: async (klic, hodnota, znacka) => {
+      if (znacka === "") {
+        await bezne.setJSON(klic, hodnota);
+        return true;
+      }
+      const vysledek = await bezne.setJSON(klic, hodnota, znacka === null ? { onlyIfNew: true } : { onlyIfMatch: znacka });
+      return vysledek.modified;
+    },
     smaz: async (klic) => {
       await bezne.delete(klic);
     },

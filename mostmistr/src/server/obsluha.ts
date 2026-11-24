@@ -155,7 +155,7 @@ function jeUlozenyVytah(h: unknown): h is UlozenyVytah {
   );
 }
 
-function odpoved(stav: number, telo?: unknown): Response {
+export function odpoved(stav: number, telo?: unknown): Response {
   if (telo === undefined) return new Response(null, { status: stav });
   return new Response(JSON.stringify(telo), {
     status: stav,
@@ -163,7 +163,7 @@ function odpoved(stav: number, telo?: unknown): Response {
   });
 }
 
-const chyba = (stav: number, zprava: string): Response => odpoved(stav, { chyba: zprava });
+export const chyba = (stav: number, zprava: string): Response => odpoved(stav, { chyba: zprava });
 
 /**
  * Přišla žádost ze stránky téhož webu? Prohlížeč posílá s každým POST hlavičku Origin; cizí
@@ -171,7 +171,7 @@ const chyba = (stav: number, zprava: string): Response => odpoved(stav, { chyba:
  * někým, kdo si hlavičku napíše sám (tu žádná veřejná adresa nemá), jen před cizími weby a
  * nahodilými roboty. Adresa webu se bere z žádosti i z hlaviček, které přidává Netlify.
  */
-function zCizihoWebu(zadost: Request): boolean {
+export function zCizihoWebu(zadost: Request): boolean {
   const puvod = zadost.headers.get("origin");
   if (puvod === null) return true;
   let host: string;
@@ -190,7 +190,7 @@ function zCizihoWebu(zadost: Request): boolean {
 }
 
 /** Přečte tělo žádosti jako JSON; vrací odpověď s chybou, když je moc velké nebo to JSON není. */
-async function teloJson(zadost: Request, nejvic: number): Promise<{ data: unknown } | Response> {
+export async function teloJson(zadost: Request, nejvic: number): Promise<{ data: unknown } | Response> {
   const delka = Number(zadost.headers.get("content-length") ?? "0");
   if (delka > nejvic) return chyba(413, "žádost je příliš velká");
   const zapis = await zadost.text();
@@ -203,7 +203,7 @@ async function teloJson(zadost: Request, nejvic: number): Promise<{ data: unknow
   }
 }
 
-function denZ(cas: Date): string {
+export function denZ(cas: Date): string {
   return cas.toISOString().slice(0, 10);
 }
 
