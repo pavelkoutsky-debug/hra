@@ -24,7 +24,7 @@ Poslední aktualizace: 23. 11. 2026
 | M10 Pád a výsledek | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M11 Kmitání a nápověda | Hotovo (23. 11. 2026); nezávislé recenze viz „Nezávislé recenze M11“ a „Druhé kolo recenzí M11“ |
 | M12 Obtížnost a medaile | První část (medaile po schodech, přeladěné úrovně, šampioni výzev, klidné úseky, krátká zadání, slovníček, odemykání po kapitolách) hotová 23. 11. 2026, viz „M12 — výsledek první části“; zbývají těžké varianty úrovní a příčiny v kapitole 7 |
-| M13 Sdílení mostu | Čeká |
+| M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Čeká |
 | M15 Dílna a Havarijní komise | Čeká |
 | M16 Žebříčky a denní rozbor | Čeká; potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry |
@@ -39,6 +39,20 @@ Poslední aktualizace: 23. 11. 2026
 - **M10 Pád a výsledek** je hotový (viz „M10 — výsledek“).
 - **M11 Kmitání a nápověda** je hotový (viz „M11 — výsledek“).
 - **M12 Obtížnost a medaile**: první část je hotová (viz „M12 — výsledek první části“). Zbývá M12c (těžké varianty údolí, zkouškové úrovně bez návodu, příčiny v kapitole 7) a drobnosti vypsané na konci oddílu.
+
+## M13 — výsledek
+
+Sdílení mostu odkazem (návrh 13 z `docs/RECENZE.md`): důvod se ke hře vrátit a poslat ji dál. Fyzika, úrovně ani formáty dat se nemění.
+
+**Odkaz na most** (`src/data/sdileni.ts`). Tlačítko „Sdílet most…“ v paletě a v podrobnostech výsledku otevře okno s odkazem `?uroven=1-03&most=…`, který most otevře komukoli v jeho úrovni. Kód mostu je vlastní úsporný zápis (celá čísla po sedmi bitech, ostatní přesně jako osm bajtů, abeceda bezpečná pro adresu): most pro mistrovskou 1-03 má odkaz dlouhý 211 znaků, největší most kampaně pod 1 500. Zápis JSON z Exportu by byl třikrát až osmkrát delší a samé procento. Kód nese pořadí i čísla prutů a styčníků, takže **most z odkazu dá ve zkoušce stejný otisk jako originál** (kritérium milníku; hlídá jednotkový test na čtyřech úrovních a test v prohlížeči na 1-03). Na konci má kontrolní součet: odkaz zkrácený cestou (zalomení v e-mailu, limit zprávy) se odmítne s větou „odkaz je poškozený nebo neúplný“, místo aby otevřel půlku mostu. Import čte i odkaz nebo samotný kód.
+
+**Most z odkazu je host** (`host` v `src/hra/uroven.ts`). Kdo odkaz otevře, vidí cizí most ve výkresu a nad ním řádek, co s ním může dělat. Jeho vlastní most zůstává uložený a **nic se nepřepisuje, dokud se sám nerozhodne**: „Postavit levnější“ vrátí jeho most a zapamatuje si cenu soupeřova jako výzvu, „Nechat si ho“ (s vlastním mostem „Nahradit jím můj most“) ho začne ukládat, třetí tlačítko se vrátí k vlastnímu mostu nebo k prázdnému výkresu. Přechod mezi vlastním a cizím mostem maže historii kroků (`Editor.vymen`): Zpět by jinak cizí most vrátil do výkresu hráče a ten by se uložil jako jeho. Řádek je pod horní lištou, ne přes výkres (na telefonu první verze zakryla most, o který šlo), a zůstává i při zkoušce, aby plátno při jejím spuštění nezměnilo výšku. Na telefonu se po tu dobu zmenší paleta, výkresu zůstává přes třetinu výšky.
+
+**Výzva o cenu.** Po „Postavit levnější“ je v paletě rámeček „Výzva z odkazu: postav most levnější než 98 985 Kč“ (pamatuje se i po zavření hry, jde zrušit a soupeřův most si jde znovu ukázat). Výsledek zkoušky řekne, jak si hráč stojí: vyhrává jen most ostře levnější v korunách, jak je vidí, a jen takový, který prošel a nic se na něm neporušilo (stejné pravidlo jako u rekordů výzev). Kdo vyhraje, dostane v okně sdílení rovnou zprávu s odvetou („Tvůj most jsem překonal: můj stojí 94 073 Kč, o 4 912 Kč míň“).
+
+**Zpráva a obrázek.** Okno sdílení nabízí hotovou zprávu podle toho, jestli most zkouškou prošel („…stojí 98 985 Kč. Postavíš levnější?“), kopírování odkazu i zprávy, na zařízeních, která to umějí, systémové sdílení, a **obrázek výkresu** 1200 × 630 px ke stažení (`src/vykres/obrazek.ts`): úroveň s mostem oříznutá kolem mostu a popisové pole s názvem úrovně, cenou, hmotností a medailemi. Medaile jsou v obrázku jen u mostu, který zkouškou právě prošel.
+
+**Co sdílení nedělá.** Nic neposílá na server (odkaz je celý most; hra o sdílení ví jen z deníku hraní: otevření okna, kopírování, stažení, otevření odkazu, přijetí výzvy). Pískoviště sdílení nenabízí: jeho údolí odkaz nenese (přijde s dílnou v M15). Most z odkazu se počítá do medailí a rekordů jako každý jiný: zkopírovat cizí most šlo Importem vždycky.
 
 ## M12 — výsledek první části
 
