@@ -27,6 +27,7 @@ import {
   pridavnaFrekvenceZamku,
   pridejSilyZamku,
   vytvorZamky,
+  mezeraZamku,
   zamkniZamky,
   zamkyZamcene,
   type Zamky,
@@ -199,6 +200,9 @@ export class Zkouska {
   /** Pruty návrhu, které jsou písty, v pořadí pístů. */
   #prutyPistu: number[] = [];
   #nejvetsiSilaPistu = 0;
+  /** Kosinus největšího otočení mostovky při zvedání a co dělaly písty při prvním nárazu lodi. */
+  #kosinusOtoceni = 1;
+  #pistyPriNarazu: PohybZkousky["pistyPriNarazu"] = null;
   /** Stav každé lodi úrovně. */
   readonly #lode: Uint8Array;
 
@@ -624,11 +628,32 @@ export class Zkouska {
       if (prut < 0 || !mostovka.has(prut)) continue;
       const a = s.prvekA[e]!;
       const b = s.prvekB[e]!;
-      if ((s.x[b]! - s.x[a]!) * s.osaX0[e]! + (s.y[b]! - s.y[a]!) * s.osaY0[e]! >= 0) continue;
+      const dx = s.x[b]! - s.x[a]!;
+      const dy = s.y[b]! - s.y[a]!;
+      const prumet = dx * s.osaX0[e]! + dy * s.osaY0[e]!;
+      // Jak vysoko se křídlo dostalo: nejmenší kosinus úhlu mezi dílem mostovky a jeho výkresem.
+      if (prumet > 0) {
+        const delka2 = dx * dx + dy * dy;
+        if (prumet * prumet < this.#kosinusOtoceni * this.#kosinusOtoceni * delka2) this.#kosinusOtoceni = prumet / Math.sqrt(delka2);
+      }
+      if (prumet >= 0) continue;
+      this.#kosinusOtoceni = 0;
       this.#preklopeno = true;
       udalosti.push({ cas: this.simulace.cas, druh: "pohyb", faze: "preklopeno" });
       return;
     }
+  }
+
+  /**
+   * Proč zámky po sklopení nezapadly: stav prvního odemčeného zámku na konci zkoušky. Zámek
+   * zapadne, když písty dojely zpátky, konce jsou u sebe blíž než `VULE_ZAMKU` a skoro se vůči
+   * sobě nehýbou; tohle říká, na čem z toho to vázne.
+   */
+  #procNezamceno(): NonNullable<PohybZkousky["nezamceno"]> | null {
+    const s = this.simulace.soustava;
+    const mezera = mezeraZamku(s, this.#zamky);
+    if (mezera === null) return null;
+    return { pistyVCili: pistyVCili(s, this.#pisty), vodorovne: mezera.vodorovne, svisle: mezera.svisle, rychlost: mezera.rychlost };
   }
 
   /** Největší síla, kterou dosedací plochy zámků na opěrách od posledního vynulování přenesly, N. */
@@ -669,6 +694,10 @@ export class Zkouska {
         if (!useckaVProfilu(s.x[a]!, s.y[a]!, s.x[b]!, s.y[b]!, lod.xMin, lod.xMax, hladina, hladina + lod.vyska)) continue;
         this.#lode[k] = LOD_NARAZILA;
         udalosti.push({ cas, druh: "lod", lod: k, stav: "narazila", prut });
+        // Proč tam prut byl: křídlo ještě stoupalo, stálo na konci zdvihu, nebo už zase kleslo.
+        if (this.#pistyPriNarazu === null && this.#fazePohybu === POHYB_ZVEDANI) {
+          this.#pistyPriNarazu = !this.#zvednuto ? "zveda" : pistyVCili(s, this.#pisty) ? "drzi" : "klesl";
+        }
         break;
       }
     }
@@ -1028,6 +1057,9 @@ export class Zkouska {
           klidoveDosednuti: this.#klidoveDosednuti,
           pretizenychPistu,
           nejvetsiSilaPistu: this.#nejvetsiSilaPistu,
+          kosinusOtoceni: this.#kosinusOtoceni,
+          pistyPriNarazu: this.#pistyPriNarazu,
+          nezamceno: this.#fazePohybu === POHYB_SKLAPENI ? this.#procNezamceno() : null,
         }
       : null;
     const lode = { celkem: this.#lode.length, proplulo: 0, narazilo: 0 };

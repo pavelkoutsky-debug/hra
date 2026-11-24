@@ -40,6 +40,7 @@ import { MEZ_POHODLI_VE_VOZE, MEZE_KOMFORTU } from "../jadro/komfort";
 import { ZPUSOB_OHYB, ZPUSOB_SMYK, ZPUSOB_TAH, ZPUSOB_TLAK, ZPUSOB_ZADNY } from "../jadro/namahani";
 import { NASLEDEK_KLOUB, NASLEDEK_ODPOJENI } from "../jadro/poruseni";
 import { VERZE_FYZIKY } from "../jadro/verze";
+import { VULE_ZAMKU } from "../jadro/zamky";
 import { nadpisSJednotkou, prvek, udaj } from "../ui/dom";
 import { celeCislo, cislo, datum, hmotnost, koruny, meritkoVykresu, procenta, velkymPismenem, zobrazenyRozdil } from "../ui/formaty";
 import { posunPrehravani, zapisCasu, type StavPrehravani } from "../ui/prehravani";
@@ -81,6 +82,7 @@ import { BARVY } from "../vykres/barvy";
 import { nakresliSlozeni, nakresliZaber } from "../vykres/zaber";
 import { nakresliSplouchnuti, nakresliTrosky } from "../vykres/efekty";
 import { casyPadu, najdiSplouchnuti, najdiZlomy, type Splouchnuti, type Zlom } from "../zkouska/efekty";
+import { pricinyPohybu, type PricinaPohybu } from "../zkouska/pricinaPohybu";
 import { BEZ_NALEZU, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
 import { dalsiDilMostovky, type KrokVedeni } from "../data/vedeni";
 import { nakresliVedeni } from "../vykres/vedeni";
@@ -2867,6 +2869,7 @@ export function spustUroven(
     document.body.dataset.zkouska = "pocita";
     delete document.body.dataset.otisk;
     delete document.body.dataset.pricina;
+    delete document.body.dataset.pricinaPohybu;
     obnovStavbu();
     obnovOsu();
     // Kde na trase chybí mostovka, tam provoz spadne: hráč se to má dozvědět hned, ne až z výsledku.
@@ -3954,6 +3957,42 @@ export function spustUroven(
     }
   }
 
+  /** Věta k příčině, proč pohyblivý most neprošel (`pricinyPohybu`). */
+  function vetaPricinyPohybu(pricina: PricinaPohybu): string {
+    switch (pricina.kod) {
+      case "kridlo-bez-pistu":
+        return t(pricina.strana === null ? "vysledek.pohyb.pricina.kridloBezPistu" : `vysledek.pohyb.pricina.kridloBezPistu.${pricina.strana}`);
+      case "preklopeno":
+        return t("vysledek.shrnuti.preklopeno");
+      case "bez-pistu":
+        return t("vysledek.pohyb.pricina.bezPistu");
+      case "bez-zamku":
+        return t("vysledek.pohyb.pricina.bezZamku");
+      case "maly-zdvih": {
+        // Zkouška nese kosinus (počítá bez goniometrie); stupně jsou jen pro větu.
+        const uhel = Math.round((Math.acos(Math.min(1, Math.max(-1, pricina.kosinus))) * 180) / Math.PI);
+        return t("vysledek.pohyb.pricina.malyZdvih", { uhel });
+      }
+      case "neudrzel":
+        return t("vysledek.pohyb.pricina.neudrzel", { sila: `${cislo(PIST.nejvetsiSila / 1000, 0)} kN` });
+      case "nezvedl":
+        return t("vysledek.shrnuti.pistNestaci");
+      case "pomaly":
+        return t("vysledek.shrnuti.nezvednuto");
+      case "minuly-se": {
+        const naVysku = Math.abs(pricina.svisle) >= pricina.vodorovne;
+        const cm = Math.max(1, Math.round((naVysku ? Math.abs(pricina.svisle) : pricina.vodorovne) * 100));
+        return t(naVysku ? "vysledek.pohyb.pricina.minulySe.vyska" : "vysledek.pohyb.pricina.minulySe.strana", { cm, vule: Math.round(VULE_ZAMKU * 100) });
+      }
+      case "houpe-se":
+        return t("vysledek.pohyb.pricina.houpeSe");
+      case "pisty-zpet":
+        return t("vysledek.pohyb.pricina.pistyZpet");
+      case "nezamceno":
+        return t("vysledek.shrnuti.nezamceno");
+    }
+  }
+
   function ukazVysledek(b: Beh, vysledek: VysledekZkousky): void {
     b.vysledekUkazan = true;
     zapis("vysledek.zobrazen", { pruchod: vysledek.pruchod, sekund: sekundVUrovni() });
@@ -4058,15 +4097,16 @@ export function spustUroven(
       const pohyb = vysledek.pohyb;
       const maPisty = b.navrh.pruty.some((p) => KATALOG[p.prvek].druh === "pist");
       const predPohybem = vety.length;
-      if (pohyb?.preklopeno) vety.push(t("vysledek.shrnuti.preklopeno"));
-      else if (pohyb && maPisty) {
-        // Píst na mezi síly: když kvůli tomu most neprošel, je to příčina; když prošel, jen poznámka.
-        const nestacil = pohyb.pretizenychPistu > 0 && (!pohyb.zvednuto || vysledek.lode.narazilo > 0);
-        if (!vysledek.pruchod && nestacil) vety.push(t("vysledek.shrnuti.pistNestaci"));
-        else if (!vysledek.pruchod && !pohyb.zvednuto) vety.push(t("vysledek.shrnuti.nezvednuto"));
-        else if (vysledek.pruchod && pohyb.pretizenychPistu > 0) vety.push(t("vysledek.shrnuti.pistNaMezi"));
+      if (pohyb && !vysledek.pruchod) {
+        // Příčina o krok před tím, co zkouška viděla: křídlo bez pístu, most bez zámku, malý
+        // zdvih, píst, který křídlo neudržel, konce zámku, které se minuly.
+        const priciny = pricinyPohybu(b.navrh, uroven, pohyb, vysledek.lode.narazilo);
+        for (const p of priciny) vety.push(vetaPricinyPohybu(p));
+        document.body.dataset.pricinaPohybu = priciny.map((p) => p.kod).join(";");
+      } else if (pohyb && maPisty && pohyb.pretizenychPistu > 0) {
+        // Píst na mezi síly u mostu, který prošel, je jen poznámka.
+        vety.push(t("vysledek.shrnuti.pistNaMezi"));
       }
-      if (pohyb && !pohyb.zamceno && !pohyb.preklopeno) vety.push(t("vysledek.shrnuti.nezamceno"));
       // Proč se most nezvedl nebo nezamkl, je příčina; náraz lodi bývá až její následek.
       if (!vysledek.pruchod && vety.length > predPohybem) pricinaPohybu = vety[predPohybem]!;
     }

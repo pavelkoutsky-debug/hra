@@ -194,6 +194,27 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
   return zapadlo;
 }
 
+/**
+ * O kolik se míjejí konce prvního odemčeného zámku a jak rychle se vůči sobě hýbou: vodorovně
+ * a svisle v metrech (svisle kladně, když konec se zámkem leží níž než jeho protějšek), rychlost
+ * v m/s. null, když žádný zámek odemčený není nebo jeho druhý konec už neexistuje. Jen čte;
+ * slouží větě o tom, proč most po sklopení nezamkl.
+ */
+export function mezeraZamku(s: Soustava, z: Zamky): { vodorovne: number; svisle: number; rychlost: number } | null {
+  for (let k = 0; k < z.pocet; k++) {
+    if (z.stav[k] !== ZAMEK_ODEMCENY) continue;
+    const i = z.stycnik[k]!;
+    const j = z.druhy[k]!;
+    if (j < 0 && !naOpere(z, k)) continue;
+    const dx = j >= 0 ? s.x[j]! - s.x[i]! : z.x0[k]! - s.x[i]!;
+    const dy = j >= 0 ? s.y[j]! - s.y[i]! : z.y0[k]! - s.y[i]!;
+    const dvx = j >= 0 ? s.vx[j]! - s.vx[i]! : s.vx[i]!;
+    const dvy = j >= 0 ? s.vy[j]! - s.vy[i]! : s.vy[i]!;
+    return { vodorovne: dx < 0 ? -dx : dx, svisle: dy, rychlost: Math.sqrt(dvx * dvx + dvy * dvy) };
+  }
+  return null;
+}
+
 /** Součinitel tlumení pro daný poměrný útlum: 2·ζ·√(k·m), kde 1/m je `invHmota`. */
 function tlumeniPodleHmoty(z: Zamky, tuhost: number, invHmota: number): number {
   return invHmota > 0 ? 2 * z.utlum * Math.sqrt(tuhost / invHmota) : 0;

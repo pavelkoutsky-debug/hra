@@ -581,6 +581,17 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.pohyb.lodNarazila": "the ship hit member {prut} at {cas}",
   "vysledek.pohyb.zamceno": "locked at {cas}",
   "vysledek.pohyb.nezamceno": "the locks did not engage",
+  "vysledek.pohyb.pricina.kridloBezPistu": "The leaf has no cylinder: once the lock opened, nothing held it and it fell. A cylinder runs from an anchor below the pivot to the leaf.",
+  "vysledek.pohyb.pricina.kridloBezPistu.leve": "The left leaf has no cylinder: once the lock opened, nothing held it and it fell. Give it a cylinder too.",
+  "vysledek.pohyb.pricina.kridloBezPistu.prave": "The right leaf has no cylinder: once the lock opened, nothing held it and it fell. Give it a cylinder too.",
+  "vysledek.pohyb.pricina.bezPistu": "The bridge has no cylinder, so it did not rise and the ship hit it. A cylinder runs from an anchor below the pivot to the leaf.",
+  "vysledek.pohyb.pricina.bezZamku": "The bridge did not unlock: it has no lock to release the end of the leaf, so the cylinders only pushed against it. Put a lock at the end of the leaf: on the bearing, or between the leaves.",
+  "vysledek.pohyb.pricina.malyZdvih": "The leaf rose by only {uhel}° and the ship did not fit under it. The cylinders reached the end of their stroke: increase the stroke, or move the cylinder mount closer to the pivot.",
+  "vysledek.pohyb.pricina.neudrzel": "The cylinder raised the leaf but could not hold it: at the top it pushed at the limit of its force ({sila}), the relief valve opened and the leaf dropped into the ship's path. Give the cylinder a longer lever arm: a deeper anchor, or a mount farther from the pivot.",
+  "vysledek.pohyb.pricina.minulySe.vyska": "The bridge did not lock after lowering: the ends of the lock missed each other by {cm} cm in height (the lock engages within {vule} cm). A longer or heavier leaf hangs lower on its cylinder: make the leaves the same length, or give the lower one a cylinder with a longer lever arm.",
+  "vysledek.pohyb.pricina.minulySe.strana": "The bridge did not lock after lowering: the ends of the lock missed each other by {cm} cm sideways (the lock engages within {vule} cm). The leaves did not come back to where they started.",
+  "vysledek.pohyb.pricina.houpeSe": "The bridge did not lock after lowering: the end of the leaf kept swinging and the lock could not catch it. The leaf is too soft or too heavy for its cylinder.",
+  "vysledek.pohyb.pricina.pistyZpet": "The bridge did not lock after lowering: the cylinders did not return all the way. The relief valve stopped them, or they ran out of time.",
   "vysledek.pist": "Cylinder force",
   "vysledek.pist.hodnota": "at most {sila} of {nejvic}",
   "vysledek.pist.pretizen": "at the {nejvic} limit: the relief valve opened",
@@ -613,10 +624,10 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.shrnuti.lodNarazila":
     "The ship hit the bridge: member {prut} ({prvek}) was left in its navigation clearance. Click the line with the collision to see which one.",
   "vysledek.shrnuti.pistNestaci":
-    "The cylinder did not raise the bridge or could not hold it up: the relief valve opened. Either it lacks the force (its lever arm to the pivot is short), or the bridge is held by something that did not unlock.",
+    "The cylinder did not raise the bridge: the relief valve opened before it reached the end of its stroke. Either it lacks the force (its lever arm to the pivot is short), or the bridge is held by something that did not unlock.",
   "vysledek.shrnuti.pistNaMezi":
     "The cylinder worked at the limit of its force and the relief valve opened now and then; this time it was enough for the ship.",
-  "vysledek.shrnuti.nezvednuto": "The cylinders had not reached the end of their stroke by the time lowering began.",
+  "vysledek.shrnuti.nezvednuto": "The cylinders did not reach the end of their stroke in time: the stroke is too long for that.",
   "vysledek.shrnuti.preklopeno":
     "The leaf rotated by more than a quarter turn: either the cylinder pushed it past vertical (its stroke is too large), or nothing holds it and it fell. Such a bridge does not pass the test.",
   "vysledek.shrnuti.mezera": "The bridge does not reach the approach: the deck is missing along the route from {od} m to {do} m.",
