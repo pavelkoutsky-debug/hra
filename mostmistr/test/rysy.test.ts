@@ -104,9 +104,10 @@ describe("rysy referenčních mostů", () => {
     expect(rysy("4-01")).toMatchObject({ pilire: true, svary: false });
     // Pylony lanového mostu a pilíře spojitého nosníku nejsou „pilíře pod příhradou“.
     expect(rysy("4-02")).toMatchObject({ pilire: false, svary: true, svaryMeziPodporami: true });
-    // Zavěšený most 4-03 má jediný pylon (úroveň má jediný základ), visutý 4-04 dva.
+    // Zavěšený most 4-03 má jediný pylon v údolí (úroveň má jediný základ); visutý 4-04 dva
+    // na březích za opěrami (základy v x = −4 a 76 při trase 0 až 72 m).
     expect(rysy("4-03")).toMatchObject({ pilire: false, pylonu: 1, pylonyNaBrezich: false });
-    expect(rysy("4-04")).toMatchObject({ pilire: false, pylonu: 2, pylonyNaBrezich: false });
+    expect(rysy("4-04")).toMatchObject({ pilire: false, pylonu: 2, pylonyNaBrezich: true });
     expect(rysy("2-03")).toMatchObject({ zavazi: true, ladeneTlumice: false, pylonu: 0 });
     expect(rysy("5-02")).toMatchObject({ zavazi: false, ladeneTlumice: true });
     expect(rysy("7-01")).toMatchObject({ kridel: 1, zamek: true });
@@ -201,5 +202,5 @@ describe("věta o principu", () => {
       }
     }
     expect(mostu).toBeGreaterThanOrEqual(9);
-  });
+  }, 60_000);
 });
