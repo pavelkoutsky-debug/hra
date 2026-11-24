@@ -3,7 +3,7 @@
 // o něm nemůžou tvrdit nic, co na něm není.
 
 import { KATALOG } from "./katalog";
-import type { NavrhMostu } from "./navrh";
+import { zamkyNavrhu, type NavrhMostu } from "./navrh";
 import type { Uroven } from "./uroven";
 
 /** Čím most nese mostovku. */
@@ -42,12 +42,14 @@ export interface RysyMostu {
   ladeneTlumice: boolean;
   viskozniTlumice: boolean;
   /**
-   * Kolik pístů zvedací most má; 0 u mostu bez pístů. Referenční mosty mají na každé křídlo
-   * jeden píst, takže je to i počet křídel.
+   * Kolik křídel zvedací most má: dvě, když je dělí zámek mezi křídly, jinak jedno; 0 u mostu
+   * bez pístů. Počet pístů to neříká: jedno křídlo smějí zvedat dva.
    */
   kridel: number;
   /** Dělicí zámek. */
   zamek: boolean;
+  /** Lanový most, jehož mostovku ztužuje ještě příhrada z prutů (nese tam, kam lana nedosáhnou). */
+  prihradaNavic: boolean;
   /** Zvedací most má křídlo ztužené dalšími pruty. */
   ztuzeni: boolean;
   /** Most, který nese hlavně něco nad mostovkou, se navíc opírá vzpěrami o kotvy pod ní. */
@@ -112,16 +114,18 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
       if (Math.min(a.y, b.y) < dolni - ODSTUP_OD_MOSTOVKY) pod += 1;
     }
   }
-  // Styčník, ve kterém se potkávají jen lana, je bod nosného lana visutého mostu. Kde se lana
-  // sbíhají k pilíři, je vrchol pylonu.
+  // Styčník, ve kterém se potkávají jen lana, je bod nosného lana visutého mostu; kotva, do
+  // které vedou dvě kotevní lana zavěšeného mostu, jím není. Kde se lana sbíhají k pilíři, je
+  // vrchol pylonu.
+  const jeKotva = (x: number, y: number): boolean => uroven.kotvy.some((k) => k.x === x && k.y === y) || uroven.zaklady.some((z) => z.x === x && z.y === y);
   let boduNosnehoLana = 0;
   const pylony = new Set<number>();
   let svaruNadPilirem = 0;
   let svaruJinde = 0;
   for (const [id, pocty] of doStycniku) {
-    if (pocty.lana >= 2 && pocty.pilire === 0 && pocty.jine === 0) boduNosnehoLana += 1;
     const st = podleId.get(id);
     if (!st) continue;
+    if (pocty.lana >= 2 && pocty.pilire === 0 && pocty.jine === 0 && !jeKotva(st.x, st.y)) boduNosnehoLana += 1;
     if (pocty.lana >= 2 && pocty.pilire > 0) pylony.add(st.x);
     if (st.svar === true) {
       if (pocty.pilire > 0) svaruNadPilirem += 1;
@@ -153,8 +157,9 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
     zavazi: navrh.stycniky.some((s) => (s.zavazi ?? 0) > 0),
     ladeneTlumice: navrh.stycniky.some((s) => s.tlumic !== undefined),
     viskozniTlumice: viskozni > 0,
-    kridel: pisty,
+    kridel: pisty === 0 ? 0 : zamkyNavrhu(navrh, uroven).some((z) => z.druh === "kridla") ? 2 : 1,
     zamek: navrh.stycniky.some((s) => s.zamek === true),
+    prihradaNavic: lanovy && pruty > NEJVIC_PRUTU_TROJUHELNIKU,
     ztuzeni: soustava === "zvedaci" && pruty > 0,
     vzperyNavic: opreno && nesNad,
     vesadloNavic: nesPod && nad > 0,
@@ -179,6 +184,7 @@ export function principMostu(rysy: RysyMostu): string[] {
   // Zavěšený most s jediným pylonem: věta nesmí mluvit o pylonech.
   else if (rysy.soustava === "zaveseny" && rysy.pylonu === 1) vety.push("zaveseny.jeden");
   else vety.push(rysy.soustava);
+  if (rysy.prihradaNavic) vety.push("prihrada.navic");
   if (rysy.vzperyNavic) vety.push("vzpery.navic");
   if (rysy.vesadloNavic) vety.push("vesadlo.navic");
   if (rysy.pilire) vety.push("pilire");

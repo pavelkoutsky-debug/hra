@@ -228,7 +228,9 @@ describe("verze formátu úrovně", () => {
     // Zkouškové jsou právě páté úrovně kapitol, každá kapitola má jednu.
     expect(zkousky.map((u) => u.id)).toEqual(kampan.filter((u) => u.id.endsWith("-05")).map((u) => u.id));
     expect(zkousky.map((u) => u.id).sort()).toEqual(Object.keys(RESENI_ZKOUSEK).sort());
-    expect(zkousky).toHaveLength(new Set(kampan.map((u) => u.id.split("-")[0])).size);
+    // Každá kapitola kromě závěrečné (ta nic neučí a zkoušku nemá) má jednu.
+    const kapitoly = [...new Set(kampan.map((u) => u.id.split("-")[0]!))];
+    expect(zkousky.map((u) => u.id.split("-")[0])).toEqual(kapitoly.slice(0, -1));
     for (const u of zkousky) {
       // Nic neučí: žádná ukázka, žádné „Více o úloze“, žádný odstavec o skutečných mostech.
       expect(ukazkaUrovne(u), u.id).toBeNull();

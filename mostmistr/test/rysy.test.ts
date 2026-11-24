@@ -46,6 +46,8 @@ const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSous
   "7-02": ["zvedaci", "zvedaci", "zvedaci"],
   "7-03": ["zvedaci", "zvedaci", "zvedaci"],
   "7-04": ["zvedaci", "zvedaci", "zvedaci"],
+  "8-01": ["zaveseny", "zaveseny", "zaveseny"],
+  "8-03": ["zvedaci", "zvedaci", "zvedaci"],
 };
 
 describe("rysy referenčních mostů", () => {
@@ -108,6 +110,11 @@ describe("rysy referenčních mostů", () => {
     expect(rysy("5-02")).toMatchObject({ zavazi: false, ladeneTlumice: true });
     expect(rysy("7-01")).toMatchObject({ kridel: 1, zamek: true });
     expect(rysy("7-02")).toMatchObject({ kridel: 2, zamek: true });
+    // Jedno křídlo se dvěma písty (8-03, most pro mistrovskou) je pořád jedno křídlo se zámkem na břehu.
+    expect(rysyMostu(RESENI["8-03"]!.mistrovska, kampan.find((u) => u.id === "8-03")!)).toMatchObject({ kridel: 1, zamek: true });
+    expect(principMostu(rysyMostu(RESENI["8-03"]!.mistrovska, kampan.find((u) => u.id === "8-03")!))).toEqual(["zvedaci.jedno", "zamek.breh", "ztuzeni"]);
+    // Zavěšený most se dvěma kotevními lany do jedné kotvy (8-01) není visutý.
+    expect(rysyMostu(RESENI["8-01"]!.mistrovska, kampan.find((u) => u.id === "8-01")!)).toMatchObject({ soustava: "zaveseny", pylonu: 2 });
     expect(rysy("1-01")).toMatchObject({
       kridel: 0,
       zamek: false,

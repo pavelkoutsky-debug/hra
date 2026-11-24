@@ -873,6 +873,10 @@ const CS = {
     "Erasmův most v Rotterdamu otevřeli 6. září 1996. Jeho sklopné pole dlouhé 89 metrů je největší a nejtěžší v západní Evropě.",
   "skutecnost.7-04":
     "most Jacquese Chabana-Delmase v Bordeaux z roku 2013 se nesklápí, ale zdvihá: střední pole dlouhé přes sto metrů a těžké kolem 2 600 tun vyjede mezi čtyřmi věžemi do výšky asi 53 metrů nad řeku. V době otevření to byl největší zdvižný most v Evropě.",
+  "skutecnost.8-01":
+    "Øresundský most mezi Dánskem a Švédskem, otevřený 1. července 2000, je zavěšený most s hlavním polem 490 metrů. Dvojkolejná železnice vede po spodním patře a obě patra spojují ocelové příhrady, které mostovku ztužují pod těžkými vlaky.",
+  "skutecnost.8-03":
+    "železniční zvedací mosty mají místo pístů protizávaží, které křídlo skoro vyváží, takže ho stroj jen pootáčí. Most St. Charles Air Line v Chicagu byl v roce 1919 se svým křídlem dlouhým 260 stop (79 metrů) nejdelším sklopným mostem na světě: příhrada nad kolejí s betonovým protizávažím. V roce 1930 most posunuli a zkrátili asi na 220 stop.",
   "paleta.vyber": "Výběr",
   "paleta.vyber.popis": "Výběr a posun: klikni na prut nebo styčník, tažením ho posuň, tažením z prázdna vyber rámečkem (V)",
   "paleta.zrcadlit.popis": "Zrcadlit most (nebo jen výběr) podle osy rozpětí (M)",
@@ -1220,6 +1224,7 @@ const CS = {
   "napoveda.princip.vzpery": "Mostovku podpírají zdola vzpěry opřené o kotvy pod ní; dolní pás od břehu k břehu most nemá.",
   "napoveda.princip.vzpery.navic": "Navíc se opírá vzpěrami o kotvu pod mostovkou.",
   "napoveda.princip.vesadlo.navic": "Nad mostovkou má navíc pár prutů do trojúhelníku.",
+  "napoveda.princip.prihrada.navic": "Mostovku navíc ztužuje příhrada z prutů: nese tíhu tam, kam lana nedosáhnou.",
   "napoveda.princip.stejny": "Nese stejně jako most pro průchod; liší se v materiálu, rozměrech nebo přídavcích.",
   "napoveda.prvek": "{prvek}: {prutu}× (dohromady {metru} m)",
   "napoveda.svaru": "svařené styčníky: {pocet}",
@@ -1447,6 +1452,14 @@ const CS = {
   "zadani.7-04.vice":
     "Čím kratší má píst k čepu rameno, tím větší silou křídlo drží: píst z mělké kotvy blízko čepu to neudrží, přetlakový ventil povolí a křídlo klesne lodi do cesty. Delší rameno má píst z hluboké kotvy nebo píst uchycený dál od čepu. Dlouhé křídlo se taky hodně ohýbá: pomůže trojúhelník nad jeho kořenem, který konec křídla přidrží táhlem.",
   "zadani.7-05": "Dvacet metrů kanálu a strojovna jen v levé zdi: čep a pod ním dvě kotvy pro píst, na pravém břehu pouhé ložisko. V šestnácté sekundě připluje loď vysoká deset metrů a po sklopení se na mostě potkají nákladní auto a autobus.",
+  "zadani.8-01":
+    "Přes údolí s řekou povede železnice v jediném poli dlouhém šestadevadesát metrů; za rychlíkem přijede uhelný vlak, který na mostě zastaví. Pylony smějí stát jen na březích a nad středem řeky se smí stavět jen nízko, takže se tu lana a ztužující nosník musí doplnit.",
+  "zadani.8-01.vice":
+    "Vlak je několikrát těžší než silniční provoz. Lana z pylonů na březích dosáhnou jen do dvou třetin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
+  "zadani.8-03":
+    "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
+  "zadani.8-03.vice":
+    "Křídlo, které unese vlak, je těžké, a těžké křídlo píst sotva zvedne. Pomůže tvar: příhrada nad kolejí nese vlak a váží málo, zatímco plná mostovka je těžká a slabá. Píst potřebuje dlouhé rameno, tedy hlubokou kotvu, a dost zdvihu pro loď. Kdo chce, aby křídlo dosedlo měkce, nesmí nechat píst pracovat na hraně jeho síly.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem, a každý rytmus rozhoupe jinak vysoký most. Buď najdi výšku, která se vyhne všem třem, nebo most utlum.",
   "zadani.2-04.vice":
