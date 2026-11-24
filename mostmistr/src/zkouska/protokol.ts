@@ -489,4 +489,8 @@ export type ZpravaZeZkousky =
   | { typ: "dopnuti"; id: number; dopnuti: DopnutiLan | null }
   | { typ: "chyba"; kod: KodChyby; podrobnosti?: string };
 
-export type KodChyby = "jina-verze-fyziky" | "neplatny-vstup" | "vypocet-selhal";
+/**
+ * Kód chyby zkoušky. `skript-nenacten`: soubor pracovního vlákna nešel načíst (typicky stará
+ * záložka po novém nasazení, kdy starý soubor už na webu není); pomůže načíst stránku znovu.
+ */
+export type KodChyby = "jina-verze-fyziky" | "neplatny-vstup" | "vypocet-selhal" | "skript-nenacten";

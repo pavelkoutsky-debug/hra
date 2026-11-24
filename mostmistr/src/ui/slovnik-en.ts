@@ -299,6 +299,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zkouska.chyba.jina-verze-fyziky": "the game and the simulation are different versions; reload the page",
   "zkouska.chyba.neplatny-vstup": "the bridge breaks this level’s rules",
   "zkouska.chyba.vypocet-selhal": "the computation failed",
+  "zkouska.chyba.skript-nenacten": "The game has been updated in the meantime. Just reload the page.",
+  "zkouska.chyba.nacistZnovu": "Reload",
 
   // Zpětná vazba hráče a deník hraní
   "vazba.tlacitko": "Feedback",

@@ -3209,7 +3209,9 @@ export function spustUroven(
         zapis("zkouska.chyba", { kod: zprava.kod, podrobnosti: (zprava.podrobnosti ?? "").slice(0, 300) });
         document.body.dataset.zkouska = "chyba";
         zpetKeStavbe();
-        ukazHlaseni(t("zkouska.chyba", { duvod }), "varovani", false);
+        ukazHlaseni(zprava.kod === "skript-nenacten" ? t("zkouska.chyba.skript-nenacten") : t("zkouska.chyba", { duvod }), "varovani", false);
+        // Soubor vlákna už na webu není (hra se mezitím nasadila znovu): pomůže načíst stránku.
+        if (zprava.kod === "skript-nenacten") poleHlaseni.append(" ", Object.assign(document.createElement("a"), { href: window.location.href, textContent: t("zkouska.chyba.nacistZnovu") }));
         break;
       }
       case "pripraveno":

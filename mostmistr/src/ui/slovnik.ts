@@ -301,6 +301,8 @@ const CS = {
   "zkouska.chyba.jina-verze-fyziky": "hra a simulace mají různou verzi; obnov stránku",
   "zkouska.chyba.neplatny-vstup": "most nevyhovuje pravidlům úrovně",
   "zkouska.chyba.vypocet-selhal": "výpočet selhal",
+  "zkouska.chyba.skript-nenacten": "Hra se mezitím aktualizovala na novou verzi. Stačí načíst stránku znovu.",
+  "zkouska.chyba.nacistZnovu": "Načíst znovu",
 
   // Zpětná vazba hráče a deník hraní
   "vazba.tlacitko": "Napiš nám",
