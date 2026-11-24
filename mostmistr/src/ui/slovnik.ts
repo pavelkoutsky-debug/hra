@@ -846,7 +846,7 @@ const CS = {
     "Delší pole mostu táhne hlavu pylonu doprava a nic ji nedrží: betonový pylon se ohne a zlomí už pod vlastní tíhou mostu. Kotevní lana vedou z hlavy pylonu do opěr na koncích mostu a ten tah zachytí.",
   "ukazka.4-04.a": "Lana, jak je položil výkres",
   "ukazka.4-04.b": "Po automatickém dopnutí",
-  "ukazka.4-04.popis": "Stejný most, stejná lana. Nosné lano se pod tíhou mostovky vyrovná do oblouku, jaký odpovídá zatížení, a nedbá na to, jak je nakreslené. Závěsy dlouhé podle výkresu pak mostovku někde nadzvednou a jinde nechají klesnout skoro o metr. Dopnutí upraví každému závěsu délku tak, aby mostovka zůstala rovná.",
+  "ukazka.4-04.popis": "Stejný most, stejná lana. Nosné lano se pod tíhou mostovky vyrovná do oblouku, jaký odpovídá zatížení, a nedbá na to, jak je nakreslené. Závěsy dlouhé podle výkresu pak nechají mostovku klesnout až o tři čtvrtě metru. Dopnutí upraví každému závěsu délku tak, aby mostovka zůstala rovná.",
   "skutecnost.4-01":
     "viadukt Millau v jižní Francii nese dálnici přes údolí řeky Tarn na sedmi betonových pilířích. Nejvyšší z nich měří 245 metrů a s pylonem nad vozovkou 343 metrů, víc než Eiffelova věž. Otevřeli ho v prosinci 2004.",
   "skutecnost.4-02":
@@ -1663,9 +1663,9 @@ const CS = {
   "zadani.4-03.vice":
     "Pylon s lany do mostovky je zavěšený most. Lano umí jen táhnout a smí měřit až šedesát metrů. Delší pole táhne hlavu pylonu k sobě a drží ji jen kotevní lano do levé opěry: nedotažené se nejdřív protáhne, pylon se mezitím ohne a pod kolonou zlomí. Tlačítko Dopnout lana (N) nastaví napínáky tak, aby mostovka pod vlastní tíhou zůstala rovná; jednotlivá lana doladíš položkou Napínák lana.",
   "zadani.4-04":
-    "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano a z něj závěsy k mostovce.",
+    "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano volným pásem nad roklí a z něj svislé závěsy k mostovce.",
   "zadani.4-04.vice":
-    "Pylony stojí na základech na březích; nosné lano je mezi nimi prověšené do oblouku a za pylony ho ukotvi do kotev v zemi. Závěsy vedou svisle ke styčníkům mostovky. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
+    "Pylony stojí na základech na březích; nosné lano je mezi nimi prověšené do oblouku a za pylony ho ukotvi do kotev v zemi. Nad roklí je pro ně volný jen pás mezi zakázanými zónami a závěsy vedou svisle štěrbinami ke styčníkům mostovky: šikmá lana z pylonů rovnou do mostovky tu nejdou, stejně jako ocelové pruty. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo; na závěsy obyčejné stačí. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
   "zadani.4-05": "Silnice dlouhá dvaasedmdesát metrů přes údolí, ve kterém jde založit jediný pilíř, a ten nestojí uprostřed: osmačtyřicet metrů od levého břehu. Pod delším polem se stavět nesmí a k ruce jsou jen pilíř a lana; pojedou dva tahače s návěsem, proti nim kolona tří nákladních aut a nakonec tahač proti autobusu.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s².",
