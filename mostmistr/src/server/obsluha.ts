@@ -207,7 +207,7 @@ export function denZ(cas: Date): string {
   return cas.toISOString().slice(0, 10);
 }
 
-const DEN = /^\d{4}-\d{2}-\d{2}$/;
+export const DEN = /^\d{4}-\d{2}-\d{2}$/;
 const ID_HRACE = /^[0-9a-f]{8,32}$/;
 const ID_VAZBY = /^\d{8}T\d{6}-[0-9a-f]{4,12}$/;
 const SLOZKA_SEZENI = /^\d{13,15}-[0-9a-f]{8,32}$/;
@@ -333,7 +333,7 @@ async function stejne(a: string, b: string): Promise<boolean> {
 }
 
 /** Ověří heslo správce; vrací odpověď s chybou, když nesedí nebo není nastavené. */
-async function overSpravce(zadost: Request, p: ProstrediServeru): Promise<Response | null> {
+export async function overSpravce(zadost: Request, p: ProstrediServeru): Promise<Response | null> {
   if (p.hesloSpravce === null || p.hesloSpravce.length < 8) {
     return chyba(503, "heslo správce není nastavené (proměnná prostředí MM_SPRAVCE_HESLO, aspoň 8 znaků)");
   }
@@ -358,12 +358,12 @@ async function provedVse<T>(klice: readonly string[], prace: (klic: string) => P
 }
 
 /** Přečte záznamy pod danými klíči, několik souběžně, v pořadí klíčů. */
-function prectiVse(sklad: SkladZaznamu, klice: readonly string[]): Promise<unknown[]> {
+export function prectiVse(sklad: SkladZaznamu, klice: readonly string[]): Promise<unknown[]> {
   return provedVse(klice, (klic) => sklad.cti(klic));
 }
 
 /** Záznam, který vypadá jako evidovaná zpětná vazba; poškozený nebo cizí se přeskočí. */
-function jeVazba(h: unknown): h is EvidovanaVazba {
+export function jeVazba(h: unknown): h is EvidovanaVazba {
   if (typeof h !== "object" || h === null) return false;
   const v = h as Partial<EvidovanaVazba>;
   return (
@@ -446,7 +446,7 @@ async function vytahDne(
 }
 
 /** Souhrn za dny od–do (včetně). Počítá se z výtahů dnů; co se nestihne, hlásí jako nedokončené. */
-async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promise<OdpovedSouhrnu> {
+export async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promise<OdpovedSouhrnu> {
   const dny = (await p.sklad.slozky("denik/")).filter((d) => DEN.test(d) && d >= od && d <= po).sort();
   const ulozene = (await prectiVse(p.sklad, dny.map(klicVytahu))).map((u) => (jeUlozenyVytah(u) ? u : null));
   const rozpocet = { zbyva: NEJVIC_DAVEK_NAJEDNOU };
