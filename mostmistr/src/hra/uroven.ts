@@ -129,6 +129,7 @@ import { sandboxNaText, type NastaveniSandboxu } from "../data/sandbox";
 import { RESENI } from "../../urovne/reseni";
 import { pripojNapovedu, type Napoveda } from "./napoveda";
 import { pripojDilnu } from "./dilna";
+import { pripojZebricek, type DuvodBezZapisu } from "./zebricek";
 import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
@@ -643,6 +644,14 @@ export function spustUroven(
       : null;
   /** Jak dopadly běžné zkoušky téhle návštěvy: zápis mostu → prošel bez porušení? */
   const zkouseneMosty = new Map<string, boolean>();
+  /**
+   * Co jde poslat do žebříčku: otisk běžné zkoušky a zkoušky do zlomu pro most (podle jeho
+   * zápisu), se kterým hráč v téhle návštěvě prošel bez porušení. Server si most přepočítá
+   * a otisk musí sedět, takže se pamatuje jen to, co zkouška opravdu vrátila.
+   */
+  const otiskyProZebricek = new Map<string, { bezna?: string; zlom?: string }>();
+  /** Proč most po běžné zkoušce téhle návštěvy do žebříčku nesmí: neprošel, nebo se na něm něco porušilo. */
+  const nezdaryProZebricek = new Map<string, "neprosel" | "poruseny">();
   /** Výzva z odkazu: soupeřův most, který má hráč v téhle úrovni překonat cenou. */
   let vyzvaOdkazu: { kod: string; cena: number } | null = sandbox === null ? vyzvaZKodu(uloziste.vyzvaOdkazu(uroven.id)) : null;
   // Případ Havarijní komise začíná mostem, který spadl; rozdělaná oprava má přednost.
@@ -3123,8 +3132,12 @@ export function spustUroven(
           // Platí pro cenu a hmotnost i pro zkoušku do zlomu.
           const neporuseny = vysledek.neporuseny;
           zkouseneMosty.set(navrhNaText(b.navrh), vysledek.pruchod && !vysledek.rozpad && neporuseny);
+          if (vysledek.pruchod && !vysledek.rozpad && neporuseny) nezdaryProZebricek.delete(navrhNaText(b.navrh));
+          else nezdaryProZebricek.set(navrhNaText(b.navrh), vysledek.pruchod && !vysledek.rozpad ? "poruseny" : "neprosel");
           if (vysledek.pruchod && !vysledek.rozpad && neporuseny) {
             prosleMosty.add(navrhNaText(b.navrh));
+            // Do žebříčku jen vlastní most v kampani (cizí most z odkazu až po rozhodnutí hráče).
+            if (!mimoSoutez && !b.host) otiskyProZebricek.set(navrhNaText(b.navrh), { ...otiskyProZebricek.get(navrhNaText(b.navrh)), bezna: vysledek.otisk });
             // Pamatuje se i přes zavření hry (jen v kampani: pískoviště výzvy nemá; cizí most
             // z odkazu také ne, dokud si ho hráč nenechá).
             if (!mimoSoutez && !b.host) uloziste.zapisProsly(uroven.id, otiskNavrhu(b.navrh));
@@ -3172,6 +3185,7 @@ export function spustUroven(
           b.zlomSePocita = prosleMosty.has(navrhNaText(b.navrh)) || uloziste.prosel(uroven.id, otiskNavrhu(b.navrh));
           if (b.zlomSePocita) {
             rekord = uloziste.zapocitejZlom(uroven.id, unosnostNaKorunu(vysledek.zlom.celkem, vysledek.cena), VERZE_FYZIKY);
+            otiskyProZebricek.set(navrhNaText(b.navrh), { ...otiskyProZebricek.get(navrhNaText(b.navrh)), zlom: vysledek.otisk });
           }
         }
         if (prehravani.cas > b.trvani || b.naKonecPoVypoctu) prehravani = { ...prehravani, cas: b.trvani, bezi: false };
@@ -5777,6 +5791,35 @@ export function spustUroven(
   priKliknuti("import", () => rezim === "stavba" && otevriOkno("import", ""));
   // Sdílet jde z palety i z podrobností výsledku.
   for (const tlacitko of document.querySelectorAll<HTMLElement>('[data-akce="sdilet"]')) tlacitko.addEventListener("click", otevriSdileni);
+  // Žebříček úrovně: jen v kampani (pískoviště, komise ani zkušební úroveň mimo kampaň ho nemají).
+  // Zapsat jde most na výkresu, pokud s ním hráč v téhle návštěvě prošel bez porušení.
+  const tlacitkaZebricku = document.querySelectorAll<HTMLElement>('[data-akce="zebricek"]');
+  if (!mimoSoutez && kampan.some((u) => u.id === uroven.id)) {
+    const oknoZebricku = pripojZebricek({
+      uroven: uroven.id,
+      nazev: nazevUrovne(uroven),
+      uloziste,
+      kZapisu: () => {
+        const nic = (duvod: DuvodBezZapisu): { bezna: null; zlom: null; duvod: DuvodBezZapisu } => ({ bezna: null, zlom: null, duvod });
+        if (host) return nic("host");
+        const navrh = editor.navrh;
+        // Zkouška, jejíž přehrávání ještě běží, se nepočítá: okno nesmí výsledek prozradit dřív než hra.
+        if (beh && !beh.pokus && beh.navrh === navrh && !beh.vysledekUkazan) return nic("nezkouseno");
+        const klic = navrhNaText(navrh);
+        const otisky = otiskyProZebricek.get(klic);
+        // Zlom bez běžné zkoušky téže návštěvy se neposílá: server ho bez ověřené běžné nepřijme.
+        if (otisky?.bezna === undefined) return nic(nezdaryProZebricek.get(klic) ?? "nezkouseno");
+        // Most, který se nevejde do odkazu, se nevejde ani do zápisu (server čte stejný kód).
+        if (!vejdeSeDoOdkazu(navrh)) return nic("velky");
+        const kod = zakodujMost(navrh);
+        return { bezna: { kod, otisk: otisky.bezna }, zlom: otisky.zlom === undefined ? null : { kod, otisk: otisky.zlom }, duvod: null };
+      },
+      zapis: (data) => zapis("zebricek", data),
+    });
+    for (const tlacitko of tlacitkaZebricku) tlacitko.addEventListener("click", () => oknoZebricku.otevri());
+  } else {
+    for (const tlacitko of tlacitkaZebricku) tlacitko.hidden = true;
+  }
   priKliknuti("sdileni-odkaz", () => void zkopirujKeSdileni(poleOdkazu, "odkaz"));
   priKliknuti("sdileni-zprava", () => void zkopirujKeSdileni(poleZpravy, "zprava"));
   priKliknuti("sdileni-system", () => void sdilejSystemem());

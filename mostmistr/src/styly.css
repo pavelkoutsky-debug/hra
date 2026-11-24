@@ -1656,6 +1656,136 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   }
 }
 
+/* Okno žebříčku: tři měřítka vedle sebe, na úzkém okně pod sebou. */
+.okno--zebricek {
+  width: min(900px, 94vw);
+}
+
+.okno--zebricek form {
+  display: flex;
+  flex-direction: column;
+  max-height: min(86vh, 860px);
+}
+
+/* Posouvá se jen seznam řádků; zápis a hlášení pod ním zůstávají vidět. */
+.zebricek__obsah {
+  flex: 1 1 auto;
+  min-height: 96px;
+  overflow-y: auto;
+  margin: 8px 0 10px;
+  padding: 0 4px 2px 0;
+}
+
+/* Nadpisy sloupců sdílejí jeden řádek mřížky: delší nadpis s jednotkou neposune své řádky níž. */
+.zebricek__tabulky {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: 0 18px;
+}
+
+.zebricek__mira {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+}
+
+.zebricek__mira h3 {
+  align-self: end;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.zebricek__radky {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+/* Řádek: pořadí, přezdívka (zkrátí se), hodnota (nikdy se neláme ani nespadne pod jméno). */
+.zebricek__radky li {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 4px;
+}
+
+.zebricek__poradi {
+  text-align: right;
+  color: var(--popisek);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Řádek hráče, který se dívá. */
+.zebricek__radky li[data-ja] {
+  background: rgb(255 255 255 / 10%);
+  outline: 1px solid var(--cara);
+}
+
+.zebricek__jmeno {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zebricek__hodnota {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.zebricek__zapis {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+}
+
+.zebricek__zapis label {
+  color: var(--popisek);
+}
+
+.zebricek__zapis input {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.okno--zebricek .tlacitko[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+.okno--zebricek .okno__hlaseni {
+  flex: none;
+  margin-bottom: 6px;
+}
+
+.okno--zebricek .okno__hlaseni[data-druh="ok"] {
+  color: var(--cara-silna);
+}
+
+@media (max-width: 640px) {
+  .zebricek__tabulky {
+    display: block;
+  }
+
+  .zebricek__mira {
+    display: block;
+    margin-bottom: 12px;
+  }
+}
+
 /* Okno dílny: uložené práce z pískoviště s náhledy. */
 
 .okno--dilna {

@@ -84,6 +84,11 @@ export interface ProstrediServeru {
   prostredi: string;
   /** Heslo správce; null, dokud ho zadavatel v Netlify nenastavil. */
   hesloSpravce: string | null;
+  /**
+   * Heslo jen pro denní rozbor (viz `sprava.ts`): smí číst podklady a rozbory a rozbor uložit,
+   * nic jiného. Null nebo nenastavené: rozbor jde ukládat jen s heslem správce.
+   */
+  hesloRozboru?: string | null;
 }
 
 /** Zpětná vazba v seznamu: bez přiloženého mostu a událostí, s textem zkráceným na ukázku. */
@@ -155,7 +160,7 @@ function jeUlozenyVytah(h: unknown): h is UlozenyVytah {
   );
 }
 
-function odpoved(stav: number, telo?: unknown): Response {
+export function odpoved(stav: number, telo?: unknown): Response {
   if (telo === undefined) return new Response(null, { status: stav });
   return new Response(JSON.stringify(telo), {
     status: stav,
@@ -163,7 +168,7 @@ function odpoved(stav: number, telo?: unknown): Response {
   });
 }
 
-const chyba = (stav: number, zprava: string): Response => odpoved(stav, { chyba: zprava });
+export const chyba = (stav: number, zprava: string): Response => odpoved(stav, { chyba: zprava });
 
 /**
  * Přišla žádost ze stránky téhož webu? Prohlížeč posílá s každým POST hlavičku Origin; cizí
@@ -171,7 +176,7 @@ const chyba = (stav: number, zprava: string): Response => odpoved(stav, { chyba:
  * někým, kdo si hlavičku napíše sám (tu žádná veřejná adresa nemá), jen před cizími weby a
  * nahodilými roboty. Adresa webu se bere z žádosti i z hlaviček, které přidává Netlify.
  */
-function zCizihoWebu(zadost: Request): boolean {
+export function zCizihoWebu(zadost: Request): boolean {
   const puvod = zadost.headers.get("origin");
   if (puvod === null) return true;
   let host: string;
@@ -190,7 +195,7 @@ function zCizihoWebu(zadost: Request): boolean {
 }
 
 /** Přečte tělo žádosti jako JSON; vrací odpověď s chybou, když je moc velké nebo to JSON není. */
-async function teloJson(zadost: Request, nejvic: number): Promise<{ data: unknown } | Response> {
+export async function teloJson(zadost: Request, nejvic: number): Promise<{ data: unknown } | Response> {
   const delka = Number(zadost.headers.get("content-length") ?? "0");
   if (delka > nejvic) return chyba(413, "žádost je příliš velká");
   const zapis = await zadost.text();
@@ -203,11 +208,11 @@ async function teloJson(zadost: Request, nejvic: number): Promise<{ data: unknow
   }
 }
 
-function denZ(cas: Date): string {
+export function denZ(cas: Date): string {
   return cas.toISOString().slice(0, 10);
 }
 
-const DEN = /^\d{4}-\d{2}-\d{2}$/;
+export const DEN = /^\d{4}-\d{2}-\d{2}$/;
 const ID_HRACE = /^[0-9a-f]{8,32}$/;
 const ID_VAZBY = /^\d{8}T\d{6}-[0-9a-f]{4,12}$/;
 const SLOZKA_SEZENI = /^\d{13,15}-[0-9a-f]{8,32}$/;
@@ -319,7 +324,7 @@ export async function prijmiVazbu(zadost: Request, p: ProstrediServeru): Promise
 }
 
 /** Porovná dva texty tak, aby doba porovnání neprozradila, kolik znaků sedí. */
-async function stejne(a: string, b: string): Promise<boolean> {
+export async function stejne(a: string, b: string): Promise<boolean> {
   const koder = new TextEncoder();
   const [otiskA, otiskB] = await Promise.all([
     crypto.subtle.digest("SHA-256", koder.encode(a)),
@@ -333,7 +338,7 @@ async function stejne(a: string, b: string): Promise<boolean> {
 }
 
 /** Ověří heslo správce; vrací odpověď s chybou, když nesedí nebo není nastavené. */
-async function overSpravce(zadost: Request, p: ProstrediServeru): Promise<Response | null> {
+export async function overSpravce(zadost: Request, p: ProstrediServeru): Promise<Response | null> {
   if (p.hesloSpravce === null || p.hesloSpravce.length < 8) {
     return chyba(503, "heslo správce není nastavené (proměnná prostředí MM_SPRAVCE_HESLO, aspoň 8 znaků)");
   }
@@ -358,12 +363,12 @@ async function provedVse<T>(klice: readonly string[], prace: (klic: string) => P
 }
 
 /** Přečte záznamy pod danými klíči, několik souběžně, v pořadí klíčů. */
-function prectiVse(sklad: SkladZaznamu, klice: readonly string[]): Promise<unknown[]> {
+export function prectiVse(sklad: SkladZaznamu, klice: readonly string[]): Promise<unknown[]> {
   return provedVse(klice, (klic) => sklad.cti(klic));
 }
 
 /** Záznam, který vypadá jako evidovaná zpětná vazba; poškozený nebo cizí se přeskočí. */
-function jeVazba(h: unknown): h is EvidovanaVazba {
+export function jeVazba(h: unknown): h is EvidovanaVazba {
   if (typeof h !== "object" || h === null) return false;
   const v = h as Partial<EvidovanaVazba>;
   return (
@@ -446,7 +451,7 @@ async function vytahDne(
 }
 
 /** Souhrn za dny od–do (včetně). Počítá se z výtahů dnů; co se nestihne, hlásí jako nedokončené. */
-async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promise<OdpovedSouhrnu> {
+export async function souhrnObdobi(p: ProstrediServeru, od: string, po: string): Promise<OdpovedSouhrnu> {
   const dny = (await p.sklad.slozky("denik/")).filter((d) => DEN.test(d) && d >= od && d <= po).sort();
   const ulozene = (await prectiVse(p.sklad, dny.map(klicVytahu))).map((u) => (jeUlozenyVytah(u) ? u : null));
   const rozpocet = { zbyva: NEJVIC_DAVEK_NAJEDNOU };

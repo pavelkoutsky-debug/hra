@@ -1,9 +1,9 @@
-// Správa zpětné vazby a deníku hraní pro zadavatele; chráněná heslem z proměnné prostředí
-// MM_SPRAVCE_HESLO. Logika je v `src/server/obsluha.ts`.
+// Správa zpětné vazby, deníku hraní, žebříčků a denních rozborů pro zadavatele; chráněná heslem
+// z proměnné prostředí MM_SPRAVCE_HESLO. Logika je v `src/server/sprava.ts`.
 import { prostrediNetlify, type KontextNetlify } from "../../src/server/netlify";
-import { spravuj } from "../../src/server/obsluha";
+import { spravujVse } from "../../src/server/sprava";
 
-export default (zadost: Request, kontext: KontextNetlify): Promise<Response> => spravuj(zadost, prostrediNetlify(kontext));
+export default (zadost: Request, kontext: KontextNetlify): Promise<Response> => spravujVse(zadost, prostrediNetlify(kontext));
 
 // Omezení počtu žádostí brání i hádání hesla hrubou silou.
 export const config = {

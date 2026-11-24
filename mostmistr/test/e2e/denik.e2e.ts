@@ -11,7 +11,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhZTextu } from "../../src/data/navrh";
 import { souhrnDeniku } from "../../src/denik/souhrn";
 import type { DavkaDeniku, EvidovanaVazba, UdalostDeniku } from "../../src/denik/udalosti";
-import { prijmiDenik, prijmiVazbu, spravuj, type ProstrediServeru } from "../../src/server/obsluha";
+import { prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../../src/server/obsluha";
+import { spravujVse } from "../../src/server/sprava";
 import { SkladVPameti } from "../../src/server/sklad";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
@@ -124,7 +125,7 @@ beforeAll(async () => {
   adresa = mistni;
   napoj("/api/denik", "denik", prijmiDenik);
   napoj("/api/vazba", "vazba", prijmiVazbu);
-  napoj("/api/sprava", "sprava", spravuj);
+  napoj("/api/sprava", "sprava", spravujVse);
   prohlizec = await chromium.launch();
   kontext = await prohlizec.newContext({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   stranka = await kontext.newPage();
