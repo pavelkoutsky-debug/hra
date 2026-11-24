@@ -54,6 +54,7 @@ function kartaUrovne(uroven: Uroven, zamek: Zamek | null, uloziste: Uloziste): H
   polozka.className = "karta";
   polozka.dataset.uroven = uroven.id;
   polozka.dataset.zamceno = String(!odemceno);
+  if (uroven.zkouskova) polozka.dataset.zkouskova = "true";
 
   const obal = document.createElement(odemceno ? "a" : "div");
   obal.className = "karta__obal";
@@ -73,6 +74,14 @@ function kartaUrovne(uroven: Uroven, zamek: Zamek | null, uloziste: Uloziste): H
   nazev.className = "karta__nazev";
   nazev.textContent = nazevUrovne(uroven);
   hlavicka.append(id, nazev);
+  if (uroven.zkouskova) {
+    // Zkouška kapitoly: bez ukázky a bez nápovědy. Štítek to řekne dřív, než ji hráč otevře.
+    const stitek = document.createElement("span");
+    stitek.className = "karta__stitek";
+    stitek.textContent = t("prehled.zkouska");
+    stitek.title = t("prehled.zkouska.popis");
+    hlavicka.append(stitek);
+  }
 
   const stav = document.createElement("span");
   stav.className = "karta__stav";

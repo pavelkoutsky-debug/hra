@@ -301,5 +301,6 @@ export function urovenSandboxu(nastaveni: NastaveniSandboxu): Uroven {
     jizdniRad: n.provoz.map(polozkaRadu),
     pohyb: null,
     lode: [],
+    zkouskova: false,
   });
 }

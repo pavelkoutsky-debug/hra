@@ -82,6 +82,25 @@
         <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres" data-kratce-text="lista.celyVykres.kratce"></button>
       </header>
 
+      <!--
+        Most otevřený z odkazu: vlastní most hráče je stranou a nic se neukládá, dokud se
+        nerozhodne. Vlastní řádek pod lištou, ne přes výkres: cizí most má být celý vidět.
+      -->
+      <div class="host" data-udaj="host" role="status" hidden>
+        <p class="host__text" data-udaj="host-text"></p>
+        <div class="host__tlacitka">
+          <button type="button" class="tlacitko tlacitko--hlavni" data-akce="host-prekonat" data-text="sdileni.host.prekonat" data-popis="sdileni.host.prekonat.popis"></button>
+          <button type="button" class="tlacitko" data-akce="host-nechat"></button>
+          <button type="button" class="tlacitko" data-akce="host-zpet"></button>
+        </div>
+        <!-- Kdo přijde odkazem, zadání neotevírá: upozornění na záznam hraní má vidět tady. -->
+        <div class="zaznam zaznam--host" data-udaj="zaznam-upozorneni" role="note" hidden>
+          <span data-text="denik.upozorneni"></span>
+          <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
+          <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
+        </div>
+      </div>
+
       <div class="uroven">
         <aside class="paleta">
           <!-- Zadání, nápověda a nastavení pískoviště jsou nahoře: na dlouhé paletě by jinak byly pod okrajem okna. -->
@@ -232,6 +251,17 @@
             <button type="button" class="paleta__tlacitko" data-akce="export"><span data-text="paleta.export"></span></button>
             <button type="button" class="paleta__tlacitko" data-akce="import"><span data-text="paleta.import"></span></button>
           </div>
+          <!-- Sdílení mostu odkazem: jen v kampani (údolí z pískoviště odkaz nenese). -->
+          <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="sdilet" data-popis="sdileni.tlacitko.popis" data-jen-kampan>
+            <span data-text="sdileni.tlacitko"></span>
+          </button>
+          <div class="paleta__vyzva" data-udaj="vyzva-odkazu" data-jen-kampan hidden>
+            <p data-udaj="vyzva-odkazu-text"></p>
+            <div class="paleta__dvojice">
+              <button type="button" class="paleta__tlacitko" data-akce="vyzva-ukazat" data-popis="sdileni.vyzva.ukazat.popis"><span data-text="sdileni.vyzva.ukazat"></span></button>
+              <button type="button" class="paleta__tlacitko" data-akce="vyzva-zrusit"><span data-text="sdileni.vyzva.zrusit"></span></button>
+            </div>
+          </div>
 
           <h2 data-text="paleta.zadani"></h2>
           <p class="paleta__zadani" data-udaj="zadani"></p>
@@ -344,6 +374,7 @@
                 <h3 data-text="vyzvy.nadpis"></h3>
                 <ul class="vyzvy" data-udaj="vysledek-vyzvy"></ul>
               </div>
+              <p class="vysledek__vyzva-odkazu" data-udaj="vysledek-vyzva-odkazu" hidden></p>
               <dl class="vysledek__cisla">
                 <dt data-text="vysledek.cena"></dt>
                 <dd data-udaj="vysledek-cena"></dd>
@@ -363,6 +394,7 @@
                 <dd><ul class="poruseni" data-udaj="vysledek-poruseni"></ul></dd>
               </dl>
               <div class="vysledek__tlacitka vysledek__tlacitka--dole">
+                <button type="button" class="tlacitko" data-akce="sdilet" data-text="sdileni.tlacitko" data-popis="sdileni.tlacitko.popis" data-jen-kampan></button>
                 <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika" data-popis="vysledek.diagnostika.popis"></button>
                 <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.zVysledku"></button>
               </div>
@@ -459,6 +491,30 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="okno okno--sdileni" id="okno-sdileni">
+      <form method="dialog">
+        <h2 data-text="sdileni.nadpis"></h2>
+        <p data-udaj="sdileni-popis"></p>
+        <canvas class="sdileni__obrazek" data-udaj="sdileni-obrazek" role="img" data-popis="sdileni.obrazek.popis"></canvas>
+        <label class="sdileni__pole">
+          <span data-text="sdileni.odkaz"></span>
+          <input type="text" id="sdileni-odkaz" readonly spellcheck="false" autocomplete="off" />
+        </label>
+        <label class="sdileni__pole">
+          <span data-text="sdileni.zprava"></span>
+          <textarea id="sdileni-zprava" rows="3" spellcheck="false" autocomplete="off"></textarea>
+        </label>
+        <p class="sdileni__hlaseni" data-udaj="sdileni-hlaseni" role="status"></p>
+        <div class="okno__tlacitka">
+          <button type="button" class="tlacitko tlacitko--hlavni" data-akce="sdileni-odkaz" data-text="sdileni.kopirovat.odkaz"></button>
+          <button type="button" class="tlacitko" data-akce="sdileni-zprava" data-text="sdileni.kopirovat.zpravu"></button>
+          <button type="button" class="tlacitko" data-akce="sdileni-system" data-text="sdileni.system" hidden></button>
+          <button type="button" class="tlacitko" data-akce="sdileni-obrazek" data-text="sdileni.stahnout"></button>
+          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="okno" id="okno">
       <form method="dialog">
@@ -577,6 +633,7 @@
         <div class="okno__telo">
           <div class="okno__hlavni">
             <p class="okno__zadani" data-udaj="zadani-text"></p>
+            <p class="okno__zkouska" data-udaj="zadani-zkouska" data-text="zadani.zkouska.bez" hidden></p>
             <section class="ukazka" data-udaj="ukazka" hidden>
               <h3 data-text="ukazka.nadpis"></h3>
               <div class="ukazka__strany">

@@ -87,6 +87,7 @@ export function urovenRegrese(z: ZadaniUrovne): Uroven {
     jizdniRad: [],
     pohyb: null,
     lode: [],
+    zkouskova: false,
   };
 }
 

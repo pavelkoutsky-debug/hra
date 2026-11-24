@@ -77,6 +77,13 @@ function frekvenceTlumice(frekvence: number): number {
   return Math.round(omezena * 100) / 100;
 }
 
+/** Výkres odložený stranou: návrh a historie kroků (`Editor.odloz`, `Editor.vrat`). */
+export interface OdlozenyVykres {
+  readonly navrh: NavrhMostu;
+  readonly zpet: readonly NavrhMostu[];
+  readonly znovu: readonly NavrhMostu[];
+}
+
 export class Editor {
   readonly uroven: Uroven;
   /** Prvek, kterým se kreslí. */
@@ -189,6 +196,42 @@ export class Editor {
   nahrad(navrh: NavrhMostu): void {
     this.zrusVyber();
     this.#zmen(navrh, "import");
+  }
+
+  /**
+   * Vymění celý návrh za jiný most a zapomene historii kroků. Pro přechod mezi vlastním mostem
+   * a mostem z odkazu: Zpět nesmí cizí most vrátit do výkresu hráče (uložil by se jako jeho)
+   * ani hráčův most do výkresu, kde je hostem.
+   */
+  vymen(navrh: NavrhMostu): void {
+    this.zrusVyber();
+    this.tah = null;
+    this.#zpet.length = 0;
+    this.#znovu.length = 0;
+    this.posledniAkce = "import";
+    this.posledniPrut = null;
+    if (navrh === this.#navrh) return;
+    this.#navrh = navrh;
+    this.#ocistiVyber();
+    this.#poZmene();
+  }
+
+  /**
+   * Výkres, jak je teď, i s historií kroků: `vrat` ho obnoví. Pro nahlédnutí na cizí most
+   * z vlastní stavby (výzva z odkazu): po návratu má Zpět fungovat jako před odchodem.
+   */
+  odloz(): OdlozenyVykres {
+    return { navrh: this.#navrh, zpet: [...this.#zpet], znovu: [...this.#znovu] };
+  }
+
+  /** Obnoví odložený výkres místo toho, co je na něm teď; nic z dneška v historii nezůstane. */
+  vrat(odlozeny: OdlozenyVykres): void {
+    const zmena = odlozeny.navrh !== this.#navrh;
+    this.vymen(odlozeny.navrh);
+    this.#zpet.push(...odlozeny.zpet);
+    this.#znovu.push(...odlozeny.znovu);
+    // Výměna ohlásila změnu dřív, než se historie vrátila: tlačítka Zpět a Znovu se obnoví teď.
+    if (!zmena || odlozeny.zpet.length + odlozeny.znovu.length > 0) this.#poZmene();
   }
 
   zpet(): void {

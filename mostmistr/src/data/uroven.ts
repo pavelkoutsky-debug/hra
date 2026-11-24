@@ -15,7 +15,7 @@ import {
 } from "./kontrola";
 import { prevedNaAktualni, type Prevod } from "./prevody";
 
-export const VERZE_UROVNE = 7;
+export const VERZE_UROVNE = 8;
 
 /** Převody ze starších verzí formátu úrovně; viz `prevedNaAktualni`. */
 const PREVODY_UROVNE: readonly Prevod[] = [
@@ -37,6 +37,8 @@ const PREVODY_UROVNE: readonly Prevod[] = [
   // 6 → 7: kotva smí být vyhrazená jednomu druhu prutu (`jen`: kotva pro tlumič, o kterou se
   // nedá opřít vzpěra). Starší úrovně takové kotvy nemají.
   (stara) => stara,
+  // 7 → 8: zkouškové úrovně (bez ukázky a bez nápovědy). Starší úrovně zkouškové nejsou.
+  (stara) => ({ ...stara, zkouskova: false }),
 ];
 
 export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
@@ -202,6 +204,11 @@ export interface Uroven {
   pohyb: PohybMostu | null;
   /** Lodě, které při zkoušce pod mostem proplují. */
   lode: Lod[];
+  /**
+   * Zkoušková úroveň: uzavírá kapitolu, nic nového neučí a hráč v ní nemá ukázku ani nápovědu.
+   * Zadání říká jen úlohu, ne řešení.
+   */
+  zkouskova: boolean;
 }
 
 const KLICE_UROVNE = [
@@ -232,6 +239,7 @@ const KLICE_UROVNE = [
   "jizdniRad",
   "pohyb",
   "lode",
+  "zkouskova",
 ] as const;
 
 function bod(h: unknown, cesta: string): Bod {
@@ -401,6 +409,7 @@ export function nactiUroven(data: unknown): Uroven {
         vyska: cislo(l.vyska, `${cesta}.vyska`, { min: 1, max: 60 }),
       };
     }),
+    zkouskova: logicka(o.zkouskova, `${c}.zkouskova`),
   };
 
   zkontrolujSouvislosti(uroven, c);

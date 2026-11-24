@@ -51,10 +51,23 @@ describe("uložený postup", () => {
     const spatnyRekord = sNavrhem();
     (spatnyRekord.rekordy["9-99"]!.medaile as unknown as Record<string, unknown>).pruchod = "ano";
     expect(cesta(spatnyRekord)).toBe("ulozeni.rekordy.9-99.medaile.pruchod");
-    // Návrh uložený pod id jiné úrovně.
-    const prehozeny = sNavrhem();
-    prehozeny.navrhy["1-01"] = prehozeny.navrhy["9-99"]!;
-    expect(cesta(prehozeny)).toBe("ulozeni.navrhy.1-01");
+  });
+
+  it("jeden most, který nejde přečíst, hráče nepřipraví o zbytek postupu", () => {
+    // Návrh uložený pod id jiné úrovně a návrh se dvěma pruty téhož id (to umělo vyrobit id
+    // prutu kolem 2^53 z podvrženého odkazu: další nakreslený prut dostal stejné číslo).
+    const ulozeni = sNavrhem();
+    const data = JSON.parse(ulozeniNaText(ulozeni)) as { navrhy: Record<string, { pruty: { id: number }[]; stycniky: unknown[] }>; rekordy: Record<string, unknown> };
+    data.navrhy["1-01"] = data.navrhy["9-99"]!;
+    data.navrhy["1-02"] = { ...data.navrhy["9-99"]!, uroven: "1-02", pruty: [data.navrhy["9-99"]!.pruty[0]!, data.navrhy["9-99"]!.pruty[0]!] } as never;
+    data.rekordy["1-02"] = data.rekordy["9-99"];
+    const zahozene: string[] = [];
+    const nactene = nactiUlozeni(data, zahozene);
+    expect(zahozene.sort()).toEqual(["1-01", "1-02"]);
+    // Dobrý most a všechny rekordy zůstaly, i rekord úrovně, jejíž most se zahodil.
+    expect(nactene.navrhy).toEqual({ "9-99": ulozeni.navrhy["9-99"] });
+    expect(Object.keys(nactene.rekordy).sort()).toEqual(["1-02", "9-99"]);
+    expect(ulozeniZTextu(JSON.stringify(data)).rekordy["9-99"]).toEqual(ulozeni.rekordy["9-99"]);
   });
 });
 

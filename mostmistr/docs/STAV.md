@@ -24,12 +24,12 @@ Poslední aktualizace: 23. 11. 2026
 | M10 Pád a výsledek | Hotovo, po třech nezávislých recenzích sloučeno do `main` (23. 11. 2026) |
 | M11 Kmitání a nápověda | Hotovo (23. 11. 2026); nezávislé recenze viz „Nezávislé recenze M11“ a „Druhé kolo recenzí M11“ |
 | M12 Obtížnost a medaile | První část (medaile po schodech, přeladěné úrovně, šampioni výzev, klidné úseky, krátká zadání, slovníček, odemykání po kapitolách) hotová 23. 11. 2026, viz „M12 — výsledek první části“; zbývají těžké varianty úrovní a příčiny v kapitole 7 |
-| M13 Sdílení mostu | Čeká |
+| M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Čeká |
 | M15 Dílna a Havarijní komise | Čeká |
 | M16 Žebříčky a denní rozbor | Čeká; potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry |
 
-## Kde práce stojí (23. 11. 2026)
+## Kde práce stojí (24. 11. 2026)
 
 - **M5** a **M6** jsou sloučené do `main` (pull requesty 13 a 14).
 - **M7 Režimy** je hotový a po třech nezávislých recenzích sloučený do `main` (viz „M7 — výsledek“ a „Nezávislé recenze M7“).
@@ -39,6 +39,60 @@ Poslední aktualizace: 23. 11. 2026
 - **M10 Pád a výsledek** je hotový (viz „M10 — výsledek“).
 - **M11 Kmitání a nápověda** je hotový (viz „M11 — výsledek“).
 - **M12 Obtížnost a medaile**: první část je hotová (viz „M12 — výsledek první části“). Zbývá M12c (těžké varianty údolí, zkouškové úrovně bez návodu, příčiny v kapitole 7) a drobnosti vypsané na konci oddílu.
+- **M13 Sdílení mostu** je hotový a po recenzích opravený (viz „M13 — výsledek“ a „Nezávislé recenze M13“).
+- **Rozpracováno (24. 11. 2026):** M12c: věty o příčině u pohyblivých mostů jsou hotové (`src/zkouska/pricinaPohybu.ts`), zkouškové úrovně 1-05, 5-05, 6-05 a 7-05 jsou navržené a leží mimo repozitář (`urovne/*-05.json`, `urovne/zkousky/`; git je dočasně ignoruje přes `.git/info/exclude`), 2-05, 3-05 a 4-05 jsou rozdělané. M14: galerie mostů a závěrečný list jsou v místní větvi `m14-priprava`, úrovně kapitoly 8 mají zadání v `recenze-docasne/m14/`. **Pomocným agentům došel 24. 11. limit modelu (obnoví se 29. 11.)**; do té doby se pracuje bez nich.
+
+## M13 — výsledek
+
+Sdílení mostu odkazem (návrh 13 z `docs/RECENZE.md`): důvod se ke hře vrátit a poslat ji dál. Verze hry 0.18.0. Fyzika ani úrovně se nemění. S milníkem jde ven i příprava zkouškových úrovní (formát úrovně 8 s polem `zkouskova`: úroveň bez ukázky a bez nápovědy, se štítkem v přehledu); samotné zkouškové úrovně přijdou se zbytkem M12 a do té doby se nic z toho neprojeví.
+
+**Odkaz na most** (`src/data/sdileni.ts`). Tlačítko „Sdílet most…“ v paletě a v podrobnostech výsledku otevře okno s odkazem `?most=…&uroven=1-03`, který most otevře komukoli v jeho úrovni. Kód mostu je vlastní úsporný zápis (celá čísla po sedmi bitech, ostatní přesně jako osm bajtů, abeceda bezpečná pro adresu): most pro mistrovskou 1-03 má odkaz dlouhý kolem 210 znaků, největší most kampaně pod 800. Zápis JSON z Exportu by byl třikrát až osmkrát delší a samé procento. Kód nese pořadí i čísla prutů a styčníků, takže **most z odkazu dá ve zkoušce stejný otisk jako originál** (kritérium milníku; hlídá jednotkový test na čtyřech úrovních a test v prohlížeči na 1-03). Na konci má kontrolní součet (32 bitů; šestnáct by po záměně jediného znaku jednou z desítek tisíc případů otevřelo jiný most): odkaz zkrácený cestou (zalomení v e-mailu, limit zprávy) se odmítne s větou „odkaz je poškozený nebo neúplný“, místo aby otevřel půlku mostu. Import čte i odkaz nebo samotný kód.
+
+**Most z odkazu je host** (`host` v `src/hra/uroven.ts`). Kdo odkaz otevře, vidí cizí most ve výkresu a nad ním řádek, co s ním může dělat. Jeho vlastní most zůstává uložený a **nic se nepřepisuje, dokud se sám nerozhodne**: „Postavit levnější“ vrátí jeho most a zapamatuje si cenu soupeřova jako výzvu, „Nechat si ho“ (s vlastním mostem „Nahradit jím můj most“) ho začne ukládat, třetí tlačítko se vrátí k vlastnímu mostu nebo k prázdnému výkresu. Přechod mezi vlastním a cizím mostem maže historii kroků (`Editor.vymen`): Zpět by jinak cizí most vrátil do výkresu hráče a ten by se uložil jako jeho. Řádek je pod horní lištou, ne přes výkres (na telefonu první verze zakryla most, o který šlo), a zůstává i při zkoušce, aby plátno při jejím spuštění nezměnilo výšku. Na telefonu se po tu dobu zmenší paleta, výkresu zůstává přes třetinu výšky.
+
+**Výzva o cenu.** Po „Postavit levnější“ je v paletě rámeček „Výzva z odkazu: postav most levnější než 98 985 Kč“ (pamatuje se i po zavření hry, jde zrušit a soupeřův most si jde znovu ukázat). Výsledek zkoušky řekne, jak si hráč stojí: vyhrává jen most ostře levnější v korunách, jak je vidí, a jen takový, který prošel a nic se na něm neporušilo (stejné pravidlo jako u rekordů výzev). Kdo vyhraje, dostane v okně sdílení rovnou zprávu s odvetou („Tvůj most jsem překonal: můj stojí 94 073 Kč, o 4 912 Kč míň“).
+
+**Zpráva a obrázek.** Okno sdílení nabízí hotovou zprávu podle toho, jestli most zkouškou prošel („…stojí 98 985 Kč. Postavíš levnější?“), kopírování odkazu i zprávy, na zařízeních, která to umějí, systémové sdílení, a **obrázek výkresu** 1200 × 630 px ke stažení (`src/vykres/obrazek.ts`): úroveň s mostem oříznutá kolem mostu a popisové pole s názvem úrovně, cenou, hmotností a medailemi. Medaile jsou v obrázku jen u mostu, který zkouškou právě prošel.
+
+**Co sdílení nedělá.** Nic neposílá na server (odkaz je celý most; hra o sdílení ví jen z deníku hraní: otevření okna, kopírování, stažení, otevření odkazu, přijetí výzvy). Pískoviště sdílení nenabízí: jeho údolí odkaz nenese (přijde s dílnou v M15). Zkouška cizího mostu v roli hosta se do medailí a rekordů **nepočítá** (první verze je počítala; po recenzích ne, viz níže); kdo si most nechá, zkouší ho jako svůj. Zkopírovat cizí most šlo Importem vždycky.
+
+### Nezávislé recenze M13 (24. 11. 2026)
+
+Tři čerství agenti: recenze kódu, hraní v prohlížeči očima příjemce odkazu a autora, a odolnost (poškozené a podvržené odkazy, věrnost kódu). **Třetí recenzent zprávu nedopsal**: v polovině práce došel limit modelu všem pomocným agentům (obnoví se 29. 11.). Jeho rozdělané pokusy zůstaly na disku a nálezy z nich jsem vyčetl sám; jsou níže označené. Zásadní nález neměly první dvě recenze žádný, třetí dva.
+
+**Zapracováno z recenze kódu**
+- **Dvě záložky.** Odkaz se typicky otevře vedle rozehrané hry a `Uloziste` drželo snímek postupu z načtení stránky: zápis z druhé záložky vrátil hráči starší most a smazal mezitím získané medaile. Úložiště teď před každým čtením i zápisem srovná postup s pamětí prohlížeče (`#srovnej`); test jednotkový i v prohlížeči se dvěma stránkami.
+- **„Nahradit jím můj most“ šlo jedním kliknutím a nešlo vrátit.** Je to teď krok jako každý jiný (`Editor.nahrad`): Zpět vrátí most, který hráč měl, a hlášení to říká. Nahlédnutí na soupeřův most z vlastní stavby už nemaže historii kroků (`Editor.odloz`, `Editor.vrat`).
+- **Výzva se přijímala i proti mostu, který úrovní neprojde** (jediný trám za 5 000 Kč, most proti pravidlům úrovně). Přijmout jde jen most, který u příjemce prošel zkouškou bez porušení; do té doby tlačítko poradí, že ho má nejdřív zkusit.
+- **Zkouška cizího mostu zapsala hráči medaile, rekordy a projití úrovně**, ačkoli pruh sliboval, že se nic neukládá. Host teď nezapíše nic (`Beh.host`), výsledek to říká v pruhu i v podrobnostech, deník nese příznak a souhrn správce takové zkoušky nepočítá.
+- **Zmrazené vzorky kódu** (`test/data/kody-mostu-v1.json`): změna rozložení bajtů bez zvýšení verze by jinak prošla testy a rozbila rozeslané odkazy.
+- Drobné: kód z adresy se uklidí i u odkazu na most, který hráč už má, a u odkazu, který nešel přečíst; neznámé příznaky a prvek mimo katalog jsou „novější verze“, ne „poškozený odkaz“; `zakodujMost`, které most zapsat neumí, už neshodí výsledek ani Sdílet; okno sdílení neprozradí výsledek dřív než přehrávání a po brnknutí nebo zkoušce do zlomu most neoznačí za nezkoušený; výhru výzvy nedostane cizí most; rámeček výzvy po výhře neříká „ještě musí projít“; most nad limit délky odkaz nedostane (jen obrázek); obrázek, který nejde vyrobit, to řekne; slovo v Importu není „poškozený odkaz“; **otisk úrovně nezávisí na verzi formátu** (formát 8 by jinak všem hráčům zahodil paměť prošlých mostů; ověřeno, že 1-03 má zase otisk jako na `main`).
+
+**Zapracováno z hraní**
+- **Výsledek výzvy** je v pruhu výsledku („Výzva z odkazu: vyhráváš o 4 912 Kč.“), rámeček v paletě má stav vyhráno a pamatuje si ho i po načtení stránky (přes paměť prošlých mostů), stejně jako odvetná zpráva.
+- **„Vezmu kamarádův most a zlevním ho“**: kdo si most nechá, má jeho cenu jako výzvu; pruh u upraveného mostu říká, že úpravy zůstanou jen s „Nechat si ho“.
+- **Okno sdílení v nízkém okně** (1366 × 625, telefon naležato) mělo tlačítka pod okrajem: obrázek ustoupí a tlačítka drží dole. Pole odkazu ukazuje začátek adresy.
+- **Upozornění na záznam hraní** příchozí z odkazu neviděl (zadání se mu neotevírá): má ho v pruhu hosta, dokud ho neodklikne.
+- **Věta pruhu** neplatila hráči bez vlastního mostu („tvůj vlastní most je uložený stranou“): má vlastní znění.
+- Drobné: odvetná zpráva není v mužském rodě; zpráva i obrázek mostu, který neprošel, to říkají; cizí most se neposílá jako „můj“; druhá výzva řekne, že nahradila první; hlášení o poškozeném odkazu nezakryje zadání; tečka nebo závorka za odkazem a zalomení uvnitř kódu nevadí; odkaz na most, který hráč už má, to řekne; „Soupeřův most“ nenabízí výzvu podruhé; systémové sdílení pošle i obrázek, kde to zařízení umí; pruh hosta nemění výšku; angličtina (kept safe, yours is cheaper, mass).
+
+**Zapracováno z pokusů třetího recenzenta (odolnost)**
+- **Podvržený odkaz uměl příjemci rozbít celý uložený postup.** Most s id prutu kolem 2^53: po „Nechat si ho“ dostal další nakreslený prut stejné id (součet už není přesný), uložený most nešel přečíst a hra při příštím startu zahodila postup všech úrovní (medaile 9 → 0). Tři opravy: id a souřadnice návrhu mají meze (`NEJVETSI_ID_NAVRHU`, `NEJVETSI_SOURADNICE`; platí i pro Import), čtení kódu odmítá čísla nad bezpečný rozsah, a **jeden nečitelný most už nezahodí celý postup** (`nactiUlozeni` ho vynechá, medaile a ostatní mosty zůstanou, původní zápis jde stranou).
+- **Tlumič s podvrženou tuhostí** (`tuhost` u prutu, který není pružina) byl vzpěra za cenu tlumiče a směl do kotev vyhrazených tlumičům: v 2-04 tak šlo zlato ceny i hmotnosti mostem, který editor nepostaví. Kontrola návrhu ho odmítá (`tuhost-nepatri`). Totéž šlo Importem už dřív; s výzvami a žebříčky (M16) by to byl podvod.
+- **Souřadnice 1e300** daly cenu „Infinity Kč“ a zdržely zkoušku na sekundy: meze souřadnic.
+- **Kontrolní součet má 32 bitů.** Ze 3,5 milionu záměn jednoho znaku jich šestnáctibitovým součtem prošlo čtrnáct jako jiný most. Kód ještě nikdo nedostal (milník nebyl venku), takže se změnil bez nové verze.
+- **Kód končící pomlčkou nebo podtržítkem** (některé aplikace je z konce odkazu odříznou): odkaz má kód první a úroveň poslední.
+- Co jeho pokusy potvrdily: 232 známých mostů a 271 mostů překreslených editorem dává u příjemce stejný otisk zkoušky; milion poškozených kódů nedal nic jiného než odmítnutí nebo platný most; text úrovně ani mostu se nikde nevkládá jako HTML; odkaz nenese z adresy autora nic navíc.
+
+**Nezapracováno**
+- **Sdílet v pruhu výsledku** (je v podrobnostech a v paletě): pruh má na telefonu místo jen na hlavní tlačítka.
+- **Přehled o přijatých výzvách neví** a výzva je jedna na úroveň. Patří k žebříčkům (M16).
+- **Telefon 390 × 664 v roli hosta**: pruh výsledku s pruhem hosta zakryje most; na 360 × 640 zbývá výkresu čtvrtina výšky. Hra hlídá 390 × 844; menší displeje zůstávají.
+- **`?sandbox&most=…`** odkaz potichu zahodí: pískoviště sdílení nemá (přijde s dílnou v M15).
+- **Souhrn správce** události sdílení zatím neukazuje (jen je nepočítá mezi zkoušky hráče); přijde s denním rozborem v M16.
+- **Obrázek 7-02**: píst překrývá popisek hladiny.
+- **Dokončení třetí recenze.** Chybí její závěrečná zpráva a část pokusů v prohlížeči (psal je, když mu došel limit). Až se limit obnoví, stojí za to nechat recenzi odolnosti doběhnout na opravené verzi.
+- Neověřeno nikým: Firefox, Safari, skutečný telefon, skutečná systémová nabídka sdílení a průchod odkazu skutečnými aplikacemi.
 
 ## M12 — výsledek první části
 

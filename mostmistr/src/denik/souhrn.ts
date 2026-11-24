@@ -273,6 +273,8 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
       const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
       zaznam.napoveda = Math.max(zaznam.napoveda ?? 0, krok);
+    } else if (u.druh === "zkouska.konec" && data.host === true) {
+      // Zkouška cizího mostu z odkazu: není to hráčova stavba a do čísel o úrovni nepatří.
     } else if (u.druh === "zkouska.konec" && data.pokus === "zlom") {
       zaznam.zlomu = (zaznam.zlomu ?? 0) + 1;
     } else if (u.druh === "zkouska.konec" && (data.pokus === null || data.pokus === undefined)) {

@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`proč pohyblivý most neprošel > pády kapitoly 7 dostanou příčinu, která sedí k jejich názvu 1`] = `
+"7-01 „jen mostovka“: {"kod":"bez-pistu"} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-01 „bez zámku: konec křídla drží ložisko“: {"kod":"bez-zamku"} | zvednuto false při nárazu zveda přetíženo 1 zamčeno true
+7-01 „nesvařená mostovka: křídlo se při zvedání složí“: {"kod":"preklopeno"} | zvednuto true při nárazu drzi přetíženo 0 zamčeno false
+7-01 „malý zdvih: křídlo se nezvedne dost“: {"kod":"maly-zdvih","kosinus":0.7944952693437599} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-01 „křídlo o metr kratší, bez zámku: na opěru nedosáhne“: — | zvednuto true při nárazu null přetíženo 0 zamčeno true
+7-02 „jen mostovka“: {"kod":"bez-pistu"} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-02 „bez zámku uprostřed: písty tlačí proti sobě“: {"kod":"bez-zamku"} | zvednuto false při nárazu zveda přetíženo 2 zamčeno true
+7-02 „malý zdvih“: {"kod":"maly-zdvih","kosinus":0.9077925161345394} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-02 „píst jen vlevo: pravé křídlo po odemknutí spadne“: {"kod":"kridlo-bez-pistu","strana":"prave"} | zvednuto true při nárazu null přetíženo 0 zamčeno false
+7-03 „jen mostovka“: {"kod":"bez-pistu"} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-03 „hluboká kotva s malým zdvihem“: {"kod":"maly-zdvih","kosinus":0.8766291810813661} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-03 „bez zámku“: {"kod":"bez-zamku"} | zvednuto false při nárazu zveda přetíženo 1 zamčeno true
+7-04 „jen mostovka“: {"kod":"bez-pistu"} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-04 „písty z mělkých kotev“: {"kod":"neudrzel"} | zvednuto true při nárazu klesl přetíženo 2 zamčeno true
+7-04 „bez zámku uprostřed“: {"kod":"bez-zamku"} | zvednuto false při nárazu zveda přetíženo 2 zamčeno true
+7-04 „křídla, která se uprostřed nepotkají“: {"kod":"maly-zdvih","kosinus":0.7555894135980983} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true
+7-04 „píst sedm metrů od čepu s malým zdvihem: křídlo se nezvedne dost“: {"kod":"maly-zdvih","kosinus":0.8195002681602097} | zvednuto true při nárazu drzi přetíženo 0 zamčeno true"
+`;

@@ -2,7 +2,7 @@
 // Každá chyba nese cestu k místu, kde vznikla, aby šla opravit bez hádání.
 
 /** Druh chyby, který má hra umět říct hráči vlastní větou (věty kontroly jsou jen česky). */
-export type KodChybyDat = "novejsi-verze";
+export type KodChybyDat = "novejsi-verze" | "odkaz-poskozeny";
 
 export class ChybaDat extends Error {
   readonly cesta: string;

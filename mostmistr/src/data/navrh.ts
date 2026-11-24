@@ -80,13 +80,22 @@ export interface NavrhMostu {
   pruty: PrutNavrhu[];
 }
 
+/**
+ * Největší id styčníku a prutu. Editor dává novým prvkům id o jedna větší než největší v návrhu;
+ * u čísel kolem 2^53 by součet přestal být přesný, dvě id by splynula a uložený most (a s ním
+ * celý postup) by nešel přečíst. Miliarda je daleko za vším, co kdy editor vyrobí.
+ */
+export const NEJVETSI_ID_NAVRHU = 1_000_000_000;
+/** Největší souřadnice styčníku v metrech: žádné údolí hry není širší a ceny zůstanou konečné. */
+export const NEJVETSI_SOURADNICE = 100_000;
+
 function stycnik(h: unknown, cesta: string): StycnikNavrhu {
   const o = objekt(h, cesta);
   jenZnameKlice(o, cesta, ["id", "x", "y", "svar", "zamek", "zavazi", "tlumic"]);
   const s: StycnikNavrhu = {
-    id: cislo(o.id, `${cesta}.id`, { min: 0, cele: true }),
-    x: cislo(o.x, `${cesta}.x`, { cele: true }),
-    y: cislo(o.y, `${cesta}.y`, { cele: true }),
+    id: cislo(o.id, `${cesta}.id`, { min: 0, max: NEJVETSI_ID_NAVRHU, cele: true }),
+    x: cislo(o.x, `${cesta}.x`, { min: -NEJVETSI_SOURADNICE, max: NEJVETSI_SOURADNICE, cele: true }),
+    y: cislo(o.y, `${cesta}.y`, { min: -NEJVETSI_SOURADNICE, max: NEJVETSI_SOURADNICE, cele: true }),
   };
   const svar = volitelne(o.svar, (v) => logicka(v, `${cesta}.svar`));
   if (svar !== undefined) s.svar = svar;
@@ -110,9 +119,9 @@ function prut(h: unknown, cesta: string): PrutNavrhu {
   const o = objekt(h, cesta);
   jenZnameKlice(o, cesta, ["id", "a", "b", "prvek", "predpeti", "tuhost", "tlumeni", "zdvih"]);
   const p: PrutNavrhu = {
-    id: cislo(o.id, `${cesta}.id`, { min: 0, cele: true }),
-    a: cislo(o.a, `${cesta}.a`, { min: 0, cele: true }),
-    b: cislo(o.b, `${cesta}.b`, { min: 0, cele: true }),
+    id: cislo(o.id, `${cesta}.id`, { min: 0, max: NEJVETSI_ID_NAVRHU, cele: true }),
+    a: cislo(o.a, `${cesta}.a`, { min: 0, max: NEJVETSI_ID_NAVRHU, cele: true }),
+    b: cislo(o.b, `${cesta}.b`, { min: 0, max: NEJVETSI_ID_NAVRHU, cele: true }),
     prvek: jedenZ(o.prvek, `${cesta}.prvek`, ID_PRVKU),
   };
   const predpeti = volitelne(o.predpeti, (v) => cislo(v, `${cesta}.predpeti`, { min: PREDPETI_LANA.nejmensi, max: PREDPETI_LANA.nejvetsi }));
@@ -194,6 +203,7 @@ export type DruhProblemu =
   | "ladeny-tlumic-nepovoleny"
   | "ladeny-tlumic-mimo-rozsah"
   | "tlumeni-mimo-rozsah"
+  | "tuhost-nepatri"
   | "predpeti-mimo-rozsah"
   | "zdvih-mimo-rozsah"
   | "zdvih-za-uvrati"
@@ -268,6 +278,9 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (rozsah && p.tlumeni !== undefined && (p.tlumeni < rozsah.nejmensi || p.tlumeni > rozsah.nejvetsi)) {
       problemy.push({ druh: "tlumeni-mimo-rozsah", prut: p.id });
     }
+    // Tuhost patří jen pružině. Editor ji jinému prutu nedá, ale zápis z Importu nebo odkazu
+    // ano: tlumič s tuhostí by byl vzpěra za cenu tlumiče (a směl by do kotvy vyhrazené tlumičům).
+    if (p.tuhost !== undefined && p.tuhost !== 0 && polozka.druh !== "pruzina") problemy.push({ druh: "tuhost-nepatri", prut: p.id });
     if (p.predpeti !== undefined && (p.predpeti < PREDPETI_LANA.nejmensi || p.predpeti > PREDPETI_LANA.nejvetsi)) {
       problemy.push({ druh: "predpeti-mimo-rozsah", prut: p.id });
     }

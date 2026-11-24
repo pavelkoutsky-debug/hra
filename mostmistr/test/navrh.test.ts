@@ -3,6 +3,8 @@ import { KATALOG } from "../src/data/katalog";
 import { ChybaDat } from "../src/data/kontrola";
 import { Kreslic } from "../src/data/kreslic";
 import {
+  NEJVETSI_ID_NAVRHU,
+  NEJVETSI_SOURADNICE,
   VERZE_NAVRHU,
   nactiNavrh,
   navrhNaText,
@@ -65,6 +67,27 @@ describe("čtení návrhu", () => {
     const navrh = trojuhelnik();
     navrh.stycniky[2]!.x = 2.5;
     ocekavejChybu(navrh, "navrh.stycniky[2].x");
+  });
+
+  it("odmítne id a souřadnice mimo rozumné meze (podvržený odkaz nebo Import)", () => {
+    // Id kolem 2^53: editor dává novému prutu id o jedna větší a u takových čísel by dvě
+    // id splynula; uložený most by pak nešel přečíst.
+    const velkeId = trojuhelnik();
+    velkeId.pruty[2]!.id = 2 ** 53 - 1;
+    ocekavejChybu(velkeId, "navrh.pruty[2].id");
+    const velkyStycnik = trojuhelnik();
+    velkyStycnik.stycniky[2]!.id = NEJVETSI_ID_NAVRHU + 1;
+    ocekavejChybu(velkyStycnik, "navrh.stycniky[2].id");
+    const naHrane = trojuhelnik();
+    naHrane.pruty[2]!.id = NEJVETSI_ID_NAVRHU;
+    expect(nactiNavrh(naHrane).pruty[2]!.id).toBe(NEJVETSI_ID_NAVRHU);
+    // Souřadnice 1e300 dala cenu „Infinity Kč“ a zdržela zkoušku na sekundy.
+    const daleko = trojuhelnik();
+    daleko.stycniky[2]!.x = 1e300;
+    ocekavejChybu(daleko, "navrh.stycniky[2].x");
+    const hluboko = trojuhelnik();
+    hluboko.stycniky[2]!.y = -(NEJVETSI_SOURADNICE + 1);
+    ocekavejChybu(hluboko, "navrh.stycniky[2].y");
   });
 
   it("odmítne opakované id styčníku", () => {
@@ -249,6 +272,19 @@ describe("kontrola návrhu proti úrovni", () => {
   it("prut přesně na největší délce je v pořádku", () => {
     expect(KATALOG["mostovka-drevo"].nejvetsiDelka).toBe(4);
     expect(druhy(trojuhelnik())).not.toContain("prut-dlouhy");
+  });
+
+  it("tuhost patří jen pružině: tlumič s tuhostí je vzpěra za cenu tlumiče a kontrola ho odmítne", () => {
+    const navrh = trojuhelnik();
+    navrh.pruty[1] = { ...navrh.pruty[1]!, prvek: "tlumic", tuhost: 1e9 };
+    expect(druhy(nactiNavrh(navrh))).toContain("tuhost-nepatri");
+    // Nulová tuhost nic nedělá a pružina tuhost mít smí.
+    navrh.pruty[1] = { ...navrh.pruty[1]!, tuhost: 0 };
+    expect(druhy(nactiNavrh(navrh))).not.toContain("tuhost-nepatri");
+    navrh.pruty[1] = { ...navrh.pruty[1]!, prvek: "pruzina", tuhost: 4e6 };
+    expect(druhy(nactiNavrh(navrh))).not.toContain("tuhost-nepatri");
+    navrh.pruty[1] = { ...navrh.pruty[1]!, prvek: "ocel-lehka", tuhost: 5 };
+    expect(druhy(nactiNavrh(navrh))).toContain("tuhost-nepatri");
   });
 
   it("pozná prvek, který úroveň nepovoluje", () => {
