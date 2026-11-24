@@ -238,6 +238,36 @@ describe("editor", () => {
     expect(e.lzeZnovu).toBe(false);
   });
 
+  it("odložený výkres se vrátí i s historií kroků; nahrazení mostu po návratu jde vzít zpět", () => {
+    const { e, tahni } = novy();
+    tahni([0, 0], [4, 0]);
+    tahni([4, 0], [8, 0]);
+    e.zpet();
+    const vlastni = e.navrh;
+    expect(e.lzeZpet).toBe(true);
+    expect(e.lzeZnovu).toBe(true);
+    // Nahlédnutí na cizí most: výkres hráče jde stranou, cizí most má vlastní prázdnou historii.
+    const odlozeny = e.odloz();
+    const cizi = pridejPrut(pridejPrut(prazdnyNavrh(e.navrh.uroven), B(0, 0), B(4, 0), "mostovka-drevo"), B(0, 0), B(2, 2), "drevo-lehke");
+    e.vymen(cizi);
+    tahni([4, 0], [8, 0]);
+    expect(e.lzeZnovu).toBe(false);
+    // Návrat: most hráče i jeho Zpět a Znovu jsou zpátky a úpravy cizího mostu v historii nezůstaly.
+    e.vrat(odlozeny);
+    expect(e.navrh).toBe(vlastni);
+    expect(e.lzeZpet).toBe(true);
+    expect(e.lzeZnovu).toBe(true);
+    e.znovu();
+    expect(e.navrh.pruty.length).toBe(2);
+    e.zpet();
+    expect(e.navrh).toBe(vlastni);
+    // „Nahradit jím můj most“: cizí most se vloží jako krok, který Zpět vrátí.
+    e.nahrad(cizi);
+    expect(e.navrh).toBe(cizi);
+    e.zpet();
+    expect(e.navrh).toBe(vlastni);
+  });
+
   it("kliknutím vybere prut nebo styčník, Shift přidává, Delete maže", () => {
     const { e, tahni } = novy();
     tahni([0, 0], [4, 0]);

@@ -3115,6 +3115,8 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 14px;
+  /* Stejná výška, ať je věta na jeden řádek, nebo na dva: výkres pod pruhem nesmí poskakovat. */
+  min-height: 48px;
   padding: 6px 12px;
   border-bottom: 1px solid var(--cara);
   background: var(--zvyrazneni);
@@ -3124,6 +3126,16 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   flex: 1 1 260px;
   margin: 0;
   color: var(--cara-silna);
+}
+
+/*
+ * Upozornění na záznam hraní pro toho, kdo přišel odkazem (zadání se mu neotevírá): vlastní
+ * řádek pruhu, dokud ho neodklikne. Nic nepřekrývá; výkresu vrátí místo jedno klepnutí.
+ */
+.zaznam--host {
+  flex: 1 1 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .host__tlacitka {
@@ -3170,14 +3182,30 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 
 .okno--sdileni {
   width: min(720px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
 }
 
+/* V nízkém okně (notebook, telefon naležato) ustoupí obrázek: tlačítka musejí být vidět. */
 .sdileni__obrazek {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   height: auto;
-  margin: 0 0 10px;
+  max-height: 34vh;
+  max-height: 34dvh;
+  margin: 0 auto 10px;
   border: 1px solid rgb(207 227 255 / 0.4);
+}
+
+.okno--sdileni .okno__tlacitka {
+  position: sticky;
+  bottom: -16px;
+  margin: 0 -18px -16px;
+  padding: 10px 18px 14px;
+  background: var(--lista);
+  border-top: 1px solid rgb(207 227 255 / 0.3);
 }
 
 .sdileni__pole {

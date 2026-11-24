@@ -1,7 +1,9 @@
 // Kód mostu pro sdílení odkazem (`src/data/sdileni.ts`): most se z odkazu vrátí přesně takový,
 // jaký do něj šel, a poškozený nebo zkrácený odkaz se odmítne, místo aby otevřel jiný most.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ChybaDat } from "../src/data/kontrola";
+import { Kreslic } from "../src/data/kreslic";
 import { nactiNavrh, navrhNaText, type NavrhMostu } from "../src/data/navrh";
 import {
   kodMostuVTextu,
@@ -10,6 +12,7 @@ import {
   odkazNaMost,
   rozkodujMost,
   stavVyzvyOdkazu,
+  vejdeSeDoOdkazu,
   VERZE_KODU_MOSTU,
   zakodujMost,
 } from "../src/data/sdileni";
@@ -251,5 +254,128 @@ describe("obrázek výkresu ke sdílení", () => {
         expect(v.yMax - v.yMin, uroven.id).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe("odkazy, které už někdo poslal", () => {
+  const zmrazene = JSON.parse(readFileSync(new URL("./data/kody-mostu-v1.json", import.meta.url), "utf8")) as {
+    vzorky: { nazev: string; kod: string; navrh: unknown }[];
+  };
+
+  it("zmrazené kódy se čtou pořád stejně a dnešní kodér je zapíše znak po znaku stejně", () => {
+    expect(zmrazene.vzorky.length).toBeGreaterThanOrEqual(2);
+    for (const vzorek of zmrazene.vzorky) {
+      const most = rozkodujMost(vzorek.kod);
+      expect(most, vzorek.nazev).toEqual(nactiNavrh(vzorek.navrh));
+      // Stejná verze rozložení bajtů musí dát stejný kód: jinak je čas zvýšit VERZE_KODU_MOSTU
+      // a starou verzi číst dál.
+      if (VERZE_KODU_MOSTU === 1) expect(zakodujMost(most), vzorek.nazev).toBe(vzorek.kod);
+    }
+  });
+});
+
+describe("kód, který tahle verze hry nezná", () => {
+  /** Kód s jedním bajtem změněným a kontrolním součtem dopočítaným znovu. */
+  function sUpravou(kod: string, uprav: (bajty: number[]) => void): string {
+    const abeceda = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const bity: number[] = [];
+    for (const znak of kod) {
+      const n = abeceda.indexOf(znak);
+      for (let b = 5; b >= 0; b--) bity.push((n >> b) & 1);
+    }
+    const bajty: number[] = [];
+    for (let i = 0; i + 8 <= bity.length; i += 8) bajty.push(bity.slice(i, i + 8).reduce((a, b) => a * 2 + b, 0));
+    const telo = bajty.slice(0, -2);
+    uprav(telo);
+    let h = 0x811c9dc5;
+    for (const b of telo) {
+      h ^= b;
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    const soucet = (h ^ (h >>> 16)) & 0xffff;
+    const vse = [...telo, soucet & 255, soucet >> 8];
+    let text = "";
+    for (let i = 0; i < vse.length; i += 3) {
+      const a = vse[i]!;
+      const b = vse[i + 1];
+      const c = vse[i + 2];
+      text += abeceda[a >> 2]! + abeceda[((a & 3) << 4) | ((b ?? 0) >> 4)]!;
+      if (b !== undefined) text += abeceda[((b & 15) << 2) | ((c ?? 0) >> 6)]!;
+      if (c !== undefined) text += abeceda[c & 63]!;
+    }
+    return text;
+  }
+
+  const k = new Kreslic("1-01");
+  k.prut("mostovka-drevo", [0, 0], [4, 0]);
+  k.prut("mostovka-drevo", [4, 0], [8, 0]);
+  const maly = k.navrh();
+  const kod = zakodujMost(maly);
+
+  function kodChyby(text: string): string | undefined {
+    try {
+      rozkodujMost(text);
+    } catch (chyba) {
+      return chyba instanceof ChybaDat ? (chyba.kod ?? "bez-kodu") : "jina-chyba";
+    }
+    return undefined;
+  }
+
+  it("pomocná úprava kód nerozbije, když nic nezmění", () => {
+    expect(sUpravou(kod, () => {})).toBe(kod);
+  });
+
+  it("prvek, který katalog nezná, je novější verze, ne poškozený odkaz", () => {
+    // Název prvku „mostovka-drevo“ začíná za verzemi, úrovní a počtem prvků; změní se jeho první písmeno.
+    const upraveny = sUpravou(kod, (bajty) => {
+      const zacatek = bajty.findIndex((b, i) => b === "m".charCodeAt(0) && bajty[i + 1] === "o".charCodeAt(0));
+      expect(zacatek).toBeGreaterThan(0);
+      bajty[zacatek] = "x".charCodeAt(0);
+    });
+    expect(kodChyby(upraveny)).toBe("novejsi-verze");
+  });
+
+  it("neznámý příznak mostu, styčníku nebo prutu je novější verze", () => {
+    // Bajt příznaků mostu leží hned za názvy prvků: je to první bajt za textem „mostovka-drevo“.
+    const zaPrvky = (bajty: number[]): number => {
+      const zacatek = bajty.findIndex((b, i) => b === "m".charCodeAt(0) && bajty[i + 1] === "o".charCodeAt(0));
+      return zacatek + "mostovka-drevo".length;
+    };
+    expect(kodChyby(sUpravou(kod, (bajty) => (bajty[zaPrvky(bajty)]! |= 4)))).toBe("novejsi-verze");
+    // Za příznaky je počet styčníků a první styčník: x, y a jeho příznaky.
+    expect(kodChyby(sUpravou(kod, (bajty) => (bajty[zaPrvky(bajty) + 4]! |= 16)))).toBe("novejsi-verze");
+    // Příznaky posledního prutu jsou poslední bajt těla.
+    expect(kodChyby(sUpravou(kod, (bajty) => (bajty[bajty.length - 1]! |= 16)))).toBe("novejsi-verze");
+  });
+
+  it("id větší než bezpečné celé číslo se odmítne při čtení, ne až při dalším zápisu", () => {
+    const sVelkymId = nactiNavrh({ ...maly, stycniky: maly.stycniky.map((s, i) => (i === 0 ? { ...s, id: 900 } : s)), pruty: maly.pruty.map((p) => ({ ...p, a: p.a === maly.stycniky[0]!.id ? 900 : p.a, b: p.b === maly.stycniky[0]!.id ? 900 : p.b })) });
+    const kodSId = zakodujMost(sVelkymId);
+    expect(rozkodujMost(kodSId)).toEqual(sVelkymId);
+    // Id 900 se zapíše dvěma bajty (0x84 0x07); osm bajtů s nejvyššími bity dá číslo přes 2^53.
+    const prerostly = sUpravou(kodSId, (bajty) => {
+      const misto = bajty.findIndex((b, i) => b === 0x84 && bajty[i + 1] === 0x07);
+      expect(misto).toBeGreaterThan(0);
+      bajty.splice(misto, 2, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f);
+    });
+    expect(kodChyby(prerostly)).toBe("odkaz-poskozeny");
+  });
+
+  it("most větší, než kolik hra přečte, odkaz nedostane", () => {
+    expect(vejdeSeDoOdkazu(maly)).toBe(true);
+    const velky = new Kreslic("1-01");
+    for (let i = 0; i < 900; i++) velky.prut("mostovka-drevo", [i, i % 7], [i + 1, (i + 1) % 7]);
+    const navrh = velky.navrh();
+    expect(zakodujMost(navrh).length).toBeGreaterThan(NEJDELSI_KOD_MOSTU);
+    expect(vejdeSeDoOdkazu(navrh)).toBe(false);
+  });
+
+  it("obyčejné slovo v Importu není kód mostu", () => {
+    expect(kodMostuVTextu("mostovka")).toBeNull();
+    expect(kodMostuVTextu("ahojsvete-jak-se-mas")).toBeNull();
+    expect(kodMostuVTextu(kod)).toBe(kod);
+    expect(kodMostuVTextu(`https://example.org/?uroven=1-01&most=${kod}`)).toBe(kod);
+    // V odkazu se bere i kód, kterému součet nesedí: hra pak řekne, že je odkaz poškozený.
+    expect(kodMostuVTextu("https://example.org/?most=mostovka")).toBe("mostovka");
   });
 });
