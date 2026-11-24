@@ -1402,7 +1402,7 @@ const CS = {
     "Dvaasedmdesát metrů přes rokli, kde není kam postavit pilíř; pojede podvalník se sto dvaceti tunami a po něm dvě nákladní auta. Postav visutý most: dva pylony, přes jejich hlavy nosné lano a z něj závěsy k mostovce.",
   "zadani.4-04.vice":
     "Pylony stojí na základech na březích; nosné lano je mezi nimi prověšené do oblouku a za pylony ho ukotvi do kotev v zemi. Závěsy vedou svisle ke styčníkům mostovky. Nosné lano je čtyřikrát silnější než obyčejné, které by se tu přetrhlo. Pod tíhou mostovky se samo vyrovná do oblouku a závěsy mu musí odpovídat délkou: bez dopnutí (N) se mostovka prověsí o desítky centimetrů.",
-  "zadani.4-05": "Silnice dlouhá dvaasedmdesát metrů přes údolí, ve kterém jde založit jediný pilíř, a ten nestojí uprostřed: osmačtyřicet metrů od levého břehu. Pod delším polem se stavět nesmí; pojedou dva tahače s návěsem, proti nim kolona tří nákladních aut a nakonec tahač proti autobusu.",
+  "zadani.4-05": "Silnice dlouhá dvaasedmdesát metrů přes údolí, ve kterém jde založit jediný pilíř, a ten nestojí uprostřed: osmačtyřicet metrů od levého břehu. Pod delším polem se stavět nesmí a k ruce jsou jen pilíř a lana; pojedou dva tahače s návěsem, proti nim kolona tří nákladních aut a nakonec tahač proti autobusu.",
   "zadani.5-01":
     "Lávka na nábřeží, osmačtyřicet metrů, a po ní dav: sto dvacet lidí, každý svým krokem kolem 1,7 Hz. Promenáda má být klidná: kmitání nesmí přesáhnout 0,5 m/s².",
   "zadani.5-01.vice":

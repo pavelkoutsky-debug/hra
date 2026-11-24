@@ -6,16 +6,20 @@
 // Co úroveň zkouší: zavěšený most ze 4-03 má dvě stejná pole a lana na obou stranách pylonu se
 // vyvažují. Tady visí vlevo dvakrát delší pole než vpravo, pylon to táhne doleva a všechno, co
 // ho drží, je kotevní lano do pravé opěry. Obyčejné lano na to nestačí (potřebuje nosné lano ze
-// 4-04, nebo aspoň dvě vedle sebe), nízký pylon dá lanům malý úhel a přetíží je, a příhrada na
-// pilíři projde, ale bez rezervy. Mistrovská chce pylon nakloněný nad delší pole, nebo vysoký
-// svislý s dvojitým kotvením.
+// 4-04, nebo aspoň dvě vedle sebe) a nízký pylon dá lanům malý úhel a přetíží je. Mistrovská
+// chce pylon nakloněný nad delší pole, vysoký svislý s dvojitým kotvením, nebo svislý
+// dvacetimetrový s jediným nosným kotevním lanem (ten splní bonus jen těsně).
+//
+// Úroveň nedovoluje ocelové pruty, jen mostovku, pilíř a lana. Recenze obtížnosti M12c našla,
+// že lehká příhrada nad delším polem (pět až šest metrů vysoká, bez jediného lana) dávala
+// rozpočtovou medaili v šedesáti ze sto deseti tvarů a levněji než zavěšený most; zkouška
+// kapitoly o lanech se tak dala složit bez lan. Mosty autora ocel nepoužívají.
 
 import type { IdPrvku } from "../../src/data/katalog";
 import { Kreslic } from "../../src/data/kreslic";
 import type { NavrhMostu } from "../../src/data/navrh";
 import type { ReseniUrovne } from "../reseni";
 
-const O: IdPrvku = "ocel-lehka";
 const LANO: IdPrvku = "lano";
 const NOSNE: IdPrvku = "lano-nosne";
 const PILIR: IdPrvku = "pilir";
@@ -78,34 +82,15 @@ function sikmy(vrchol: number, posun: number, predpeti: readonly number[]): Navr
   }, predpeti);
 }
 
-/**
- * Příhrada bez lan: nad delším polem lehké trojúhelníky s vrcholy ve výšce `vyska` a svislicemi
- * ve styčnících `svislice`, pod kratším polem dvoumetrová příhrada a vzpěra z dříku pilíře.
- */
-function prihrada(vyska: number, svislice: readonly number[]): NavrhMostu {
+/** Svařená mostovka na pilíři rozevřeném do V: šikmé pilíře ze základu do styčníků 42 a 54 m, bez lan. */
+function vecko(): NavrhMostu {
   return navrh((k) => {
     vozovka(k);
-    pilir(k, 0, [-4]);
-    k.prut(O, [X, -4], [54, 0]);
-    // Kratší pole: příhrada dva metry pod vozovkou.
-    k.prut(O, [54, 0], [60, -2]);
-    k.prut(O, [66, -2], [72, 0]);
-    k.prut(O, [60, -2], [66, -2]);
-    k.prut(O, [60, 0], [60, -2]);
-    k.prut(O, [66, 0], [66, -2]);
-    k.prut(O, [60, 0], [66, -2]);
-    // Delší pole: horní pás a šikminy trojúhelníků nad středy polí mostovky.
-    for (let x = 3; x + 6 < X; x += 6) {
-      if (svislice.includes(x + 3)) {
-        k.prut(O, [x, vyska], [x + 3, vyska]);
-        k.prut(O, [x + 3, vyska], [x + 6, vyska]);
-        k.prut(O, [x + 3, 0], [x + 3, vyska]);
-      } else k.prut(O, [x, vyska], [x + 6, vyska]);
-    }
-    for (let x = 3; x < X; x += 6) {
-      k.prut(O, [x - 3, 0], [x, vyska]);
-      k.prut(O, [x, vyska], [x + 3, 0]);
-    }
+    for (let x = 6; x < ROZPETI; x += 6) k.bod(x, 0, { svar: true });
+    k.prut(PILIR, [X, PATA], [X - 3, PATA / 2]);
+    k.prut(PILIR, [X - 3, PATA / 2], [X - 6, 0]);
+    k.prut(PILIR, [X, PATA], [X + 3, PATA / 2]);
+    k.prut(PILIR, [X + 3, PATA / 2], [X + 6, 0]);
   });
 }
 
@@ -145,10 +130,7 @@ export const reseni: ReseniUrovne = {
     { nazev: "pylon 18 m bez kotevního lana", navrh: svisly(18, [...DLOUHE, ...KRATKE], LANO, false, [3.333, 5.469, 10.184, 5.751, 10.117, 5.152, 5.443, -3.503, -5.374, -5.807]) },
     // Nakloněný pylon musí být dost vysoký: osmnáctimetrový se v patě zlomí.
     { nazev: "nakloněný pylon jen 18 m", navrh: sikmy(18, 4, [0.226, 0.198, 0.171, 0.147, 0.127, 0.113, 0.108, 0.123, 0.14, 0.162, 0.266]) },
-    // Příhrada bez lan musí být dost vysoká: čtyřmetrová se nad delším polem vzepře.
-    { nazev: "příhrada bez lan, jen čtyři metry vysoká", navrh: prihrada(4, [6, 12, 18, 24, 30, 36, 42]) },
+    // Bez lan: svařená mostovka (lekce 4-02) na pilíři do V zkrátí delší pole jen o šest metrů.
+    { nazev: "svařená mostovka na pilíři do V, bez lan", navrh: vecko() },
   ],
-  // Bez lan to jde také, a levněji: pětimetrová lehká příhrada nad delším polem. Projde bez
-  // porušení, ale její pruty jedou skoro na doraz, takže mistrovskou nedá.
-  vyzvy: [{ nazev: "příhrada bez lan", navrh: prihrada(5, [12, 18, 24, 30, 36]) }],
 };

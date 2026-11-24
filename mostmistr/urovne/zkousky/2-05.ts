@@ -1,4 +1,4 @@
-// Referenční mosty zkouškové úrovně 2-05 „Dva rytmy“: lávka 36 m, přes kterou pochoduje útvar
+// Referenční mosty zkouškové úrovně 2-05 „Pochod a běh“: lávka 36 m, přes kterou pochoduje útvar
 // (24 lidí, 1,8 Hz) a po něm běží devět běžců v rytmu (3 Hz). Výš než metr nad mostovku a pod ni se
 // stavět nesmí, takže most nejde ztužit: jeho první vlastní frekvence (2,1 Hz, s lidmi 1,8 Hz) leží
 // přesně v rytmu pochodu. Běžci prohýbají dlouhá pole mostovky. Tlumič má jedinou kotvu, ve třetině
