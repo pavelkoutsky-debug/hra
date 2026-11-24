@@ -7,7 +7,22 @@ import type { Denik } from "../denik/denik";
 import { nastavZaznam, priZmeneVolby } from "../denik/prohlizec";
 import { prvek, udaj } from "../ui/dom";
 import { t } from "../ui/slovnik";
+import { KLIC_ZEBRICKU } from "./uloziste";
 import type { OknoVazby } from "./vazba";
+
+/**
+ * Číslo, pod kterým hráče vedou žebříčky (jiné a delší než číslo záznamu hraní); null, dokud
+ * se do žádného nezapsal. Čte se rovnou z paměti prohlížeče: okno je i v přehledu, kde
+ * úložiště úrovně není po ruce.
+ */
+function cisloVZebriccich(): string | null {
+  try {
+    const zapis = JSON.parse(window.localStorage.getItem(KLIC_ZEBRICKU) ?? "null") as { hrac?: unknown } | null;
+    return typeof zapis?.hrac === "string" && /^[0-9a-f]{8,64}$/.test(zapis.hrac) ? zapis.hrac : null;
+  } catch {
+    return null;
+  }
+}
 
 export function pripojSoukromi(denik: Denik, vazba: OknoVazby): void {
   const okno = prvek("#okno-soukromi", HTMLDialogElement);
@@ -16,6 +31,9 @@ export function pripojSoukromi(denik: Denik, vazba: OknoVazby): void {
 
   const obnov = (): void => {
     udaj("soukromi-hrac").textContent = denik.cisloHrace;
+    const vZebriccich = cisloVZebriccich();
+    udaj("soukromi-zebricek").textContent = vZebriccich ?? "";
+    udaj("soukromi-zebricek-radek").hidden = vZebriccich === null;
     udaj("soukromi-zaznam").textContent = t(
       !denik.lzeZapnout ? "denik.bezPameti" : denik.zapnuto ? "vazba.zaznam.zapnuty" : "vazba.zaznam.vypnuty",
     );
@@ -50,7 +68,9 @@ export function pripojSoukromi(denik: Denik, vazba: OknoVazby): void {
     };
     // Schránka nemusí být dostupná (starší prohlížeč, stránka bez zabezpečeného spojení):
     // číslo je vedle tlačítka vypsané a jde označit ručně.
-    void navigator.clipboard?.writeText(denik.cisloHrace).then(hotovo, () => undefined);
+    const vZebriccich = cisloVZebriccich();
+    const text = vZebriccich === null ? denik.cisloHrace : `${denik.cisloHrace} / ${vZebriccich}`;
+    void navigator.clipboard?.writeText(text).then(hotovo, () => undefined);
   });
 
   prvek('[data-akce="soukromi-napis"]', HTMLButtonElement).addEventListener("click", () => {

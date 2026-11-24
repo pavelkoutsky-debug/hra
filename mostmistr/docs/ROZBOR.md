@@ -27,6 +27,10 @@ nehraje. Připravené je prostředí úlohy „Mostmistr – denní rozbor“ (s
 3. Zadavatel rozbor najde na **stránce správce** (`/sprava.html`, záložka Denní rozbor): shrnutí,
    návrhy podle priority a celý text. Rozbor se na stránku píše jen jako text.
 
+Podklady nesou texty zpráv bez pole s kontaktem a e-maily a telefonní čísla napsané přímo do textu
+v nich server nahrazuje značkami `[e-mail]` a `[telefon]`. Žádost o podklady zároveň pustí úklid
+starých dat (deník starší než rok, zprávy starší než dva roky, počitadla adres starší než dva dny).
+
 Rozbor nepíše server ani hra: server jen vydává podklady a hlídá, co ukládá. Kód je
 v `src/server/rozbor.ts` (podklady, ukládání, seznam), `src/server/sprava.ts` (jedna adresa správy)
 a `src/sprava/stranka.ts` (záložka). Hlídá to `test/rozbor.test.ts` a `test/e2e/zebricek.e2e.ts`.
@@ -96,7 +100,8 @@ Tohle znění je uložené v naplánované úloze. Když se změní tady, je pot
 >    Odpověď je JSON: `upozorneni`, `den` (včerejšek, UTC), `souhrnDne` a `souhrnTydne` (deník hraní: hráči, noví hráči,
 >    sezení, chyby prohlížeče a po úrovních otevření, zkoušky, průchody, zkoušky a minuty do
 >    průchodu, medaile, na čem mosty padaly, nápověda), `vazby` (zprávy hráčů toho dne),
->    `vazebCelkem`, `zebricky` (zápisy do žebříčků a odmítnutí podle důvodu), `predchozi`
+>    `vazebCelkem` (v textech zpráv jsou e-maily a telefonní čísla nahrazené značkami `[e-mail]`
+>    a `[telefon]`), `zebricky` (zápisy do žebříčků a odmítnutí podle důvodu), `predchozi`
 >    (shrnutí a názvy návrhů posledních rozborů) a `neuplne`. Když je `neuplne` true, zavolej
 >    totéž znovu, nejvýš pětkrát: server souhrn dopočítává po částech.
 > 2. Když odpověď není JSON nebo přijde chyba (401, 403, 404, 5xx, odmítnutí sítě), nic neukládej

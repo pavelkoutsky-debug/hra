@@ -361,8 +361,9 @@ const CS = {
     "Data leží u služby Netlify, na které hra běží (jako každý webový server si vede i vlastní provozní záznamy přístupů). Záznam hraní se maže po 12 měsících, zprávy po 24 měsících. Nikomu dalšímu je nepředáváme a neprodáváme.",
   "soukromi.smazani.nadpis": "Smazání a dotazy",
   "soukromi.smazani":
-    "Chceš svá data smazat, nebo se na něco zeptat? Napiš nám přes okno Napiš nám a uveď číslo hráče, které vidíš níž; odpovědět ti můžeme, jen když připojíš e-mail. Hru provozují její autoři.",
+    "Chceš svá data smazat, nebo se na něco zeptat? Napiš nám přes okno Napiš nám a uveď číslo hráče, které vidíš níž (tlačítko Zkopírovat vezme i číslo ze žebříčků, pokud ho máš); odpovědět ti můžeme, jen když připojíš e-mail. Hru provozují její autoři.",
   "soukromi.hrac": "Tvoje číslo hráče:",
+  "soukromi.hrac.zebricek": "V žebříčcích tě hra vede pod jiným číslem:",
   "soukromi.kopirovat": "Zkopírovat",
   "soukromi.zkopirovano": "Zkopírováno",
   "soukromi.napis": "Napiš nám",

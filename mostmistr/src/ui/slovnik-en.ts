@@ -359,8 +359,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "The data is kept with Netlify, the service the game runs on (like every web server it also keeps its own access logs). The play log is deleted after 12 months, messages after 24 months. We do not pass the data on or sell it to anyone.",
   "soukromi.smazani.nadpis": "Deletion and questions",
   "soukromi.smazani":
-    "Do you want your data deleted, or do you have a question? Write to us through the Write to us window and include the player number shown below; we can reply only if you add an email. The game is run by its authors.",
+    "Do you want your data deleted, or do you have a question? Write to us through the Write to us window and include the player number shown below (the Copy button also takes your leaderboard number, if you have one); we can reply only if you add an email. The game is run by its authors.",
   "soukromi.hrac": "Your player number:",
+  "soukromi.hrac.zebricek": "Leaderboards keep you under a different number:",
   "soukromi.kopirovat": "Copy",
   "soukromi.zkopirovano": "Copied",
   "soukromi.napis": "Write to us",
