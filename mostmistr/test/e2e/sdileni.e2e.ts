@@ -495,7 +495,8 @@ describe("sdílení mostu odkazem", () => {
         dole: r.bottom,
         vrchPlatna: platno.top,
         vyskaPlatna: platno.height,
-        tlacitka: [...pruh.querySelectorAll<HTMLElement>(".host__tlacitka button")].map((b) => b.getBoundingClientRect().height),
+        // Tlačítko pro návštěvu scénáře v pískovišti je v kampani skryté: měří se jen ta, která hráč vidí.
+        tlacitka: [...pruh.querySelectorAll<HTMLElement>(".host__tlacitka button:not([hidden])")].map((b) => b.getBoundingClientRect().height),
       };
     });
     expect(rozmery.stranka).toBeLessThanOrEqual(rozmery.sirka);

@@ -3401,6 +3401,15 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
     max-height: 20vh;
     max-height: 20dvh;
   }
+
+  /*
+   * V Havarijní komisi bere pruh případu výkresu místo a lávky k tomu mají pod výkresem osu
+   * frekvencí: paleta mu ho vrátí, ať výkresu zbude aspoň třetina výšky telefonu.
+   */
+  body[data-havarie] .uroven .paleta {
+    max-height: 26vh;
+    max-height: 26dvh;
+  }
 }
 
 .okno--sdileni {
