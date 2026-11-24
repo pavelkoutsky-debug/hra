@@ -1641,6 +1641,112 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   }
 }
 
+/* Okno žebříčku: tři měřítka vedle sebe, na úzkém okně pod sebou. */
+.okno--zebricek {
+  width: min(860px, 94vw);
+}
+
+.okno--zebricek form {
+  display: flex;
+  flex-direction: column;
+  max-height: min(86vh, 860px);
+}
+
+.zebricek__obsah {
+  overflow-y: auto;
+  padding: 0 4px 6px 0;
+}
+
+.zebricek__tabulky {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 18px;
+  margin: 10px 0 14px;
+}
+
+.zebricek__mira h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--popisek);
+}
+
+.zebricek__radky {
+  margin: 0;
+  padding: 0 0 0 28px;
+  font-size: 13px;
+}
+
+.zebricek__radky li {
+  padding: 2px 4px;
+}
+
+.zebricek__radky li::marker {
+  color: var(--popisek);
+}
+
+/* Řádek hráče, který se dívá. */
+.zebricek__radky li[data-ja] {
+  background: rgb(255 255 255 / 10%);
+  outline: 1px solid var(--cara);
+}
+
+.zebricek__radky li {
+  display: list-item;
+}
+
+.zebricek__jmeno {
+  display: inline-block;
+  max-width: 58%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.zebricek__hodnota {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.zebricek__zapis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 6px;
+}
+
+.zebricek__zapis label {
+  color: var(--popisek);
+}
+
+.zebricek__zapis input {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--cara);
+  background: var(--pozadi);
+  color: var(--cara-silna);
+  font: inherit;
+}
+
+.okno--zebricek .tlacitko[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+.okno--zebricek .okno__hlaseni[data-druh="ok"] {
+  color: var(--cara-silna);
+}
+
+@media (max-width: 640px) {
+  .zebricek__tabulky {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Okno dílny: uložené práce z pískoviště s náhledy. */
 
 .okno--dilna {

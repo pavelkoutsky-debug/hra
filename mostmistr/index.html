@@ -295,6 +295,10 @@
           <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="sdilet" data-popis="sdileni.tlacitko.popis" data-jen-kampan>
             <span data-text="sdileni.tlacitko"></span>
           </button>
+          <!-- Žebříček úrovně: tři měřítka, mosty všech hráčů ověřené serverem. -->
+          <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="zebricek" data-popis="zebricek.tlacitko.popis" data-jen-kampan>
+            <span data-text="zebricek.tlacitko"></span>
+          </button>
           <div class="paleta__vyzva" data-udaj="vyzva-odkazu" data-jen-kampan hidden>
             <p data-udaj="vyzva-odkazu-text"></p>
             <div class="paleta__dvojice">
@@ -436,6 +440,7 @@
               </dl>
               <div class="vysledek__tlacitka vysledek__tlacitka--dole">
                 <button type="button" class="tlacitko" data-akce="sdilet" data-text="sdileni.tlacitko" data-popis="sdileni.tlacitko.popis" data-jen-kampan></button>
+                <button type="button" class="tlacitko" data-akce="zebricek" data-text="zebricek.tlacitko" data-popis="zebricek.tlacitko.popis" data-jen-kampan></button>
                 <button type="button" class="tlacitko" data-akce="diagnostika" data-text="vysledek.diagnostika" data-popis="vysledek.diagnostika.popis"></button>
                 <button type="button" class="tlacitko" data-akce="vazba" data-text="vazba.zVysledku"></button>
               </div>
@@ -658,6 +663,26 @@
           <h3 data-udaj="dilna-pocet"></h3>
           <p class="okno__poznamka" data-udaj="dilna-prazdno" data-text="dilna.prazdno" hidden></p>
           <ul class="dilna__prace" data-udaj="dilna-prace"></ul>
+        </div>
+        <div class="okno__tlacitka">
+          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--zebricek" id="okno-zebricek">
+      <form method="dialog">
+        <h2><span data-text="zebricek.nadpis"></span> · <span data-udaj="zebricek-uroven"></span></h2>
+        <div class="zebricek__obsah">
+          <p class="okno__poznamka" data-text="zebricek.popis"></p>
+          <div class="zebricek__tabulky" data-udaj="zebricek-tabulky"></div>
+          <div class="zebricek__zapis">
+            <label for="zebricek-jmeno" data-text="zebricek.jmeno"></label>
+            <input type="text" id="zebricek-jmeno" autocomplete="nickname" />
+            <button type="button" class="tlacitko tlacitko--hlavni" data-akce="zebricek-zapsat" data-text="zebricek.zapsat"></button>
+          </div>
+          <p class="okno__poznamka" data-text="zebricek.soukromi"></p>
+          <p class="okno__hlaseni" data-udaj="zebricek-hlaseni" role="status"></p>
         </div>
         <div class="okno__tlacitka">
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>

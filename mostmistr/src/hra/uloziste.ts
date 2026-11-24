@@ -8,6 +8,7 @@ import { dilnaNaText, dilnaZTextu, type Dilna } from "../data/dilna";
 import { postupHavariiZTextu, zapisUzavreni, type PostupHavarii } from "../data/havarie";
 import { ID_SANDBOXU, sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
 import { NEJDELSI_KOD_MOSTU } from "../data/sdileni";
+import { jeIdHraceZebricku, upravPrezdivku } from "../data/zebricek";
 import {
   prazdneUlozeni,
   ulozeniNaText,
@@ -59,6 +60,8 @@ export const KLIC_SANDBOXU = "mostmistr.sandbox";
 export const KLIC_SANDBOX_NAVSTIVEN = "mostmistr.sandbox.navstiven";
 /** Dílna: pojmenované práce z pískoviště (údolí s provozem a most). */
 export const KLIC_DILNY = "mostmistr.dilna";
+/** Žebříčky: náhodné číslo hráče (podle něj server pozná jeho starší zápis) a přezdívka. */
+export const KLIC_ZEBRICKU = "mostmistr.zebricek";
 /** Havarijní komise: které případy hráč uzavřel a kolika změnami. */
 export const KLIC_HAVARII = "mostmistr.havarie";
 
@@ -380,6 +383,31 @@ export class Uloziste {
 
   set dilna(dilna: Dilna) {
     this.#pis(KLIC_DILNY, dilnaNaText(dilna));
+  }
+
+  /**
+   * Kdo hráč v žebříčcích je: číslo a přezdívka. Null, dokud se do žebříčku nezapsal. Nečitelný
+   * zápis je „ještě se nezapsal“: dostane nové číslo a jeho starší řádky zůstanou cizí.
+   */
+  get zebricek(): { hrac: string; jmeno: string } | null {
+    const zapis = this.#cti(KLIC_ZEBRICKU);
+    if (zapis === null) return null;
+    try {
+      const data = JSON.parse(zapis) as { hrac?: unknown; jmeno?: unknown };
+      const jmeno = upravPrezdivku(data.jmeno);
+      return jeIdHraceZebricku(data.hrac) && jmeno !== null ? { hrac: data.hrac, jmeno } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Zapamatuje přezdívku; číslo hráče vznikne při prvním zápisu a pak už se nemění. */
+  nastavPrezdivku(jmeno: string): { hrac: string; jmeno: string } {
+    const dosud = this.zebricek;
+    const hrac = dosud?.hrac ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+    const identita = { hrac, jmeno };
+    this.#pis(KLIC_ZEBRICKU, JSON.stringify(identita));
+    return identita;
   }
 
   /** Postup v Havarijní komisi: id případu → nejmenší počet změn, kterým ho hráč uzavřel. */

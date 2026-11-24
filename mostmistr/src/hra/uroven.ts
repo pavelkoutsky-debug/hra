@@ -129,6 +129,7 @@ import { sandboxNaText, type NastaveniSandboxu } from "../data/sandbox";
 import { RESENI } from "../../urovne/reseni";
 import { pripojNapovedu, type Napoveda } from "./napoveda";
 import { pripojDilnu } from "./dilna";
+import { pripojZebricek } from "./zebricek";
 import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
@@ -620,6 +621,12 @@ export function spustUroven(
       : null;
   /** Jak dopadly běžné zkoušky téhle návštěvy: zápis mostu → prošel bez porušení? */
   const zkouseneMosty = new Map<string, boolean>();
+  /**
+   * Co jde poslat do žebříčku: otisk běžné zkoušky a zkoušky do zlomu pro most (podle jeho
+   * zápisu), se kterým hráč v téhle návštěvě prošel bez porušení. Server si most přepočítá
+   * a otisk musí sedět, takže se pamatuje jen to, co zkouška opravdu vrátila.
+   */
+  const otiskyProZebricek = new Map<string, { bezna?: string; zlom?: string }>();
   /** Výzva z odkazu: soupeřův most, který má hráč v téhle úrovni překonat cenou. */
   let vyzvaOdkazu: { kod: string; cena: number } | null = sandbox === null ? vyzvaZKodu(uloziste.vyzvaOdkazu(uroven.id)) : null;
   // Případ Havarijní komise začíná mostem, který spadl; rozdělaná oprava má přednost.
@@ -3099,6 +3106,8 @@ export function spustUroven(
           zkouseneMosty.set(navrhNaText(b.navrh), vysledek.pruchod && !vysledek.rozpad && neporuseny);
           if (vysledek.pruchod && !vysledek.rozpad && neporuseny) {
             prosleMosty.add(navrhNaText(b.navrh));
+            // Do žebříčku jen vlastní most v kampani (cizí most z odkazu až po rozhodnutí hráče).
+            if (!mimoSoutez && !b.host) otiskyProZebricek.set(navrhNaText(b.navrh), { ...otiskyProZebricek.get(navrhNaText(b.navrh)), bezna: vysledek.otisk });
             // Pamatuje se i přes zavření hry (jen v kampani: pískoviště výzvy nemá; cizí most
             // z odkazu také ne, dokud si ho hráč nenechá).
             if (!mimoSoutez && !b.host) uloziste.zapisProsly(uroven.id, otiskNavrhu(b.navrh));
@@ -3144,6 +3153,7 @@ export function spustUroven(
           b.zlomSePocita = prosleMosty.has(navrhNaText(b.navrh)) || uloziste.prosel(uroven.id, otiskNavrhu(b.navrh));
           if (b.zlomSePocita) {
             rekord = uloziste.zapocitejZlom(uroven.id, unosnostNaKorunu(vysledek.zlom.celkem, vysledek.cena), VERZE_FYZIKY);
+            otiskyProZebricek.set(navrhNaText(b.navrh), { ...otiskyProZebricek.get(navrhNaText(b.navrh)), zlom: vysledek.otisk });
           }
         }
         if (prehravani.cas > b.trvani || b.naKonecPoVypoctu) prehravani = { ...prehravani, cas: b.trvani, bezi: false };
@@ -5673,6 +5683,24 @@ export function spustUroven(
   priKliknuti("import", () => rezim === "stavba" && otevriOkno("import", ""));
   // Sdílet jde z palety i z podrobností výsledku.
   for (const tlacitko of document.querySelectorAll<HTMLElement>('[data-akce="sdilet"]')) tlacitko.addEventListener("click", otevriSdileni);
+  // Žebříček úrovně (jen v kampani): zapsat jde most na výkresu, pokud s ním hráč právě prošel.
+  if (!mimoSoutez) {
+    const oknoZebricku = pripojZebricek({
+      uroven: uroven.id,
+      nazev: nazevUrovne(uroven),
+      uloziste,
+      kZapisu: () => {
+        const otisky = host ? undefined : otiskyProZebricek.get(navrhNaText(editor.navrh));
+        if (!otisky) return { bezna: null, zlom: null };
+        // Most, který se nevejde do odkazu, se nevejde ani do zápisu (server čte stejný kód).
+        if (!vejdeSeDoOdkazu(editor.navrh)) return { bezna: null, zlom: null };
+        const kod = zakodujMost(editor.navrh);
+        return { bezna: otisky.bezna === undefined ? null : { kod, otisk: otisky.bezna }, zlom: otisky.zlom === undefined ? null : { kod, otisk: otisky.zlom } };
+      },
+      zapis: (data) => zapis("zebricek", data),
+    });
+    for (const tlacitko of document.querySelectorAll<HTMLElement>('[data-akce="zebricek"]')) tlacitko.addEventListener("click", () => oknoZebricku.otevri());
+  }
   priKliknuti("sdileni-odkaz", () => void zkopirujKeSdileni(poleOdkazu, "odkaz"));
   priKliknuti("sdileni-zprava", () => void zkopirujKeSdileni(poleZpravy, "zprava"));
   priKliknuti("sdileni-system", () => void sdilejSystemem());
