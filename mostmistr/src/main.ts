@@ -1,8 +1,10 @@
 // Vstupní bod hry: podle adresy otevře přehled kampaně, obrazovku úrovně (`?uroven=1-02`)
 // nebo sandbox (`?sandbox`). Zkušební výkres 0-00 do kampaně nepatří, ale adresou otevřít jde.
 
+import { pripadHavarie } from "../urovne/havarie/index";
 import { nactiKampan, nactiUrovne } from "../urovne/index";
 import { jeSandboxVAdrese, PARAMETR_SANDBOXU, sandboxZAdresy } from "./data/dilna";
+import { jeIdPripadu } from "./data/havarie";
 import { ChybaDat } from "./data/kontrola";
 import { PARAMETR_MOSTU, rozkodujMost, ocistiKodMostu } from "./data/sdileni";
 import { ID_SANDBOXU, sandboxZTextu, urovenSandboxu } from "./data/sandbox";
@@ -69,6 +71,12 @@ try {
     spustList(kampan, uloziste, denik);
   } else if (id === null) {
     spustPrehled(kampan, uloziste, denik, mostZOdkazu && "chyba" in mostZOdkazu ? t(`sdileni.chyba.${mostZOdkazu.chyba}`) : undefined);
+  } else if (jeIdPripadu(id)) {
+    // Havarijní komise: případ má vlastní údolí a začíná mostem, který spadl. Most z odkazu se
+    // do případu neotevírá (cizí oprava by ho prozradila); otevře se případ sám.
+    const pripad = pripadHavarie(id);
+    if (pripad) spustUroven(pripad.uroven, kampan, uloziste, denik, null, null, pripad);
+    else spustPrehled(kampan, uloziste, denik, t("prehled.neznamaUroven", { uroven: id }));
   } else {
     const uroven = nactiUrovne().find((u) => u.id === id);
     if (uroven) spustUroven(uroven, kampan, uloziste, denik, null, mostZOdkazu);

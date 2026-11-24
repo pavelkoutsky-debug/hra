@@ -27,8 +27,9 @@ body {
   display: none !important;
 }
 
-/* V pískovišti se nesoutěží: medaile tam nejsou vidět nikde. */
-body[data-sandbox] [data-jen-kampan] {
+/* V pískovišti a v Havarijní komisi se nesoutěží: medaile tam nejsou vidět nikde. */
+body[data-sandbox] [data-jen-kampan],
+body[data-havarie] [data-jen-kampan] {
   display: none !important;
 }
 
@@ -285,7 +286,9 @@ a.tlacitko {
 
 /* Pískoviště nemá buňku s medailemi: cena a hmotnost si rozdělí celý řádek, ať nezbude díra. */
 body[data-sandbox] .pole__bunka:nth-child(2),
-body[data-sandbox] .pole__bunka:nth-child(3) {
+body[data-sandbox] .pole__bunka:nth-child(3),
+body[data-havarie] .pole__bunka:nth-child(2),
+body[data-havarie] .pole__bunka:nth-child(3) {
   grid-column: span 3;
 }
 
@@ -1764,6 +1767,17 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   }
 }
 
+.vysledek__nalez {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.vysledek__nalez[hidden] {
+  display: none;
+}
+
 .vazba__druhy {
   display: flex;
   flex-wrap: wrap;
@@ -1906,6 +1920,18 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   color: var(--cara-silna);
 }
 
+/* Oddíl Havarijní komise v přehledu: stejné karty jako úrovně, oddělený linkou. */
+.komise {
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--cara);
+}
+
+.komise[hidden] {
+  display: none;
+}
+
+.komise h1,
 .kapitola h1 {
   margin: 0;
   color: var(--cara-silna);
@@ -1944,7 +1970,8 @@ a.karta__obal:hover {
   outline: 2px solid var(--cara-silna);
 }
 
-.karta[data-zamceno="true"] .karta__obal {
+.karta[data-zamceno="true"] .karta__obal,
+.pripad[data-zamceno="true"] .karta__obal {
   border-style: dashed;
   opacity: 0.55;
 }
@@ -3292,6 +3319,15 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   padding: 6px 12px;
   border-bottom: 1px solid var(--cara);
   background: var(--zvyrazneni);
+}
+
+/* Pruh Havarijní komise: kolik změn oprava má; přes povolený počet varuje. */
+.host--komise[data-stav="moc"] .host__text {
+  color: var(--varovani);
+}
+
+.host--komise .tlacitko[aria-disabled="true"] {
+  opacity: 0.5;
 }
 
 .host__text {

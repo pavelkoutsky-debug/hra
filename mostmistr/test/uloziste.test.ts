@@ -7,6 +7,7 @@ import { ID_SANDBOXU, sandboxNaText, vychoziSandbox } from "../src/data/sandbox"
 import {
   KLIC_CISEL,
   KLIC_DILNY,
+  KLIC_HAVARII,
   KLIC_ODEMCENI,
   KLIC_POSKOZENEHO,
   KLIC_PROSLYCH,
@@ -369,6 +370,26 @@ describe("paměť prošlých mostů a volba zpomaleného záběru", () => {
     const bez = new Uloziste(null);
     bez.nastavVyzvuOdkazu("1-01", "AQQEMS0wMQ");
     expect(bez.vyzvaOdkazu("1-01")).toBeNull();
+  });
+
+  it("Havarijní komise: uzavřené případy a rozdělaná oprava se pamatují; horší výsledek lepší nepřepíše", () => {
+    const sklad = new SkladVPameti();
+    const uloziste = new Uloziste(sklad);
+    expect(uloziste.havarie).toEqual({});
+    uloziste.zapisHavarii("9-02", 3);
+    uloziste.zapisHavarii("9-02", 2);
+    uloziste.zapisHavarii("9-02", 3);
+    uloziste.zapisHavarii("9-01", 1);
+    expect(new Uloziste(sklad).havarie).toEqual({ "9-01": 1, "9-02": 2 });
+    // Rozdělaná oprava se ukládá jako most úrovně případu; medaile ani rekord k ní nevzniknou.
+    const k = new Kreslic("9-01");
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    uloziste.ulozNavrh(k.navrh());
+    const znovu = new Uloziste(sklad);
+    expect(znovu.navrh("9-01")?.pruty).toHaveLength(1);
+    expect(znovu.rekord("9-01")).toBeUndefined();
+    sklad.setItem(KLIC_HAVARII, "{rozbité");
+    expect(znovu.havarie).toEqual({});
   });
 
   it("dílna: práce z pískoviště se pamatují mezi návštěvami, čtou se i po zápisu z jiné záložky a rozbitý zápis je prázdná dílna", () => {

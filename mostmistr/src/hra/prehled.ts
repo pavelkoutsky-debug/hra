@@ -1,6 +1,8 @@
 // Přehled kampaně: kapitoly, karty úrovní s náhledem výkresu, medailemi a zámky.
 
+import { PRIPADY } from "../../urovne/havarie/index";
 import { zakladVyzev } from "../../urovne/vyzvy";
+import { cisloPripadu, otevrenePripady, stavOpravy, type PripadHavarie } from "../data/havarie";
 import { kapitolaUrovne, zamkyKampane, type Zamek } from "../data/kampan";
 import { BEZ_MEDAILI } from "../data/ulozeni";
 import { prahyVyzev } from "../data/vyzvy";
@@ -10,6 +12,7 @@ import { prvek, udaj } from "../ui/dom";
 import { koruny } from "../ui/formaty";
 import { jeKlicTextu, nazevUrovne, t } from "../ui/slovnik";
 import { celyVyrez } from "../vykres/kamera";
+import { nakresliNahledMostu } from "../vykres/list";
 import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
 import { znackyMedaili } from "./medaile";
@@ -123,6 +126,76 @@ function kartaUrovne(uroven: Uroven, zamek: Zamek | null, uloziste: Uloziste): H
   return polozka;
 }
 
+/** Karta případu Havarijní komise: náhled spadlého mostu (nebo rozdělané opravy), název a stav. */
+function kartaPripadu(pripad: PripadHavarie, otevreny: boolean, uloziste: Uloziste): HTMLElement {
+  const { uroven } = pripad;
+  const uzavreno = uloziste.havarie[uroven.id];
+  const polozka = document.createElement("li");
+  // Vlastní třída, ne „karta“: karty jsou úrovně kampaně a tak je počítají přehled i testy.
+  polozka.className = "pripad";
+  polozka.dataset.pripad = uroven.id;
+  polozka.dataset.zamceno = String(!otevreny);
+  polozka.dataset.uzavreno = String(uzavreno ?? 0);
+
+  const obal = document.createElement(otevreny ? "a" : "div");
+  obal.className = "karta__obal";
+  if (obal instanceof HTMLAnchorElement) obal.href = `?uroven=${uroven.id}`;
+
+  const nahled = document.createElement("canvas");
+  nahled.className = "karta__nahled";
+  nahled.setAttribute("aria-hidden", "true");
+  const hustota = window.devicePixelRatio || 1;
+  nahled.width = Math.round(SIRKA_NAHLEDU * hustota);
+  nahled.height = Math.round(VYSKA_NAHLEDU * hustota);
+  const ctx = nahled.getContext("2d", { alpha: false });
+  const rozdelany = uloziste.navrh(uroven.id);
+  if (ctx) {
+    ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
+    nakresliNahledMostu(ctx, uroven, rozdelany ?? pripad.most, SIRKA_NAHLEDU, VYSKA_NAHLEDU);
+  }
+
+  const hlavicka = document.createElement("span");
+  hlavicka.className = "karta__hlavicka";
+  const cislo = document.createElement("span");
+  cislo.className = "karta__id";
+  cislo.textContent = t("komise.pripad", { cislo: cisloPripadu(uroven.id) });
+  const nazev = document.createElement("span");
+  nazev.className = "karta__nazev";
+  nazev.textContent = nazevUrovne(uroven);
+  hlavicka.append(cislo, nazev);
+
+  const stav = document.createElement("span");
+  stav.className = "karta__stav";
+  if (!otevreny) stav.textContent = t("komise.zamceno", { kapitola: pripad.kapitola });
+  else if (uzavreno !== undefined) stav.textContent = t(uzavreno === 1 ? "komise.uzavreno.jedna" : "komise.uzavreno", { zmen: uzavreno });
+  else stav.textContent = t(rozdelany && stavOpravy(pripad, rozdelany).zmeny.length > 0 ? "komise.rozpracovano" : "komise.ceka");
+
+  obal.append(nahled, hlavicka, stav);
+  polozka.append(obal);
+  return polozka;
+}
+
+/** Oddíl Havarijní komise pod kapitolami kampaně; bez případů zůstane schovaný. */
+function vykresliKomisi(kampan: readonly Uroven[], uloziste: Uloziste): void {
+  const oddil = udaj("prehled-komise");
+  oddil.hidden = PRIPADY.length === 0;
+  if (PRIPADY.length === 0) return;
+  const projite = new Set(kampan.filter((u) => uloziste.rekord(u.id)?.medaile.pruchod === true).map((u) => u.id));
+  const postup = uloziste.havarie;
+  const otevrene = otevrenePripady(PRIPADY, projite, postup);
+  const nadpis = document.createElement("h1");
+  nadpis.textContent = t("komise.nadpis");
+  const tema = document.createElement("p");
+  tema.className = "kapitola__tema";
+  const uzavreno = PRIPADY.filter((p) => postup[p.uroven.id] !== undefined).length;
+  tema.textContent = `${t("komise.tema")} ${t("komise.postup", { uzavreno, pripadu: PRIPADY.length })}`;
+  const seznam = document.createElement("ol");
+  seznam.className = "kapitola__urovne";
+  seznam.append(...PRIPADY.map((pripad) => kartaPripadu(pripad, uloziste.odemcenoVse || otevrene.has(pripad.uroven.id), uloziste)));
+  oddil.dataset.uzavreno = String(uzavreno);
+  oddil.replaceChildren(nadpis, tema, seznam);
+}
+
 /** Kolik toho hráč v kampani dokázal: projité úrovně, medaile a stupně výzev o efektivitu. */
 export function postupKampani(
   kampan: readonly Uroven[],
@@ -187,6 +260,7 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
         return oddil;
       }),
     );
+    vykresliKomisi(kampan, uloziste);
   };
 
   // Odemknutí všech úrovní je pomůcka pro zkoušení hry: nabízí se jen s ?vyvoj=1 v adrese.

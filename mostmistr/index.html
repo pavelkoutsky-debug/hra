@@ -31,6 +31,8 @@
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <div class="prehled__kapitoly"></div>
+        <!-- Havarijní komise: případy mimo kampaň (cizí most, který spadl, a oprava pár změnami). -->
+        <section class="komise" data-udaj="prehled-komise" hidden></section>
         <!-- Odemknutí všech úrovní je pomůcka pro zkoušení hry: ukáže se jen s ?vyvoj=1 v adrese. -->
         <label class="prehled__volba" data-jen-vyvoj hidden>
           <input type="checkbox" id="odemknout-vse" />
@@ -109,6 +111,17 @@
         Most otevřený z odkazu: vlastní most hráče je stranou a nic se neukládá, dokud se
         nerozhodne. Vlastní řádek pod lištou, ne přes výkres: cizí most má být celý vidět.
       -->
+      <!--
+        Havarijní komise: pruh s počtem změn opravy. Vlastní řádek pod lištou, ne přes výkres;
+        zůstává i při zkoušce, aby plátno při jejím spuštění nezměnilo výšku.
+      -->
+      <div class="host host--komise" data-udaj="komise" role="status" hidden>
+        <p class="host__text" data-udaj="komise-text"></p>
+        <div class="host__tlacitka">
+          <button type="button" class="tlacitko" data-akce="komise-spis" data-text="komise.spis" data-popis="komise.spis.popis"></button>
+          <button type="button" class="tlacitko" data-akce="komise-puvodni" data-text="komise.puvodni" data-popis="komise.puvodni.popis"></button>
+        </div>
+      </div>
       <div class="host" data-udaj="host" role="status" hidden>
         <p class="host__text" data-udaj="host-text"></p>
         <div class="host__tlacitka">
@@ -396,6 +409,7 @@
             <div class="vysledek__podrobnosti" id="vysledek-podrobnosti">
               <p class="vysledek__shrnuti" data-udaj="vysledek-shrnuti"></p>
               <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
+              <p class="vysledek__nalez" data-udaj="vysledek-nalez" hidden></p>
               <ul class="medaile" data-udaj="vysledek-medaile" data-jen-kampan></ul>
               <div class="vysledek__vyzvy" data-cast="vyzvy" hidden>
                 <h3 data-text="vyzvy.nadpis"></h3>
