@@ -129,7 +129,7 @@ describe("přehled kampaně", () => {
     for (const nazev of ["První vlak", "Rychlík", "Uhelný vlak", "Dvě patra"]) {
       expect(karty.some((text) => text.includes(nazev)), nazev).toBe(true);
     }
-    await stranka.locator(".prehled__kapitoly").evaluate((el) => el.lastElementChild?.scrollIntoView());
+    await stranka.locator("#obrazovka-prehled .prehled__kapitoly").evaluate((el) => el.lastElementChild?.scrollIntoView());
     await stranka.screenshot({ path: `${SLOZKA}/t0-kapitola-trat.png` });
   });
 });

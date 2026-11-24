@@ -89,7 +89,7 @@ describe("výkres", () => {
 
   it("plátno není prázdné: má pozadí modráku i světlé čáry", async () => {
     const barvy = await stranka.evaluate(() => {
-      const platno = document.querySelector("canvas")!;
+      const platno = document.querySelector<HTMLCanvasElement>("canvas.vykres__platno")!;
       const data = platno.getContext("2d")!.getImageData(0, 0, platno.width, platno.height).data;
       let pozadi = 0;
       let svetle = 0;
@@ -106,7 +106,7 @@ describe("výkres", () => {
 
   it("plátno má rozlišení podle velikosti okna", async () => {
     const rozmery = await stranka.evaluate(() => {
-      const platno = document.querySelector("canvas")!;
+      const platno = document.querySelector<HTMLCanvasElement>("canvas.vykres__platno")!;
       const obrys = platno.getBoundingClientRect();
       return { sirka: platno.width, vyska: platno.height, css: [Math.round(obrys.width), Math.round(obrys.height)] };
     });
@@ -212,7 +212,7 @@ describe("ovládání", () => {
     await pockejNaSnimek();
     expect(await meritko()).toBeGreaterThan(pred);
     const sirky = await stranka.evaluate(() => {
-      const platno = document.querySelector("canvas")!;
+      const platno = document.querySelector<HTMLCanvasElement>("canvas.vykres__platno")!;
       return [platno.width, Math.round(platno.getBoundingClientRect().width)];
     });
     expect(sirky[0]).toBe(sirky[1]);
