@@ -10,11 +10,13 @@ import {
   nactiSandbox,
   nejvicVeSkupine,
   nejvicZakladu,
+  PREDLOHY_SANDBOXU,
   PROVOZ_SANDBOXU,
   sandboxNaText,
   sandboxZTextu,
   stejneUdoli,
   urovenSandboxu,
+  VERZE_SANDBOXU,
   vychoziPocet,
   vychoziProvoz,
   vychoziSandbox,
@@ -48,7 +50,18 @@ describe("nastavení sandboxu", () => {
     expect(cesta({ zaklady: 4 })).toBe("sandbox.zaklady");
     expect(cesta({ druh: "dalnice" })).toBe("sandbox.druh");
     expect(cesta({ navic: 1 })).toBe("sandbox.navic");
-    expect(cesta({ verze: 2 })).toBe("sandbox.verze");
+    expect(cesta({ verze: 3 })).toBe("sandbox.verze");
+    // Zvedání a cíl: čas a výška lodi v mezích, loď jen s vodou, rozpočet v mezích, třída 1 až 3.
+    expect(cesta({ zvedani: { cas: -1, lod: 0, kridla: 1 } })).toBe("sandbox.zvedani.cas");
+    expect(cesta({ zvedani: { cas: 5, lod: MEZE_SANDBOXU.lod.max + 1, kridla: 1 } })).toBe("sandbox.zvedani.lod");
+    expect(cesta({ zvedani: { cas: 5, lod: 6, kridla: 3 } })).toBe("sandbox.zvedani.kridla");
+    expect(cesta({ zvedani: { cas: 5, lod: 6, kridla: 1, navic: 1 } })).toBe("sandbox.zvedani.navic");
+    expect(cesta({ voda: false, zvedani: { cas: 5, lod: 6, kridla: 1 } })).toBe("sandbox.zvedani.lod");
+    expect(nactiSandbox({ ...vychoziSandbox(), voda: false, zvedani: { cas: 5, lod: 0, kridla: 2 } }).zvedani).toEqual({ cas: 5, lod: 0, kridla: 2 });
+    expect(cesta({ rozpocet: 500 })).toBe("sandbox.rozpocet");
+    expect(cesta({ rozpocet: 120_000.5 })).toBe("sandbox.rozpocet");
+    expect(cesta({ komfort: 4 })).toBe("sandbox.komfort");
+    expect(cesta({ komfort: undefined })).toBe("sandbox.komfort");
     // Vlak po silnici nejede a auto po lávce taky ne.
     expect(cesta({ provoz: [{ druh: "vlak-osobni", pocet: 4, smer: 1, cas: 0 }] })).toBe("sandbox.provoz[0].druh");
     expect(cesta({ druh: "lavka", provoz: [{ druh: "auto", pocet: 1, smer: 1, cas: 0 }] })).toBe("sandbox.provoz[0].druh");
@@ -115,6 +128,29 @@ describe("nastavení sandboxu", () => {
     }
   });
 
+  it("nastavení verze 1 (před dílnou) se čte dál: bez zvedání a bez cíle", () => {
+    const stare = { verze: 1, rozpeti: 30, hloubka: 9, druh: "lavka", voda: true, zaklady: 2, provoz: [{ druh: "dav", pocet: 30, smer: 1, cas: 0 }] };
+    expect(sandboxZTextu(JSON.stringify(stare))).toEqual({ ...stare, verze: VERZE_SANDBOXU, zvedani: null, rozpocet: null, komfort: 3 });
+    // Verze 1 s polem, které neznala, je poškozený zápis, ne nastavení k doplnění.
+    expect(() => nactiSandbox({ ...stare, rozpocet: 100_000 })).toThrow(ChybaDat);
+  });
+
+  it("hotová údolí jsou platná nastavení, každé jiné, a jedno je výchozí pískoviště", () => {
+    const zapisy = new Set<string>();
+    for (const predloha of PREDLOHY_SANDBOXU) {
+      expect(nactiSandbox(predloha.nastaveni), predloha.id).toEqual(predloha.nastaveni);
+      expect(() => urovenSandboxu(predloha.nastaveni), predloha.id).not.toThrow();
+      zapisy.add(sandboxNaText(predloha.nastaveni));
+    }
+    expect(zapisy.size).toBe(PREDLOHY_SANDBOXU.length);
+    expect(new Set(PREDLOHY_SANDBOXU.map((p) => p.id)).size).toBe(PREDLOHY_SANDBOXU.length);
+    expect(zapisy.has(sandboxNaText(vychoziSandbox()))).toBe(true);
+    // Mezi předlohami je každý druh trasy, zvedací most i cíl kmitání.
+    expect(new Set(PREDLOHY_SANDBOXU.map((p) => p.nastaveni.druh))).toEqual(new Set(DRUHY_TRAS));
+    expect(PREDLOHY_SANDBOXU.some((p) => p.nastaveni.zvedani !== null)).toBe(true);
+    expect(PREDLOHY_SANDBOXU.some((p) => p.nastaveni.komfort < 3)).toBe(true);
+  });
+
   it("pozná, jestli změna nastavení mění údolí (most pak neplatí), nebo jen provoz", () => {
     const a = vychoziSandbox();
     expect(stejneUdoli(a, { ...a, provoz: [] })).toBe(true);
@@ -123,6 +159,11 @@ describe("nastavení sandboxu", () => {
     expect(stejneUdoli(a, { ...a, druh: "lavka", provoz: [] })).toBe(false);
     // Voda opěry ani kotvy nemění: most zůstává.
     expect(stejneUdoli(a, { ...a, voda: !a.voda })).toBe(true);
+    // Cíl most nemění; zvedání ano (kotvy pístů, píst a zámek v paletě), loď a čas zvedání ne.
+    expect(stejneUdoli(a, { ...a, rozpocet: 200_000, komfort: 1 })).toBe(true);
+    expect(stejneUdoli(a, { ...a, zvedani: { cas: 6, lod: 0, kridla: 1 } })).toBe(false);
+    expect(stejneUdoli({ ...a, zvedani: { cas: 6, lod: 0, kridla: 1 } }, { ...a, zvedani: { cas: 20, lod: 9, kridla: 1 } })).toBe(true);
+    expect(stejneUdoli({ ...a, zvedani: { cas: 6, lod: 0, kridla: 1 } }, { ...a, zvedani: { cas: 6, lod: 0, kridla: 2 } })).toBe(false);
   });
 });
 
@@ -132,7 +173,7 @@ describe("úroveň sandboxu", () => {
       for (let rozpeti = MEZE_SANDBOXU.rozpeti.min; rozpeti <= MEZE_SANDBOXU.rozpeti.max; rozpeti += 1) {
         for (const hloubka of [MEZE_SANDBOXU.hloubka.min, 8, MEZE_SANDBOXU.hloubka.max]) {
           for (let zaklady = 0; zaklady <= nejvicZakladu(rozpeti); zaklady++) {
-            const nastaveni: NastaveniSandboxu = { verze: 1, rozpeti, hloubka, druh, voda: zaklady % 2 === 0, zaklady, provoz: [] };
+            const nastaveni: NastaveniSandboxu = { ...vychoziSandbox(), rozpeti, hloubka, druh, voda: zaklady % 2 === 0, zaklady, provoz: [] };
             const u = urovenSandboxu(nastaveni);
             expect(u.id).toBe(ID_SANDBOXU);
             expect(u.rozpocet).toBeNull();
@@ -151,7 +192,7 @@ describe("úroveň sandboxu", () => {
           }
           // Víc základů, než se vejde, nastavení odmítne.
           if (nejvicZakladu(rozpeti) < MEZE_SANDBOXU.zaklady.max) {
-            expect(() => urovenSandboxu({ verze: 1, rozpeti, hloubka, druh, voda: true, zaklady: nejvicZakladu(rozpeti) + 1, provoz: [] })).toThrow();
+            expect(() => urovenSandboxu({ ...vychoziSandbox(), rozpeti, hloubka, druh, voda: true, zaklady: nejvicZakladu(rozpeti) + 1, provoz: [] })).toThrow();
           }
         }
       }
@@ -183,6 +224,55 @@ describe("úroveň sandboxu", () => {
     const kolej = urovenSandboxu({ ...vychoziSandbox(), druh: "kolej", provoz: [] });
     expect(kolej.povolenePrvky.filter((id) => KATALOG[id].druh === "mostovka")).toEqual(["kolejiste"]);
     expect(kolej.povolenePrvky).toContain("lano");
+  });
+
+  it("zvedací most: píst a zámek v paletě, kotvy pístů pod opěrami, fáze zvedání a loď", () => {
+    for (const druh of DRUHY_TRAS) {
+      for (let rozpeti = MEZE_SANDBOXU.rozpeti.min; rozpeti <= MEZE_SANDBOXU.rozpeti.max; rozpeti += 3) {
+        for (const hloubka of [MEZE_SANDBOXU.hloubka.min, 4, 5, 8, MEZE_SANDBOXU.hloubka.max]) {
+          for (const lod of [0, 9]) {
+            const kridla = lod > 0 ? 2 : 1;
+            const u = urovenSandboxu({ ...vychoziSandbox(), rozpeti, hloubka, druh, zaklady: 0, provoz: [], zvedani: { cas: 6, lod, kridla } });
+            expect(u.povolenePrvky).toContain("pist");
+            // Kotvy pro paty pístů: pod opěrou s čepem (u dvou křídel pod oběma), nad dnem, na rastru.
+            const pistu = u.kotvy.filter((k) => (k.x === 0 || k.x === rozpeti) && k.y < 0);
+            expect(pistu.length, `${rozpeti} × ${hloubka}`).toBeGreaterThanOrEqual(1);
+            expect(pistu.some((k) => k.x === rozpeti)).toBe(kridla === 2);
+            // Jedno křídlo zamyká zámek na ložisku pravé opěry; dvě křídla mají čepy v obou opěrách.
+            expect(u.kotvy.find((k) => k.x === rozpeti && k.y === 0)!.typ).toBe(kridla === 2 ? "pevna" : "posuvna");
+            for (const k of pistu) {
+              expect(k.y).toBeGreaterThan(-hloubka);
+              expect(Number.isInteger(k.y)).toBe(true);
+            }
+            expect(new Set(u.kotvy.map((k) => `${k.x};${k.y}`)).size).toBe(u.kotvy.length);
+            expect(u.pohyb).toEqual({ zvednout: 6, sklopit: lod > 0 ? 17 : 14 });
+            if (lod > 0) {
+              expect(u.lode).toHaveLength(1);
+              const [plavba] = u.lode;
+              expect(plavba).toMatchObject({ cas: 13, trvani: 3, vyska: 9 });
+              // Loď pluje mezi patami stěn a celá se vejde mezi zvednutí a sklopení.
+              expect(plavba!.xMin).toBeGreaterThan(0);
+              expect(plavba!.xMax).toBeLessThan(rozpeti);
+              expect(plavba!.xMax).toBeGreaterThan(plavba!.xMin);
+              expect(plavba!.cas + plavba!.trvani).toBeLessThanOrEqual(u.pohyb!.sklopit);
+            } else expect(u.lode).toEqual([]);
+          }
+        }
+      }
+    }
+    // Bez zvedání píst ani kotvy pístů nejsou.
+    const pevny = urovenSandboxu(vychoziSandbox());
+    expect(pevny.povolenePrvky).not.toContain("pist");
+    expect(pevny.pohyb).toBeNull();
+    expect(pevny.kotvy).toHaveLength(6);
+  });
+
+  it("volitelný cíl: rozpočet a třída kmitání se propíšou do úrovně", () => {
+    const u = urovenSandboxu({ ...vychoziSandbox(), druh: "lavka", provoz: vychoziProvoz("lavka"), rozpocet: 250_000, komfort: 1 });
+    expect(u.rozpocet).toBe(250_000);
+    expect(u.inzenyrskyRozpocet).toBeNull();
+    expect(u.mistrovska).toBeNull();
+    expect(u.nejhorsiKomfort).toBe(1);
   });
 
   it("provoz sandboxu se převede na jízdní řád; vlak dostane vozy", () => {
@@ -229,6 +319,58 @@ describe("zkouška v sandboxu", () => {
     const v = zkouska.vysledek();
     expect(v).toMatchObject({ pruchod: true, ucastniku: 3, prejelo: 3, spadlo: 0, poruseni: 0 });
     expect(v.medaile).toEqual({ pruchod: true, rozpocet: false, mistrovska: false });
+  }, 60_000);
+
+  it("předloha s kanálem: dvoukřídlý most se zámkem uprostřed se zvedne, loď propluje a auta přejedou", () => {
+    const u = urovenSandboxu(PREDLOHY_SANDBOXU.find((p) => p.id === "kanal")!.nastaveni);
+    const k = new Kreslic(ID_SANDBOXU);
+    for (const [cep, smer] of [[0, 1], [16, -1]] as const) {
+      k.prut("mostovka-ocel", [cep, 0], [cep + smer * 4, 0]);
+      k.prut("mostovka-ocel", [cep + smer * 4, 0], [8, 0]);
+      k.bod(cep + smer * 4, 0, { svar: true });
+      k.prut("pist", [cep, -5], [cep + smer * 4, 0], { zdvih: 2 });
+    }
+    k.bod(8, 0, { zamek: true });
+    const navrh = k.navrh();
+    expect(zkontrolujNavrh(navrh, u)).toEqual([]);
+    const zkouska = new Zkouska(u, navrh, nasadaUrovne(u));
+    while (!zkouska.hotovo) zkouska.pokracuj(1);
+    const v = zkouska.vysledek();
+    expect(v).toMatchObject({ pruchod: true, ucastniku: 3, prejelo: 3, spadlo: 0, poruseni: 0 });
+    expect(v.pohyb).toMatchObject({ zvednuto: true, zamceno: true, narazenyPrut: null });
+    expect(v.lode).toEqual({ celkem: 1, proplulo: 1, narazilo: 0 });
+    // Tentýž most bez pístů loď nepustí.
+    const bezPistu = { ...navrh, pruty: navrh.pruty.filter((p) => p.prvek !== "pist") };
+    const druha = new Zkouska(u, bezPistu, nasadaUrovne(u));
+    while (!druha.hotovo) druha.pokracuj(1);
+    expect(druha.vysledek().pruchod).toBe(false);
+  }, 60_000);
+
+  it("jedno křídlo se zámkem na ložisku pravé opěry; cíl rozpočtu most nad rozpočet ke zkoušce nepustí", () => {
+    const nastaveni: NastaveniSandboxu = {
+      ...vychoziSandbox(),
+      rozpeti: 12,
+      zaklady: 0,
+      provoz: [{ druh: "auto", pocet: 2, smer: 1, cas: 0 }],
+      zvedani: { cas: 6, lod: 8, kridla: 1 },
+    };
+    const k = new Kreslic(ID_SANDBOXU);
+    k.prut("mostovka-ocel", [0, 0], [6, 0]);
+    k.prut("mostovka-ocel", [6, 0], [12, 0]);
+    k.bod(6, 0, { svar: true });
+    k.prut("pist", [0, -5], [6, 0], { zdvih: 2.5 });
+    k.bod(12, 0, { zamek: true });
+    const navrh = k.navrh();
+    const u = urovenSandboxu(nastaveni);
+    expect(zkontrolujNavrh(navrh, u)).toEqual([]);
+    const zkouska = new Zkouska(u, navrh, nasadaUrovne(u));
+    while (!zkouska.hotovo) zkouska.pokracuj(1);
+    const v = zkouska.vysledek();
+    expect(v).toMatchObject({ pruchod: true, prejelo: 2, poruseni: 0 });
+    expect(v.lode).toEqual({ celkem: 1, proplulo: 1, narazilo: 0 });
+    // S rozpočtem jako cílem pod cenou mostu ho kontrola návrhu ke zkoušce nepustí (stojí 401 500 Kč).
+    expect(zkontrolujNavrh(navrh, urovenSandboxu({ ...nastaveni, rozpocet: 400_000 }))).toEqual([{ druh: "nad-rozpocet" }]);
+    expect(zkontrolujNavrh(navrh, urovenSandboxu({ ...nastaveni, rozpocet: 402_000 }))).toEqual([]);
   }, 60_000);
 
   it("zkouška do zlomu běží i v sandboxu", () => {

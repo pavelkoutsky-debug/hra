@@ -1562,13 +1562,58 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   width: 68px;
 }
 
+.okno--sandbox input.sandbox__castka {
+  width: 112px;
+}
+
+/* Hotová údolí: řada tlačítek, každé vyplní celé nastavení. */
+.sandbox__predlohy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.sandbox__predlohy .tlacitko {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 5px 9px;
+  text-align: left;
+}
+
+.sandbox__predlohy .tlacitko small {
+  font-size: 11px;
+  color: var(--popisek);
+}
+
+.sandbox__pole--zvedani {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--cara);
+}
+
+.sandbox__pole--zvedani[hidden] {
+  display: none;
+}
+
+/* Okno pískoviště je dlouhé: posouvá se jeho obsah, tlačítka zůstávají dole na dohled. */
+.okno--sandbox form {
+  display: flex;
+  flex-direction: column;
+  max-height: min(86vh, 860px);
+}
+
+.okno--sandbox .sandbox__obsah {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .sandbox__provoz {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* Dlouhý jízdní řád se posouvá uvnitř okna, aby tlačítka dole zůstala vidět i v nízkém okně. */
-  max-height: 32vh;
-  overflow-y: auto;
   margin: 6px 0 8px;
   padding: 2px 4px 2px 0;
   list-style: none;

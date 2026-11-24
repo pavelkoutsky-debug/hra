@@ -584,18 +584,35 @@
     <dialog class="okno okno--sandbox" id="okno-sandbox">
       <form method="dialog">
         <h2 data-text="sandbox.nadpis"></h2>
+        <div class="sandbox__obsah">
         <p data-text="sandbox.popis"></p>
+        <h3 data-text="sandbox.predlohy"></h3>
+        <div class="sandbox__predlohy" data-udaj="sandbox-predlohy"></div>
+        <h3 data-text="sandbox.udoli"></h3>
         <div class="sandbox__pole">
           <label><span data-text="sandbox.rozpeti"></span><input type="number" id="sandbox-rozpeti" inputmode="numeric" /><span>m</span></label>
           <label><span data-text="sandbox.hloubka"></span><input type="number" id="sandbox-hloubka" inputmode="numeric" /><span>m</span></label>
           <label><span data-text="sandbox.druh"></span><select id="sandbox-druh"></select></label>
           <label><span data-text="sandbox.zaklady"></span><input type="number" id="sandbox-zaklady" inputmode="numeric" /></label>
           <label class="sandbox__volba"><input type="checkbox" id="sandbox-voda" /><span data-text="sandbox.voda"></span></label>
+          <label class="sandbox__volba"><input type="checkbox" id="sandbox-zvedani" /><span data-text="sandbox.zvedani"></span></label>
+        </div>
+        <div class="sandbox__pole sandbox__pole--zvedani" data-udaj="sandbox-zvedani" hidden>
+          <label class="sandbox__volba"><span data-text="sandbox.kridla"></span><select id="sandbox-kridla"></select></label>
+          <label><span data-text="sandbox.zvednout"></span><input type="number" id="sandbox-zvednout" inputmode="numeric" /><span>s</span></label>
+          <label><span data-text="sandbox.lod"></span><input type="number" id="sandbox-lod" inputmode="numeric" /><span>m</span></label>
         </div>
         <h3 data-text="sandbox.provoz"></h3>
         <p class="okno__poznamka" data-text="sandbox.provoz.popis"></p>
         <ul class="sandbox__provoz" data-udaj="sandbox-provoz"></ul>
         <button type="button" class="tlacitko" data-akce="sandbox-pridat" data-text="sandbox.pridat"></button>
+        <h3 data-text="sandbox.cil"></h3>
+        <p class="okno__poznamka" data-text="sandbox.cil.popis"></p>
+        <div class="sandbox__pole">
+          <label><span data-text="sandbox.rozpocet"></span><input type="number" id="sandbox-rozpocet" inputmode="numeric" class="sandbox__castka" /><span>Kč</span></label>
+          <label><span data-text="sandbox.komfort"></span><select id="sandbox-komfort"></select></label>
+        </div>
+        </div>
         <p class="okno__hlaseni" data-udaj="sandbox-hlaseni" role="status"></p>
         <div class="okno__tlacitka">
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="sandbox-pouzit" data-text="sandbox.pouzit"></button>

@@ -4591,7 +4591,15 @@ export function spustUroven(
     }
     // Za větu o provozu a příčinu patří to, co hráč čeká nejvíc: jak dopadla výzva z odkazu,
     // a u cizího mostu, že se mu nezapočítal.
-    const dovetekPruhu = b.host && !jePokus ? t("sdileni.vysledek.host") : vetaVyzvyOdkazu;
+    // V pískovišti s vlastním cílem (rozpočet, klidnější most) patří k výhře i to, že ho most splnil.
+    const castiCile: string[] = [];
+    if (sandbox && vysledek.pruchod && !jePokus) {
+      if (sandbox.rozpocet !== null) castiCile.push(t("sandbox.cil.rozpocet", { castka: koruny(sandbox.rozpocet) }));
+      if (sandbox.komfort < 3 && vysledek.komfort) castiCile.push(t("sandbox.cil.komfort", { mez: cislo(MEZE_KOMFORTU[sandbox.komfort - 1]!, 1) }));
+    }
+    const vetaCile = castiCile.length > 0 ? t("sandbox.cil.splnen", { cil: castiCile.join(t("sandbox.cil.a")) }) : null;
+    document.body.dataset.cilSandboxu = sandbox && (sandbox.rozpocet !== null || sandbox.komfort < 3) ? (vetaCile ? "splnen" : "nesplnen") : "";
+    const dovetekPruhu = b.host && !jePokus ? t("sdileni.vysledek.host") : (vetaCile ?? vetaVyzvyOdkazu);
     const vetaVPruhu = [vety[0] ?? "", pricina, dovetekPruhu].filter((cast) => cast !== null && cast !== "").join(" ");
     udaj("vysledek-veta").textContent = vetaVPruhu;
     // Pruh má na větu dva řádky; co se nevejde, je celé v bublině i v podrobnostech.
@@ -5317,6 +5325,10 @@ export function spustUroven(
           voda: nove.voda,
           zaklady: nove.zaklady,
           provoz: nove.provoz.map((p) => `${p.pocet}x${p.druh}`).join(","),
+          zvedani: nove.zvedani ? nove.zvedani.kridla : 0,
+          lod: nove.zvedani?.lod ?? 0,
+          rozpocet: nove.rozpocet ?? 0,
+          komfort: nove.komfort,
           smazanMost: smazatMost,
         });
         uloziste.sandbox = nove;

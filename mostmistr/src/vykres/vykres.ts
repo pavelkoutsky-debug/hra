@@ -129,7 +129,13 @@ function nakresliPopiskyKotev(ctx: Kontext, s: StavVykresu): void {
   ctx.font = `10px ${PISMO}`;
   ctx.textBaseline = "middle";
   // Dvě kotvy pro píst na stejném břehu rozlišuje zadání jako mělkou a hlubokou; popisek taky.
-  const proPist = s.uroven.kotvy.filter((kotva) => kotva.typ === "pevna" && !naKonciTrasy(kotva));
+  // Kotva pro píst leží pod koncem trasy (pod čepem). Ostatní pevné kotvy (pro lana za opěrami,
+  // v patách svahů pískoviště) popisek nedostanou: píst z nich vést jde, ale k tomu tam nejsou.
+  const podKoncemTrasy = (kotva: Kotva): boolean =>
+    s.uroven.trasy.some(
+      (trasa) => (trasa.zacatek.x === kotva.x && kotva.y < trasa.zacatek.y) || (trasa.konec.x === kotva.x && kotva.y < trasa.konec.y),
+    );
+  const proPist = s.uroven.kotvy.filter((kotva) => kotva.typ === "pevna" && !naKonciTrasy(kotva) && podKoncemTrasy(kotva));
   const nazevKotvyPistu = (kotva: Kotva): string => {
     const naBrehu = proPist.filter((jina) => jina.x <= stred === kotva.x <= stred);
     if (naBrehu.length < 2) return t("vykres.kotvaPist");
@@ -140,6 +146,7 @@ function nakresliPopiskyKotev(ctx: Kontext, s: StavVykresu): void {
   for (const kotva of s.uroven.kotvy) {
     if (kotva.typ !== "pevna") continue;
     const cep = naKonciTrasy(kotva);
+    if (!cep && !proPist.includes(kotva)) continue;
     const text = cep ? t("vykres.kotvaCep") : nazevKotvyPistu(kotva);
     const p = svetNaObraz(s.kamera, s.rozmer, kotva);
     const vlevo = kotva.x <= stred;

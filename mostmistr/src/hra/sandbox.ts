@@ -1,5 +1,6 @@
-// Okno s nastavením sandboxu: údolí (rozpětí, hloubka, voda, základy), druh trasy a provoz.
-// Samo nic nepočítá ani neukládá: nastavení přečte z formuláře, zkontroluje a předá dál.
+// Okno s nastavením sandboxu: hotová údolí na jedno kliknutí, údolí (rozpětí, hloubka, voda,
+// základy), druh trasy, zvedání mostu s lodí, provoz a volitelný cíl. Samo nic nepočítá ani
+// neukládá: nastavení přečte z formuláře, zkontroluje a předá dál.
 
 import { ChybaDat } from "../data/kontrola";
 import {
@@ -7,6 +8,7 @@ import {
   nactiSandbox,
   nejvicVeSkupine,
   nejvicZakladu,
+  PREDLOHY_SANDBOXU,
   PROVOZ_SANDBOXU,
   stejneUdoli,
   VERZE_SANDBOXU,
@@ -17,8 +19,10 @@ import {
   type PolozkaSandboxu,
 } from "../data/sandbox";
 import { DRUHY_TRAS, type DruhTrasy } from "../data/uroven";
+import { MEZE_KOMFORTU } from "../jadro/komfort";
 import { prvek, udaj } from "../ui/dom";
-import { t } from "../ui/slovnik";
+import { cislo } from "../ui/formaty";
+import { t, type KlicTextu } from "../ui/slovnik";
 
 export interface MoznostiSandboxu {
   /** Má hráč v sandboxu rozestavěný most? Změna údolí ho smaže, proto se na ni okno ptá. */
@@ -32,10 +36,16 @@ export interface MoznostiSandboxu {
  * hráč do formuláře napsal; meze některých polí závisejí na jiných (základy na rozpětí,
  * počet na druhu provozu).
  */
-function textChyby(chyba: unknown, data: { rozpeti: number; provoz: { druh: string }[] }): string {
+function textChyby(chyba: unknown, data: { rozpeti: number; voda: boolean; provoz: { druh: string }[] }): string {
   const cesta = chyba instanceof ChybaDat ? chyba.cesta : "";
   if (cesta === "sandbox.rozpeti") return t("sandbox.chyba.rozpeti", MEZE_SANDBOXU.rozpeti);
   if (cesta === "sandbox.hloubka") return t("sandbox.chyba.hloubka", MEZE_SANDBOXU.hloubka);
+  if (cesta === "sandbox.zvedani.cas") return t("sandbox.chyba.zvednout", MEZE_SANDBOXU.zvedani);
+  // Loď mimo meze, nebo loď v údolí bez vody: kontrola je hlásí na stejném poli.
+  if (cesta === "sandbox.zvedani.lod") return data.voda ? t("sandbox.chyba.lod", MEZE_SANDBOXU.lod) : t("sandbox.chyba.lodBezVody");
+  if (cesta === "sandbox.rozpocet") {
+    return t("sandbox.chyba.rozpocet", { min: cislo(MEZE_SANDBOXU.rozpocet.min, 0), max: cislo(MEZE_SANDBOXU.rozpocet.max, 0) });
+  }
   if (cesta === "sandbox.zaklady") {
     return t("sandbox.chyba.zaklady", { rozpeti: data.rozpeti, max: nejvicZakladu(data.rozpeti) });
   }
@@ -63,6 +73,14 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
   const druh = prvek("#sandbox-druh", HTMLSelectElement);
   const zaklady = prvek("#sandbox-zaklady", HTMLInputElement);
   const voda = prvek("#sandbox-voda", HTMLInputElement);
+  const zvedani = prvek("#sandbox-zvedani", HTMLInputElement);
+  const poleZvedani = udaj("sandbox-zvedani");
+  const kridla = prvek("#sandbox-kridla", HTMLSelectElement);
+  const zvednout = prvek("#sandbox-zvednout", HTMLInputElement);
+  const lod = prvek("#sandbox-lod", HTMLInputElement);
+  const rozpocet = prvek("#sandbox-rozpocet", HTMLInputElement);
+  const komfort = prvek("#sandbox-komfort", HTMLSelectElement);
+  const predlohy = udaj("sandbox-predlohy");
   const seznam = udaj("sandbox-provoz");
   const hlaseni = udaj("sandbox-hlaseni");
   const pridat = prvek('[data-akce="sandbox-pridat"]', HTMLButtonElement);
@@ -78,6 +96,48 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
   meze(rozpeti, MEZE_SANDBOXU.rozpeti);
   meze(hloubka, MEZE_SANDBOXU.hloubka);
   meze(zaklady, MEZE_SANDBOXU.zaklady);
+  meze(zvednout, MEZE_SANDBOXU.zvedani);
+  meze(lod, MEZE_SANDBOXU.lod);
+  rozpocet.min = String(MEZE_SANDBOXU.rozpocet.min);
+  rozpocet.max = String(MEZE_SANDBOXU.rozpocet.max);
+  rozpocet.step = "1000";
+  rozpocet.placeholder = t("sandbox.rozpocet.bez");
+  const volba = (hodnota: string, text: string): HTMLOptionElement => {
+    const o = document.createElement("option");
+    o.value = hodnota;
+    o.textContent = text;
+    return o;
+  };
+  kridla.replaceChildren(volba("1", t("sandbox.kridla.1")), volba("2", t("sandbox.kridla.2")));
+  // Třída kmitání: 3 je mez, která platí vždycky (bez cíle), 2 a 1 jsou přísnější.
+  komfort.replaceChildren(
+    ...([3, 2, 1] as const).map((trida) =>
+      volba(String(trida), t(trida === 3 ? "sandbox.komfort.bezCile" : "sandbox.komfort.mez", { mez: cislo(MEZE_KOMFORTU[trida - 1]!, 1) })),
+    ),
+  );
+  zvedani.addEventListener("change", () => {
+    poleZvedani.hidden = !zvedani.checked;
+  });
+  // Hotová údolí: tlačítko vyplní celé nastavení; platit začne až po „Použít“.
+  predlohy.replaceChildren(
+    ...PREDLOHY_SANDBOXU.map((predloha) => {
+      const tlacitko = document.createElement("button");
+      tlacitko.type = "button";
+      tlacitko.className = "tlacitko";
+      tlacitko.dataset.predloha = predloha.id;
+      const nazev = document.createElement("span");
+      nazev.textContent = t(`sandbox.predloha.${predloha.id}` as KlicTextu);
+      const popis = document.createElement("small");
+      popis.textContent = t(`sandbox.predloha.${predloha.id}.popis` as KlicTextu);
+      tlacitko.append(nazev, popis);
+      tlacitko.addEventListener("click", () => {
+        napln(predloha.nastaveni);
+        hlaseni.dataset.druh = "ok";
+        hlaseni.textContent = t("sandbox.predloha.vyplneno", { nazev: nazev.textContent });
+      });
+      return tlacitko;
+    }),
+  );
   druh.replaceChildren(
     ...DRUHY_TRAS.map((d) => {
       const volba = document.createElement("option");
@@ -158,7 +218,7 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
   }
 
   /** Nastavení, jak je teď ve formuláři; čísla mimo meze nechá projít ke kontrole, ta řekne proč. */
-  function zFormulare(): { rozpeti: number; provoz: { druh: string }[] } & Record<string, unknown> {
+  function zFormulare(): { rozpeti: number; voda: boolean; provoz: { druh: string }[] } & Record<string, unknown> {
     const provoz = [...seznam.children].map((uzel) => {
       const pole = (jmeno: string): string =>
         uzel.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-pole="${jmeno}"]`)?.value ?? "";
@@ -172,6 +232,10 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
       voda: voda.checked,
       zaklady: Number(zaklady.value),
       provoz,
+      zvedani: zvedani.checked ? { cas: Number(zvednout.value), lod: Number(lod.value), kridla: Number(kridla.value) } : null,
+      // Prázdné pole je „bez rozpočtu“; cokoli jiného musí být číslo v mezích.
+      rozpocet: rozpocet.value.trim() === "" ? null : Number(rozpocet.value),
+      komfort: Number(komfort.value),
     };
   }
 
@@ -181,6 +245,13 @@ export function pripojSandbox(soucasne: NastaveniSandboxu, moznosti: MoznostiSan
     druh.value = n.druh;
     zaklady.value = String(n.zaklady);
     voda.checked = n.voda;
+    zvedani.checked = n.zvedani !== null;
+    poleZvedani.hidden = n.zvedani === null;
+    kridla.value = String(n.zvedani?.kridla ?? 1);
+    zvednout.value = String(n.zvedani?.cas ?? 6);
+    lod.value = String(n.zvedani?.lod ?? 8);
+    rozpocet.value = n.rozpocet === null ? "" : String(n.rozpocet);
+    komfort.value = String(n.komfort);
     seznam.replaceChildren(...n.provoz.map(radek));
     hlaseni.textContent = "";
     delete hlaseni.dataset.druh;

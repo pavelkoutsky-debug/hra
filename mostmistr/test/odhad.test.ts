@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
-import { urovenSandboxu } from "../src/data/sandbox";
+import { urovenSandboxu, vychoziSandbox } from "../src/data/sandbox";
 import type { Uroven } from "../src/data/uroven";
 import { TIHOVE_ZRYCHLENI } from "../src/jadro/integrator";
 import { MEZE_KOMFORTU } from "../src/jadro/komfort";
@@ -70,7 +70,7 @@ function lavka(id: string, vysky: readonly number[], d: Doplnky = {}): NavrhMost
 
 /** Lávka v pískovišti s jednou skupinou lidí. */
 function piskoviste(rozpeti: number, druh: "skakajici-dav" | "chodec" | "bezec", pocet: number): Uroven {
-  return urovenSandboxu({ verze: 1, rozpeti, hloubka: 8, druh: "lavka", voda: true, zaklady: 0, provoz: [{ druh, pocet, smer: 1, cas: 0 }] });
+  return urovenSandboxu({ ...vychoziSandbox(), rozpeti, hloubka: 8, druh: "lavka", voda: true, zaklady: 0, provoz: [{ druh, pocet, smer: 1, cas: 0 }] });
 }
 
 describe("ustálená odezva s připojenými těly", () => {
