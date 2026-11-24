@@ -302,6 +302,55 @@ describe("žebříčky", () => {
     expect((await radky(s, "cena").locator(".zebricek__jmeno").allInnerTexts()).map(bezMezer)).toEqual(["Boris"]);
   }, 120_000);
 
+  it("stránka správce ukáže denní rozbor jako text a žebříčky s mazáním", async () => {
+    const hlavicky = { authorization: `Bearer ${HESLO}`, "content-type": "application/json" };
+    const vcera = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const rozbor = {
+      den: vcera,
+      shrnuti: "Hráli dva lidé; oba prošli 1-01 a zapsali se do žebříčku.",
+      text: "První odstavec.\n\n- odrážka <script>window.zle = 1</script>",
+      navrhy: [
+        { nazev: "Druhý návrh", duvod: "Důvod dvě.", popis: "Popis dvě.", narocnost: "mala", priorita: 2 },
+        { nazev: "První návrh <b>tučně</b>", duvod: "Důvod jedna.", popis: "Popis jedna.", narocnost: "velka", priorita: 1 },
+      ],
+    };
+    expect((await fetch(`${adresa}api/sprava?co=rozbor`, { method: "POST", headers: hlavicky, body: JSON.stringify(rozbor) })).status).toBe(201);
+    // Podklady pro další rozbor ten včerejší připomenou (až pro den po něm).
+    const podklady = (await (await fetch(`${adresa}api/sprava?co=podklady&den=${new Date().toISOString().slice(0, 10)}`, { headers: hlavicky })).json()) as {
+      predchozi: { den: string }[];
+      zebricky: { prijato: number; odmitnuto: Record<string, number> };
+    };
+    expect(podklady.predchozi.map((r) => r.den)).toEqual([vcera]);
+    expect(podklady.zebricky.prijato).toBeGreaterThanOrEqual(4);
+    expect(podklady.zebricky.odmitnuto.otisk).toBe(2);
+
+    const s = await cistaStranka();
+    await s.goto(`${adresa}sprava.html`);
+    await s.locator("#heslo").fill(HESLO);
+    await s.locator("#heslo").press("Enter");
+    await s.locator('body[data-sprava="prihlaseno"]').waitFor();
+    await s.locator('body[data-rozboru="1"]').waitFor();
+    await s.locator('[data-zalozka="rozbory"]').click();
+    expect(await s.locator("#rozbor-shrnuti").innerText()).toBe(rozbor.shrnuti);
+    expect(await s.locator("#rozbor-text").innerText()).toContain("<script>window.zle = 1</script>");
+    expect(await s.evaluate(() => (window as unknown as { zle?: number }).zle)).toBeUndefined();
+    // Návrhy podle priority; značky v názvu jsou jen text.
+    const navrhy = await s.locator("#rozbor-navrhy li strong").allInnerTexts();
+    expect(navrhy).toEqual(["První návrh <b>tučně</b>", "Druhý návrh"]);
+    expect(await s.locator("#rozbor-navrhy b").count()).toBe(0);
+    expect(await s.locator("#rozbor-navrhy li").first().innerText()).toContain("náročnost velká");
+    await s.screenshot({ path: `${SLOZKA}/z4-sprava-rozbor.png`, fullPage: true });
+
+    await s.locator('[data-zalozka="zebricky"]').click();
+    expect(await s.locator("#zebricky tbody tr").count()).toBe(2);
+    expect(await s.locator("#zebricky tbody tr").first().innerText()).toContain("Boris");
+    await s.screenshot({ path: `${SLOZKA}/z5-sprava-zebricky.png`, fullPage: true });
+    s.once("dialog", (dialog) => void dialog.accept());
+    await s.locator("#zebricky tbody tr").first().locator("button", { hasText: "Smazat hráče" }).click();
+    await s.locator('body[data-zebricku="0"]').waitFor();
+    expect(await s.locator("#hlaseni").innerText()).toBe("Smazáno zápisů: 2.");
+  }, 120_000);
+
   it("během práce se žebříčkem prohlížeč nehlásil žádnou chybu", () => {
     expect(chyby).toEqual([]);
   });
