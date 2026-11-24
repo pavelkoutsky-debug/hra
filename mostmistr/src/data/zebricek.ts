@@ -89,8 +89,24 @@ export interface OdpovedNaZapis {
  * mostu nejde přečíst. `plno`: server dnes už ověřil tolik mostů, kolik smí; `adresa`: tolik,
  * kolik smí z jedné adresy. `nejdriv`: zápis ze zkoušky do zlomu přišel dřív než zápis z běžné
  * zkoušky téhož mostu. `soubeh`: žebříček se zrovna měnil a zápis se nepovedl (zkusit znovu).
+ * `bez-adresy`: server nepozná, odkud zápis přichází, a bez toho stropy nehlídá. `prezdivka`:
+ * přezdívka je na seznamu nevhodných výrazů (`src/server/prezdivky.ts`).
  */
-export const KODY_ODMITNUTI = ["tvar", "uroven", "verze", "most", "pravidla", "otisk", "neprosel", "plno", "adresa", "nejdriv", "soubeh"] as const;
+export const KODY_ODMITNUTI = [
+  "tvar",
+  "uroven",
+  "verze",
+  "most",
+  "pravidla",
+  "otisk",
+  "neprosel",
+  "plno",
+  "adresa",
+  "nejdriv",
+  "soubeh",
+  "bez-adresy",
+  "prezdivka",
+] as const;
 export type KodOdmitnuti = (typeof KODY_ODMITNUTI)[number];
 
 const ID_HRACE = /^[0-9a-f]{32}$/;

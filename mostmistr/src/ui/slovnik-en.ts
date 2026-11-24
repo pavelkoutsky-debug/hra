@@ -1451,6 +1451,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zebricek.odmitnuto.adresa": "The server has already recalculated as many bridges from your connection today as it may from one. Please try again tomorrow.",
   "zebricek.odmitnuto.nejdriv": "The server does not know this bridge from the regular test yet. Pass the regular test with it and enter it again.",
   "zebricek.odmitnuto.soubeh": "The leaderboard was changing just now and the entry failed. Please try again.",
+  "zebricek.odmitnuto.bez-adresy": "The server cannot tell where the entry comes from right now, so the leaderboard is not accepting it. Try again later.",
+  "zebricek.odmitnuto.prezdivka": "The leaderboard will not accept this nickname. Choose another one.",
   "dilna.tlacitko": "Workshop",
   "dilna.tlacitko.popis": "Saved bridges from the sandbox: save this one, open another, share a scenario by link",
   "dilna.nadpis": "Workshop: saved bridges",

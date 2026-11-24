@@ -17,7 +17,7 @@ import { SkladVPameti } from "../../src/server/sklad";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
-const HESLO = "tajne-heslo-123";
+const HESLO = "tajne-heslo-spravce-123";
 
 let server: PreviewServer;
 let prohlizec: Browser;
@@ -34,6 +34,8 @@ const prostredi: ProstrediServeru = {
   nahoda: () => (++cislo).toString(16).padStart(6, "0"),
   prostredi: "test",
   hesloSpravce: HESLO,
+  // Náhledový server hlavičku Netlify s adresou nepřidá.
+  adresa: () => "203.0.113.7",
 };
 /** Kolik žádostí na který koncový bod hra poslala. */
 const zadosti = { denik: 0, vazba: 0, sprava: 0 };
@@ -400,7 +402,7 @@ describe("odkaz bez záznamu", () => {
 describe("stránka správce", () => {
   it("bez správného hesla nic neukáže; s ním vypíše zpětnou vazbu a dovolí ji vyřešit", async () => {
     await stranka.goto(`${adresa}sprava.html`);
-    await stranka.locator("#heslo").fill("spatne-heslo");
+    await stranka.locator("#heslo").fill("spatne-heslo-spravce");
     await stranka.locator('#prihlaseni button[type="submit"]').click();
     await stranka.locator('body[data-sprava="odmitnuto"]').waitFor();
     expect(await stranka.locator("#hlaseni").innerText()).toBe("Nesprávné heslo správce.");

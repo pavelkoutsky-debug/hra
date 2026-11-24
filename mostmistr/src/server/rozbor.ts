@@ -9,10 +9,15 @@
 //   GET  /api/sprava?co=rozbor&den=RRRR-MM-DD       jeden rozbor celý
 //
 // V podkladech nejsou kontakty hráčů, přiložené mosty ani události: rozbor má stát na číslech
-// a na tom, co hráči napsali, a nic z toho nemá opustit server víc, než je potřeba.
+// a na tom, co hráči napsali, a nic z toho nemá opustit server víc, než je potřeba. E-maily
+// a telefonní čísla, která hráč napíše přímo do textu zprávy, se v podkladech nahradí značkou
+// (`maskujKontakty`); zpráva uložená pro správce zůstává celá.
+//
+// Podklady při tom pustí úklid starých dat (`uklid.ts`): úloha rozboru je stahuje každý den.
 
 import type { SouhrnDeniku } from "../denik/souhrn";
 import { chyba, DEN, denZ, jeVazba, odpoved, prectiVse, souhrnObdobi, teloJson, type ProstrediServeru } from "./obsluha";
+import { uklid } from "./uklid";
 import { poctyZebricku, type PoctyZebricku } from "./zebricek";
 
 /** Největší tělo žádosti s rozborem. */
@@ -112,6 +117,31 @@ function orez(text: string, nejdelsi: number): string {
   return cisty.length > nejdelsi ? `${cisty.slice(0, nejdelsi)}…` : cisty;
 }
 
+/** E-mailová adresa (i s písmeny s diakritikou). */
+const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu;
+/**
+ * Kandidát na telefonní číslo: číslice ve skupinách oddělených nejvýš jedním znakem (mezera,
+ * tečka, pomlčka, lomítko) a závorkami, volitelně s předvolbou `+` nebo `00`. Zda to číslo je,
+ * rozhodne počet číslic (`jeTelefon`). Mezi skupinami číslic je oddělovač povinný, jinak by
+ * dlouhá řada číslic znamenala nekonečné zkoušení, jak ji rozdělit.
+ */
+const KANDIDAT_TELEFONU = /(?<![\p{L}\p{N}+])(?:\+|00)?(?:\(\d+\)|\d+)(?:[ \u00a0./-]?\(\d+\)|[ \u00a0./-]\d+)*(?![\p{L}\p{N}])/gu;
+
+/**
+ * Je kandidát telefonní číslo? České číslo má devět číslic, s předvolbou dvanáct; mezinárodní
+ * s předvolbou deset až patnáct. Bez předvolby se bere devět až dvanáct číslic, aby se nechytaly
+ * ceny, data a verze (ty mají číslic méně).
+ */
+function jeTelefon(kandidat: string): boolean {
+  const cislic = kandidat.replace(/\D/g, "").length;
+  return /^(?:\+|00)/.test(kandidat) ? cislic >= 10 && cislic <= 15 : cislic >= 9 && cislic <= 12;
+}
+
+/** Text zprávy pro podklady: e-maily a telefonní čísla nahrazená značkami `[e-mail]` a `[telefon]`. */
+export function maskujKontakty(text: string): string {
+  return text.replace(EMAIL, "[e-mail]").replace(KANDIDAT_TELEFONU, (kandidat) => (jeTelefon(kandidat) ? "[telefon]" : kandidat));
+}
+
 /** Vybere z pole nejvýš `kolik` položek rovnoměrně od první do poslední. */
 function rovnomerne<T>(pole: readonly T[], kolik: number): T[] {
   if (pole.length <= kolik) return [...pole];
@@ -180,7 +210,7 @@ export async function podkladyDne(p: ProstrediServeru, den: string): Promise<Pod
     hra: v.hlavicka.hra.replace(/[^0-9A-Za-z.+-]/g, "").slice(0, 20),
     jazyk: v.hlavicka.jazyk.replace(/[^A-Za-z/-]/g, "").slice(0, 20),
     dotyk: v.hlavicka.dotyk,
-    text: v.text.length > NEJDELSI_TEXT_VAZBY ? `${v.text.slice(0, NEJDELSI_TEXT_VAZBY)}…` : v.text,
+    text: ((text) => (text.length > NEJDELSI_TEXT_VAZBY ? `${text.slice(0, NEJDELSI_TEXT_VAZBY)}…` : text))(maskujKontakty(v.text)),
   }));
   const kliceRozboru = (await p.sklad.klice("rozbor/")).filter((k) => k < klicRozboru(den)).reverse().slice(0, PRIPOMENUTYCH_ROZBORU);
   const predchozi = (await prectiVse(p.sklad, kliceRozboru)).filter(jeRozbor).map((r) => ({ den: r.den, shrnuti: r.shrnuti, navrhy: r.navrhy.map((n) => n.nazev) }));
@@ -210,7 +240,15 @@ export async function spravujRozbor(zadost: Request, p: ProstrediServeru, analyt
     // Výchozí je včerejšek: den, který už skončil a má všechny dávky.
     const den = dotaz.get("den") ?? denPred(denZ(p.ted()), 1);
     if (!jePlatnyDen(den)) return chyba(400, "chybí platný den ve tvaru RRRR-MM-DD");
-    return odpoved(200, await podkladyDne(p, den));
+    const podklady = await podkladyDne(p, den);
+    // Úklid je vnitřní věc serveru: heslo pro rozbor ho smí spustit, ale nic z něj nevidí,
+    // a jeho chyba podklady neshodí.
+    try {
+      await uklid(p.sklad, p.ted());
+    } catch {
+      // Dodělá se příště.
+    }
+    return odpoved(200, podklady);
   }
   if (co === "rozbor" && zadost.method === "POST") {
     const telo = await teloJson(zadost, NEJVETSI_ROZBOR);

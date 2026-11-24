@@ -16,7 +16,7 @@ import { nactiKampan, nasadaUrovne } from "../urovne/index";
 import { RESENI } from "../urovne/reseni";
 
 const WEB = "https://mostmistr.example";
-const SPRAVCE = { authorization: "Bearer tajne-heslo-123" };
+const SPRAVCE = { authorization: "Bearer tajne-heslo-spravce-123" };
 
 function hlavicka(hrac = "aaaaaaaaaaaaaaaa", sezeni = "bbbbbbbbbbbbbbbb"): HlavickaDeniku {
   return { verze: VERZE_DENIKU, hrac, sezeni, zacatek: 1_795_000_000_000, hra: "0.22.0", sestaveni: "abc1234", jazyk: "cs/cs-CZ", okno: [1280, 720], dotyk: false };
@@ -34,7 +34,8 @@ function server(cas: string): ProstrediServeru & { cas: string } {
     ted: () => new Date(p.cas),
     nahoda: () => (++cislo).toString(16).padStart(6, "0"),
     prostredi: "test",
-    hesloSpravce: "tajne-heslo-123",
+    hesloSpravce: "tajne-heslo-spravce-123",
+    adresa: (() => "203.0.113.7") as (zadost: Request) => string | null,
   };
   return p;
 }
@@ -118,7 +119,10 @@ describe("podklady denního rozboru", () => {
   it("když zpráv přijde víc, než se vejde, berou se rovnoměrně z celého dne; cizí texty jsou oříznuté a očištěné", async () => {
     const p = server("2026-11-22T00:00:01.000Z");
     const celkem = NEJVIC_VAZEB_V_PODKLADECH + 60;
-    // Někdo den hned po půlnoci zaplaví zprávami; poslední zpráva dne je od skutečného hráče.
+    // Někdo den hned po půlnoci zaplaví zprávami (z mnoha adres, jinak by ho zastavil strop na
+    // adresu); poslední zpráva dne je od skutečného hráče.
+    let adresa = 0;
+    p.adresa = () => `198.51.100.${++adresa % 250}`;
     for (let i = 0; i < celkem - 1; i++) {
       p.cas = new Date(Date.parse("2026-11-22T00:00:01.000Z") + i * 1000).toISOString();
       expect((await prijmiVazbu(zadost("/api/vazba", { hlavicka: hlavicka(), druh: "jine", text: `Záplava ${i}` }), p)).status).toBe(201);

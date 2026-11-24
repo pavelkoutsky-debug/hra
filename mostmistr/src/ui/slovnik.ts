@@ -1418,6 +1418,8 @@ const CS = {
   "zebricek.odmitnuto.adresa": "Z tvého připojení dnes server přepočítal už tolik mostů, kolik z jednoho smí. Zkus to prosím zítra.",
   "zebricek.odmitnuto.nejdriv": "Server tenhle most ještě nezná z běžné zkoušky. Projdi s ním běžnou zkouškou a zapiš ho znovu.",
   "zebricek.odmitnuto.soubeh": "Žebříček se zrovna měnil a zápis se nepovedl. Zkus to prosím znovu.",
+  "zebricek.odmitnuto.bez-adresy": "Server teď nepozná, odkud zápis přichází, a žebříček proto nepřijímá. Zkus to později.",
+  "zebricek.odmitnuto.prezdivka": "Tuhle přezdívku žebříček nepřijme. Zvol si jinou.",
   "dilna.tlacitko": "Dílna",
   "dilna.tlacitko.popis": "Uložené mosty z pískoviště: uložit tenhle, otevřít jiný, poslat scénář odkazem",
   "dilna.nadpis": "Dílna: uložené mosty",
