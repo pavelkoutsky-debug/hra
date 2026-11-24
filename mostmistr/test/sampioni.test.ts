@@ -14,6 +14,7 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
+import { rysyMostu, type RysyMostu } from "../src/data/rysy";
 import type { Uroven } from "../src/data/uroven";
 import { VERZE_FYZIKY } from "../src/jadro/verze";
 import { Zkouska } from "../src/zkouska/zkouska";
@@ -172,6 +173,21 @@ describe("šampioni výzev", () => {
     },
     7_200_000,
   );
+});
+
+describe("šampioni závěrečné kapitoly", () => {
+  it("používají obě mechaniky své úrovně", () => {
+    // Kontrola obtížnosti M14: šampioni 8-02 byly lávky bez laděného tlumiče (hledání vyšlo
+    // z mostu, kterým šla úroveň obejít) a zlato výzev tak hráče vedlo mimo lekci. Šampion
+    // kapitoly 8 má být most, jaký úroveň chce: 8-01 lana a ztužující příhrada, 8-02 lana
+    // a laděný tlumič, 8-03 příhrada na pístu.
+    const rysy = (id: string, meritko: Meritko): RysyMostu => rysyMostu(sampionUrovne(id, meritko)!, kampan.find((u) => u.id === id)!);
+    for (const meritko of MERITKA_SAMPIONU) {
+      expect(rysy("8-01", meritko), `8-01 ${meritko}`).toMatchObject({ soustava: "zaveseny", prihradaNavic: true });
+      expect(rysy("8-02", meritko), `8-02 ${meritko}`).toMatchObject({ soustava: "zaveseny", ladeneTlumice: true });
+      expect(rysy("8-03", meritko).kridel, `8-03 ${meritko}`).toBe(1);
+    }
+  });
 });
 
 describe("zeštíhlení mostu", () => {
