@@ -1468,7 +1468,7 @@ const CS = {
   "zadani.8-01":
     "Přes údolí s řekou povede železnice v jediném poli dlouhém šestadevadesát metrů; za rychlíkem přijede uhelný vlak, který na mostě zastaví. Pylony smějí stát jen na březích a nad středem řeky se smí stavět jen nízko, takže se tu lana a ztužující nosník musí doplnit.",
   "zadani.8-01.vice":
-    "Vlak je několikrát těžší než silniční provoz. Lana z pylonů na březích dosáhnou jen do dvou třetin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
+    "Vlak je několikrát těžší než silniční provoz. Na straně k řece vede po pylonech do výšky osmnácti metrů schodiště pro údržbu, takže lana k řece smějí z pylonu vycházet až nad ním. Pod nízký strop nad středem řeky odtamtud dosáhnou z každého břehu jen do necelých dvou pětin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
   "zadani.8-02":
     "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést. Lana lávku unesou levně, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s².",
   "zadani.8-02.vice":

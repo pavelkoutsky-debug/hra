@@ -223,6 +223,53 @@ describe("lekce, které nejde obejít", () => {
     for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["4-05"]![klic], uroven), klic).toEqual([]);
   });
 
+  it("8-01: zavěšený most bez ztužující příhrady nejde postavit; lana dosáhnou jen do styčníku 37", () => {
+    // Recenze obtížnosti M14 (nález 2): s pylonem 20 m a lany z 15 a 12 m do styčníků 42 a 48
+    // dostal most bez příhrady rozpočtovou medaili. Zóna u pylonu (do 18 m) spolu se stropem
+    // 4 m nad středem takové lano nepustí: pod strop projde z pylonu jen lano, které začíná
+    // nejvýš ve výšce 4·(x + 6)/(x − 28,5), a to je pro styčník 38 už 18,5 m, pro 42 jen 14,2 m.
+    const uroven = kampan.find((u) => u.id === "8-01")!;
+    const k = new Kreslic("8-01");
+    for (let x = 0; x < 96; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
+    for (const [pylon, smer] of [
+      [-6, 1],
+      [102, -1],
+    ] as const) {
+      const x = (odBrehu: number): number => (smer === 1 ? odBrehu : 96 - odBrehu);
+      for (const odBrehu of [6, 12, 18, 24, 30, 36]) k.prut("lano", [pylon, 20], [x(odBrehu), 0]);
+      k.prut("lano", [pylon, 18], [x(36), 0]);
+      k.prut("lano", [pylon, 15], [x(42), 0]);
+      k.prut("lano", [pylon, 12], [x(48), 0]);
+      k.prut("lano-nosne", [pylon, 20], [pylon - smer * 24, 0]);
+      k.prut("lano-nosne", [pylon, 15], [pylon - smer * 24, 0]);
+      k.prut("lano", [pylon, 12], [pylon - smer * 24, 0]);
+      for (const [od, po] of [
+        [0, 12],
+        [12, 15],
+        [15, 18],
+        [18, 20],
+      ] as const) {
+        k.prut("pilir", [pylon, od], [pylon, po]);
+      }
+    }
+    const problemy = zkontrolujNavrh(k.navrh(), uroven);
+    expect(new Set(problemy.map((p) => p.druh))).toEqual(new Set(["prut-v-zakazane-zone"]));
+    // Do zóny vedou právě lana k řece, která z pylonu vycházejí pod 18 m, a lano do styčníku 6.
+    expect(problemy.length).toBeGreaterThanOrEqual(8);
+    // Jediné lano z hlavy 22 m: do styčníku 36 pod strop projde, do 42 už ne.
+    const jedinymLanem = (cil: number): string[] => {
+      const m = new Kreslic("8-01");
+      for (let x = 0; x < 96; x += 6) m.prut("kolejiste", [x, 0], [x + 6, 0]);
+      m.prut("pilir", [-6, 0], [-6, 12]);
+      m.prut("pilir", [-6, 12], [-6, 22]);
+      m.prut("lano", [-6, 22], [cil, 0]);
+      return zkontrolujNavrh(m.navrh(), uroven).map((p) => p.druh).filter((druh) => druh === "prut-v-zakazane-zone");
+    };
+    expect(jedinymLanem(36)).toEqual([]);
+    expect(jedinymLanem(42)).toEqual(["prut-v-zakazane-zone"]);
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["8-01"]![klic], uroven), klic).toEqual([]);
+  });
+
   it("2-04: o kotvy pro tlumiče se neopře vzpěra; tlumič do nich vést smí", () => {
     // Kontrola obtížnosti M12: se vzpěrami z těch kotev do každého styčníku mostovky měla lávka
     // bez jediného tlumiče všechny tři medaile a zlato obou výzev za 87 % inženýrského rozpočtu.

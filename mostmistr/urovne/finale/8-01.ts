@@ -13,9 +13,9 @@
 // se z té výšky dostanou nejdál do styčníku 37 (vpravo 59). Strmější lano do středu narazí do
 // stropu, plošší začíná pod 18 m. Lano nebo táhlo z volného styčníku v pásu vějíře by muselo
 // mířit pod plošší přímku, než jakou dají lana z pylonu nad 18 m, takže ho drží jen lano do
-// mostovky u břehu a to s mnohonásobným tahem (zkoušeno: pylon povolí hned na začátku).
+// mostovky u břehu, a to s mnohonásobným tahem (zkoušeno 20 takových mostů, žádný neprošel).
 // Bez příhrady tak zbude 22 m kolejiště bez lan a ani svařené ho vlak nepřejede; příhrada bez lan
-// takové pole nepřeklene a konzola z pylonů bez lan se pod rychlíkem zborcí. Zóny u opěr berou
+// takové pole nepřeklene a konzola z pylonů bez lan, která by vlak unesla, stojí přes 5,3 milionu. Zóny u opěr berou
 // oporu konzolové příhradě, která by jinak lana nahradila ocelovým táhlem do kotev.
 // Recenze M14 našla, že s dřívějším stropem 4,5 m a bez zóny u pylonu lana z 15 a 12 m dosáhla
 // do styčníků 42 a 48 a most bez příhrady dostal rozpočtovou medaili; takový most dnes neprojde
@@ -230,7 +230,7 @@ export const reseni: ReseniUrovne = {
   ],
   vyzvy: [
     // Nejlevnější most, který jsem našel: nízká příhrada 3 m a kotvení z jednoho nosného
-    // a jednoho obyčejného lana. Projde neporušený, paty pylonů jedou na 94 %.
+    // a jednoho obyčejného lana. Projde neporušený, paty pylonů jedou na 92 %.
     {
       nazev: "pylon 21 m, příhrada 3 m, kotevní lano nosné a obyčejné",
       navrh: navrh((k) => {
