@@ -5,6 +5,7 @@
 import { PREDPETI_LANA, type IdPrvku } from "../src/data/katalog";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
+import { RESENI_ZKOUSEK } from "./zkousky/index";
 
 export interface ReseniUrovne {
   /** Most, který projde zkouškou; nemusí být levný ani úsporný. */
@@ -798,7 +799,7 @@ export const MOSTY_UKAZEK = {
   "6-03": viadukt(3, true, vzperyPiliru(TO)),
 } as const satisfies Record<string, NavrhMostu>;
 
-export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
+const RESENI_KAPITOL: Readonly<Record<string, ReseniUrovne>> = {
   // Lávka přes potok, 8 m: dvě výpravy proti sobě, 36 lidí. Lekce je kinematická (mostovka
   // s kloubem uprostřed se bez trojúhelníku složí); trámy jsou na pěší silné dost.
   "1-01": {
@@ -1425,3 +1426,6 @@ export const RESENI: Readonly<Record<string, ReseniUrovne>> = {
     ],
   },
 };
+
+/** Mosty všech úrovní kampaně: čtyři úrovně každé kapitoly a její zkouška (`urovne/zkousky/`). */
+export const RESENI: Readonly<Record<string, ReseniUrovne>> = { ...RESENI_KAPITOL, ...RESENI_ZKOUSEK };

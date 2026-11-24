@@ -1,0 +1,141 @@
+{
+  "verze": 8,
+  "id": "3-05",
+  "nazev": "Nad kolejištěm",
+  "vyrez": {
+    "xMin": -10,
+    "yMin": -13,
+    "xMax": 64,
+    "yMax": 10
+  },
+  "teren": [
+    {
+      "x": -10,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 1,
+      "y": -8
+    },
+    {
+      "x": 4,
+      "y": -10
+    },
+    {
+      "x": 50,
+      "y": -10
+    },
+    {
+      "x": 53,
+      "y": -8
+    },
+    {
+      "x": 54,
+      "y": 0
+    },
+    {
+      "x": 64,
+      "y": 0
+    }
+  ],
+  "hladina": null,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 54,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 1,
+      "y": -8,
+      "typ": "pevna"
+    },
+    {
+      "x": 53,
+      "y": -8,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [
+    {
+      "xMin": -10,
+      "yMin": 2.5,
+      "xMax": 64,
+      "yMax": 10
+    },
+    {
+      "xMin": 6.5,
+      "yMin": -10,
+      "xMax": 47.5,
+      "yMax": -1.5
+    }
+  ],
+  "trasy": [
+    {
+      "id": "silnice",
+      "druh": "silnice",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 54,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 7,
+  "hmotnostVybaveni": 600,
+  "nerovnost": "B",
+  "rozpocet": 1800000,
+  "inzenyrskyRozpocet": 1515000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.8
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "ocel-tezka"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "silnice",
+      "smer": 1,
+      "druh": "nakladni",
+      "pocet": 5,
+      "rozestup": 11,
+      "brzdeni": {
+        "misto": 51,
+        "stani": 3
+      }
+    },
+    {
+      "cas": 2,
+      "trasa": "silnice",
+      "smer": -1,
+      "druh": "autobus"
+    }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": true
+}

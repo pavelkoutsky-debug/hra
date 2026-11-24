@@ -203,6 +203,12 @@ export class Zkouska {
   /** Kosinus největšího otočení mostovky při zvedání a co dělaly písty při prvním nárazu lodi. */
   #kosinusOtoceni = 1;
   #pistyPriNarazu: PohybZkousky["pistyPriNarazu"] = null;
+  /** Největší otočení každého prutu mostovky proti výkresu (kosinus), do prvního porušení a do překlopení. */
+  #kosinusPrutu: Float64Array = new Float64Array(0);
+  /** Prut, do kterého narazila první loď. */
+  #narazenyPrut: number | null = null;
+  /** Kdy se most poprvé porušil vzhledem ke zvedání (`PohybZkousky.poruseno`). */
+  #porusenoPriPohybu: PohybZkousky["poruseno"] = null;
   /** Stav každé lodi úrovně. */
   readonly #lode: Uint8Array;
 
@@ -369,6 +375,7 @@ export class Zkouska {
 
     this.trasyMostovky = stavba.trasy.flatMap((t) => t.pruty);
     this.#prutyMostovky = new Set(this.trasyMostovky);
+    this.#kosinusPrutu = new Float64Array(navrh.pruty.length).fill(1);
     // Komfort se měří ve všech styčnících mostovky včetně skrytých dělicích. Budič používá
     // totéž měření: zajímá ho, jak moc se mostovka rozkmitá.
     if (this.#budic || uroven.jizdniRad.some((p) => jeClovek(p.druh))) {
@@ -616,6 +623,16 @@ export class Zkouska {
   }
 
   /**
+   * Zapamatuje si, kdy se most poprvé porušil vzhledem ke zvedání. Co zkouška o zvedání
+   * a zamknutí změří potom, je následek porušení: o zvednutí je rozhodnuto, jakmile loď
+   * narazila nebo se most začal sklápět. Volá se před sledováním lodí.
+   */
+  #sledujPoruseniPohybu(): void {
+    if (this.#porusenoPriPohybu !== null || this.#fazePohybu === POHYB_HOTOV || !this.simulace.porusena) return;
+    this.#porusenoPriPohybu = this.#fazePohybu === POHYB_SKLAPENI || this.#narazenyPrut !== null ? "zamykani" : "zvedani";
+  }
+
+  /**
    * Hlídá, jestli píst mostovku nepřetlačil přes svislici: prvek mostovky otočený proti
    * výkresu o víc než čtvrt kruhu znamená překlopené křídlo. Trosky po porušení se nepočítají.
    */
@@ -623,6 +640,7 @@ export class Zkouska {
     if (this.#preklopeno || this.#fazePohybu === POHYB_PRED || this.simulace.porusena) return;
     const s = this.simulace.soustava;
     const mostovka = this.#prutyMostovky;
+    const kosinusy = this.#kosinusPrutu;
     for (let e = 0; e < s.pocetPrvku; e++) {
       const prut = s.prut[e]!;
       if (prut < 0 || !mostovka.has(prut)) continue;
@@ -631,12 +649,19 @@ export class Zkouska {
       const dx = s.x[b]! - s.x[a]!;
       const dy = s.y[b]! - s.y[a]!;
       const prumet = dx * s.osaX0[e]! + dy * s.osaY0[e]!;
-      // Jak vysoko se křídlo dostalo: nejmenší kosinus úhlu mezi dílem mostovky a jeho výkresem.
+      // Jak vysoko se křídlo dostalo: nejmenší kosinus úhlu mezi dílem mostovky a jeho výkresem,
+      // u každého prutu zvlášť (dvě křídla se nezvedají stejně) a za celý most.
       if (prumet > 0) {
         const delka2 = dx * dx + dy * dy;
-        if (prumet * prumet < this.#kosinusOtoceni * this.#kosinusOtoceni * delka2) this.#kosinusOtoceni = prumet / Math.sqrt(delka2);
+        const dosud = kosinusy[prut]!;
+        if (prumet * prumet < dosud * dosud * delka2) {
+          const kosinus = prumet / Math.sqrt(delka2);
+          kosinusy[prut] = kosinus;
+          if (kosinus < this.#kosinusOtoceni) this.#kosinusOtoceni = kosinus;
+        }
+        continue;
       }
-      if (prumet >= 0) continue;
+      kosinusy[prut] = 0;
       this.#kosinusOtoceni = 0;
       this.#preklopeno = true;
       udalosti.push({ cas: this.simulace.cas, druh: "pohyb", faze: "preklopeno" });
@@ -645,9 +670,9 @@ export class Zkouska {
   }
 
   /**
-   * Proč zámky po sklopení nezapadly: stav prvního odemčeného zámku na konci zkoušky. Zámek
-   * zapadne, když písty dojely zpátky, konce jsou u sebe blíž než `VULE_ZAMKU` a skoro se vůči
-   * sobě nehýbou; tohle říká, na čem z toho to vázne.
+   * Proč zámky po sklopení nezapadly: stav odemčeného zámku, jehož konce jsou na konci zkoušky
+   * od sebe nejdál. Zámek zapadne, když písty dojely zpátky, konce jsou u sebe blíž než
+   * `VULE_ZAMKU` a skoro se vůči sobě nehýbou; tohle říká, na čem z toho to vázne.
    */
   #procNezamceno(): NonNullable<PohybZkousky["nezamceno"]> | null {
     const s = this.simulace.soustava;
@@ -694,6 +719,7 @@ export class Zkouska {
         if (!useckaVProfilu(s.x[a]!, s.y[a]!, s.x[b]!, s.y[b]!, lod.xMin, lod.xMax, hladina, hladina + lod.vyska)) continue;
         this.#lode[k] = LOD_NARAZILA;
         udalosti.push({ cas, druh: "lod", lod: k, stav: "narazila", prut });
+        if (this.#narazenyPrut === null) this.#narazenyPrut = prut;
         // Proč tam prut byl: křídlo ještě stoupalo, stálo na konci zdvihu, nebo už zase kleslo.
         if (this.#pistyPriNarazu === null && this.#fazePohybu === POHYB_ZVEDANI) {
           this.#pistyPriNarazu = !this.#zvednuto ? "zveda" : pistyVCili(s, this.#pisty) ? "drzi" : "klesl";
@@ -793,6 +819,7 @@ export class Zkouska {
       let novaStavba = this.#ridPohyb(davka.udalosti);
       if (sim.kroku % INTERVAL_OBALKY === 0) {
         this.#aktualizujObalku();
+        if (this.#uroven.pohyb) this.#sledujPoruseniPohybu();
         this.#sledujLode(davka.udalosti);
         if (this.#uroven.pohyb) this.#sledujPreklopeni(davka.udalosti);
       }
@@ -1059,6 +1086,9 @@ export class Zkouska {
           nejvetsiSilaPistu: this.#nejvetsiSilaPistu,
           kosinusOtoceni: this.#kosinusOtoceni,
           pistyPriNarazu: this.#pistyPriNarazu,
+          kosinusPrutu: Array.from(this.#kosinusPrutu),
+          narazenyPrut: this.#narazenyPrut,
+          poruseno: this.#porusenoPriPohybu,
           nezamceno: this.#fazePohybu === POHYB_SKLAPENI ? this.#procNezamceno() : null,
         }
       : null;

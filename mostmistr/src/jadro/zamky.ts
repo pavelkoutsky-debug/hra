@@ -195,12 +195,15 @@ export function zamkniZamky(s: Soustava, z: Zamky): number {
 }
 
 /**
- * O kolik se míjejí konce prvního odemčeného zámku a jak rychle se vůči sobě hýbou: vodorovně
- * a svisle v metrech (svisle kladně, když konec se zámkem leží níž než jeho protějšek), rychlost
- * v m/s. null, když žádný zámek odemčený není nebo jeho druhý konec už neexistuje. Jen čte;
- * slouží větě o tom, proč most po sklopení nezamkl.
+ * O kolik se míjejí konce odemčeného zámku a jak rychle se vůči sobě hýbou: vodorovně a svisle
+ * v metrech (svisle kladně, když konec se zámkem leží níž než jeho protějšek), rychlost v m/s.
+ * Z více odemčených zámků ten, jehož konce jsou od sebe nejdál (ten, který zapadnout nemůže).
+ * null, když žádný zámek odemčený není nebo jeho druhý konec už neexistuje. Jen čte; slouží
+ * větě o tom, proč most po sklopení nezamkl.
  */
 export function mezeraZamku(s: Soustava, z: Zamky): { vodorovne: number; svisle: number; rychlost: number } | null {
+  let nejdal: { vodorovne: number; svisle: number; rychlost: number } | null = null;
+  let nejvic = -1;
   for (let k = 0; k < z.pocet; k++) {
     if (z.stav[k] !== ZAMEK_ODEMCENY) continue;
     const i = z.stycnik[k]!;
@@ -208,11 +211,14 @@ export function mezeraZamku(s: Soustava, z: Zamky): { vodorovne: number; svisle:
     if (j < 0 && !naOpere(z, k)) continue;
     const dx = j >= 0 ? s.x[j]! - s.x[i]! : z.x0[k]! - s.x[i]!;
     const dy = j >= 0 ? s.y[j]! - s.y[i]! : z.y0[k]! - s.y[i]!;
+    const daleko = dx * dx + dy * dy;
+    if (!(daleko > nejvic)) continue;
     const dvx = j >= 0 ? s.vx[j]! - s.vx[i]! : s.vx[i]!;
     const dvy = j >= 0 ? s.vy[j]! - s.vy[i]! : s.vy[i]!;
-    return { vodorovne: dx < 0 ? -dx : dx, svisle: dy, rychlost: Math.sqrt(dvx * dvx + dvy * dvy) };
+    nejvic = daleko;
+    nejdal = { vodorovne: dx < 0 ? -dx : dx, svisle: dy, rychlost: Math.sqrt(dvx * dvx + dvy * dvy) };
   }
-  return null;
+  return nejdal;
 }
 
 /** Součinitel tlumení pro daný poměrný útlum: 2·ζ·√(k·m), kde 1/m je `invHmota`. */

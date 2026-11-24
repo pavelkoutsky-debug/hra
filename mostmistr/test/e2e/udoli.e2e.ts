@@ -403,12 +403,17 @@ describe("náklad století: visutý most", () => {
     await stranka.keyboard.press("Escape");
     await akce("dopnout").click();
     await stranka.locator('body[data-dopnuti="hotovo"]').waitFor({ timeout: 90_000 });
-    expect(await hlaseni()).toMatch(/^Lana mostovku do výkresu nedotáhnou: musela by nést víc, než bezpečně unesou \(už teď \d\d % své pevnosti\)\. Mostovka zůstává až \d+ mm pod výkresem\./);
+    expect(await hlaseni()).toMatch(/^Lana mostovku do výkresu nedotáhnou: mostovka zůstává až \d+ mm pod výkresem a lana už teď nesou \d\d % své pevnosti\. Lana by musela nést víc, než bezpečně unesou: dej nosnému lanu větší průvěs/);
     await stranka.screenshot({ path: `${SLOZKA}/99d-rovne-lano-dopnuti.png` });
-    // Zkouška skončí obyčejným pádem, ne rozpadem výpočtu, a poradí dopnutí.
+    // Zkouška skončí obyčejným pádem, ne rozpadem výpočtu. Dopnutí už proběhlo a nestačilo:
+    // výsledek ho neradí znovu (hráč by se točil v kruhu), ale řekne, co pomůže místo něj.
     await spust();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
-    expect(await udaj("vysledek-shrnuti")).toContain("Lana nejsou dopnutá: mostovka už před zkouškou visela");
+    const poDopnuti = await udaj("vysledek-shrnuti");
+    expect(poDopnuti).toMatch(/Mostovka už před zkouškou visela \d+ mm pod výkresem, i když jsou lana dopnutá: napínáky víc nespraví\./);
+    expect(poDopnuti).toContain("dej nosnému lanu větší průvěs");
+    expect(poDopnuti).not.toContain("Lana nejsou dopnutá");
+    expect(await udaj("vysledek-veta")).not.toContain("Dopnout lana");
     await stranka.screenshot({ path: `${SLOZKA}/99e-rovne-lano-vysledek.png` });
     await akce("upravit").click();
   }, 360_000);
