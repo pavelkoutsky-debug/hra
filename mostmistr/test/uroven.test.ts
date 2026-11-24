@@ -324,4 +324,22 @@ describe("verze formátu úrovně", () => {
     ocekavejChybu({ ...zaklad, verze: 8 }, "uroven.zkouskova");
     ocekavejChybu({ ...zaklad, verze: 8, zkouskova: "ano" }, "uroven.zkouskova");
   });
+
+  it("verze 8 se převede jako úroveň, která průhyb mostovky nehlídá; od verze 9 to soubor říká sám", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const zaklad: Record<string, any> = { ...platna(), verze: 8, nejvetsiZavazi: 0, osaFrekvenci: false, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false, nejhorsiKomfort: 3, nerovnost: "zadna", pohyb: null, lode: [], zkouskova: false };
+    const osma = nactiUroven(zaklad);
+    expect(osma.verze).toBe(VERZE_UROVNE);
+    expect(osma.nejvetsiPruhyb).toBeNull();
+    expect(nactiUroven({ ...zaklad, verze: 9, nejvetsiPruhyb: 0.1 }).nejvetsiPruhyb).toBe(0.1);
+    expect(nactiUroven({ ...zaklad, verze: 9, nejvetsiPruhyb: null }).nejvetsiPruhyb).toBeNull();
+    // Ve verzi 9 je pole povinné, starší verze ho neznají a mez musí dávat smysl.
+    ocekavejChybu({ ...zaklad, verze: 9 }, "uroven.nejvetsiPruhyb");
+    // Soubor verze 8 mez mít nemůže: převod ji nastaví na „nehlídá se“.
+    expect(nactiUroven({ ...zaklad, verze: 8, nejvetsiPruhyb: 0.1 }).nejvetsiPruhyb).toBeNull();
+    ocekavejChybu({ ...zaklad, verze: 9, nejvetsiPruhyb: 0 }, "uroven.nejvetsiPruhyb");
+    ocekavejChybu({ ...zaklad, verze: 9, nejvetsiPruhyb: 2 }, "uroven.nejvetsiPruhyb");
+    // U mostu, který se zvedá, průhyb proti výkresu hlídat nejde.
+    ocekavejChybu({ ...zaklad, verze: 9, nejvetsiPruhyb: 0.1, pohyb: { zvednout: 5, sklopit: 20 } }, "uroven.nejvetsiPruhyb");
+  });
 });

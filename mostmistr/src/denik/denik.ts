@@ -105,6 +105,14 @@ export class Denik {
   /** Kolik dávek deník v této stránce úspěšně odeslal. */
   odeslano = 0;
 
+  /**
+   * Náhodné číslo, pod kterým si hra vede záznam hraní tohoto prohlížeče. Hráč ho vidí v okně
+   * Soukromí: podle něj jde jeho záznam na serveru dohledat a na požádání smazat.
+   */
+  get cisloHrace(): string {
+    return this.#hrac;
+  }
+
   constructor(p: ProstrediDeniku) {
     this.#p = p;
     this.#volby = p.trvala ?? p.sezeni;

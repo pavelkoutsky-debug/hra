@@ -85,8 +85,10 @@ function otiskTextu(text: string): string {
  * smazalo, i když mosty v něm platí dál.
  */
 export function otiskZadani(uroven: Uroven): string {
-  const { nazev: _nazev, verze: _verze, inzenyrskyRozpocet: _inzenyrsky, mistrovska: _mistrovska, zkouskova: _zkouskova, ...zadani } = uroven;
-  return otiskTextu(JSON.stringify(zadani));
+  const { nazev: _nazev, verze: _verze, inzenyrskyRozpocet: _inzenyrsky, mistrovska: _mistrovska, zkouskova: _zkouskova, nejvetsiPruhyb, ...zadani } = uroven;
+  // Mez průhybu (formát 9) do otisku patří, jen když ji úroveň má: úrovním bez ní by nové pole
+  // jinak změnilo klíč a žebříček by začal od nuly, i když se na nich nic nezměnilo.
+  return otiskTextu(JSON.stringify(nejvetsiPruhyb === null ? zadani : { ...zadani, nejvetsiPruhyb }));
 }
 
 /** Ověřovač nad úrovněmi kampaně, jak je nese tohle sestavení. */

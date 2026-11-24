@@ -336,7 +336,8 @@ describe("stránka se zvuky", () => {
   }, 180_000);
 
   it("ze zkušebny na stránku vede odkaz", async () => {
-    await stranka.goto(`${adresa}zkusebna.html`);
+    // Odkazy na nástroje autorů ukazuje zkušebna jen s ?vyvoj=1 (hráči na oči nepatří).
+    await stranka.goto(`${adresa}zkusebna.html?vyvoj=1`);
     await stranka.locator('a[href="/zvuky.html"]').click();
     await stranka.locator("#mereni").waitFor();
   });

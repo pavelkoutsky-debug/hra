@@ -77,3 +77,28 @@ export class SkladVPameti implements SkladZaznamu {
     return Promise.resolve([...slozky].sort());
   }
 }
+
+/** Zápis s podmínkou se ani po opakování nepovedl: někdo záznam pořád měnil. */
+export class SoubehZapisu extends Error {}
+
+/** Kolikrát se zkusí zápis s podmínkou, když záznam mezitím změnil někdo jiný. */
+const POKUSU_O_ZAPIS = 6;
+
+/**
+ * Zápis s podmínkou a s opakováním: přečte, upraví, zapíše; když mezitím zapsal někdo jiný,
+ * znovu. Když se to nepovede ani napotřetí… pošesté, vzdá to (`SoubehZapisu`): zápis bez
+ * podmínky by přepsal cizí zápis, a to je horší než požádat o nový pokus. `zapsat: undefined`
+ * znamená „nic neměnit“.
+ */
+export async function upravSPodminkou<T>(
+  sklad: SkladZaznamu,
+  klic: string,
+  zmena: (dnes: unknown) => { zapsat: unknown; vysledek: T },
+): Promise<T> {
+  for (let pokus = 0; pokus < POKUSU_O_ZAPIS; pokus++) {
+    const { hodnota, znacka } = await sklad.ctiSeZnackou(klic);
+    const { zapsat, vysledek } = zmena(hodnota);
+    if (zapsat === undefined || (await sklad.zapisPokud(klic, zapsat, znacka))) return vysledek;
+  }
+  throw new SoubehZapisu(klic);
+}

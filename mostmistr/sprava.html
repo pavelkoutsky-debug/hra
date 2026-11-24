@@ -85,12 +85,12 @@
     <p>
       Zpětná vazba hráčů a deník hraní. Stránka je jen pro tebe: bez hesla správce server nic
       nevydá. Heslo je proměnná prostředí <code>MM_SPRAVCE_HESLO</code> v nastavení webu na Netlify
-      (aspoň osm znaků, bez diakritiky; nejlépe dlouhé náhodné); po jejím nastavení web znovu nasaď.
+      (aspoň šestnáct znaků, bez diakritiky; nejlépe dlouhé náhodné); po jejím nastavení web znovu nasaď.
     </p>
 
     <form class="rada" id="prihlaseni">
       <label for="heslo">Heslo správce</label>
-      <input id="heslo" type="password" autocomplete="current-password" required minlength="8" />
+      <input id="heslo" type="password" autocomplete="current-password" required minlength="16" />
       <button type="submit">Přihlásit</button>
       <button type="button" id="odhlasit" hidden>Odhlásit</button>
     </form>
@@ -219,6 +219,20 @@
           </table>
         </div>
       </section>
+
+      <h2>Smazat data hráče</h2>
+      <p>
+        Když hráč požádá o smazání svých údajů: smaže jeho deník hraní ze všech dnů, jeho zprávy zpětné vazby
+        a jeho řádky ve všech žebříčcích. Číslo hráče je v detailu zprávy (řádek Hráč) nebo v deníku; žebříček
+        vede hráče pod jiným, delším číslem, takže to může chtít smazat obě. Už spočítané souhrny dnů se
+        nepřepočítávají. Nejde to vrátit.
+      </p>
+      <form class="rada" id="smazani-hrace">
+        <label for="smazani-hrac">Číslo hráče</label>
+        <input id="smazani-hrac" required pattern="[0-9a-f]{8,32}" size="34" autocomplete="off" spellcheck="false" />
+        <button type="submit">Smazat data hráče</button>
+        <span id="smazani-prubeh" role="status"></span>
+      </form>
     </div>
 
     <script type="module" src="/src/sprava/stranka.ts"></script>

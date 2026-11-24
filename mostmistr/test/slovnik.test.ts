@@ -54,6 +54,12 @@ describe("angličtina", () => {
     expect(ceske).toEqual([]);
   });
 
+  it("měnu jmenuje jedním slovem: koruna, nikdy crown", () => {
+    // Jedna veličina se jmenovala „per koruna“ ve výsledku a „per crown“ v žebříčku.
+    const crown = klice.filter((klic) => /crown/i.test(TEXTY.en[klic] ?? ""));
+    expect(crown).toEqual([]);
+  });
+
   it("má název každé úrovně, zkušebního výkresu i sandboxu", () => {
     const bezNazvu = [...nactiUrovne().map((u) => u.id), ID_SANDBOXU].filter((id) => !(NAZVY_UROVNI_EN[id] ?? "").trim());
     expect(bezNazvu).toEqual([]);

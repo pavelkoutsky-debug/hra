@@ -1,0 +1,126 @@
+<!doctype html>
+<!-- Stránka pro neexistující adresu. Netlify ji vrací se stavem 404; je bez skriptů, aby fungovala vždy. -->
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b2f5c" />
+    <meta name="robots" content="noindex" />
+    <title>Mostmistr – stránka nenalezena / page not found</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --pozadi: #103f78;
+        --lista: #0b2f5c;
+        --cara: #cfe3ff;
+        --cara-silna: #ffffff;
+        --popisek: #8fb4e6;
+        --varovani: #ffd166;
+        color-scheme: dark;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+        background-color: var(--pozadi);
+        /* Rastr výkresu: jemný po metru, silnější po pěti. */
+        background-image:
+          linear-gradient(rgb(207 227 255 / 0.16) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(207 227 255 / 0.16) 1px, transparent 1px),
+          linear-gradient(rgb(207 227 255 / 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(207 227 255 / 0.07) 1px, transparent 1px);
+        background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+        color: var(--cara);
+        font-family: "DejaVu Sans Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .list {
+        width: min(640px, 100%);
+        border: 2px solid var(--cara);
+        background: rgb(11 47 92 / 0.88);
+      }
+      .list__vykres { display: block; width: 100%; height: auto; border-bottom: 1px solid var(--cara); }
+      .list__text { padding: 16px 20px 6px; }
+      h1 {
+        margin: 0 0 6px;
+        color: var(--cara-silna);
+        font-size: 18px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      p { margin: 0 0 14px; }
+      .en { color: var(--popisek); }
+      a.tlacitko {
+        display: inline-block;
+        margin: 2px 0 16px;
+        padding: 8px 14px;
+        border: 1px solid var(--cara-silna);
+        color: var(--cara-silna);
+        text-decoration: none;
+        letter-spacing: 0.04em;
+      }
+      a.tlacitko:hover, a.tlacitko:focus-visible { background: var(--cara-silna); color: var(--lista); outline: none; }
+      /* Rohové razítko jako na výkresu. */
+      .razitko {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        border-top: 1px solid var(--cara);
+        font-size: 11px;
+        color: var(--popisek);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .razitko span { padding: 5px 10px; border-left: 1px solid var(--cara); }
+      .razitko span:first-child { border-left: 0; }
+      .razitko strong { color: var(--varovani); font-weight: normal; }
+    </style>
+  </head>
+  <body>
+    <main class="list">
+      <!-- Most, kterému chybí pole: cesta, která nikam nevede. -->
+      <svg class="list__vykres" viewBox="0 0 640 220" role="img" aria-label="Most s chybějícím polem / A bridge with a missing span">
+        <g fill="none" stroke="#cfe3ff" stroke-width="1.5" stroke-linejoin="round">
+          <!-- terén údolí -->
+          <path d="M0 120 H96 L150 196 H490 L544 120 H640" stroke="#8fb4e6" />
+          <!-- levá část mostu: mostovka a příhrada -->
+          <path d="M96 120 H300" stroke="#ffffff" stroke-width="3" />
+          <path d="M96 120 L130 84 L164 120 L198 84 L232 120 L266 84 L300 120 M130 84 H266" />
+          <!-- pravá část mostu -->
+          <path d="M404 120 H544" stroke="#ffffff" stroke-width="3" />
+          <path d="M404 120 L438 84 L472 120 L506 84 L544 120 M438 84 H506" />
+          <!-- utržené konce -->
+          <path d="M300 120 L314 132 M404 120 L392 134" stroke="#ffd166" stroke-width="2" />
+        </g>
+        <!-- podpory -->
+        <g fill="none" stroke="#ffffff" stroke-width="1.5">
+          <path d="M96 120 l-9 14 h18 z" />
+          <path d="M544 120 l-9 14 h18 z" />
+          <path d="M531 139 h26" />
+        </g>
+        <!-- kóta chybějícího pole -->
+        <g stroke="#ffd166" stroke-width="1" fill="#ffd166">
+          <path d="M300 62 V112 M404 62 V112" stroke-dasharray="3 3" />
+          <path d="M300 70 H404" />
+          <path d="M300 70 l8 -4 v8 z M404 70 l-8 -4 v8 z" stroke="none" />
+        </g>
+        <text x="352" y="58" fill="#ffd166" text-anchor="middle" font-family="DejaVu Sans Mono, Consolas, Menlo, monospace" font-size="20">404</text>
+      </svg>
+      <div class="list__text">
+        <h1>Tady most nevede</h1>
+        <p>Stránka na této adrese neexistuje. Možná je odkaz zkrácený nebo překlepnutý.</p>
+        <p class="en" lang="en">There is no bridge here: this page does not exist. The link may be cut short or mistyped.</p>
+        <a class="tlacitko" href="/">Zpět do hry · Back to the game</a>
+      </div>
+      <div class="razitko">
+        <span>Mostmistr</span>
+        <span>List / Sheet <strong>404</strong></span>
+        <span>Nenalezeno / Not found</span>
+      </div>
+    </main>
+  </body>
+</html>

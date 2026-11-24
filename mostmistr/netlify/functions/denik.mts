@@ -4,9 +4,9 @@ import { prijmiDenik } from "../../src/server/obsluha";
 
 export default (zadost: Request, kontext: KontextNetlify): Promise<Response> => prijmiDenik(zadost, prostrediNetlify(kontext));
 
-// Hra posílá dávku nejvýš jednou za dvacet sekund a po každé zkoušce; víc než dvě za sekundu
-// z jedné adresy není hráč.
+// Hra posílá dávku nejvýš jednou za dvacet sekund a po každé zkoušce; třicet za minutu z jedné
+// adresy unese i pár hráčů za jedním připojením. Denní strop na skupinu adres hlídá obsluha.
 export const config = {
   path: "/api/denik",
-  rateLimit: { windowLimit: 120, windowSize: 60, aggregateBy: ["ip", "domain"] },
+  rateLimit: { windowLimit: 30, windowSize: 60, aggregateBy: ["ip", "domain"] },
 };

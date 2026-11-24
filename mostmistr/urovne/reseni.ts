@@ -467,28 +467,29 @@ function nedopnuty(most: NavrhMostu): NavrhMostu {
 }
 
 /**
- * Visutý most úrovně 4-04: pylony na březích s hlavou ve výšce `vez`, mezi nimi nosné lano
- * přes body ve výškách `vysky` nad styčníky mostovky (po 6 m), z každého závěs dolů a za pylony
- * kotevní lana do kotev v zemi.
+ * Visutý most úrovně 4-04: pylony na březích s hlavou ve výšce `vez` (nebo [levý, pravý]), mezi
+ * nimi nosné lano přes body ve výškách `vysky` nad styčníky mostovky (po 6 m), z každého svislý
+ * závěs dolů a za pylony kotevní lana do kotev v zemi.
  */
 function visuty(
   vysky: readonly number[],
-  vez: number,
+  vez: number | readonly [number, number],
   predpeti: readonly number[] = [],
-  volby: { nosne?: IdPrvku; kotevni?: boolean; svarit?: boolean } = {},
+  volby: { nosne?: IdPrvku; zavesy?: IdPrvku; kotevni?: boolean } = {},
 ): NavrhMostu {
   const nosne = volby.nosne ?? NOSNE;
+  const [vlevo, vpravo] = typeof vez === "number" ? [vez, vez] : vez;
   return navrh("4-04", (k) => {
     vozovka(k, 72);
-    for (const x of [-4, 76]) pilir(k, x, 0, vez);
-    const body: [number, number][] = [[-4, vez], ...vysky.map((y, i): [number, number] => [6 * (i + 1), y]), [76, vez]];
+    pilir(k, -4, 0, vlevo);
+    pilir(k, 76, 0, vpravo);
+    const body: [number, number][] = [[-4, vlevo], ...vysky.map((y, i): [number, number] => [6 * (i + 1), y]), [76, vpravo]];
     for (let i = 0; i + 1 < body.length; i++) k.prut(nosne, body[i]!, body[i + 1]!);
-    vysky.forEach((y, i) => k.prut(LANO, [6 * (i + 1), y], [6 * (i + 1), 0]));
+    vysky.forEach((y, i) => k.prut(volby.zavesy ?? LANO, [6 * (i + 1), y], [6 * (i + 1), 0]));
     if (volby.kotevni !== false) {
-      k.prut(nosne, [-4, vez], [-18, 0]);
-      k.prut(nosne, [76, vez], [90, 0]);
+      k.prut(nosne, [-4, vlevo], [-18, 0]);
+      k.prut(nosne, [76, vpravo], [90, 0]);
     }
-    if (volby.svarit) for (let x = 6; x < 72; x += 6) k.bod(x, 0, { svar: true });
     napni(k, predpeti);
   });
 }
@@ -504,26 +505,28 @@ const PREDPETI: Readonly<Record<string, readonly number[]>> = {
   "4-03 bez kotevnich": [-0.767, -0.818, -0.586, 0.821, 1.104, 1.114, 1.049, 0.981],
   "4-03 nizky": [0.672, 0.235, 0.172, 0.121, 0.135, 0.186, 0.246, 0.311, 0.379, -0.246],
   "4-04 pruchod": [
-    0.613, 0.007, -0.938, 0.292, 1.127, 1.148, 1.151, 1.126, 0.293, -0.939, 0.007, 0.613, 0.296, 5.539, 6.437, -3.937,
-    -9.068, -2.557, -9.068, -3.937, 6.438, 5.539, 0.296, 0.375, 0.375,
+    0.13, 0.419, 0.918, 0.829, 0.217, -0.018, -0.019, 0.217, 0.829, 0.918, 0.419, 0.13, 2.278, -4.483, -8.404, 7.056, -3.076,
+    36.027, -3.077, 7.056, -8.404, -4.483, 2.278, 0.357, 0.357,
   ],
   "4-04 rozpocet": [
-    0.817, -0.773, 0.178, 0.333, 1.015, 1.177, 1.177, 1.015, 0.333, 0.177, -0.773, 0.817, 8.119, 8.226, -0.805, -0.599,
-    -12.947, -7.038, -12.947, -0.599, -0.805, 8.226, 8.119, 0.402, 0.402,
+    0.087, 0.227, 0.745, 0.747, 0.427, 0.323, 0.855, 1.252, 0.644, 0.361, -0.187, 1.466, 6.973, -3.197, -12.244, -6.908,
+    -28.594, -7.64, -22.548, 3.646, -2.415, 6.394, 16.125, 0.392, 0.246,
   ],
   "4-04 mistrovska": [
     0.124, 0.429, 0.927, 0.839, 0.216, -0.033, -0.033, 0.216, 0.839, 0.927, 0.429, 0.124, 2.275, -4.521, -8.431, 7.123,
     -2.77, 36.759, -2.771, 7.122, -8.432, -4.521, 2.275, 0.356, 0.356,
   ],
   "4-04 slabe": [
-    1.425, 0.85, -0.134, 1.082, 1.912, 1.934, 1.936, 1.911, 1.083, -0.134, 0.85, 1.425, 0.295, 5.537, 6.44, -3.925,
-    -9.045, -2.529, -9.045, -3.925, 6.44, 5.537, 0.295, 1.583, 1.583,
+    0.613, 7.701, 0.422, 1.862, -8.552, -12.218, -12.66, -8.509, -7.53, -0.921, 23.881, -1.095, 13.121, 29.484, 50, 50,
+    49.993, 49.996, 49.985, 50, 49.998, 26.708, 14.171, -0.069, -0.078,
   ],
 };
 
-const OBLOUK_16 = [11, 9, 7, 5, 4, 4, 4, 5, 7, 9, 11];
-const OBLOUK_12 = [9, 7, 5, 4, 3, 3, 3, 4, 5, 7, 9];
-/** Nosné lano mostu pro mistrovskou: věže 13 m a průvěs až metr nad mostovku. */
+/**
+ * Nosné lano mostů 4-04: body ve výškách nad styčníky mostovky, průvěs až metr nad mostovku.
+ * Úroveň mu nechává volný jen pás kolem téhle čáry (zakázané zóny nad ním a pod ním), aby se
+ * nedalo nahradit šikmými lany z pylonů; mosty autora se liší výškou pylonů.
+ */
 const OBLOUK_13 = [8, 5, 3, 2, 1, 1, 1, 2, 3, 5, 8];
 
 // ---- Pomůcky kapitoly 6: trať ----
@@ -1177,18 +1180,22 @@ const RESENI_KAPITOL: Readonly<Record<string, ReseniUrovne>> = {
   // Náklad století, 72 m přes rokli, 120 t na podvalníku. Visutý most: nosné lano přes pylony
   // na březích, kotvené do země, a z něj závěsy k mostovce. Nosné lano se pod tíhou vyrovná do
   // oblouku samo; závěsy se mu musí přizpůsobit délkou, jinak se mostovka prověsí o desítky
-  // centimetrů (automatické dopnutí). Vyšší pylony a větší průvěs zmenší tah v laně.
+  // centimetrů (automatické dopnutí). Úroveň nemá ocel a volný nechává jen pás, kudy vede nosné
+  // lano, a svislé štěrbiny pro závěsy ve styčnících (recenze obtížnosti M17: příhrada a lana
+  // z pylonů rovnou do mostovky šly postavit levněji; test „lekce, které nejde obejít“).
   "4-04": {
-    pruchod: visuty(OBLOUK_16, 16, PREDPETI["4-04 pruchod"]),
-    rozpocet: visuty(OBLOUK_12, 12, PREDPETI["4-04 rozpocet"]),
-    // Nižší věže a nosné lano prověšené až metr nad mostovku: větší průvěs zmenší tah v laně
-    // i ohyb pylonů víc než vyšší věže a stojí míň.
+    // Závěsy z nosného lana: unese s rezervou, ale nosné lano stojí víc než trojnásobek obyčejného
+    // a závěsy nesou jen kus mostovky, takže most stojí víc, než inženýrský rozpočet dovolí.
+    pruchod: visuty(OBLOUK_13, 13, PREDPETI["4-04 pruchod"], { zavesy: NOSNE }),
+    // Levný: pylony 12 a 11 m. Nic se neporuší, ale nižší pylon se ohýbá přes devět desetin únosnosti.
+    rozpocet: visuty(OBLOUK_13, [12, 11], PREDPETI["4-04 rozpocet"]),
+    // Pylony 13 m: tah v laně i ohyb pylonů zůstanou kolem poloviny únosnosti.
     mistrovska: visuty(OBLOUK_13, 13, PREDPETI["4-04 mistrovska"]),
     pady: [
       { nazev: "jen mostovka", navrh: navrh("4-04", (k) => vozovka(k, 72)) },
-      { nazev: "nedopnutá lana", navrh: visuty(OBLOUK_16, 16) },
-      { nazev: "závěsné lano místo nosného", navrh: visuty(OBLOUK_16, 16, PREDPETI["4-04 slabe"], { nosne: LANO }) },
-      { nazev: "bez kotevních lan", navrh: visuty(OBLOUK_16, 16, [], { kotevni: false }) },
+      { nazev: "nedopnutá lana", navrh: visuty(OBLOUK_13, 13, [], { zavesy: NOSNE }) },
+      { nazev: "obyčejné lano místo nosného", navrh: visuty(OBLOUK_13, 13, PREDPETI["4-04 slabe"], { nosne: LANO }) },
+      { nazev: "bez kotevních lan", navrh: visuty(OBLOUK_13, 13, [], { kotevni: false }) },
     ],
   },
 

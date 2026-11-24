@@ -22,6 +22,9 @@ const OKRAJ_VYKRESU = 30;
 
 pripravJazyk();
 doplnTexty();
+// Odkazy na nástroje autorů (shoda výpočtu, měření výkonu, zvuky) nepatří hráči na oči: jen s ?vyvoj=1.
+const proVyvoj = new URLSearchParams(window.location.search).get("vyvoj") === "1";
+for (const uzel of document.querySelectorAll<HTMLElement>("[data-jen-vyvoj]")) uzel.hidden = !proVyvoj;
 
 const canvas = prvek(".vykres__platno", HTMLCanvasElement);
 const vyber = prvek("#pripad", HTMLSelectElement);

@@ -48,6 +48,7 @@ import { frekvenceVolnehoKmitani } from "./kmitani";
 import type {
   BudicZkousky,
   KomfortZkousky,
+  PruhybZkousky,
   ObalkaPrutu,
   PohybZkousky,
   ReakcePodpory,
@@ -185,6 +186,15 @@ export class Zkouska {
   readonly #obalkaKlidu: ObalkaPrutu[];
   readonly #reakce: ReakcePodpory[];
   /** Měření kmitání mostovky; null v úrovni, kde přes most nejdou lidé. */
+  /**
+   * Průhyb mostovky proti výkresu v úrovni, která ho hlídá (`Uroven.nejvetsiPruhyb`): styčníky
+   * mostovky (i skryté dělicí), jejich nakreslená výška a poloha x. Null v úrovni bez meze.
+   */
+  readonly #pruhybStycniky: Int32Array | null;
+  readonly #pruhybVykres: Float64Array;
+  readonly #pruhybX: Float64Array;
+  /** Co se zatím změřilo: největší odchylka (m), kdy a kde, a čas prvního překročení meze (−1: nebylo). */
+  readonly #pruhyb = { nejvetsi: 0, cas: 0, x: 0, prekroceno: -1 };
   readonly #komfort: MereniKomfortu | null;
   /**
    * Měření kmitání pod lidmi na mostě, který se porušil a stojí dál: pokračuje od prvního
@@ -405,6 +415,25 @@ export class Zkouska {
     this.trasyMostovky = stavba.trasy.flatMap((t) => t.pruty);
     this.#prutyMostovky = new Set(this.trasyMostovky);
     this.#kosinusPrutu = new Float64Array(navrh.pruty.length).fill(1);
+    // Průhyb se měří ve všech styčnících mostovky včetně skrytých dělicích, proti výšce, ve které
+    // jsou nakreslené (skryté leží na spojnici konců prutu).
+    {
+      const stycniky: number[] = [];
+      if (uroven.nejvetsiPruhyb !== null) {
+        const videne = new Set<number>();
+        for (let e = 0; e < s.pocetPrvku; e++) {
+          if (!this.#prutyMostovky.has(s.prut[e]!)) continue;
+          for (const i of [s.prvekA[e]!, s.prvekB[e]!]) {
+            if (videne.has(i) || !stavba.popis.stycniky[i]) continue;
+            videne.add(i);
+            stycniky.push(i);
+          }
+        }
+      }
+      this.#pruhybStycniky = uroven.nejvetsiPruhyb !== null ? Int32Array.from(stycniky) : null;
+      this.#pruhybVykres = Float64Array.from(stycniky, (i) => stavba.popis.stycniky[i]!.y);
+      this.#pruhybX = Float64Array.from(stycniky, (i) => stavba.popis.stycniky[i]!.x);
+    }
     // Komfort se měří ve všech styčnících mostovky včetně skrytých dělicích. Budič používá
     // totéž měření: zajímá ho, jak moc se mostovka rozkmitá.
     if (this.#budic || uroven.jizdniRad.some((p) => jeClovek(p.druh))) {
@@ -540,6 +569,37 @@ export class Zkouska {
    * stane cokoli; kdo zkouší mnoho mostů za sebou, nemusí zbytek počítat. Kmitání prázdného
    * mostu (po autě, když lidé odešli) se do meze nepočítá, stejně jako ve výsledku.
    */
+  /**
+   * Změří, o kolik se mostovka právě liší od výkresu. Do simulace nevstupuje (otisk nemění);
+   * měří se v každém kroku, aby výsledek nezávisel na tom, po jak dlouhých dávkách se zkouška krokuje.
+   */
+  #zmerPruhyb(s: Soustava, cas: number): void {
+    const stycniky = this.#pruhybStycniky!;
+    const vykres = this.#pruhybVykres;
+    let nejvic = 0;
+    let kde = -1;
+    for (let k = 0; k < stycniky.length; k++) {
+      const rozdil = s.y[stycniky[k]!]! - vykres[k]!;
+      const odchylka = rozdil < 0 ? -rozdil : rozdil;
+      if (odchylka > nejvic) {
+        nejvic = odchylka;
+        kde = k;
+      }
+    }
+    const p = this.#pruhyb;
+    if (kde >= 0 && nejvic > p.nejvetsi) {
+      p.nejvetsi = nejvic;
+      p.cas = cas;
+      p.x = this.#pruhybX[kde]!;
+    }
+    if (p.prekroceno < 0 && nejvic > (this.#uroven.nejvetsiPruhyb ?? Infinity)) p.prekroceno = cas;
+  }
+
+  /** Překročila už mostovka při zkoušce největší průhyb, který úroveň dovoluje? */
+  get pruhybNadMezi(): boolean {
+    return this.#pruhybStycniky !== null && this.#pruhyb.prekroceno >= 0 && this.#brnknuty < 0 && this.#budic === null && this.#zlom === null;
+  }
+
   get kmitaniNadMezi(): boolean {
     if (this.#budic !== null || this.#komfort === null) return false;
     // Po porušení platí totéž: kdo spadne, neprojde, a když nikdo nespadne, počítá se kmitání.
@@ -867,6 +927,7 @@ export class Zkouska {
         this.#polohyBrnknuti.push(s.y[this.#brnknuty]!);
         this.#dalsiVzorekBrnknuti += 1 / VZORKU_BRNKNUTI;
       }
+      if (this.#pruhybStycniky) this.#zmerPruhyb(s, sim.cas);
       if (this.#komfort && !sim.porusena) {
         zmerKomfort(s, this.#komfort, sim.dt, sim.cas, this.#budic !== null || this.provoz.lideNaMoste(s));
         const budic = this.#budic;
@@ -1154,7 +1215,20 @@ export class Zkouska {
     // po něm všichni přešli: opírat se smí jen o kotvy a podpory. (Dotyk s terénem je jinak
     // určený troskám; most bez klidové polohy ho má od začátku děje, protože se skládá.)
     const opreno = this.#oprenoSekund > OPRENI_O_TEREN;
+    // Průhyb mostovky hlídá jen běžná zkouška: pokus most zatěžuje jinak a medaile neuděluje.
+    const mezPruhybu = uroven.nejvetsiPruhyb;
+    const pruhyb: PruhybZkousky | null =
+      mezPruhybu !== null && this.#pruhybStycniky !== null && this.#brnknuty < 0 && this.#budic === null && this.#zlom === null
+        ? {
+            nejvetsi: this.#pruhyb.nejvetsi,
+            cas: this.#pruhyb.cas,
+            x: this.#pruhyb.x,
+            mez: mezPruhybu,
+            prekroceno: this.#pruhyb.prekroceno >= 0 ? this.#pruhyb.prekroceno : null,
+          }
+        : null;
     const pruchod =
+      (pruhyb === null || pruhyb.prekroceno === null) &&
       !rozpad &&
       spadlo === 0 &&
       prejelo === ucastniku &&
@@ -1237,6 +1311,7 @@ export class Zkouska {
       opreno,
       neporuseny,
       pruvesVKlidu: this.pruvesVKlidu,
+      pruhyb,
       rozpad,
       trvani: this.simulace.cas,
       kroku: this.simulace.kroku,

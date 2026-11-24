@@ -75,7 +75,164 @@
       "y": 0
     }
   ],
-  "zakazaneZony": [],
+  "zakazaneZony": [
+    {
+      "xMin": -3.75,
+      "yMin": -0.5,
+      "xMax": -0.25,
+      "yMax": 8.5
+    },
+    {
+      "xMin": 72.25,
+      "yMin": -0.5,
+      "xMax": 75.75,
+      "yMax": 8.5
+    },
+    {
+      "xMin": 0.25,
+      "yMin": 0.25,
+      "xMax": 5.75,
+      "yMax": 7.5
+    },
+    {
+      "xMin": 0.25,
+      "yMin": 13,
+      "xMax": 5.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 6.25,
+      "yMin": 0.25,
+      "xMax": 11.75,
+      "yMax": 4.5
+    },
+    {
+      "xMin": 6.25,
+      "yMin": 8.5,
+      "xMax": 11.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 12.25,
+      "yMin": 0.25,
+      "xMax": 17.75,
+      "yMax": 2.5
+    },
+    {
+      "xMin": 12.25,
+      "yMin": 5.5,
+      "xMax": 17.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 18.25,
+      "yMin": 0.25,
+      "xMax": 23.75,
+      "yMax": 1.5
+    },
+    {
+      "xMin": 18.25,
+      "yMin": 3.5,
+      "xMax": 23.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 24.25,
+      "yMin": 0.25,
+      "xMax": 29.75,
+      "yMax": 0.5
+    },
+    {
+      "xMin": 24.25,
+      "yMin": 2.5,
+      "xMax": 29.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 30.25,
+      "yMin": 0.25,
+      "xMax": 35.75,
+      "yMax": 0.5
+    },
+    {
+      "xMin": 30.25,
+      "yMin": 1.5,
+      "xMax": 35.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 36.25,
+      "yMin": 0.25,
+      "xMax": 41.75,
+      "yMax": 0.5
+    },
+    {
+      "xMin": 36.25,
+      "yMin": 1.5,
+      "xMax": 41.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 42.25,
+      "yMin": 0.25,
+      "xMax": 47.75,
+      "yMax": 0.5
+    },
+    {
+      "xMin": 42.25,
+      "yMin": 2.5,
+      "xMax": 47.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 48.25,
+      "yMin": 0.25,
+      "xMax": 53.75,
+      "yMax": 1.5
+    },
+    {
+      "xMin": 48.25,
+      "yMin": 3.5,
+      "xMax": 53.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 54.25,
+      "yMin": 0.25,
+      "xMax": 59.75,
+      "yMax": 2.5
+    },
+    {
+      "xMin": 54.25,
+      "yMin": 5.5,
+      "xMax": 59.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 60.25,
+      "yMin": 0.25,
+      "xMax": 65.75,
+      "yMax": 4.5
+    },
+    {
+      "xMin": 60.25,
+      "yMin": 8.5,
+      "xMax": 65.75,
+      "yMax": 24
+    },
+    {
+      "xMin": 66.25,
+      "yMin": 0.25,
+      "xMax": 71.75,
+      "yMax": 7.5
+    },
+    {
+      "xMin": 66.25,
+      "yMin": 13,
+      "xMax": 71.75,
+      "yMax": 24
+    }
+  ],
   "trasy": [
     {
       "id": "silnice",
@@ -101,8 +258,6 @@
   },
   "povolenePrvky": [
     "mostovka-ocelobeton",
-    "ocel-lehka",
-    "ocel-tezka",
     "lano",
     "lano-nosne",
     "pilir"

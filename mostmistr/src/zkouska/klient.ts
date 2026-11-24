@@ -10,9 +10,14 @@ export class KlientZkousky {
     this.#pracovnik.onmessage = (udalost: MessageEvent<ZpravaZeZkousky>) => {
       for (const posluchac of this.#posluchaci) posluchac(udalost.data);
     };
-    // Pád vlákna (nenačtený skript, chyba mimo výpočet) se hlásí stejně jako chyba výpočtu.
-    this.#pracovnik.onerror = (udalost) => {
-      const zprava: ZpravaZeZkousky = { typ: "chyba", kod: "vypocet-selhal", podrobnosti: udalost.message };
+    // Pád vlákna. Chyba ve skriptu vlákna (mimo výpočet) přijde jako ErrorEvent s místem v kódu;
+    // soubor vlákna, který nešel načíst (stará záložka po novém nasazení), jen jako událost bez
+    // řádku a bez zprávy. Ten se hlásí zvlášť, protože pomůže načíst stránku znovu.
+    this.#pracovnik.onerror = (udalost: Event) => {
+      const vKodu = udalost instanceof ErrorEvent && (udalost.lineno > 0 || udalost.message !== "");
+      const zprava: ZpravaZeZkousky = vKodu
+        ? { typ: "chyba", kod: "vypocet-selhal", podrobnosti: udalost.message }
+        : { typ: "chyba", kod: "skript-nenacten" };
       for (const posluchac of this.#posluchaci) posluchac(zprava);
     };
   }

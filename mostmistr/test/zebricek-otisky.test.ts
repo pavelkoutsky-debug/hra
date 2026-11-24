@@ -42,6 +42,11 @@ describe("otisk zkoušky na serveru a ve hře", () => {
     // Název, ladění medailí ani štítek zkoušky žebříček nemažou; změna zadání ano.
     const u = kampan[0]!;
     expect(otiskZadani({ ...u, nazev: "Jinak", inzenyrskyRozpocet: 1 })).toBe(otiskZadani(u));
+    // Mez průhybu mostovky (formát úrovně 9): úrovni bez ní nové pole klíč nezmění (žebříčky
+    // ostatních úrovní zůstávají), úrovni s ní ano.
+    const { nejvetsiPruhyb: _mez, ...bezPole } = u;
+    expect(otiskZadani({ ...u, nejvetsiPruhyb: null })).toBe(otiskZadani(bezPole as typeof u));
+    expect(otiskZadani({ ...u, nejvetsiPruhyb: 0.1 })).not.toBe(otiskZadani({ ...u, nejvetsiPruhyb: null }));
     expect(otiskZadani({ ...u, rozpocet: (u.rozpocet ?? 0) + 1 })).not.toBe(otiskZadani(u));
   });
 

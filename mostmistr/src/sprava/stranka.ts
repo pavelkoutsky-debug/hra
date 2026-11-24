@@ -803,6 +803,50 @@ async function nactiZebricky(): Promise<void> {
   );
 }
 
+// ---- Smazání dat hráče ----
+
+/** Nejvíc žádostí na jedno smazání: server na každou projde jen část úložiště. */
+const NEJVIC_KOL_SMAZANI = 2000;
+const NAZVY_CASTI: Record<string, string> = { denik: "deník", vazba: "zprávy", zebricek: "žebříčky" };
+
+prvek<HTMLFormElement>("#smazani-hrace").addEventListener("submit", (udalost) => {
+  udalost.preventDefault();
+  const pole = prvek<HTMLInputElement>("#smazani-hrac");
+  const prubeh = prvek("#smazani-prubeh");
+  const tlacitko = prvek<HTMLButtonElement>("#smazani-hrace button[type=submit]");
+  const hrac = pole.value.trim().toLowerCase();
+  if (!/^[0-9a-f]{8,32}$/.test(hrac)) {
+    prubeh.textContent = "Číslo hráče má 8 až 32 znaků 0–9 a a–f.";
+    return;
+  }
+  if (!window.confirm(`Smazat všechna data hráče ${hrac} (deník, zprávy, žebříčky)? Nejde to vrátit.`)) return;
+  void (async () => {
+    tlacitko.disabled = true;
+    document.body.dataset.smazaniHrace = "probiha";
+    let smazano = 0;
+    let od: string | null = null;
+    try {
+      // Server projde na jednu žádost jen část úložiště a řekne, kde pokračovat.
+      for (let kolo = 0; kolo < NEJVIC_KOL_SMAZANI; kolo++) {
+        const odpoved: { smazano: number; dalsi: string | null } = await sprava("co=smazat-hrace", { hrac, od });
+        smazano += odpoved.smazano;
+        od = odpoved.dalsi;
+        if (od === null) break;
+        prubeh.textContent = `Mažu: zatím ${pocet(smazano, "záznam", "záznamy", "záznamů")}, procházím ${NAZVY_CASTI[od.slice(0, od.indexOf("/"))] ?? "úložiště"}…`;
+      }
+      prubeh.textContent =
+        od === null ? `Hotovo: smazáno ${pocet(smazano, "záznam", "záznamy", "záznamů")} hráče ${hrac}.` : `Nedokončeno (${smazano} smazáno); spusť smazání znovu.`;
+      document.body.dataset.smazaniHrace = od === null ? "hotovo" : "nedokonceno";
+      if (od === null) pole.value = "";
+    } catch (chyba) {
+      prubeh.textContent = `Smazat se nepodařilo (${smazano} smazáno): ${(chyba as Error).message}`;
+      document.body.dataset.smazaniHrace = "chyba";
+    } finally {
+      tlacitko.disabled = false;
+    }
+  })();
+});
+
 // ---- Přihlášení a záložky ----
 
 for (const zalozka of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
@@ -830,7 +874,7 @@ async function prihlas(): Promise<void> {
     const stav = chyba instanceof ChybaSpravy ? chyba.stav : 0;
     if (stav === 401) ohlas("Nesprávné heslo správce.");
     else if (stav === 429) ohlas("Příliš mnoho pokusů za sebou. Chvíli počkej a zkus to znovu.");
-    else if (stav === 503) ohlas(`Server heslo správce nezná: ${(chyba as Error).message}.`);
+    else if (stav === 503) ohlas("Server heslo správce nezná: proměnná MM_SPRAVCE_HESLO na Netlify není nastavená, nebo má méně než 16 znaků.");
     else if (stav === 404 || stav === 0) ohlas("Správa na této adrese neběží (funkce Netlify nejsou nasazené, nebo je stránka otevřená mimo Netlify).");
     else ohlas(`Přihlášení se nepovedlo: ${(chyba as Error).message}`);
     return;
