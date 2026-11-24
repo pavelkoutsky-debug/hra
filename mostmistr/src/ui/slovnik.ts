@@ -37,6 +37,7 @@ const CS = {
   "vykres.kotvaCep": "čep křídla",
   "vykres.kotvaPist": "kotva pro píst",
   "vykres.kotvaTlumic": "kotva pro tlumič",
+  "vykres.kotvaLano": "kotva pro lano",
   "vykres.kotvaPist.melka": "mělká kotva pro píst",
   "vykres.kotvaPist.hluboka": "hluboká kotva pro píst",
   "vykres.zakazanaZona": "zakázaná zóna",
@@ -873,6 +874,12 @@ const CS = {
     "Erasmův most v Rotterdamu otevřeli 6. září 1996. Jeho sklopné pole dlouhé 89 metrů je největší a nejtěžší v západní Evropě.",
   "skutecnost.7-04":
     "most Jacquese Chabana-Delmase v Bordeaux z roku 2013 se nesklápí, ale zdvihá: střední pole dlouhé přes sto metrů a těžké kolem 2 600 tun vyjede mezi čtyřmi věžemi do výšky asi 53 metrů nad řeku. V době otevření to byl největší zdvižný most v Evropě.",
+  "skutecnost.8-01":
+    "Øresundský most mezi Dánskem a Švédskem, otevřený 1. července 2000, je zavěšený most s hlavním polem 490 metrů. Dvojkolejná železnice vede po spodním patře a obě patra spojují ocelové příhrady, které mostovku ztužují pod těžkými vlaky.",
+  "skutecnost.8-02":
+    "londýnský Millennium Bridge (hlavní pole 144 metrů) otevřeli 10. června 2000 a o dva dny později zavřeli: rozhoupal se pod chodci, kteří srovnali krok s jeho kmitáním. V letech 2001 a 2002 do něj vestavěli viskózní tlumiče a laděné tlumiče proti svislému kmitání a v únoru 2002 ho otevřeli znovu.",
+  "skutecnost.8-03":
+    "železniční zvedací mosty mají místo pístů protizávaží, které křídlo skoro vyváží, takže ho stroj jen pootáčí. Most St. Charles Air Line v Chicagu byl v roce 1919 se svým křídlem dlouhým 260 stop (79 metrů) nejdelším sklopným mostem na světě: příhrada nad kolejí s betonovým protizávažím. V roce 1930 most posunuli a zkrátili asi na 220 stop.",
   "paleta.vyber": "Výběr",
   "paleta.vyber.popis": "Výběr a posun: klikni na prut nebo styčník, tažením ho posuň, tažením z prázdna vyber rámečkem (V)",
   "paleta.zrcadlit.popis": "Zrcadlit most (nebo jen výběr) podle osy rozpětí (M)",
@@ -923,6 +930,7 @@ const CS = {
   "duvod.pilir-sikmy": "Pilíř je sloup: smí se naklonit nejvýš o polovinu své výšky, položit nejde.",
   "duvod.zaklad-jen-pilir": "Na základ patří jen pilíř. Vzpěry, lana i mostovku veď z pilíře nebo z opěr.",
   "duvod.kotva-jen-tlumic": "Tahle kotva je připravená jen pro tlumič: vzpěra ani jiný prut se o ni neopře.",
+  "duvod.kotva-jen-lano": "Tahle kotva je kotevní blok pro lano: ocelové táhlo ani jiný prut do ní nevede.",
   "duvod.pilir-pahyl": "Na hlavě pilíře pod mostovkou smí být jen lano. Dotáhni pilíř až k mostovce; vzpěru veď z jeho dříku.",
   "duvod.stycnik-v-terenu": "Pod povrchem terénu se staví jen z kotev.",
   "duvod.zavazi-nepovolene": "Tolik závaží do jednoho styčníku tato úroveň nedovoluje.",
@@ -1168,6 +1176,8 @@ const CS = {
   "kapitola.6.tema": "Vlak. Kolejiště, lokomotiva a vozy, styky kolejnic, pohodlí cestujících, brzdící vlak a most o dvou patrech.",
   "kapitola.7.nazev": "Přístav",
   "kapitola.7.tema": "Most, který se hýbe. Hydraulický píst, dělicí zámek, ocelová mostovka, lodě a dosednutí mostu na opěru.",
+  "kapitola.8.nazev": "Mistrovské dílo",
+  "kapitola.8.tema": "Všechno najednou. Vlak na lanech, lávka s tlumičem nad řekou a zvedací most pro trať: nic nového, jen to, co už umíš, pohromadě.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
   "prehled.zkouska": "zkouška",
   "prehled.zkouska.popis": "Zkouška kapitoly: bez ukázky a bez nápovědy.",
@@ -1218,6 +1228,7 @@ const CS = {
   "napoveda.princip.vzpery": "Mostovku podpírají zdola vzpěry opřené o kotvy pod ní; dolní pás od břehu k břehu most nemá.",
   "napoveda.princip.vzpery.navic": "Navíc se opírá vzpěrami o kotvu pod mostovkou.",
   "napoveda.princip.vesadlo.navic": "Nad mostovkou má navíc pár prutů do trojúhelníku.",
+  "napoveda.princip.prihrada.navic": "Mostovku navíc ztužuje příhrada z prutů: nese tíhu tam, kam lana nedosáhnou.",
   "napoveda.princip.stejny": "Nese stejně jako most pro průchod; liší se v materiálu, rozměrech nebo přídavcích.",
   "napoveda.prvek": "{prvek}: {prutu}× (dohromady {metru} m)",
   "napoveda.svaru": "svařené styčníky: {pocet}",
@@ -1243,9 +1254,29 @@ const CS = {
   "napoveda.nabidka": "Nedaří se? Nahoře v paletě je Nápověda: nejdřív prozradí jen princip mostu, který projde.",
   "prehled.postup": "Projito {projito} z {urovni} úrovní · medaile {medaili} z {medailiCelkem} · stupně výzev {vyzev} z {vyzevCelkem}",
   "prehled.postup.popis": "Každá úroveň má tři medaile a k nim tři výzvy o efektivitu (nejlevnější most, nejlehčí most, únosnost na korunu), každou se stupni bronz, stříbro a zlato",
+  // Závěrečný list kampaně a galerie mostů (M14)
+  "prehled.list": "Moje mosty ▸",
+  "prehled.list.dokonceno": "Závěrečný list ▸",
+  "list.nadpis.prubezny": "Moje mosty",
+  "list.nadpis.dokonceno": "Závěrečný list",
+  "list.veta.prubezny": "Projito {projito} z {urovni} úrovní. Až projdeš všechny, stane se z téhle stránky závěrečný list kampaně.",
+  "list.veta.dokonceno": "Kampaň dokončena: všech {urovni} úrovní je projitých. List vystaven {datum}.",
+  "list.cislo.urovne": "Projité úrovně",
+  "list.cislo.medaile": "Medaile",
+  "list.cislo.mistrovske": "Mistrovské medaile",
+  "list.cislo.rozpeti": "Přemostěno",
+  "list.cislo.cena": "Prostavěno",
+  "list.cislo.hmotnost": "Hmotnost mostů",
+  "list.cislo.zCelku": "{kolik} z {celkem}",
+  "list.karta.zadny": "zatím bez mostu",
+  "list.karta.rozestaveny": "rozestavěný · {cena}",
+  "list.poznamka": "V obrázcích je nejlepší most, který úrovní prošel (nejvíc medailí, pak neporušený, pak nejlevnější). Úrovně projité dřív, než si hra mosty začala pamatovat, ukazují most, který je právě na výkresu; projdi je znovu a most se doplní.",
+  "list.stahnout": "Stáhnout list",
+  "list.stahnout.popis": "Uloží celý list jako obrázek",
+  "list.stazeno": "List se stahuje jako obrázek.",
   "prehled.dokonceno": "Všechny úrovně jsou projité. Zbývají medaile a výzvy o efektivitu, nebo si postav, co chceš, v Pískovišti.",
   "prehled.dokonceno.nadpis": "Kampaň dokončena.",
-  "vysledek.kampanDokoncena": "Kampaň dokončena · přehled",
+  "vysledek.kampanDokoncena": "Kampaň dokončena · závěrečný list",
   "vysledek.naPrehled": "Zpět na přehled ▸",
   "prehled.sandbox": "Pískoviště",
   "prehled.sandbox.popis": "Volná stavba bez rozpočtu: vlastní údolí, všechny prvky a provoz, jaký si poskládáš",
@@ -1300,6 +1331,17 @@ const CS = {
   "sandbox.chyba.cas": "Na {radek}. řádku jízdního řádu je čas mimo rozsah 0 až {max} s.",
   "sandbox.chyba.smerKoleje": "Trať má jednu kolej: vlak na {radek}. řádku jízdního řádu musí jet stejným směrem jako první, jinak by se na mostě srazily.",
   "sandbox.chyba.plno": "Jízdní řád má nejvýš {max} položek. Některou odeber, nebo zvětši počet v řádku.",
+  "dopnuti.rada.zbylo.kotveny": "Něco pod tahem lan uhýbá, i když pylony kotevní lana mají: kotevní lano je na tah vějíře slabé ({lano}), nebo mostovka visí tam, kam lana nedosáhnou ({mostovka}).",
+  "rada.ohyb.pylon.kotveny": "Ohnula ho lana, která ho táhnou víc na jednu stranu. Kotevní lano má, ale na tah lan z pole nestačí: {lano}, nebo pylon nakloň proti tahu.",
+  "rada.lano.silnejsi": "dej místo něj nosné lano, nebo přidej druhé",
+  "rada.lano.druhe": "přidej druhé",
+  "rada.mostovka.prihrada": "přidej lana, nebo ji ztuž příhradou",
+  "rada.mostovka.lana": "přidej lana",
+  "kmitani.rada.novyTlumic.malo": "Pomohl by laděný tlumič na {f} Hz: odhad asi {a} m/s². Jeden nejspíš stačit nebude; až ho most bude mít, hra poradí další.",
+  "kmitani.rada.tuzsi.lana": "Pomohl by tužší most (vyšší pylony, víc lan nebo strmější lana).",
+  "kmitani.rada.tuzsi.vyrazne.lana": "Pomohl by výrazně tužší most (o hodně vyšší pylony a víc lan).",
+  "napoveda.princip.ztuzeni.jedno": "Křídlo ztužují další pruty nad mostovkou.",
+  "vysledek.kampanDokoncena.veta": "Tím je kampaň dokončená: prošel jsi všechny úrovně.",
   "zadani.0-01":
     "Pískoviště: žádný rozpočet, žádné medaile, všechny prvky. Postav most přes údolí a pusť na něj provoz; tlačítkem „Údolí a provoz“ nahoře v paletě si nastavíš, jak je údolí široké a hluboké, jestli přes něj vede lávka, silnice nebo trať, kolik je na dně základů pro pilíře a kdo přes most půjde nebo pojede. Zkouškou do zlomu zjistíš, kolik most unese; na lávce a na silnici najdeš budičem, kde rezonuje.",
   "prehled.bezPameti": "Prohlížeč nedovolil ukládat data, takže si hra postup nezapamatuje.",
@@ -1425,6 +1467,18 @@ const CS = {
   "zadani.7-04.vice":
     "Čím kratší má píst k čepu rameno, tím větší silou křídlo drží: píst z mělké kotvy blízko čepu to neudrží, přetlakový ventil povolí a křídlo klesne lodi do cesty. Delší rameno má píst z hluboké kotvy nebo píst uchycený dál od čepu. Dlouhé křídlo se taky hodně ohýbá: pomůže trojúhelník nad jeho kořenem, který konec křídla přidrží táhlem.",
   "zadani.7-05": "Dvacet metrů kanálu a strojovna jen v levé zdi: čep a pod ním dvě kotvy pro píst, na pravém břehu pouhé ložisko. V šestnácté sekundě připluje loď vysoká deset metrů a po sklopení se na mostě potkají nákladní auto a autobus.",
+  "zadani.8-01":
+    "Přes údolí s řekou povede železnice v jediném poli dlouhém šestadevadesát metrů; za rychlíkem přijede uhelný vlak, který na mostě zastaví. Pylony smějí stát jen na březích a nad středem řeky se smí stavět jen nízko, takže se tu lana a ztužující nosník musí doplnit.",
+  "zadani.8-01.vice":
+    "Vlak je několikrát těžší než silniční provoz. Na straně k řece vede po pylonech do výšky osmnácti metrů schodiště pro údržbu, takže lana k řece smějí z pylonu vycházet až nad ním. Pod nízký strop nad středem řeky odtamtud dosáhnou z každého břehu jen do necelých dvou pětin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
+  "zadani.8-02":
+    "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést, a nad celým údolím visí ve výšce 10,5 m elektrické vedení. Lana na betonových pylonech lávku unesou, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s².",
+  "zadani.8-02.vice":
+    "Zavěšená lávka je lehká, ale měkká: krok čtyřiceti lidí ji rozkmitá, i když žádnou její vlastní frekvenci přesně netrefí, a pomalé procesí chytí lávku, která útvaru uteče. Pylony tu jdou postavit jen z pilířů na základech za opěrami a pod vedení se vejdou nejvýš desetimetrové. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí, a tlumičů několik, jeden na šedesát metrů lávky nestačí.",
+  "zadani.8-03":
+    "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
+  "zadani.8-03.vice":
+    "Křídlo, které unese vlak, je těžké, a těžké křídlo píst sotva zvedne. Pomůže tvar: příhrada nad kolejí nese vlak a váží málo, zatímco plná mostovka je těžká a slabá. Píst potřebuje dlouhé rameno, tedy hlubokou kotvu, a dost zdvihu pro loď. Kdo chce, aby křídlo dosedlo měkce, musí ho při spouštění přibrzdit: jediný píst ho pustí rychle, druhý píst z druhé kotvy ho zpomalí.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem, a každý rytmus rozhoupe jinak vysoký most. Buď najdi výšku, která se vyhne všem třem, nebo most utlum.",
   "zadani.2-04.vice":

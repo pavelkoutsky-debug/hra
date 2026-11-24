@@ -9,7 +9,16 @@ import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import { pridejSilyBremen, vytvorBremena, type Bremena, type PopisBremene } from "../jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { MEZE_KOMFORTU, tridaKomfortu, vytvorMereniKomfortu, zmerKomfort, type MereniKomfortu } from "../jadro/komfort";
+import {
+  MEZE_KOMFORTU,
+  prodluzKlid,
+  tridaKomfortu,
+  vytvorMereniKomfortu,
+  zkopirujMereniKomfortu,
+  zmerKomfort,
+  type KlidPoPoruseni,
+  type MereniKomfortu,
+} from "../jadro/komfort";
 import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu, vlastniTvarySoustavy } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
@@ -79,6 +88,17 @@ const BRNKNUTI_DO = 25;
 const DOBEH_BUDICE = 1;
 /** Po jaké době se zapisuje další bod křivky změřené budičem, v sekundách. */
 const KROK_MERENI_BUDICE = 0.1;
+/**
+ * Jak dlouho po porušení se kmitání pod lidmi nepočítá (s): ráz porušení není kmitání, na
+ * které by se dal most navrhnout. Filtry měření mezitím běží dál.
+ */
+const KLID_PO_PORUSENI = 3;
+/**
+ * Kolik sekund ticha po porušeních zkouška dá nejvýš dohromady (tři oddělená porušení). Most,
+ * kterému povoluje prut za prutem v rozestupech pod `KLID_PO_PORUSENI`, by jinak neměl kmitání
+ * změřené vůbec a prošel by.
+ */
+const NEJDELSI_KLID_PO_PORUSENI = 9;
 /** Po kolika krocích se aktualizuje obálka namáhání; shodně s posudkem v simulaci. */
 const INTERVAL_OBALKY = 4;
 /** Jak dlouho po povelu ke sklopení se nejdéle čeká, než zámky zapadnou, v sekundách. */
@@ -166,6 +186,15 @@ export class Zkouska {
   readonly #reakce: ReakcePodpory[];
   /** Měření kmitání mostovky; null v úrovni, kde přes most nejdou lidé. */
   readonly #komfort: MereniKomfortu | null;
+  /**
+   * Měření kmitání pod lidmi na mostě, který se porušil a stojí dál: pokračuje od prvního
+   * porušení tam, kde `#komfort` skončil. Ráz samotného porušení se nepočítá (po každém je
+   * `KLID_PO_PORUSENI` ticho, dohromady nejvýš `NEJDELSI_KLID_PO_PORUSENI`) a do výsledku jde,
+   * jen když z mostu nikdo nespadl.
+   */
+  #komfortPoPoruseni: MereniKomfortu | null = null;
+  readonly #klidKomfortu: KlidPoPoruseni = { pocitatOd: 0, zbyva: NEJDELSI_KLID_PO_PORUSENI };
+  #porusenoKomfortu = 0;
   /**
    * Měření zrychlení karoserie každého autobusu a skříně každého osobního vozu zvlášť:
    * číslo účastníka (v poli, aby se dalo předat bez nové alokace) a jeho měření.
@@ -498,13 +527,23 @@ export class Zkouska {
     return this.simulace.cas >= this.#konec || this.simulace.rozpadla;
   }
 
+  /** Okamžité kmitání mostovky pro snímek záznamu; po porušení až po odeznění jeho rázu. */
+  #okamziteKmitani(): number {
+    if (!this.#komfort) return 0;
+    if (!this.simulace.porusena) return this.#komfort.okamzite;
+    const po = this.#komfortPoPoruseni;
+    return po !== null && this.simulace.cas >= this.#klidKomfortu.pocitatOd ? po.okamzite : 0;
+  }
+
   /**
    * Překročilo už kmitání pod lidmi mez úrovně? Od té chvíle most zkouškou neprojde, ať se
    * stane cokoli; kdo zkouší mnoho mostů za sebou, nemusí zbytek počítat. Kmitání prázdného
    * mostu (po autě, když lidé odešli) se do meze nepočítá, stejně jako ve výsledku.
    */
   get kmitaniNadMezi(): boolean {
-    return this.#budic === null && this.#komfort !== null && this.#komfort.prekroceni >= 0;
+    if (this.#budic !== null || this.#komfort === null) return false;
+    // Po porušení platí totéž: kdo spadne, neprojde, a když nikdo nespadne, počítá se kmitání.
+    return this.#komfort.prekroceni >= 0 || (this.#komfortPoPoruseni !== null && this.#komfortPoPoruseni.prekroceni >= 0);
   }
 
   /** Provoz a po prvním porušení i dopad trosek mostu na terén a do vody. */
@@ -828,7 +867,6 @@ export class Zkouska {
         this.#polohyBrnknuti.push(s.y[this.#brnknuty]!);
         this.#dalsiVzorekBrnknuti += 1 / VZORKU_BRNKNUTI;
       }
-      // Kmitání rozbitého mostu už o pohodlí chodců nevypovídá.
       if (this.#komfort && !sim.porusena) {
         zmerKomfort(s, this.#komfort, sim.dt, sim.cas, this.#budic !== null || this.provoz.lideNaMoste(s));
         const budic = this.#budic;
@@ -836,6 +874,16 @@ export class Zkouska {
           this.#dalsiMereniBudice += KROK_MERENI_BUDICE;
           this.#krivkaBudice.push({ f: this.#frekvenceBudice(sim.cas), a: (1000 * this.#komfort.okamzite) / budic.sila });
         }
+      } else if (this.#komfort && this.#budic === null) {
+        // Most se porušil. Když se zřítí, o pohodlí chodců už kmitání nevypovídá (výsledek ho pak
+        // nepočítá); když stojí dál a lidé po něm jdou, měří se dál. Ráz porušení se nepočítá.
+        this.#komfortPoPoruseni ??= zkopirujMereniKomfortu(this.#komfort);
+        const poruseno = sim.udalosti.length + sim.sjeti.length;
+        if (poruseno !== this.#porusenoKomfortu) {
+          this.#porusenoKomfortu = poruseno;
+          prodluzKlid(this.#klidKomfortu, sim.cas, KLID_PO_PORUSENI);
+        }
+        zmerKomfort(s, this.#komfortPoPoruseni, sim.dt, sim.cas, sim.cas >= this.#klidKomfortu.pocitatOd && this.provoz.lideNaMoste(s));
       }
 
       // Cestující hodnotí jízdu po mostě, ne po silnici před ním; po zřícení už nehodnotí nic.
@@ -1036,7 +1084,9 @@ export class Zkouska {
     // Bez provozu projde most, který pod vlastní tíhou vydržel celý.
     const cely = poruseni === 0 && this.simulace.sjeti.length === 0 && !this.bezRovnovahy;
     // Budič není člověk: jeho měření se nehodnotí jako komfort, ale vrací se jako křivka.
-    const mereni = this.#budic ? null : this.#komfort;
+    // Most, který se porušil, ale nikdo z něj nespadl, se hodnotí i podle kmitání po porušení:
+    // jinak by mostu, na kterém hned na začátku něco povolí, kmitání nikdo nezměřil.
+    const mereni = this.#budic ? null : this.#komfortPoPoruseni !== null && spadlo === 0 ? this.#komfortPoPoruseni : this.#komfort;
     const komfort: KomfortZkousky | null =
       mereni === null
         ? null
@@ -1246,7 +1296,7 @@ export class Zkouska {
       kola: new Float32Array(0),
       sily: this.#silyKNakresleni(),
       provoz: this.provoz.stavy.slice(),
-      kmitani: this.#komfort && !this.simulace.porusena ? this.#komfort.okamzite : 0,
+      kmitani: this.#okamziteKmitani(),
       klouby: plastickeKlouby(s),
     };
   }

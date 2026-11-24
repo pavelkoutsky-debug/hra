@@ -1,5 +1,5 @@
 {
-  "verzeFyziky": 8,
+  "verzeFyziky": 9,
   "urovne": {
     "1-01": {
       "reseni": "mistrovska",
@@ -140,6 +140,18 @@
     "7-05": {
       "reseni": "pruchod",
       "naKorunu": 4.091406825048851
+    },
+    "8-01": {
+      "reseni": "mistrovska",
+      "naKorunu": 3.1768632255861915
+    },
+    "8-02": {
+      "reseni": "rozpocet",
+      "naKorunu": 0.7736290710721062
+    },
+    "8-03": {
+      "reseni": "pruchod",
+      "naKorunu": 4.778227469115889
     }
   }
 }

@@ -2,6 +2,7 @@
 // Tvar dat a jeho kontrolu řeší `src/data/ulozeni.ts`; tady je jen čtení a zápis.
 // Sklad se předává zvenčí, takže stejný kód běží v prohlížeči i v testech.
 
+import { galerieNaText, galerieZTextu, lepsiMost, type Galerie, type MostGalerie } from "../data/galerie";
 import type { NavrhMostu } from "../data/navrh";
 import { ID_SANDBOXU, sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
 import { NEJDELSI_KOD_MOSTU } from "../data/sdileni";
@@ -47,6 +48,8 @@ export const KLIC_OZNAMENI = "mostmistr.oznameni";
 export const OZNAMENI_M12 = "m12";
 /** Výzvy z odkazů: kód mostu, který má hráč v úrovni překonat cenou (viz `src/data/sdileni.ts`). */
 export const KLIC_VYZEV_ODKAZU = "mostmistr.vyzvy-odkazu";
+/** Galerie: nejlepší most hráče v každé úrovni (viz `src/data/galerie.ts`); z ní je závěrečný list. */
+export const KLIC_GALERIE = "mostmistr.galerie";
 /** Kolik posledních prošlých mostů si hra na úroveň pamatuje. */
 const NEJVIC_PROSLYCH = 8;
 /** Nastavení sandboxu: údolí, trasa a provoz. */
@@ -314,6 +317,23 @@ export class Uloziste {
     } catch {
       return {};
     }
+  }
+
+  /** Galerie mostů hráče: nejlepší most, který každou úrovní prošel. */
+  get galerie(): Galerie {
+    return galerieZTextu(this.#cti(KLIC_GALERIE));
+  }
+
+  /**
+   * Nabídne galerii most, který úrovní právě prošel. Zapíše ho, jen když je lepší než ten,
+   * který tam úroveň má (`lepsiMost`), a vrátí, jestli se to stalo.
+   */
+  zapisDoGalerie(uroven: string, most: MostGalerie): boolean {
+    const galerie = this.galerie;
+    if (!lepsiMost(galerie[uroven], most)) return false;
+    galerie[uroven] = most;
+    this.#pis(KLIC_GALERIE, galerieNaText(galerie));
+    return true;
   }
 
   /** Nastavení sandboxu; výchozí, dokud si ho hráč nezmění nebo když uložené nejde přečíst. */

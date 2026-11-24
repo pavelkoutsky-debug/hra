@@ -5,6 +5,7 @@
 import { PREDPETI_LANA, type IdPrvku } from "../src/data/katalog";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
+import { RESENI_FINALE } from "./finale/index";
 import { RESENI_ZKOUSEK } from "./zkousky/index";
 
 export interface ReseniUrovne {
@@ -1427,5 +1428,8 @@ const RESENI_KAPITOL: Readonly<Record<string, ReseniUrovne>> = {
   },
 };
 
-/** Mosty všech úrovní kampaně: čtyři úrovně každé kapitoly a její zkouška (`urovne/zkousky/`). */
-export const RESENI: Readonly<Record<string, ReseniUrovne>> = { ...RESENI_KAPITOL, ...RESENI_ZKOUSEK };
+/**
+ * Mosty všech úrovní kampaně: čtyři úrovně každé kapitoly, její zkouška (`urovne/zkousky/`)
+ * a závěrečná kapitola (`urovne/finale/`).
+ */
+export const RESENI: Readonly<Record<string, ReseniUrovne>> = { ...RESENI_KAPITOL, ...RESENI_ZKOUSEK, ...RESENI_FINALE };

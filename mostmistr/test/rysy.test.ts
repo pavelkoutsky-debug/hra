@@ -46,6 +46,9 @@ const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSous
   "7-02": ["zvedaci", "zvedaci", "zvedaci"],
   "7-03": ["zvedaci", "zvedaci", "zvedaci"],
   "7-04": ["zvedaci", "zvedaci", "zvedaci"],
+  "8-01": ["zaveseny", "zaveseny", "zaveseny"],
+  "8-02": ["zaveseny", "zaveseny", "zaveseny"],
+  "8-03": ["zvedaci", "zvedaci", "zvedaci"],
 };
 
 describe("rysy referenčních mostů", () => {
@@ -101,13 +104,32 @@ describe("rysy referenčních mostů", () => {
     expect(rysy("4-01")).toMatchObject({ pilire: true, svary: false });
     // Pylony lanového mostu a pilíře spojitého nosníku nejsou „pilíře pod příhradou“.
     expect(rysy("4-02")).toMatchObject({ pilire: false, svary: true, svaryMeziPodporami: true });
-    // Zavěšený most 4-03 má jediný pylon (úroveň má jediný základ), visutý 4-04 dva.
-    expect(rysy("4-03")).toMatchObject({ pilire: false, pylonu: 1 });
-    expect(rysy("4-04")).toMatchObject({ pilire: false, pylonu: 2 });
+    // Zavěšený most 4-03 má jediný pylon v údolí (úroveň má jediný základ); visutý 4-04 dva
+    // na březích za opěrami (základy v x = −4 a 76 při trase 0 až 72 m).
+    expect(rysy("4-03")).toMatchObject({ pilire: false, pylonu: 1, pylonyNaBrezich: false });
+    expect(rysy("4-04")).toMatchObject({ pilire: false, pylonu: 2, pylonyNaBrezich: true });
     expect(rysy("2-03")).toMatchObject({ zavazi: true, ladeneTlumice: false, pylonu: 0 });
     expect(rysy("5-02")).toMatchObject({ zavazi: false, ladeneTlumice: true });
     expect(rysy("7-01")).toMatchObject({ kridel: 1, zamek: true });
     expect(rysy("7-02")).toMatchObject({ kridel: 2, zamek: true });
+    // Jedno křídlo se dvěma písty (8-03, most pro mistrovskou) je pořád jedno křídlo se zámkem na břehu.
+    expect(rysyMostu(RESENI["8-03"]!.mistrovska, kampan.find((u) => u.id === "8-03")!)).toMatchObject({ kridel: 1, zamek: true });
+    expect(principMostu(rysyMostu(RESENI["8-03"]!.mistrovska, kampan.find((u) => u.id === "8-03")!))).toEqual(["zvedaci.jedno", "zamek.breh", "ztuzeni.jedno"]);
+    // Ocelové stožáry lávky 8-02 jsou pylony (skica je nekreslí jako jediný pylon uprostřed)
+    // a nejsou příhrada.
+    expect(rysyMostu(RESENI["8-02"]!.mistrovska, kampan.find((u) => u.id === "8-02")!)).toMatchObject({ soustava: "zaveseny", pylonu: 2, pylonyNaBrezich: true, prihradaNavic: false, ladeneTlumice: true });
+    // Stožár ze tří dílů a žádná příhrada: věta o ztužující příhradě nezazní.
+    const k = new Kreslic("8-02");
+    for (let x = 0; x < 60; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+    for (const [x, kotva] of [[0, -16], [60, 76]] as const) {
+      for (let y = 0; y < 9; y += 3) k.prut("ocel-lehka", [x, y], [x, y + 3]);
+      k.prut("lano", [x, 9], [kotva, 0]);
+      for (const d of [6, 12, 18, 24]) k.prut("lano", [x, 9], [x === 0 ? d : 60 - d, 0]);
+    }
+    expect(rysyMostu(k.navrh(), kampan.find((u) => u.id === "8-02")!)).toMatchObject({ soustava: "zaveseny", pylonu: 2, prihradaNavic: false });
+    // Zavěšený most se dvěma kotevními lany do jedné kotvy (8-01) není visutý.
+    // Jeho pylony stojí na březích za opěrami (skica je nekreslí do řeky) a střed ztužuje příhrada.
+    expect(rysyMostu(RESENI["8-01"]!.mistrovska, kampan.find((u) => u.id === "8-01")!)).toMatchObject({ soustava: "zaveseny", pylonu: 2, pylonyNaBrezich: true, prihradaNavic: true });
     expect(rysy("1-01")).toMatchObject({
       kridel: 0,
       zamek: false,
@@ -180,5 +202,5 @@ describe("věta o principu", () => {
       }
     }
     expect(mostu).toBeGreaterThanOrEqual(9);
-  });
+  }, 60_000);
 });

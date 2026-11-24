@@ -34,6 +34,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vykres.hladina": "water level {vyska}",
   "vykres.kotvaCep": "leaf pivot",
   "vykres.kotvaTlumic": "anchor for a damper",
+  "vykres.kotvaLano": "anchor for a cable",
   "vykres.kotvaPist": "cylinder anchor",
   "vykres.kotvaPist.melka": "shallow cylinder anchor",
   "vykres.kotvaPist.hluboka": "deep cylinder anchor",
@@ -903,6 +904,12 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "skutecnost.7-03": "the Erasmus Bridge in Rotterdam opened on 6 September 1996. Its 89-metre bascule span is the largest and heaviest in Western Europe.",
   "skutecnost.7-04":
     "the Pont Jacques Chaban-Delmas in Bordeaux, dating from 2013, does not tilt but lifts: its central span, over a hundred metres long and weighing around 2,600 tonnes, rises between four towers to a height of about 53 metres above the river. When it opened, it was the largest vertical-lift bridge in Europe.",
+  "skutecnost.8-01":
+    "the Øresund Bridge between Denmark and Sweden, opened on 1 July 2000, is a cable-stayed bridge with a 490-metre main span. Its double-track railway runs on the lower deck, and steel trusses linking the two decks stiffen the girder under heavy trains.",
+  "skutecnost.8-02":
+    "London's Millennium Bridge (main span 144 metres) opened on 10 June 2000 and was closed two days later: it swayed under pedestrians who fell into step with its motion. Viscous dampers and tuned mass dampers against vertical vibration were fitted in 2001 and 2002, and it reopened in February 2002.",
+  "skutecnost.8-03":
+    "railway bascule bridges use a counterweight instead of cylinders: it almost balances the leaf, so the machinery only has to turn it. When it opened in 1919, the St. Charles Air Line Bridge in Chicago, with a 260-foot (79 m) leaf, was the longest bascule bridge in the world: a truss above the track with a concrete counterweight. In 1930 the bridge was moved and shortened to about 220 feet.",
   "paleta.vyber": "Select",
   "paleta.vyber.popis": "Select and move: click a member or joint, drag to move it, drag from empty space to box-select (V)",
   "paleta.zrcadlit.popis": "Mirror the bridge (or just the selection) about the span axis (M)",
@@ -953,6 +960,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "duvod.pilir-sikmy": "A pier is a column: it may lean by at most half its height and cannot be laid flat.",
   "duvod.zaklad-jen-pilir": "Only a pier belongs on a footing. Run struts, cables and the deck from a pier or from the abutments.",
   "duvod.kotva-jen-tlumic": "This anchor is made for a damper only: a strut or any other member cannot rest on it.",
+  "duvod.kotva-jen-lano": "This anchor is an anchor block for a cable: a steel tie or any other member cannot go into it.",
   "duvod.pilir-pahyl": "Only a cable may sit on a pier head below the deck. Take the pier all the way up to the deck; run struts from its shaft.",
   "duvod.stycnik-v-terenu": "Below ground level you can build only from anchors.",
   "duvod.zavazi-nepovolene": "This level does not allow that much weight at a single joint.",
@@ -1200,6 +1208,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "kapitola.6.tema": "The train. The track deck, locomotive, wagons and coaches, rail joints, passenger comfort, a braking train and a double-deck bridge.",
   "kapitola.7.nazev": "Harbour",
   "kapitola.7.tema": "A bridge that moves. The hydraulic cylinder, the span lock, the steel deck, ships and the bridge landing on its abutment.",
+  "kapitola.8.nazev": "Masterpiece",
+  "kapitola.8.tema": "Everything at once. A train on cables, a damped footbridge over the river and a lift bridge for the railway: nothing new, just all you already know, together.",
   "prehled.zamceno": "Locked: complete level {uroven} first.",
   "prehled.zkouska": "exam",
   "prehled.zkouska.popis": "Chapter exam: no demo and no hints.",
@@ -1250,6 +1260,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "napoveda.princip.vzpery": "Struts leaning on anchors below the deck prop it from underneath; the bridge has no bottom chord from bank to bank.",
   "napoveda.princip.vzpery.navic": "It also leans on struts from an anchor below the deck.",
   "napoveda.princip.vesadlo.navic": "Above the deck it also has a few members forming a triangle.",
+  "napoveda.princip.prihrada.navic": "A truss also stiffens the deck: it carries the load where the cables do not reach.",
   "napoveda.princip.stejny": "It carries the load the same way as the bridge for a pass; it differs in material, dimensions or add-ons.",
   "napoveda.prvek": "{prvek}: {prutu}× ({metru} m in total)",
   "napoveda.svaru": "Welded joints: {pocet}",
@@ -1275,9 +1286,29 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "napoveda.nabidka": "Not going well? There is a Hint at the top of the palette: at first it reveals only the principle of a bridge that passes.",
   "prehled.postup": "{projito} of {urovni} levels completed · medals {medaili} of {medailiCelkem} · challenge tiers {vyzev} of {vyzevCelkem}",
   "prehled.postup.popis": "Each level has three medals and three efficiency challenges (cheapest bridge, lightest bridge, capacity per koruna), each with bronze, silver and gold tiers",
+  // Final sheet of the campaign and the bridge gallery (M14)
+  "prehled.list": "My bridges ▸",
+  "prehled.list.dokonceno": "Final sheet ▸",
+  "list.nadpis.prubezny": "My bridges",
+  "list.nadpis.dokonceno": "Final sheet",
+  "list.veta.prubezny": "{projito} of {urovni} levels completed. Once you complete them all, this page becomes the final sheet of the campaign.",
+  "list.veta.dokonceno": "Campaign complete: all {urovni} levels are done. Sheet issued {datum}.",
+  "list.cislo.urovne": "Levels completed",
+  "list.cislo.medaile": "Medals",
+  "list.cislo.mistrovske": "Master medals",
+  "list.cislo.rozpeti": "Bridged",
+  "list.cislo.cena": "Spent",
+  "list.cislo.hmotnost": "Weight of bridges",
+  "list.cislo.zCelku": "{kolik} of {celkem}",
+  "list.karta.zadny": "no bridge yet",
+  "list.karta.rozestaveny": "in progress · {cena}",
+  "list.poznamka": "The pictures show the best bridge that passed each level (most medals, then undamaged, then cheapest). Levels completed before the game began remembering bridges show the bridge that is on the drawing right now; complete them again and the bridge will be filled in.",
+  "list.stahnout": "Download sheet",
+  "list.stahnout.popis": "Saves the whole sheet as a picture",
+  "list.stazeno": "The sheet is downloading as a picture.",
   "prehled.dokonceno": "Every level is passed. Medals and efficiency challenges remain, or build whatever you like in the Sandbox.",
   "prehled.dokonceno.nadpis": "Campaign complete.",
-  "vysledek.kampanDokoncena": "Campaign complete · overview",
+  "vysledek.kampanDokoncena": "Campaign complete · final sheet",
   "vysledek.naPrehled": "Back to overview ▸",
   "prehled.sandbox": "Sandbox",
   "prehled.sandbox.popis": "Free building with no budget: your own valley, all the elements and whatever traffic you put together",
@@ -1333,6 +1364,17 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "sandbox.chyba.cas": "Row {radek} of the timetable has a time outside the range 0 to {max} s.",
   "sandbox.chyba.smerKoleje": "The line has a single track: the train in row {radek} of the timetable must run in the same direction as the first one, otherwise they would collide on the bridge.",
   "sandbox.chyba.plno": "The timetable holds at most {max} items. Remove one, or raise the number in a row.",
+  "dopnuti.rada.zbylo.kotveny": "Something gives way under the pull of the cables although the pylons have backstays: the backstay is too weak for the pull of the fan ({lano}), or the deck hangs where the cables do not reach ({mostovka}).",
+  "rada.ohyb.pylon.kotveny": "It was bent by the cables, which pull it more to one side. It has a backstay, but the backstay cannot balance the pull from the span: {lano}, or lean the pylon against the pull.",
+  "rada.lano.silnejsi": "use a main cable instead, or add a second one",
+  "rada.lano.druhe": "add a second one",
+  "rada.mostovka.prihrada": "add cables, or stiffen it with a truss",
+  "rada.mostovka.lana": "add cables",
+  "kmitani.rada.novyTlumic.malo": "A tuned damper at {f} Hz would help: estimate about {a} m/s². One will probably not be enough; once the bridge has it, the game suggests the next.",
+  "kmitani.rada.tuzsi.lana": "A stiffer bridge would help (taller pylons, more cables or steeper cables).",
+  "kmitani.rada.tuzsi.vyrazne.lana": "Only a much stiffer bridge would help (much taller pylons and more cables).",
+  "napoveda.princip.ztuzeni.jedno": "More members above the deck stiffen the leaf.",
+  "vysledek.kampanDokoncena.veta": "That completes the campaign: you have passed every level.",
   "zadani.0-01": "Sandbox: no budget, no medals, all the elements. Build a bridge across the valley and send traffic over it; with the “Valley & traffic” button at the top of the palette you set how wide and deep the valley is, whether a footbridge, a road or a railway crosses it, how many footings for piers there are at the bottom and who will walk or drive across the bridge. With the test to failure you find out how much the bridge carries; on a footbridge and on a road the shaker finds where it resonates.",
   "prehled.bezPameti": "The browser did not allow data to be saved, so the game will not remember your progress.",
   "prehled.novaPravidla":
@@ -1458,6 +1500,18 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.7-04.vice":
     "The shorter the cylinder’s lever arm to the pivot, the greater the force it needs to hold the leaf: a cylinder from the shallow anchor close to the pivot cannot hold it, the relief valve opens and the leaf drops into the ship’s path. A cylinder from the deep anchor, or one attached further from the pivot, has a longer arm. A long leaf also bends a lot: a triangle above its root, holding the end of the leaf with a tie, will help.",
   "zadani.7-05": "Twenty metres of canal and machinery in the left wall only: a pivot with two cylinder anchors below it, and nothing but a bearing on the right bank. A ship ten metres tall arrives in the sixteenth second, and once the bridge is down again a lorry and a bus meet on it.",
+  "zadani.8-01":
+    "A railway crosses a river valley in a single ninety-six-metre span; an express is followed by a coal train that stops on the bridge. The pylons may stand only on the banks and only low structures are allowed above mid-river, so cables and a stiffening girder have to work together here.",
+  "zadani.8-01.vice":
+    "A train is several times heavier than road traffic. A maintenance stair runs up the river side of each pylon to eighteen metres, so cables towards the river may leave the pylon only above it. From there, under the low ceiling over mid-river, they reach just under two fifths of the span from each bank, and the middle has to be carried by a low truss hanging from the outermost cables. The truss alone cannot span the gap, and cables without it leave the middle hanging from the track deck alone. The backstays carry the whole pull of the fan, so one ordinary cable is not enough. A catenary mast and a signal stand at each end of the bridge: the space above the track at the abutments must stay clear.",
+  "zadani.8-02":
+    "A ceremonial column of forty people marching at 2 Hz will cross this sixty-metre footbridge while a slow procession comes the other way; nothing may pass above the viewpoint in the middle, and a power line hangs across the whole valley at 10.5 m. Cables on concrete pylons will carry the deck, but the vibration under people must not exceed 1.0 m/s².",
+  "zadani.8-02.vice":
+    "A cable-stayed footbridge is light but soft: forty people marching in step set it swaying even though they do not hit any of its natural frequencies exactly, and the slow procession catches a deck that escapes the column. Pylons here can only be piers on the foundations behind the abutments, and under the power line they fit only up to ten metres. A tuned mass damper set to the marching rhythm calms the vibration, but it carries nothing by itself: you need both, and several dampers, because one is not enough for sixty metres of deck.",
+  "zadani.8-03":
+    "A harbour railway crosses a thirty-metre shipping canal: a locomotive crosses in the morning, then the bridge must make way for a ship fourteen metres tall, and as soon as it is down again a loaded freight train rolls over it. The machinery, with the pivot and the cylinder anchors, is in the left wall; the right bank has only a bearing.",
+  "zadani.8-03.vice":
+    "A leaf strong enough for a train is heavy, and a heavy leaf is hard for the cylinder to lift. Shape helps: a truss above the track carries the train and weighs little, while a solid deck is heavy and weak. The cylinder needs a long lever arm, which means the deep anchor, and enough stroke for the ship. If the leaf is to come down gently, it has to be slowed on the way down: a single cylinder lets it drop fast, a second cylinder from the other anchor holds it back.",
   "zadani.2-04":
     "A march-past: the column crosses three times, at a slow, a normal and a quick march, and each rhythm sets a bridge of a different height swinging. Either find a height that avoids all three, or damp the bridge.",
   "zadani.2-04.vice":
@@ -1504,4 +1558,7 @@ export const NAZVY_UROVNI_EN: Readonly<Record<string, string>> = {
   "7-03": "Long Leaf",
   "7-04": "Great Harbour",
   "7-05": "A Single Leaf",
+  "8-01": "Rail on Cables",
+  "8-02": "Footbridge on Cables",
+  "8-03": "Harbour Line",
 };

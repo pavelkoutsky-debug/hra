@@ -228,7 +228,9 @@ describe("verze formátu úrovně", () => {
     // Zkouškové jsou právě páté úrovně kapitol, každá kapitola má jednu.
     expect(zkousky.map((u) => u.id)).toEqual(kampan.filter((u) => u.id.endsWith("-05")).map((u) => u.id));
     expect(zkousky.map((u) => u.id).sort()).toEqual(Object.keys(RESENI_ZKOUSEK).sort());
-    expect(zkousky).toHaveLength(new Set(kampan.map((u) => u.id.split("-")[0])).size);
+    // Každá kapitola kromě závěrečné osmé (ta nic neučí a zkoušku nemá) má jednu.
+    const kapitoly = [...new Set(kampan.map((u) => u.id.split("-")[0]!))];
+    expect(zkousky.map((u) => u.id.split("-")[0])).toEqual(kapitoly.filter((k) => k !== "8"));
     for (const u of zkousky) {
       // Nic neučí: žádná ukázka, žádné „Více o úloze“, žádný odstavec o skutečných mostech.
       expect(ukazkaUrovne(u), u.id).toBeNull();
@@ -304,6 +306,8 @@ describe("verze formátu úrovně", () => {
     const kotvy = (zaklad.kotvy as { x: number; y: number; typ: string }[]).map((k, i) => (i === 0 ? { ...k, jen: "tlumic" } : k));
     const sedma = nactiUroven({ ...zaklad, verze: 7, kotvy });
     expect(sedma.kotvy[0]!.jen).toBe("tlumic");
+    // Kotva smí být vyhrazená i lanu (kotevní blok zavěšeného mostu, 8-01).
+    expect(nactiUroven({ ...zaklad, verze: 7, kotvy: kotvy.map((k, i) => (i === 0 ? { ...k, jen: "lano" } : k)) }).kotvy[0]!.jen).toBe("lano");
     expect(sedma.kotvy[1]!.jen).toBeUndefined();
     ocekavejChybu({ ...zaklad, verze: 7, kotvy: kotvy.map((k, i) => (i === 0 ? { ...k, jen: "pilir" } : k)) }, "uroven.kotvy[0].jen");
   });

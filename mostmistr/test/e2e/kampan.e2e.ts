@@ -84,8 +84,9 @@ describe("kampaň od první úrovně do poslední", () => {
     expect(await stranka.locator(".karta").count()).toBe(kampan.length);
     expect(await zamceno(kampan[0]!.id)).toBe("false");
     for (const uroven of kampan.slice(1)) expect(await zamceno(uroven.id), uroven.id).toBe("true");
-    // Sedm kapitol po čtyřech úrovních a zkoušce: 35 úrovní, tři medaile a devět stupňů výzev na každou.
-    expect(kampan.length).toBe(35);
+    // Sedm kapitol po čtyřech úrovních a zkoušce a závěrečná kapitola se třemi úrovněmi:
+    // 38 úrovní, tři medaile a devět stupňů výzev na každou.
+    expect(kampan.length).toBe(38);
     expect(await udaj("prehled-postup")).toBe(`Projito 0 z ${kampan.length} úrovní · medaile 0 z ${3 * kampan.length} · stupně výzev 0 z ${9 * kampan.length}`);
     // Zkouška kapitoly má na kartě štítek; ostatní úrovně ne.
     for (const uroven of kampan) {
@@ -151,9 +152,17 @@ describe("kampaň od první úrovně do poslední", () => {
         } else {
           expect(await odkaz.getAttribute("data-posledni")).toBe("true");
           expect(await odkaz.getAttribute("data-dokoncena")).toBe("true");
-          expect(await odkaz.innerText()).toBe("Kampaň dokončena · přehled");
+          expect(await odkaz.innerText()).toBe("Kampaň dokončena · závěrečný list");
           await stranka.screenshot({ path: `${SLOZKA}/k1-posledni-uroven.png` });
+          // Po poslední úrovni se ukáže závěrečný list s mosty hráče: každá úroveň v něm má
+          // most, kterým prošla.
           await odkaz.click();
+          await stranka.locator('body[data-rezim="list"]').waitFor();
+          expect(await telo("list")).toBe("dokonceno");
+          expect(await telo("list-mostu")).toBe(String(kampan.length));
+          expect(await stranka.locator('#obrazovka-list .karta[data-puvod="galerie"]').count()).toBe(kampan.length);
+          await stranka.screenshot({ path: `${SLOZKA}/k1-zaverecny-list.png`, fullPage: true });
+          await stranka.locator("#obrazovka-list .lista a.tlacitko").click();
           await stranka.locator('body[data-rezim="prehled"]').waitFor();
         }
       }

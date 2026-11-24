@@ -1,0 +1,134 @@
+{
+  "verze": 8,
+  "id": "8-03",
+  "nazev": "Přístavní trať",
+  "vyrez": {
+    "xMin": -12,
+    "yMin": -10,
+    "xMax": 42,
+    "yMax": 30
+  },
+  "teren": [
+    {
+      "x": -12,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 0.5,
+      "y": -8
+    },
+    {
+      "x": 29.5,
+      "y": -8
+    },
+    {
+      "x": 30,
+      "y": 0
+    },
+    {
+      "x": 42,
+      "y": 0
+    }
+  ],
+  "hladina": -4,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 30,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": 0,
+      "y": -3,
+      "typ": "pevna"
+    },
+    {
+      "x": 0,
+      "y": -5,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [],
+  "zakazaneZony": [],
+  "trasy": [
+    {
+      "id": "kolej",
+      "druh": "kolej",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 30,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 5,
+  "hmotnostVybaveni": 0,
+  "nerovnost": "A",
+  "rozpocet": 990000,
+  "inzenyrskyRozpocet": 852000,
+  "mistrovska": {
+    "druh": "dosednuti",
+    "limit": 680000
+  },
+  "povolenePrvky": [
+    "kolejiste",
+    "ocel-lehka",
+    "ocel-tezka",
+    "pist"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "kolej",
+      "smer": -1,
+      "druh": "lokomotiva",
+      "rychlost": 11
+    },
+    {
+      "cas": 32,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "rychlost": 11,
+      "vozy": [
+        {
+          "druh": "vuz-nakladni",
+          "pocet": 3
+        }
+      ]
+    }
+  ],
+  "pohyb": {
+    "zvednout": 6,
+    "sklopit": 21
+  },
+  "lode": [
+    {
+      "cas": 15,
+      "trvani": 4,
+      "xMin": 10,
+      "xMax": 26,
+      "vyska": 14
+    }
+  ],
+  "zkouskova": false
+}

@@ -82,6 +82,9 @@ describe("kampaň", () => {
       "7-03",
       "7-04",
       "7-05",
+      "8-01",
+      "8-02",
+      "8-03",
     ]);
     expect(Object.keys(RESENI).sort()).toEqual(kampan.map((u) => u.id).sort());
   });
@@ -218,6 +221,128 @@ describe("lekce, které nejde obejít", () => {
     expect(problemy.length).toBeGreaterThan(0);
     expect(new Set(problemy.map((p) => p.druh))).toEqual(new Set(["prvek-nepovoleny"]));
     for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["4-05"]![klic], uroven), klic).toEqual([]);
+  });
+
+  it("8-01: zavěšený most bez ztužující příhrady nejde postavit; lana dosáhnou jen do styčníku 37", () => {
+    // Recenze obtížnosti M14 (nález 2): s pylonem 20 m a lany z 15 a 12 m do styčníků 42 a 48
+    // dostal most bez příhrady rozpočtovou medaili. Zóna u pylonu (do 18 m) spolu se stropem
+    // 4 m nad středem takové lano nepustí: pod strop projde z pylonu jen lano, které začíná
+    // nejvýš ve výšce 4·(x + 6)/(x − 28,5), a to je pro styčník 38 už 18,5 m, pro 42 jen 14,2 m.
+    const uroven = kampan.find((u) => u.id === "8-01")!;
+    const k = new Kreslic("8-01");
+    for (let x = 0; x < 96; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
+    for (const [pylon, smer] of [
+      [-6, 1],
+      [102, -1],
+    ] as const) {
+      const x = (odBrehu: number): number => (smer === 1 ? odBrehu : 96 - odBrehu);
+      for (const odBrehu of [6, 12, 18, 24, 30, 36]) k.prut("lano", [pylon, 20], [x(odBrehu), 0]);
+      k.prut("lano", [pylon, 18], [x(36), 0]);
+      k.prut("lano", [pylon, 15], [x(42), 0]);
+      k.prut("lano", [pylon, 12], [x(48), 0]);
+      k.prut("lano-nosne", [pylon, 20], [pylon - smer * 24, 0]);
+      k.prut("lano-nosne", [pylon, 15], [pylon - smer * 24, 0]);
+      k.prut("lano", [pylon, 12], [pylon - smer * 24, 0]);
+      for (const [od, po] of [
+        [0, 12],
+        [12, 15],
+        [15, 18],
+        [18, 20],
+      ] as const) {
+        k.prut("pilir", [pylon, od], [pylon, po]);
+      }
+    }
+    const problemy = zkontrolujNavrh(k.navrh(), uroven);
+    expect(new Set(problemy.map((p) => p.druh))).toEqual(new Set(["prut-v-zakazane-zone"]));
+    // Do zóny vedou právě lana k řece, která z pylonu vycházejí pod 18 m, a lano do styčníku 6.
+    expect(problemy.length).toBeGreaterThanOrEqual(8);
+    // Jediné lano z hlavy 22 m: do styčníku 36 pod strop projde, do 42 už ne.
+    const jedinymLanem = (cil: number): string[] => {
+      const m = new Kreslic("8-01");
+      for (let x = 0; x < 96; x += 6) m.prut("kolejiste", [x, 0], [x + 6, 0]);
+      m.prut("pilir", [-6, 0], [-6, 12]);
+      m.prut("pilir", [-6, 12], [-6, 22]);
+      m.prut("lano", [-6, 22], [cil, 0]);
+      return zkontrolujNavrh(m.navrh(), uroven).map((p) => p.druh).filter((druh) => druh === "prut-v-zakazane-zone");
+    };
+    expect(jedinymLanem(36)).toEqual([]);
+    expect(jedinymLanem(42)).toEqual(["prut-v-zakazane-zone"]);
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["8-01"]![klic], uroven), klic).toEqual([]);
+  });
+
+  it("8-01: konzolová příhrada bez lan se o kotevní bloky ocelovým táhlem neopře", () => {
+    // Po přeladění M14: konzolová příhrada z dříků pylonů s ocelovým táhlem do kotvy za opěrou
+    // prošla bez jediného lana pod rozpočtem úrovně (hladové zlevňování: 4,28 milionu, medaile za
+    // průchod). Bez táhla se složí vlastní vahou (je mezi mosty, které projít nesmějí), takže
+    // stačí kotevní bloky vyhradit lanům.
+    const uroven = kampan.find((u) => u.id === "8-01")!;
+    expect(uroven.kotvy.filter((k) => k.jen === "lano").map((k) => [k.x, k.y])).toEqual([
+      [-30, 0],
+      [126, 0],
+    ]);
+    const sTahlem = (prvek: "ocel-lehka" | "ocel-tezka" | "lano-nosne"): string[] => {
+      const k = new Kreslic("8-01");
+      for (let x = 0; x < 96; x += 6) k.prut("kolejiste", [x, 0], [x + 6, 0]);
+      k.prut("pilir", [-6, 0], [-6, 12]);
+      k.prut("pilir", [-6, 12], [-6, 24]);
+      // Táhlo z hlavy pylonu do kotevního bloku: řetěz čtyř dílů po přímce, poslední končí v kotvě.
+      if (prvek === "lano-nosne") k.prut(prvek, [-6, 24], [-30, 0]);
+      else for (let i = 0; i < 4; i++) k.prut(prvek, [-6 - 6 * i, 24 - 6 * i], [-12 - 6 * i, 18 - 6 * i]);
+      return zkontrolujNavrh(k.navrh(), uroven).map((p) => p.druh).filter((druh) => druh === "kotva-jen-lano");
+    };
+    expect(sTahlem("ocel-lehka")).toEqual(["kotva-jen-lano"]);
+    expect(sTahlem("ocel-tezka")).toEqual(["kotva-jen-lano"]);
+    expect(sTahlem("lano-nosne")).toEqual([]);
+  });
+
+  it("8-02: lávka na lanech bez laděného tlumiče: paleta nemá ocel a vedení drží pylony nízko", () => {
+    // Recenze obtížnosti M14 (nález 1): krátký šikmý ocelový stožár s hlavou nad mostovkou posunul
+    // vlastní frekvence lávky mezi rytmy útvaru a procesí a lávka bez jediného tlumiče dostala
+    // mistrovskou medaili, o čtvrt milionu levněji než most autora. Úroveň proto ocelové pruty
+    // nedovoluje (pylon je pilíř na základu za opěrou) a vedení ve výšce 10,5 m nepustí vysoké
+    // pylony, ze kterých projde bez tlumiče poloviční visutá lávka.
+    const uroven = kampan.find((u) => u.id === "8-02")!;
+    expect(uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut")).toEqual([]);
+    const lavka = (stav: (k: Kreslic) => void): NavrhMostu => {
+      const k = new Kreslic("8-02");
+      for (let x = 0; x < 60; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
+      stav(k);
+      return k.navrh();
+    };
+    const druhy = (navrh: NavrhMostu): Set<string> => new Set(zkontrolujNavrh(navrh, uroven).map((p) => p.druh).filter((druh) => druh !== "nad-rozpocet"));
+    // Most recenzenta: stožáry z opěr do (5, 5) a (55, 5), vějíř lan a kotevní lano.
+    const sikmeStozary = lavka((k) => {
+      for (const [pata, hlava, kotva, smer] of [
+        [0, 5, -16, 1],
+        [60, 55, 76, -1],
+      ] as const) {
+        k.prut("ocel-lehka", [pata, 0], [hlava, 5]);
+        for (const od of [6, 12, 18, 24, 30]) k.prut("lano", [hlava, 5], [pata + smer * od, 0]);
+        k.prut("lano", [hlava, 5], [kotva, 0]);
+      }
+    });
+    expect(druhy(sikmeStozary)).toEqual(new Set(["prvek-nepovoleny"]));
+    // Pilířový pylon vyšší než vedení: do zóny. Desetimetrový pod ni projde.
+    const sPylony = (vyska: number): NavrhMostu =>
+      lavka((k) => {
+        for (const [zaklad, kotva, smer] of [
+          [-4, -16, 1],
+          [64, 76, -1],
+        ] as const) {
+          k.prut("pilir", [zaklad, 0], [zaklad, vyska]);
+          for (const od of [6, 12, 18, 24]) k.prut("lano", [zaklad, vyska], [(smer === 1 ? 0 : 60) + smer * od, 0]);
+          k.prut("lano", [zaklad, vyska], [kotva, 0]);
+        }
+      });
+    expect(druhy(sPylony(12))).toEqual(new Set(["prut-v-zakazane-zone", "stycnik-v-zakazane-zone"]));
+    expect(druhy(sPylony(10))).toEqual(new Set());
+    // Mosty autora mají laděné tlumiče a lana a kontrolou projdou.
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) {
+      const most = RESENI["8-02"]![klic];
+      expect(zkontrolujNavrh(most, uroven), klic).toEqual([]);
+      expect(most.stycniky.filter((s) => s.tlumic).length, klic).toBeGreaterThanOrEqual(2);
+      expect(most.pruty.filter((p) => p.prvek === "lano" || p.prvek === "lano-nosne").length, klic).toBeGreaterThanOrEqual(4);
+    }
   });
 
   it("2-04: o kotvy pro tlumiče se neopře vzpěra; tlumič do nich vést smí", () => {

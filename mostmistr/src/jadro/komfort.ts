@@ -79,6 +79,40 @@ export function vytvorMereniKomfortu(s: Soustava, stycniky: Iterable<number>, me
   return m;
 }
 
+/** Kopie měření se stejným stavem filtrů: dál se měří nezávisle na originálu. */
+export function zkopirujMereniKomfortu(m: MereniKomfortu): MereniKomfortu {
+  return {
+    ...m,
+    stycniky: m.stycniky.slice(),
+    rychlost: m.rychlost.slice(),
+    dolni: m.dolni.slice(),
+    dolniMinula: m.dolniMinula.slice(),
+    horni: m.horni.slice(),
+    ctverec: m.ctverec.slice(),
+  };
+}
+
+/** Ticho po porušení mostu: do kdy se kmitání nepočítá a kolik ticha ještě zbývá rozdat. */
+export interface KlidPoPoruseni {
+  /** Čas, od kterého se kmitání zase počítá (s). */
+  pocitatOd: number;
+  /** Kolik sekund ticha zkouška ještě smí dát. */
+  zbyva: number;
+}
+
+/**
+ * Po porušení v čase `cas` se kmitání `delka` sekund nepočítá: ráz porušení není kmitání pod
+ * lidmi. Ticho má strop (`zbyva`): mostu, kterému povoluje prut za prutem, by jinak kmitání
+ * nezměřil nikdo. Okna, která se překrývají, berou ze zásoby jen to, o co ticho prodlouží.
+ */
+export function prodluzKlid(klid: KlidPoPoruseni, cas: number, delka: number): void {
+  const od = Math.max(cas, klid.pocitatOd);
+  const konec = Math.min(cas + delka, od + klid.zbyva);
+  if (konec <= od) return;
+  klid.zbyva -= konec - od;
+  klid.pocitatOd = konec;
+}
+
 /**
  * Zpracuje jeden krok simulace délky `dt`, který skončil v čase `cas`. Filtry běží pořád;
  * do největší hodnoty se měření započítá, jen když je `pocitat` (na mostě jsou lidé).

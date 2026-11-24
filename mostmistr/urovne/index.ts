@@ -35,8 +35,14 @@ import dveKridla from "./7-02.json";
 import dlouheKridlo from "./7-03.json";
 import velkyPristav from "./7-04.json";
 import jedineKridlo from "./7-05.json";
+import tratNaLanech from "./8-01.json";
+import lavkaNaLanech from "./8-02.json";
+import pristavniTrat from "./8-03.json";
 
-/** Úrovně kampaně v pořadí, v jakém se hrají; pátá úroveň každé kapitoly je její zkouška (bez ukázky a nápovědy). */
+/**
+ * Úrovně kampaně v pořadí, v jakém se hrají; pátá úroveň každé kapitoly je její zkouška (bez
+ * ukázky a nápovědy) a osmá kapitola je závěrečná: spojuje mechaniky kapitol před ní.
+ */
 const SOUBORY_KAMPANE: readonly unknown[] = [
   lavkaPresPotok,
   cyklostezka,
@@ -73,6 +79,9 @@ const SOUBORY_KAMPANE: readonly unknown[] = [
   dlouheKridlo,
   velkyPristav,
   jedineKridlo,
+  tratNaLanech,
+  lavkaNaLanech,
+  pristavniTrat,
 ];
 
 /** Soubory úrovní tak, jak leží na disku; `nactiUrovne` je zkontroluje a převede. */

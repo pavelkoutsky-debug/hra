@@ -1,0 +1,211 @@
+{
+  "verze": 8,
+  "id": "8-01",
+  "nazev": "Trať na lanech",
+  "vyrez": {
+    "xMin": -36,
+    "yMin": -24,
+    "xMax": 132,
+    "yMax": 30
+  },
+  "teren": [
+    {
+      "x": -36,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 4,
+      "y": -8
+    },
+    {
+      "x": 14,
+      "y": -16
+    },
+    {
+      "x": 30,
+      "y": -20
+    },
+    {
+      "x": 66,
+      "y": -20
+    },
+    {
+      "x": 82,
+      "y": -16
+    },
+    {
+      "x": 92,
+      "y": -8
+    },
+    {
+      "x": 96,
+      "y": 0
+    },
+    {
+      "x": 132,
+      "y": 0
+    }
+  ],
+  "hladina": -9,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 96,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": -30,
+      "y": 0,
+      "typ": "pevna",
+      "jen": "lano"
+    },
+    {
+      "x": 126,
+      "y": 0,
+      "typ": "pevna",
+      "jen": "lano"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": -6,
+      "y": 0
+    },
+    {
+      "x": 102,
+      "y": 0
+    }
+  ],
+  "zakazaneZony": [
+    {
+      "xMin": 0.5,
+      "yMin": -24,
+      "xMax": 95.5,
+      "yMax": -0.5
+    },
+    {
+      "xMin": 28.5,
+      "yMin": 4,
+      "xMax": 67.5,
+      "yMax": 30
+    },
+    {
+      "xMin": -5.5,
+      "yMin": 0.5,
+      "xMax": 3.5,
+      "yMax": 3
+    },
+    {
+      "xMin": -5.5,
+      "yMin": 0.5,
+      "xMax": -0.5,
+      "yMax": 10.5
+    },
+    {
+      "xMin": 92.5,
+      "yMin": 0.5,
+      "xMax": 101.5,
+      "yMax": 3
+    },
+    {
+      "xMin": 96.5,
+      "yMin": 0.5,
+      "xMax": 101.5,
+      "yMax": 10.5
+    },
+    {
+      "xMin": -5.5,
+      "yMin": 0.5,
+      "xMax": -4.5,
+      "yMax": 18
+    },
+    {
+      "xMin": 100.5,
+      "yMin": 0.5,
+      "xMax": 101.5,
+      "yMax": 18
+    }
+  ],
+  "trasy": [
+    {
+      "id": "kolej",
+      "druh": "kolej",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 96,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 5,
+  "hmotnostVybaveni": 0,
+  "nerovnost": "B",
+  "rozpocet": 4500000,
+  "inzenyrskyRozpocet": 4410000,
+  "mistrovska": {
+    "druh": "rezerva",
+    "limit": 0.62
+  },
+  "povolenePrvky": [
+    "kolejiste",
+    "ocel-lehka",
+    "ocel-tezka",
+    "lano",
+    "lano-nosne",
+    "pilir"
+  ],
+  "povoleneSvary": true,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": false,
+  "nejvetsiTlumic": 0,
+  "rezonancniKrivka": false,
+  "budic": false,
+  "nejhorsiKomfort": 3,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "rychlost": 27.8,
+      "vozy": [
+        {
+          "druh": "vuz-osobni",
+          "pocet": 4
+        }
+      ]
+    },
+    {
+      "cas": 8,
+      "trasa": "kolej",
+      "smer": 1,
+      "druh": "lokomotiva",
+      "vozy": [
+        {
+          "druh": "vuz-nakladni",
+          "pocet": 10
+        }
+      ],
+      "brzdeni": {
+        "misto": 80,
+        "stani": 3,
+        "zpomaleni": 1
+      }
+    }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": false
+}

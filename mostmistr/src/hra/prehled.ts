@@ -241,6 +241,10 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
     nadpis.textContent = t("prehled.dokonceno.nadpis");
     poleDokonceno.append(nadpis, document.createTextNode(` ${t("prehled.dokonceno")}`));
   }
+  // Odkaz na mosty hráče: průběžně „Moje mosty“, po projití celé kampaně závěrečný list.
+  const odkazNaList = udaj("prehled-list");
+  odkazNaList.textContent = t(dokonceno ? "prehled.list.dokonceno" : "prehled.list");
+  odkazNaList.parentElement!.hidden = postup.projito === 0;
   document.body.dataset.rezim = "prehled";
 
   // Zpětná vazba a deník hraní: v přehledu není most, který by šel přiložit.

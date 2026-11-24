@@ -121,9 +121,10 @@ describe("přehled kampaně", () => {
     await stranka.goto(`${adresa}?vyvoj=1`);
     await stranka.locator(".karta").first().waitFor();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
-    expect(kapitoly).toHaveLength(7);
-    expect(kapitoly.at(-1)).toContain("Přístav");
-    expect(kapitoly.at(-1)).toContain("Hydraulický píst, dělicí zámek");
+    // Sedm kapitol a za nimi závěrečná.
+    expect(kapitoly).toHaveLength(8);
+    expect(kapitoly[6]).toContain("Přístav");
+    expect(kapitoly[6]).toContain("Hydraulický píst, dělicí zámek");
     await stranka.locator("#odemknout-vse").check();
     const karty = await stranka.locator(".karta").allInnerTexts();
     for (const nazev of ["Zvedací most", "Dvě křídla", "Dlouhé křídlo", "Velký přístav"]) {

@@ -3255,3 +3255,78 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
     min-height: 44px;
   }
 }
+
+/* ---- Závěrečný list kampaně a galerie mostů ---- */
+
+.prehled__list {
+  margin: 0 0 14px;
+}
+
+.prehled__list a {
+  color: var(--cara-silna);
+}
+
+.list__zahlavi {
+  max-width: 1280px;
+  margin: 0 0 22px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--cara);
+}
+
+.list__zahlavi h1 {
+  margin: 0 0 6px;
+  color: var(--cara-silna);
+  font-size: 26px;
+  font-weight: normal;
+}
+
+.list__veta {
+  margin: 0 0 14px;
+}
+
+.list__cisla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 18px;
+  margin: 0;
+}
+
+.list__cisla dt {
+  color: var(--popisek);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list__cisla dd {
+  margin: 2px 0 0;
+  color: var(--cara-silna);
+  font-size: 18px;
+}
+
+.list__hlaseni {
+  min-height: 1.35em;
+  margin: 10px 0 0;
+  color: var(--cara-silna);
+}
+
+.list__hlaseni:empty {
+  display: none;
+}
+
+.list__poznamka {
+  max-width: 1280px;
+  margin: 0 0 20px;
+  color: var(--popisek);
+  font-size: 12px;
+}
+
+.karta--list .karta__stav {
+  color: var(--cara);
+}
+
+@media (max-width: 700px) {
+  .list__zahlavi h1 {
+    font-size: 20px;
+  }
+}
