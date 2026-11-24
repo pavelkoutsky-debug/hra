@@ -125,7 +125,8 @@ describe("Havarijní komise", () => {
     await s.locator(PLATNO).waitFor();
     // Spis se otevře sám: případ, co se stalo, a pravidla opravy. Medaile případ nemá.
     await s.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj(s, "zadani-list")).toBe("Případ 1");
+    // Nadtitul okna je verzálkami (styl), text je „Případ 1“.
+    expect((await udaj(s, "zadani-list")).toLowerCase()).toBe("případ 1");
     expect(await udaj(s, "zadani-text")).toContain(`oprav ho nejvýš ${NEJVIC_ZMEN_OPRAVY} změnami`);
     expect(await s.locator('[data-udaj="zadani-medaile"]').isVisible()).toBe(false);
     await s.screenshot({ path: `${SLOZKA}/k2-spis.png` });
@@ -223,7 +224,7 @@ describe("Havarijní komise", () => {
     const en = await cistaStranka({ locale: "en-US" });
     await en.goto(`${adresa}?uroven=${prvni.uroven.id}&jazyk=en`);
     await en.locator(PLATNO).waitFor();
-    expect(await udaj(en, "zadani-list")).toBe("Case 1");
+    expect((await udaj(en, "zadani-list")).toLowerCase()).toBe("case 1");
     expect(await udaj(en, "zadani-text")).toContain("repair it with at most 3 changes");
     await en.locator('#okno-zadani[open] button[value="zavrit"]').click();
     expect(await udaj(en, "komise-text")).toContain("This is how it fell");

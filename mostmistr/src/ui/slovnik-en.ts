@@ -1479,6 +1479,10 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "komise.vysledek.uzavreno.jedna": "Case closed with a single change.",
   "komise.dalsi": "Next case ▸",
   "komise.naPrehled": "Back to the overview",
+  "havarie.9-01.spis": "A timber road bridge across a deep gorge, 24 metres long, with a truss above the deck. Two cars crossed it without trouble, but when a van drove on, one panel near the left bank skewed and the deck gave way. Witnesses say one of the diagonal timbers in that panel bowed first.",
+  "havarie.9-01.nalez": "The diagonal in the second panel ran the wrong way: from the deck up towards the middle, so traffic pushed on it instead of pulling it. A light timber almost six metres long buckled under that compression. Truss diagonals should run so that the load stretches them; a member this long in compression needs heavy timber.",
+  "havarie.9-02.spis": "A steel footbridge across a valley, 32 metres long, with a low truss because nothing taller was allowed. The builder knew it would sway and hung two two-tonne weights on it. At the acceptance test a guard of honour marched across in step and the footbridge swayed so much that it was rejected; nothing broke and nobody fell.",
+  "havarie.9-02.nalez": "The weights hung at the nodes next to the abutments, where the footbridge barely moves when it vibrates, so they hardly changed its natural frequency: with the soldiers on it, it vibrated at 2.2 Hz, right at their 2.3 Hz step. Weights belong in the middle of the span, where the bridge moves most; only there do they pull the frequency below the step. Heavier members do not help: they make the bridge both stiffer and heavier, and the frequency stays almost the same.",
   "zadani.0-01": "Sandbox: no medals, all the elements. Build a bridge across the valley and send traffic over it; with the “Valley & traffic” button at the top of the palette you pick a ready-made valley or set up your own: how wide and deep it is, whether a footbridge, a road or a railway crosses it, how many footings for piers there are at the bottom, whether the bridge lifts for a ship and who will walk or drive across it. You can also set yourself a goal (a budget, a calm bridge under people). With the test to failure you find out how much the bridge carries; on a footbridge and on a road the shaker finds where it resonates.",
   "prehled.bezPameti": "The browser did not allow data to be saved, so the game will not remember your progress.",
   "prehled.novaPravidla":
@@ -1665,4 +1669,6 @@ export const NAZVY_UROVNI_EN: Readonly<Record<string, string>> = {
   "8-01": "Rail on Cables",
   "8-02": "Footbridge on Cables",
   "8-03": "Harbour Line",
+  "9-01": "Bridge over the Gorge",
+  "9-02": "Footbridge by the Barracks",
 };

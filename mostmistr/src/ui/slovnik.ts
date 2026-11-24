@@ -1446,6 +1446,10 @@ const CS = {
   "komise.vysledek.uzavreno.jedna": "Případ uzavřen jedinou změnou.",
   "komise.dalsi": "Další případ ▸",
   "komise.naPrehled": "Zpět na přehled",
+  "havarie.9-01.spis": "Dřevěný silniční most přes hlubokou rokli, 24 metrů, s příhradou nad mostovkou. Dvě auta po něm přejela bez potíží, ale když na most vjela dodávka, jedno pole nedaleko levého břehu se zkosilo a mostovka se propadla. Svědci říkají, že se v tom poli nejdřív prohnul jeden šikmý trám.",
+  "havarie.9-01.nalez": "Diagonála ve druhém poli byla obrácená: vedla od mostovky nahoru ke středu, a tak ji provoz tlačil, místo aby ji natahoval. Lehký trám dlouhý skoro šest metrů se v tlaku vzepřel. Diagonály příhrady mají vést tak, aby je zatížení natahovalo; tlačený prut takové délky potřebuje těžký trám.",
+  "havarie.9-02.spis": "Ocelová lávka přes údolí, 32 metrů, s nízkou příhradou, protože výš stavět nešlo. Stavitel věděl, že lávka bude kmitat, a zavěsil na ni dvě dvoutunová závaží. Při přejímce po ní prošla čestná jednotka v kroku a lávka se rozhoupala tak, že ji úřad nepřevzal; nic nepovolilo a nikdo nespadl.",
+  "havarie.9-02.nalez": "Závaží visela ve styčnících u opěr, kde se lávka při kmitání skoro nehýbe, a vlastní frekvenci proto téměř nezměnila: s vojáky lávka kmitala na 2,2 Hz, přímo v jejich kroku 2,3 Hz. Závaží patří doprostřed rozpětí, kde most kmitá nejvíc; teprve tam stáhne frekvenci pod krok. Těžší pruty nepomůžou: most je s nimi tužší i těžší a frekvence zůstane skoro stejná.",
   "zadani.0-01":
     "Pískoviště: žádné medaile, všechny prvky. Postav most přes údolí a pusť na něj provoz; tlačítkem „Údolí a provoz“ nahoře v paletě si vybereš hotové údolí, nebo nastavíš vlastní: jak je široké a hluboké, jestli přes něj vede lávka, silnice nebo trať, kolik je na dně základů pro pilíře, jestli se most zvedá před lodí a kdo přes něj půjde nebo pojede. Můžeš si dát i vlastní cíl (rozpočet, klidný most pod lidmi). Zkouškou do zlomu zjistíš, kolik most unese; na lávce a na silnici najdeš budičem, kde rezonuje.",
   "prehled.bezPameti": "Prohlížeč nedovolil ukládat data, takže si hra postup nezapamatuje.",
