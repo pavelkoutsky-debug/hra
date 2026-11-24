@@ -1112,6 +1112,8 @@ const CS = {
   "kapitola.6.tema": "Vlak. Kolejiště, lokomotiva a vozy, styky kolejnic, pohodlí cestujících, brzdící vlak a most o dvou patrech.",
   "kapitola.7.nazev": "Přístav",
   "kapitola.7.tema": "Most, který se hýbe. Hydraulický píst, dělicí zámek, ocelová mostovka, lodě a dosednutí mostu na opěru.",
+  "kapitola.8.nazev": "Mistrovské dílo",
+  "kapitola.8.tema": "Všechno najednou. Vlak na lanech, lávka s tlumičem nad řekou a zvedací most pro trať: nic nového, jen to, co už umíš, pohromadě.",
   "prehled.zamceno": "Zamčeno: nejdřív projdi úroveň {uroven}.",
   "prehled.zkouska": "zkouška",
   "prehled.zkouska.popis": "Zkouška kapitoly: bez ukázky a bez nápovědy.",

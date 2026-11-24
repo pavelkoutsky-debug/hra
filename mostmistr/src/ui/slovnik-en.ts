@@ -1144,6 +1144,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "kapitola.6.tema": "The train. The track deck, locomotive, wagons and coaches, rail joints, passenger comfort, a braking train and a double-deck bridge.",
   "kapitola.7.nazev": "Harbour",
   "kapitola.7.tema": "A bridge that moves. The hydraulic cylinder, the span lock, the steel deck, ships and the bridge landing on its abutment.",
+  "kapitola.8.nazev": "Masterpiece",
+  "kapitola.8.tema": "Everything at once. A train on cables, a damped footbridge over the river and a lift bridge for the railway: nothing new, just all you already know, together.",
   "prehled.zamceno": "Locked: complete level {uroven} first.",
   "prehled.zkouska": "exam",
   "prehled.zkouska.popis": "Chapter exam: no demo and no hints.",
