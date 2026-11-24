@@ -128,6 +128,10 @@ describe("Havarijní komise", () => {
     // Nadtitul okna je verzálkami (styl), text je „Případ 1“.
     expect((await udaj(s, "zadani-list")).toLowerCase()).toBe("případ 1");
     expect(await udaj(s, "zadani-text")).toContain(`oprav ho nejvýš ${NEJVIC_ZMEN_OPRAVY} změnami`);
+    // Pravidla jmenují jen změny, které paleta případu dovoluje (první případ nemá zámek ani lana).
+    expect(await udaj(s, "zadani-text")).toContain("Změna je přidaný, odebraný, vyměněný nebo jedním koncem přepojený prut, posunutý styčník");
+    expect(await udaj(s, "zadani-text")).not.toMatch(/zámek|Napínáky/);
+    expect(await udaj(s, "zadani-text")).toContain("co s tím, je na tobě");
     expect(await s.locator('[data-udaj="zadani-medaile"]').isVisible()).toBe(false);
     await s.screenshot({ path: `${SLOZKA}/k2-spis.png` });
     await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
@@ -137,14 +141,18 @@ describe("Havarijní komise", () => {
     expect(await telo(s, "pruty")).toBe(String(prvni.most.pruty.length));
     expect(await telo(s, "zmen")).toBe("0");
     expect(await s.locator('[data-udaj="komise"]').getAttribute("data-stav")).toBe("puvodni");
-    expect(await udaj(s, "komise-text")).toContain("Takhle spadl");
+    expect(await udaj(s, "komise-text")).toContain("Takhle neobstál");
     expect(await akce(s, "napoveda").isVisible()).toBe(false);
     expect(await s.locator('.paleta [data-akce="sdilet"]').isVisible()).toBe(false);
     await s.screenshot({ path: `${SLOZKA}/k3-spadly-most.png` });
 
     // Spadlý most jde pustit, jak je: neprojde a výsledek připomene úkol.
     expect(await zkousej(s)).toBe("MOST NEOBSTÁL");
-    expect(await udaj(s, "vysledek-veta")).toContain("Takhle spadl. Teď najdi příčinu");
+    expect(await udaj(s, "vysledek-veta")).toContain("Takhle neobstál. Teď najdi příčinu");
+    // Komise neradí: výsledek říká, co povolilo, ne co s tím (v kampani by tu stálo „dej silnější prvek“).
+    const oPrvnim = (await s.locator('[data-udaj="vysledek-prvni"]').textContent()) ?? "";
+    expect(oPrvnim.length).toBeGreaterThan(10);
+    expect(oPrvnim).not.toMatch(/silnější prvek|Zkrať ho|Podepři ho/);
     expect(await akce(s, "dalsi").isVisible()).toBe(false);
     expect(await telo(s, "pripad-uzavren")).toBe("");
     await akce(s, "upravit").click();
@@ -215,10 +223,35 @@ describe("Havarijní komise", () => {
     expect(await s.locator('[data-udaj="komise"]').getAttribute("data-stav")).toBe("moc");
     await s.locator(PLATNO).focus();
     await s.keyboard.press("Space");
-    expect(await udaj(s, "hlaseni")).toContain(`Oprava má ${zmen} změn, komise jich dovolí nejvýš ${NEJVIC_ZMEN_OPRAVY}.`);
+    expect(await udaj(s, "hlaseni")).toContain(`Změn v opravě: ${zmen}. Komise jich dovolí nejvýš ${NEJVIC_ZMEN_OPRAVY}`);
     expect(await telo(s, "rezim")).toBe("stavba");
     await s.screenshot({ path: `${SLOZKA}/k6-moc-zmen.png` });
   }, 120_000);
+
+  it("oprava, při které se pod provozem něco poruší, případ neuzavře", async () => {
+    // Případ 3: nohy do V jako komise, jen z lehkého profilu. Kolona přejede, ale nohy se vzepřou.
+    const treti = PRIPADY[2]!;
+    const pridane = new Set(stavOpravy(treti, treti.oprava).zmeny.flatMap((z) => (z.druh === "prut-pridan" ? [z.prut] : [])));
+    expect(pridane.size).toBe(2);
+    const lehke: NavrhMostu = { ...treti.oprava, pruty: treti.oprava.pruty.map((p) => (pridane.has(p.id) ? { ...p, prvek: "ocel-lehka" as const } : p)) };
+    expect(stavOpravy(treti, lehke).zmeny.length).toBe(2);
+    const s = await cistaStranka();
+    await s.goto(`${adresa}?uroven=${treti.uroven.id}`);
+    await s.locator(PLATNO).waitFor();
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    await nactiMost(s, lehke);
+    expect(await telo(s, "zmen")).toBe("2");
+    expect(await zkousej(s)).toBe("MOST OBSTÁL");
+    expect(await telo(s, "pripad-uzavren")).toBe("");
+    expect(await udaj(s, "vysledek-veta")).toContain("takovou opravu komise neuzná");
+    expect(await s.locator('[data-udaj="vysledek-nalez"]').isVisible()).toBe(false);
+    expect(await s.evaluate(() => window.localStorage.getItem("mostmistr.havarie"))).toBeNull();
+    // Oprava komise (těžký profil) projde bez porušení a případ uzavře.
+    await akce(s, "upravit").click();
+    await nactiMost(s, treti.oprava);
+    expect(await zkousej(s)).toBe("MOST OBSTÁL");
+    expect(await telo(s, "pripad-uzavren")).toBe("2");
+  }, 300_000);
 
   it("anglicky je případ přeložený a na telefonu pruh komise nepřetéká", async () => {
     const en = await cistaStranka({ locale: "en-US" });
@@ -227,8 +260,8 @@ describe("Havarijní komise", () => {
     expect((await udaj(en, "zadani-list")).toLowerCase()).toBe("case 1");
     expect(await udaj(en, "zadani-text")).toContain("repair it with at most 3 changes");
     await en.locator('#okno-zadani[open] button[value="zavrit"]').click();
-    expect(await udaj(en, "komise-text")).toContain("This is how it fell");
-    expect(await akce(en, "komise-puvodni").innerText()).toBe("Restore the fallen bridge");
+    expect(await udaj(en, "komise-text")).toContain("This is how it failed");
+    expect(await akce(en, "komise-puvodni").innerText()).toBe("Restore the original bridge");
 
     const telefon = await cistaStranka({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     await telefon.goto(`${adresa}?uroven=${prvni.uroven.id}`);

@@ -106,6 +106,11 @@ export type VysledekUlozeni =
  * Uloží údolí a most pod jménem `nazev`: práci stejného jména přepíše, jinak ji přidá na
  * začátek seznamu. Vrací novou dílnu a to, co se stalo; vstupní dílnu nemění.
  */
+/** Je to totéž jméno práce? Velikost písmen nerozhoduje: „Most“ a „most“ by hráč v dílně nerozeznal. */
+export function stejneJmenoPrace(a: string, b: string): boolean {
+  return a.toLocaleLowerCase() === b.toLocaleLowerCase();
+}
+
 export function ulozPraci(dilna: Dilna, nazev: string, nastaveni: NastaveniSandboxu, navrh: NavrhMostu, cas: number): VysledekUlozeni {
   const jmeno = upravNazevPrace(nazev);
   if (jmeno === "") return { stav: "bez-jmena", dilna };
@@ -117,9 +122,9 @@ export function ulozPraci(dilna: Dilna, nazev: string, nastaveni: NastaveniSandb
   }
   if (kod.length > NEJDELSI_KOD_MOSTU) return { stav: "velky", dilna };
   const prace: PraceDilny = { nazev: jmeno, nastaveni: nactiSandbox(nastaveni), kod, ulozeno: cas };
-  const byla = dilna.prace.some((p) => p.nazev === jmeno);
+  const byla = dilna.prace.some((p) => stejneJmenoPrace(p.nazev, jmeno));
   if (!byla && dilna.prace.length >= NEJVIC_PRACI) return { stav: "plno", dilna };
-  return { stav: byla ? "prepsano" : "ulozeno", dilna: { verze: VERZE_DILNY, prace: [prace, ...dilna.prace.filter((p) => p.nazev !== jmeno)] } };
+  return { stav: byla ? "prepsano" : "ulozeno", dilna: { verze: VERZE_DILNY, prace: [prace, ...dilna.prace.filter((p) => !stejneJmenoPrace(p.nazev, jmeno))] } };
 }
 
 export function smazPraci(dilna: Dilna, nazev: string): Dilna {
@@ -130,7 +135,7 @@ export function smazPraci(dilna: Dilna, nazev: string): Dilna {
 export function volnyNazevPrace(dilna: Dilna, zaklad: string): string {
   for (let n = 1; n <= NEJVIC_PRACI + 1; n++) {
     const nazev = `${zaklad} ${n}`;
-    if (!dilna.prace.some((p) => p.nazev === nazev)) return nazev;
+    if (!dilna.prace.some((p) => stejneJmenoPrace(p.nazev, nazev))) return nazev;
   }
   return `${zaklad} ${NEJVIC_PRACI + 2}`;
 }
@@ -147,16 +152,19 @@ const ZNAK_TRASY: Record<DruhTrasy, string> = { lavka: "l", silnice: "s", kolej:
  */
 export function sandboxDoAdresy(nastaveni: NastaveniSandboxu): string {
   const n = nactiSandbox(nastaveni);
+  // Čísla přesně, jen nikdy s exponentem: zápis „1e-7“ by čtení odmítlo jako poškozený odkaz
+  // (a čas pod miliontinu sekundy je nula). Meze nastavení drží čísla daleko od velkých řádů.
+  const c = (x: number): string => (Math.abs(x) < 1e-6 ? "0" : String(x));
   return [
     VERZE_SANDBOXU,
-    n.rozpeti,
-    n.hloubka,
+    c(n.rozpeti),
+    c(n.hloubka),
     ZNAK_TRASY[n.druh],
     n.voda ? 1 : 0,
-    n.zaklady,
-    n.provoz.map((p) => [p.druh, p.pocet, p.smer === 1 ? 1 : 0, p.cas].join(":")).join("_"),
-    n.zvedani ? [n.zvedani.kridla, n.zvedani.cas, n.zvedani.lod].join(":") : "",
-    n.rozpocet ?? "",
+    c(n.zaklady),
+    n.provoz.map((p) => [p.druh, c(p.pocet), p.smer === 1 ? 1 : 0, c(p.cas)].join(":")).join("_"),
+    n.zvedani ? [n.zvedani.kridla, c(n.zvedani.cas), c(n.zvedani.lod)].join(":") : "",
+    n.rozpocet === null ? "" : c(n.rozpocet),
     n.komfort,
   ].join("~");
 }

@@ -145,7 +145,16 @@ export function oznacPojmy(koren: HTMLElement): void {
       tlacitko.textContent = zbytek.data;
       tlacitko.title = t(`pojem.${nalez.pojem}.text`);
       zbytek.replaceWith(tlacitko);
-      uzel = dalsi;
+      // Čárka nebo tečka hned za pojmem se nesmí zalomit na další řádek sama (úzké okno).
+      const interpunkce = /^[,.;:!?)\]“”…]+/u.exec(dalsi.data);
+      if (interpunkce) {
+        const zaNi = dalsi.splitText(interpunkce[0].length);
+        const celek = document.createElement("span");
+        celek.className = "pojem__celek";
+        tlacitko.replaceWith(celek);
+        celek.append(tlacitko, dalsi);
+        uzel = zaNi;
+      } else uzel = dalsi;
     }
   }
 }

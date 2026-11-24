@@ -268,6 +268,62 @@ describe("dílna v pískovišti", () => {
     expect(await telo(s, "pruty")).toBe("6");
   }, 300_000);
 
+  it("otevření práce z dílny během návštěvy nejdřív uloží hráčův rozestavěný most; když to nejde, nic nepřepíše", async () => {
+    const s = await cistaStranka();
+    // Hráč má v dílně jednu práci a na stole jiný, neuložený most (příhrada bez jedné diagonály).
+    await otevriPiskoviste(s);
+    await nactiMost(s, prihrada());
+    await otevriDilnu(s);
+    await s.locator("#dilna-nazev").fill("První");
+    await akce(s, "dilna-ulozit").click();
+    await s.keyboard.press("Escape");
+    const cela = prihrada();
+    const bezDiagonaly: NavrhMostu = { ...cela, pruty: cela.pruty.slice(0, -1) };
+    await nactiMost(s, bezDiagonaly);
+    expect(await telo(s, "pruty")).toBe("12");
+
+    // Na návštěvě ve scénáři otevře práci z dílny: jeho most z pískoviště se nesmí ztratit.
+    const kanal = PREDLOHY_SANDBOXU.find((p) => p.id === "kanal")!.nastaveni;
+    const odkaz = odkazNaScenar(adresa, kanal, zakodujMost(zvedaci()));
+    await s.goto(odkaz);
+    await s.locator(PLATNO).waitFor();
+    expect(await telo(s, "host")).toBe("ano");
+    await otevriDilnu(s);
+    await Promise.all([s.waitForEvent("load"), karty(s).first().locator('[data-akce="dilna-otevrit"]').click()]);
+    await s.locator(PLATNO).waitFor();
+    expect(await telo(s, "host")).toBe("ne");
+    expect(await telo(s, "pruty")).toBe("13");
+    await otevriDilnu(s);
+    expect((await karty(s).locator(".dilna__jmeno").allInnerTexts()).map(bezMezer)).toEqual(["Rozestavěný 1", "První"]);
+    await s.keyboard.press("Escape");
+
+    // Plná dílna: rozestavěný most není kam uložit, takže se nic neotevře a nic nepřepíše.
+    await nactiMost(s, { ...cela, pruty: cela.pruty.slice(0, -2) });
+    expect(await telo(s, "pruty")).toBe("11");
+    await s.evaluate(() => {
+      const dilna = JSON.parse(window.localStorage.getItem("mostmistr.dilna")!) as { prace: { nazev: string }[] };
+      const vzor = dilna.prace[1]!;
+      for (let i = 0; dilna.prace.length < 12; i++) dilna.prace.push({ ...vzor, nazev: `Výplň ${i}` });
+      window.localStorage.setItem("mostmistr.dilna", JSON.stringify(dilna));
+    });
+    await s.goto(odkaz);
+    await s.locator(PLATNO).waitFor();
+    expect(await telo(s, "host")).toBe("ano");
+    await otevriDilnu(s);
+    expect(await karty(s).count()).toBe(12);
+    await karty(s).nth(1).locator('[data-akce="dilna-otevrit"]').click();
+    expect(await udaj(s, "dilna-hlaseni")).toContain("do dílny se ho uložit nepodařilo");
+    expect(await s.locator("#okno-dilna[open]").count()).toBe(1);
+    expect(await telo(s, "host")).toBe("ano");
+    const ulozeny = await s.evaluate(() => (JSON.parse(window.localStorage.getItem("mostmistr.ulozeni")!) as { navrhy: Record<string, { pruty: unknown[] }> }).navrhy["0-01"]!.pruty.length);
+    expect(ulozeny).toBe(11);
+    await s.keyboard.press("Escape");
+    // Totéž u „Otevřít ve svém pískovišti“.
+    await akce(s, "host-nechat").click();
+    expect(await udaj(s, "hlaseni")).toContain("do dílny se ho uložit nepodařilo");
+    expect(await telo(s, "host")).toBe("ano");
+  }, 240_000);
+
   it("odkaz, ze kterého vypadlo údolí nebo je poškozené, nic neotevře a řekne to", async () => {
     const s = await cistaStranka();
     const kod = zakodujMost(zvedaci());
@@ -281,6 +337,13 @@ describe("dílna v pískovišti", () => {
     expect(await telo(s, "host")).toBe("ne");
     expect(await telo(s, "pruty")).toBe("0");
     expect(await udaj(s, "hlaseni")).toContain("poškozený nebo neúplný");
+    // Údolí bez mostu: cizí údolí se hráči do jeho pískoviště neotevře, zůstane jeho vlastní (24 m).
+    const kanal = PREDLOHY_SANDBOXU.find((p) => p.id === "kanal")!.nastaveni;
+    await s.goto(`${adresa}?sandbox=${sandboxDoAdresy(kanal)}`);
+    await s.locator(PLATNO).waitFor();
+    expect(await telo(s, "host")).toBe("ne");
+    expect(await udaj(s, "hlaseni")).toContain("poškozený nebo neúplný");
+    expect(await udaj(s, "jizdni-rad")).not.toContain("loď");
   }, 120_000);
 
   it("během práce v dílně prohlížeč nehlásil žádnou chybu", () => {

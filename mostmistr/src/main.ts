@@ -52,12 +52,26 @@ try {
     // scénář se otevře jako návštěva. Když údolí nejde přečíst, most by do cizího nepasoval.
     let scenar: typeof mostZOdkazu = null;
     try {
-      if (sandboxVAdrese.startsWith("{")) nastaveni = sandboxZTextu(sandboxVAdrese);
-      else if (jeSandboxVAdrese(sandboxVAdrese)) {
-        nastaveni = sandboxZAdresy(sandboxVAdrese);
+      if (sandboxVAdrese.startsWith("{")) {
+        // Nastavení v adrese místo paměti prohlížeče; s mostem je to scénář stejně jako úsporný zápis.
+        nastaveni = sandboxZTextu(sandboxVAdrese);
         if (mostPiskoviste) scenar = mostZOdkazu;
+      } else if (jeSandboxVAdrese(sandboxVAdrese)) {
+        // Úsporný zápis údolí patří odkazu na scénář a ten nese i most. Bez mostu je odkaz
+        // neúplný: cizí údolí se hráči do jeho pískoviště neotevře (stavěl by v něm jako ve
+        // svém a úpravy by se mu ukládaly), zůstane jeho vlastní a dozví se, že odkaz nebyl celý.
+        if (mostPiskoviste) {
+          nastaveni = sandboxZAdresy(sandboxVAdrese);
+          scenar = mostZOdkazu;
+        } else {
+          sandboxZAdresy(sandboxVAdrese);
+          scenar = { chyba: "poskozeny" };
+        }
       }
       if (mostZOdkazu !== null && !mostPiskoviste) scenar = "chyba" in mostZOdkazu ? mostZOdkazu : { chyba: "poskozeny" };
+      // Most v adrese a údolí žádné nebo nečitelné od prvního znaku (`&sandbox`, `&sandbox=zzz`):
+      // most by se potichu zahodil. Hráč se má dozvědět, že odkaz nebyl celý.
+      else if (mostZOdkazu !== null && scenar === null) scenar = { chyba: "poskozeny" };
     } catch {
       // Nastavení v adrese nejde přečíst: platí uložené a hráč se dozví, že odkaz nebyl celý.
       if (mostZOdkazu !== null || jeSandboxVAdrese(sandboxVAdrese)) scenar = { chyba: "poskozeny" };

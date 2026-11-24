@@ -43,7 +43,7 @@ export interface StavOpravy {
   zmeny: ZmenaMostu[];
   /** Kolik změn ještě zbývá; záporné, když jich je moc. */
   zbyva: number;
-  /** Smí se s tímhle mostem ke zkoušce? (Aspoň jedna změna a nejvýš dovolený počet.) */
+  /** Smí se s tímhle mostem ke zkoušce? Nejvýš dovolený počet změn; spadlý most sám (žádná změna) pustit jde taky. */
   platna: boolean;
 }
 
