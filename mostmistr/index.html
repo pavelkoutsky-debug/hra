@@ -114,6 +114,7 @@
         <div class="host__tlacitka">
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="host-prekonat" data-text="sdileni.host.prekonat" data-popis="sdileni.host.prekonat.popis"></button>
           <button type="button" class="tlacitko" data-akce="host-nechat"></button>
+          <button type="button" class="tlacitko" data-akce="host-ulozit" data-text="dilna.host.ulozit" data-popis="dilna.host.ulozit.popis" hidden></button>
           <button type="button" class="tlacitko" data-akce="host-zpet"></button>
         </div>
         <!-- Kdo přijde odkazem, zadání neotevírá: upozornění na záznam hraní má vidět tady. -->
@@ -136,6 +137,9 @@
             </button>
             <button type="button" class="paleta__tlacitko" data-akce="sandbox" data-popis="sandbox.tlacitko.popis" hidden>
               <span data-text="sandbox.tlacitko"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="dilna" data-popis="dilna.tlacitko.popis" hidden>
+              <span data-text="dilna.tlacitko"></span>
             </button>
           </div>
           <!-- Nástroje jsou hned pod zadáním: na dlouhé paletě (lana, pískoviště) by jinak byly až pod okrajem okna. -->
@@ -616,6 +620,32 @@
         <p class="okno__hlaseni" data-udaj="sandbox-hlaseni" role="status"></p>
         <div class="okno__tlacitka">
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="sandbox-pouzit" data-text="sandbox.pouzit"></button>
+          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--dilna" id="okno-dilna">
+      <form method="dialog">
+        <h2 data-text="dilna.nadpis"></h2>
+        <div class="dilna__obsah">
+          <p data-text="dilna.popis"></p>
+          <div class="dilna__ulozit">
+            <label for="dilna-nazev" data-text="dilna.nazev"></label>
+            <input type="text" id="dilna-nazev" maxlength="40" autocomplete="off" />
+            <button type="button" class="tlacitko tlacitko--hlavni" data-akce="dilna-ulozit" data-text="dilna.ulozit"></button>
+          </div>
+          <div class="dilna__odkaz">
+            <label for="dilna-odkaz" data-text="dilna.odkaz"></label>
+            <input type="text" id="dilna-odkaz" readonly />
+            <button type="button" class="tlacitko" data-akce="dilna-kopirovat" data-text="dilna.kopirovat"></button>
+          </div>
+          <p class="okno__hlaseni" data-udaj="dilna-hlaseni" role="status"></p>
+          <h3 data-udaj="dilna-pocet"></h3>
+          <p class="okno__poznamka" data-udaj="dilna-prazdno" data-text="dilna.prazdno" hidden></p>
+          <ul class="dilna__prace" data-udaj="dilna-prace"></ul>
+        </div>
+        <div class="okno__tlacitka">
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>

@@ -120,9 +120,11 @@ import {
   klidnyUsek,
   type KlidnyUsek,
 } from "./rezie";
+import { jeStejnaPrace, NEJVIC_PRACI, odkazNaScenar, ulozPraci, volnyNazevPrace } from "../data/dilna";
 import { sandboxNaText, type NastaveniSandboxu } from "../data/sandbox";
 import { RESENI } from "../../urovne/reseni";
 import { pripojNapovedu, type Napoveda } from "./napoveda";
+import { pripojDilnu } from "./dilna";
 import { pripojSandbox } from "./sandbox";
 import { stupneVyzev, vypisVyzvy, zapisVyzvy } from "./vyzvy";
 import { ukazkaUrovne } from "../../urovne/ukazky";
@@ -581,15 +583,26 @@ export function spustUroven(
 
   const ulozeny = uloziste.navrh(uroven.id);
   let naposledUlozeny: NavrhMostu | null = ulozeny ?? null;
+  /** Stránka se právě načítá znovu s jinou prací z dílny: výkres už se nesmí uložit přes ni. */
+  let neukladat = false;
   // Most z odkazu (sdílení): hráč se na něj dívá jako host. Jeho vlastní most zůstává uložený
   // a nic se nepřepisuje, dokud se sám nerozhodne; odkaz na most, který už má, je obyčejné otevření.
-  const zOdkazu = sandbox === null && odkaz !== null && "navrh" in odkaz && odkaz.navrh.uroven === uroven.id ? odkaz : null;
+  // V pískovišti je to scénář z odkazu: údolí i most přišly adresou a pískoviště hráče zůstává.
+  const zOdkazu = odkaz !== null && "navrh" in odkaz && odkaz.navrh.uroven === uroven.id ? odkaz : null;
   /**
    * Most z odkazu, na který se hráč právě dívá; null, když staví svůj. `odlozeno` je výkres
    * hráče i s historií kroků, když na cizí most nahlíží z vlastní stavby (výzva z odkazu).
    */
   let host: { kod: string; navrh: NavrhMostu; odlozeno?: OdlozenyVykres } | null =
-    zOdkazu && !(ulozeny && navrhNaText(ulozeny) === navrhNaText(zOdkazu.navrh)) ? zOdkazu : null;
+    zOdkazu &&
+    !(
+      ulozeny &&
+      navrhNaText(ulozeny) === navrhNaText(zOdkazu.navrh) &&
+      // Scénář, který hráč už má na stole (stejný most ve stejném údolí), je obyčejné otevření.
+      (sandbox === null || sandboxNaText(uloziste.sandbox) === sandboxNaText(sandbox))
+    )
+      ? zOdkazu
+      : null;
   /** Jak dopadly běžné zkoušky téhle návštěvy: zápis mostu → prošel bez porušení? */
   const zkouseneMosty = new Map<string, boolean>();
   /** Výzva z odkazu: soupeřův most, který má hráč v téhle úrovni překonat cenou. */
@@ -1667,7 +1680,7 @@ export function spustUroven(
       if (poleHlaseni.dataset.odmitnuti) skryjHlaseni();
       naposledUlozeny = editor.navrh;
       // Most z odkazu se neukládá: hráč je v něm host a jeho vlastní most zůstává, jak byl.
-      if (!host) uloziste.ulozNavrh(editor.navrh);
+      if (!host && !neukladat) uloziste.ulozNavrh(editor.navrh);
       naplanujRozbor();
       zapisUpravu();
     }
@@ -4786,7 +4799,20 @@ export function spustUroven(
     const pruh = udaj("host");
     pruh.hidden = host === null;
     document.body.dataset.host = host ? "ano" : "ne";
-    if (host) {
+    prvek('[data-akce="host-ulozit"]', HTMLButtonElement).hidden = sandbox === null;
+    if (host && sandbox) {
+      // Scénář z odkazu: nic se nepřekonává, jde jen o to, kam s ním.
+      const maVlastni = (ulozenyMost()?.pruty.length ?? 0) > 0;
+      udaj("host-text").textContent = t(editor.navrh !== host.navrh ? "dilna.host.text.upraveny" : "dilna.host.text", {
+        cena: koruny(cenaNavrhu(editor.navrh)),
+        dovetek: t(maVlastni ? "dilna.host.dovetek.vlastni" : "dilna.host.dovetek.zadny"),
+      });
+      pruh.dataset.stav = editor.navrh !== host.navrh ? "upraveny" : "nezkouseny";
+      prvek('[data-akce="host-nechat"]', HTMLButtonElement).textContent = t("dilna.host.otevrit");
+      prvek('[data-akce="host-zpet"]', HTMLButtonElement).textContent = t("dilna.host.zpet");
+      prvek('[data-akce="host-prekonat"]', HTMLButtonElement).hidden = true;
+      for (const tlacitko of pruh.querySelectorAll("button")) tlacitko.disabled = rezim !== "stavba";
+    } else if (host) {
       const cena = koruny(cenaNavrhu(editor.navrh));
       const prosel = overeni(host.navrh);
       const klic =
@@ -4889,6 +4915,61 @@ export function spustUroven(
       const klic = prijmout ? (melVlastni ? "sdileni.nechano.vyzva.zpet" : "sdileni.nechano.vyzva") : melVlastni ? "sdileni.nechano.zpet" : "sdileni.nechano";
       ukazHlaseni(t(klic, { cena: koruny(cenaNavrhu(byl.navrh)) }), "info", true);
     }
+  }
+
+  /**
+   * Hráč se rozhodl, co se scénářem z odkazu (pískoviště): uložit ho do dílny, otevřít ho ve
+   * svém pískovišti (jeho rozestavěný most se nejdřív sám uloží do dílny), nebo se vrátit.
+   */
+  function ukonciScenar(jak: "ulozit" | "nechat" | "zpet"): void {
+    if (!host || !sandbox || rezim !== "stavba") return;
+    const dilna = uloziste.dilna;
+    if (jak === "ulozit") {
+      const vysledek = ulozPraci(dilna, volnyNazevPrace(dilna, t("dilna.nazev.zOdkazu")), sandbox, editor.navrh, Date.now());
+      zapis("dilna", { co: "scenar-ulozit", stav: vysledek.stav, praci: vysledek.dilna.prace.length });
+      if (vysledek.stav !== "ulozeno" && vysledek.stav !== "prepsano") {
+        ukazHlaseni(t(vysledek.stav === "plno" ? "dilna.ulozit.plno" : "dilna.ulozit.velky", { nejvic: celeCislo(NEJVIC_PRACI) }), "varovani", true);
+        return;
+      }
+      uloziste.dilna = vysledek.dilna;
+      ukazHlaseni(t("dilna.host.ulozeno", { nazev: vysledek.dilna.prace[0]!.nazev }), "info", true);
+      return;
+    }
+    if (jak === "nechat") {
+      // Rozestavěný most hráče nesmí zmizet bez stopy: co není v dílně, tam se uloží samo.
+      const vlastni = ulozenyMost();
+      let prace = dilna;
+      if (vlastni && vlastni.pruty.length > 0) {
+        let kod: string | null = null;
+        try {
+          kod = zakodujMost(vlastni);
+        } catch {
+          kod = null;
+        }
+        const mojeUdoli = uloziste.sandbox;
+        if (kod === null || !prace.prace.some((p) => jeStejnaPrace(p, mojeUdoli, kod))) {
+          const ulozeni = ulozPraci(prace, volnyNazevPrace(prace, t("dilna.nazev.rozestaveny")), mojeUdoli, vlastni, Date.now());
+          if (ulozeni.stav !== "ulozeno") {
+            ukazHlaseni(t("dilna.host.neniKam"), "varovani", true);
+            zapis("dilna", { co: "scenar-otevrit", stav: "neni-kam" });
+            return;
+          }
+          prace = ulozeni.dilna;
+          uloziste.dilna = prace;
+        }
+      }
+      zapis("dilna", { co: "scenar-otevrit", stav: "ok", upraveny: editor.navrh !== host.navrh });
+      const scenar = editor.navrh;
+      host = null;
+      uloziste.sandbox = sandbox;
+      uloziste.ulozNavrh(scenar);
+    } else {
+      zapis("dilna", { co: "scenar-zpet" });
+    }
+    // Pískoviště hráče se načte znovu ze své paměti; bez paměti prohlížeče by se scénář ztratil,
+    // takže tam zůstane na adrese.
+    if (uloziste.trvale || jak === "zpet") window.location.search = "?sandbox";
+    else obnovStavbu();
   }
 
   /** Ukáže znovu soupeřův most z přijaté výzvy; vlastní most zůstává uložený. */
@@ -5343,7 +5424,37 @@ export function spustUroven(
       },
     });
     tlacitkoSandboxu.addEventListener("click", () => {
-      if (rezim === "stavba") oknoSandboxu.otevri();
+      if (rezim !== "stavba") return;
+      // Scénář z odkazu není pískoviště hráče: měnit ho jde, až si ho otevře ve svém.
+      if (host) ukazHlaseni(t("dilna.host.nastaveni"), "info", true);
+      else oknoSandboxu.otevri();
+    });
+    // Dílna: pojmenované práce (údolí s provozem a most), náhledy a odkaz na scénář.
+    const stul = sandbox;
+    const oknoDilny = pripojDilnu({
+      uloziste,
+      nastaveni: () => stul,
+      navrh: () => editor.navrh,
+      naNavsteve: () => host !== null,
+      otevri: (prace) => {
+        if (!uloziste.trvale) {
+          // Bez paměti prohlížeče nese práci adresa: otevře se jako scénář z odkazu.
+          window.location.href = odkazNaScenar(window.location.origin + window.location.pathname, prace.nastaveni, prace.kod);
+          return;
+        }
+        // Od téhle chvíle se výkres neukládá: stůl patří otevírané práci.
+        host = null;
+        neukladat = true;
+        uloziste.sandbox = prace.nastaveni;
+        uloziste.ulozNavrh(rozkodujMost(prace.kod));
+        window.location.search = "?sandbox";
+      },
+      zapis: (data) => zapis("dilna", data),
+    });
+    const tlacitkoDilny = prvek('[data-akce="dilna"]', HTMLButtonElement);
+    tlacitkoDilny.hidden = false;
+    tlacitkoDilny.addEventListener("click", () => {
+      if (rezim === "stavba") oknoDilny.otevri();
     });
   }
   priKliknuti("brnknout", prepniBrnknuti);
@@ -5414,8 +5525,9 @@ export function spustUroven(
   priKliknuti("sdileni-system", () => void sdilejSystemem());
   priKliknuti("sdileni-obrazek", stahniObrazek);
   priKliknuti("host-prekonat", () => ukonciHosta("prekonat"));
-  priKliknuti("host-nechat", () => ukonciHosta("nechat"));
-  priKliknuti("host-zpet", () => ukonciHosta("zpet"));
+  priKliknuti("host-nechat", () => (sandbox ? ukonciScenar("nechat") : ukonciHosta("nechat")));
+  priKliknuti("host-zpet", () => (sandbox ? ukonciScenar("zpet") : ukonciHosta("zpet")));
+  priKliknuti("host-ulozit", () => ukonciScenar("ulozit"));
   priKliknuti("vyzva-ukazat", ukazSouperuvMost);
   priKliknuti("vyzva-zrusit", zrusVyzvuOdkazu);
   priKliknuti("prehrat", prepniPrehravani);

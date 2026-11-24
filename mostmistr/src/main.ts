@@ -2,9 +2,10 @@
 // nebo sandbox (`?sandbox`). Zkušební výkres 0-00 do kampaně nepatří, ale adresou otevřít jde.
 
 import { nactiKampan, nactiUrovne } from "../urovne/index";
+import { jeSandboxVAdrese, PARAMETR_SANDBOXU, sandboxZAdresy } from "./data/dilna";
 import { ChybaDat } from "./data/kontrola";
 import { PARAMETR_MOSTU, rozkodujMost, ocistiKodMostu } from "./data/sdileni";
-import { sandboxZTextu, urovenSandboxu } from "./data/sandbox";
+import { ID_SANDBOXU, sandboxZTextu, urovenSandboxu } from "./data/sandbox";
 import { denikHry } from "./denik/prohlizec";
 import { spustList } from "./hra/list";
 import { spustPrehled } from "./hra/prehled";
@@ -39,17 +40,30 @@ try {
   const denik = denikHry();
   const prepnuto = prepnutyJazyk();
   if (prepnuto) denik.zapis("ovladani", { co: "jazyk", jazyk: prepnuto });
-  const sandboxZAdresy = new URLSearchParams(window.location.search).get("sandbox");
-  if (sandboxZAdresy !== null) {
+  const sandboxVAdrese = new URLSearchParams(window.location.search).get(PARAMETR_SANDBOXU);
+  const mostPiskoviste = mostZOdkazu !== null && "navrh" in mostZOdkazu && mostZOdkazu.navrh.uroven === ID_SANDBOXU;
+  if (sandboxVAdrese !== null) {
     // Sandbox: úroveň se vyrobí z nastavení, které si hráč uložil. Kde prohlížeč nedá paměť,
     // nese nastavení adresa; ta má pak přednost.
     let nastaveni = uloziste.sandbox;
+    // Scénář z odkazu (dílna): adresa nese údolí i most. Pískoviště hráče zůstává, jak bylo;
+    // scénář se otevře jako návštěva. Když údolí nejde přečíst, most by do cizího nepasoval.
+    let scenar: typeof mostZOdkazu = null;
     try {
-      if (sandboxZAdresy.startsWith("{")) nastaveni = sandboxZTextu(sandboxZAdresy);
+      if (sandboxVAdrese.startsWith("{")) nastaveni = sandboxZTextu(sandboxVAdrese);
+      else if (jeSandboxVAdrese(sandboxVAdrese)) {
+        nastaveni = sandboxZAdresy(sandboxVAdrese);
+        if (mostPiskoviste) scenar = mostZOdkazu;
+      }
+      if (mostZOdkazu !== null && !mostPiskoviste) scenar = "chyba" in mostZOdkazu ? mostZOdkazu : { chyba: "poskozeny" };
     } catch {
-      // Nastavení v adrese nejde přečíst: platí uložené.
+      // Nastavení v adrese nejde přečíst: platí uložené a hráč se dozví, že odkaz nebyl celý.
+      if (mostZOdkazu !== null || jeSandboxVAdrese(sandboxVAdrese)) scenar = { chyba: "poskozeny" };
     }
-    spustUroven(urovenSandboxu(nastaveni), kampan, uloziste, denik, nastaveni);
+    spustUroven(urovenSandboxu(nastaveni), kampan, uloziste, denik, nastaveni, scenar);
+  } else if (mostPiskoviste) {
+    // Odkaz na scénář, ze kterého cestou vypadlo údolí: most sám do žádného údolí nepatří.
+    spustPrehled(kampan, uloziste, denik, t("sdileni.chyba.poskozeny"));
   } else if (id === null && new URLSearchParams(window.location.search).has("list")) {
     // Závěrečný list kampaně: souhrn a galerie mostů hráče.
     spustList(kampan, uloziste, denik);

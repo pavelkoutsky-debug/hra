@@ -4,6 +4,7 @@
 
 import { galerieNaText, galerieZTextu, lepsiMost, type Galerie, type MostGalerie } from "../data/galerie";
 import type { NavrhMostu } from "../data/navrh";
+import { dilnaNaText, dilnaZTextu, type Dilna } from "../data/dilna";
 import { ID_SANDBOXU, sandboxNaText, sandboxZTextu, vychoziSandbox, type NastaveniSandboxu } from "../data/sandbox";
 import { NEJDELSI_KOD_MOSTU } from "../data/sdileni";
 import {
@@ -55,6 +56,8 @@ const NEJVIC_PROSLYCH = 8;
 /** Nastavení sandboxu: údolí, trasa a provoz. */
 export const KLIC_SANDBOXU = "mostmistr.sandbox";
 export const KLIC_SANDBOX_NAVSTIVEN = "mostmistr.sandbox.navstiven";
+/** Dílna: pojmenované práce z pískoviště (údolí s provozem a most). */
+export const KLIC_DILNY = "mostmistr.dilna";
 
 export const HLASITOSTI = ["nahlas", "potichu", "vypnuto"] as const;
 export type Hlasitost = (typeof HLASITOSTI)[number];
@@ -362,6 +365,18 @@ export class Uloziste {
 
   set sandboxNavstiven(navstiven: boolean) {
     this.#pis(KLIC_SANDBOX_NAVSTIVEN, navstiven ? "1" : "0");
+  }
+
+  /**
+   * Dílna: uložené práce z pískoviště. Čte se pokaždé z paměti prohlížeče (druhá záložka do ní
+   * mohla mezitím zapsat); nečitelný zápis je prázdná dílna.
+   */
+  get dilna(): Dilna {
+    return dilnaZTextu(this.#cti(KLIC_DILNY));
+  }
+
+  set dilna(dilna: Dilna) {
+    this.#pis(KLIC_DILNY, dilnaNaText(dilna));
   }
 
   /** Smaže rozpracovaný most úrovně (sandbox po změně údolí). */

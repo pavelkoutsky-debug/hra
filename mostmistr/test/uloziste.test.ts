@@ -2,9 +2,11 @@
 import { describe, expect, it } from "vitest";
 import { ulozeniNaText, ulozeniZTextu, VERZE_ULOZENI, verzeZapisuUlozeni } from "../src/data/ulozeni";
 import { Kreslic } from "../src/zkouska/regrese";
+import { prazdnaDilna, ulozPraci } from "../src/data/dilna";
 import { ID_SANDBOXU, sandboxNaText, vychoziSandbox } from "../src/data/sandbox";
 import {
   KLIC_CISEL,
+  KLIC_DILNY,
   KLIC_ODEMCENI,
   KLIC_POSKOZENEHO,
   KLIC_PROSLYCH,
@@ -367,5 +369,26 @@ describe("paměť prošlých mostů a volba zpomaleného záběru", () => {
     const bez = new Uloziste(null);
     bez.nastavVyzvuOdkazu("1-01", "AQQEMS0wMQ");
     expect(bez.vyzvaOdkazu("1-01")).toBeNull();
+  });
+
+  it("dílna: práce z pískoviště se pamatují mezi návštěvami, čtou se i po zápisu z jiné záložky a rozbitý zápis je prázdná dílna", () => {
+    const sklad = new SkladVPameti();
+    const prvni = new Uloziste(sklad);
+    const druhe = new Uloziste(sklad);
+    expect(prvni.dilna).toEqual(prazdnaDilna());
+    const k = new Kreslic(ID_SANDBOXU);
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    prvni.dilna = ulozPraci(prvni.dilna, "První", vychoziSandbox(), k.navrh(), 1).dilna;
+    // Druhá záložka práci vidí a přidá svou; první pak vidí obě.
+    expect(druhe.dilna.prace.map((p) => p.nazev)).toEqual(["První"]);
+    druhe.dilna = ulozPraci(druhe.dilna, "Druhá", vychoziSandbox(), k.navrh(), 2).dilna;
+    expect(prvni.dilna.prace.map((p) => p.nazev)).toEqual(["Druhá", "První"]);
+    expect(new Uloziste(sklad).dilna.prace).toHaveLength(2);
+    sklad.setItem(KLIC_DILNY, "{rozbité");
+    expect(prvni.dilna).toEqual(prazdnaDilna());
+    // Bez paměti prohlížeče si dílna nepamatuje nic a nic nespadne.
+    const bez = new Uloziste(null);
+    bez.dilna = ulozPraci(bez.dilna, "Nic", vychoziSandbox(), k.navrh(), 3).dilna;
+    expect(bez.dilna).toEqual(prazdnaDilna());
   });
 });
