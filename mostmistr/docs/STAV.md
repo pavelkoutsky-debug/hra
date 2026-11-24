@@ -27,7 +27,7 @@ Poslední aktualizace: 24. 11. 2026
 | M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
 | M14 Finále kampaně | Hotovo (24. 11. 2026): závěrečná kapitola se třemi úrovněmi, galerie mostů a závěrečný list; viz „M14 — výsledek“ |
 | M15 Dílna a Havarijní komise | Hotovo (24. 11. 2026): pískoviště jako dílna a režim Havarijní komise; viz „M15 — výsledek“ |
-| M16 Žebříčky a denní rozbor | Čeká; potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry |
+| M16 Žebříčky a denní rozbor | Hotovo (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. Naplánovaná úloha potřebuje heslo správce jako síťový tajný údaj prostředí (`docs/ROZBOR.md`) |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -44,7 +44,30 @@ Poslední aktualizace: 24. 11. 2026
 - **M14 Finále kampaně** je hotový, viz „M14 — výsledek“.
 - **Pomocným agentům došel 24. 11. limit hlavního modelu (obnoví se 29. 11.)**; návrhy úrovní a recenze od té doby běží na záložním modelu (Opus).
 - **M15 Dílna a Havarijní komise** je hotový, viz „M15 — výsledek“.
-- **Dál:** M16 (žebříčky a denní rozbor; ten potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry).
+- **M16 Žebříčky a denní rozbor** je hotový, viz „M16 — výsledek“. Tím jsou hotové všechny milníky z koncepce (kap. 12).
+
+## M16 — výsledek
+
+Poslední milník z koncepce (návrh 19 z `docs/RECENZE.md` a přání zadavatele z 23. 11. 2026). Verze hry 0.22.0. Fyzika, formáty ani uložený postup se nemění.
+
+**Žebříčky** (`src/data/zebricek.ts`, `src/server/zebricek.ts`, `src/server/overeni.ts`, `src/hra/zebricek.ts`).
+- Každá úroveň kampaně má žebříček tří měřítek, týchž jako výzvy: nejlevnější most, nejlehčí most a únosnost na korunu. V paletě a ve výsledku je tlačítko Žebříček; okno ukáže dvacet nejlepších řádků každého měřítka a hráčův řádek označí.
+- **Zapsat jde jen most, se kterým hráč právě prošel zkouškou bez porušení** (únosnost i zkouškou do zlomu, která se počítá). Hráč zadá přezdívku (jen písmena, číslice a pár znamének, nejvýš 16 znaků; hra říká, že ji uvidí všichni a nemá to být jméno) a hra pošle serveru **most a otisk zkoušky, ne výsledek**.
+- **Server si most přepočítá sám** (kritérium: „podvržený výsledek server odmítne“): rozkóduje ho, zkontroluje proti pravidlům úrovně a pustí na něj tutéž zkoušku jako hra (fyzika běží v Node bitově stejně). Zapíše jen most, který u něj prošel bez porušení, a hodnoty, které mu vyšly; otisk od hráče musí sedět s otiskem serveru, jinak zápis odmítne. Odmítne i jinou verzi fyziky u hráče (stará stránka: pomůže načíst znovu), most mimo pravidla úrovně, nečitelný kód, úroveň mimo kampaň a žádost z cizí stránky. `test/zebricek.test.ts` zkouší každý z těch podvrhů skutečnou zkouškou a `test/e2e/zebricek.e2e.ts` je posílá z prohlížeče.
+- Hráč má v měřítku jeden zápis (lepší ho nahradí, horší nezmění); shodu rozhoduje čas zápisu a porovnává se číslo, které hráč vidí. Server pozná hráče podle náhodného čísla z paměti prohlížeče; ven dává jen jeho otisk (značku), podle kterého hra pozná vlastní řádek. Kód mostu žebříček neukazuje (jinak by šel každý rekord opsat).
+- **Co to stojí.** Zkouška mostu na serveru trvá podle úrovně 0,3 až 11 s (měřeno na všech úrovních; funkce Netlify smí běžet 60 s), jedna žádost pouští nejvýš dvě (běžnou a do zlomu, když server běžnou ještě nezná). Most, který server už přepočítal, si pamatuje (i odmítnutý) a podruhé ho nepočítá; nových mostů přepočítá nejvýš 3 000 denně a funkce má omezený počet žádostí z jedné adresy.
+- Žebříček se zapisuje s podmínkou (úložiště dostalo `ctiSeZnackou` a `zapisPokud`), takže dva zápisy ve stejnou chvíli se nepřepíšou. Po změně fyziky nebo zadání úrovně začíná žebříček té úrovně od nuly (klíč nese verzi fyziky a otisk zadání).
+- **Správa**: záložka Žebříčky na stránce správce vypíše řádky, otevře most ze zápisu ve hře a smaže zápisy hráče (nevhodná přezdívka).
+
+**Denní rozbor** (`src/server/rozbor.ts`, `docs/ROZBOR.md`).
+- Server vydává **podklady dne** (`GET /api/sprava?co=podklady`): souhrn deníku hraní za den a za sedm dní, zprávy hráčů toho dne bez kontaktů a příloh, počty žebříčků (zápisy a odmítnutí podle důvodu) a shrnutí posledních rozborů.
+- **Rozbor píše naplánovaná úloha** (Claude Code na webu, jednou za 24 hodin, pokaždé v nové relaci): podklady vyhodnotí, navrhne nejvýš šest změn pro další verze a rozbor uloží (`POST /api/sprava?co=rozbor`). Server hlídá tvar a délky. Zadání úlohy je v `docs/ROZBOR.md`.
+- Zadavatel rozbor najde na **stránce správce** v záložce Denní rozbor (kritérium: „rozbor za poslední den vznikne bez zásahu člověka a zadavatel ho najde na stránce správce“): shrnutí, návrhy podle priority s důvodem a náročností a celý text. Rozbor přichází zvenčí, takže se na stránku píše jen jako text.
+- Úloha potřebuje, aby prostředí smělo na `mostmistr.netlify.app` a mělo heslo správce uložené jako síťový tajný údaj; heslo není v zadání úlohy ani v repozitáři.
+
+**Testy.** `test/zebricek.test.ts` (přezdívka, řazení, poctivý zápis, podvrhy, zlom, paměť ověřených mostů a strop, souběžné zápisy, správa), `test/rozbor.test.ts` (podklady bez kontaktů, ukládání a meze rozboru, správa žebříčků přes jednu adresu), `test/e2e/zebricek.e2e.ts` (zápis po zkoušce, zlom, podvrh z prohlížeče, dva hráči, pískoviště a komise bez žebříčku, angličtina, telefon, stránka správce s rozborem a žebříčky).
+
+**Co ověřeno není.** Funkce Netlify se z kontejneru zavolat nedají: obsluha je v testech zapojená do náhledového serveru, ale čas zkoušky na serveru Netlify (slabší procesor než tady) a zápis s podmínkou ve skutečném úložišti Netlify Blobs ukáže až první ostrý zápis. Shoda otisku mezi prohlížeči a serverem stojí na pravidle bitové shody; Firefox a Safari ověřuje zadavatel a odmítnutí z důvodu `otisk` se počítají do podkladů denního rozboru právě proto, aby se na případnou neshodu přišlo.
 
 ## M15 — výsledek
 
