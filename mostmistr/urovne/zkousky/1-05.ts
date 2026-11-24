@@ -85,7 +85,7 @@ export const reseni: ReseniUrovne = {
   }),
   // Tatáž příhrada o metr vyšší: síly v pásu i v šikminách klesnou skoro na polovinu a rozhodují
   // vzpěry z kotvy (53 %). Stejně dobře vyjde metr vysoká příhrada s pásem po dvou metrech
-  // a sloupky (93 082 Kč, 54 %); viz zpráva.
+  // a sloupky (93 082 Kč, 54 %).
   mistrovska: navrh((k) => {
     mostovka(k, PO_CTYRECH);
     vzperyZKotvy(k);

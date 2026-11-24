@@ -390,14 +390,16 @@ export const NEJVETSI_OTOCENI_KRIDLA = 70;
  * hledá takto: pata pístu je konec v kotvě, do které nevede nic jiného než písty; druhý konec
  * drží křídlo, tedy pruty, ke kterým se od něj dá dojít bez pístů a bez průchodu zámkem. Čep
  * je jediná pevná kotva křídla bez zámku. Kde čep takhle určit nejde (píst mezi dvěma částmi
- * mostu, křídlo na dvou kotvách), vrací null a nic se nehlídá.
+ * mostu, křídlo na dvou kotvách), vrací null a nic se nehlídá. `zveda` říká, jestli píst tímhle
+ * zdvihem konec křídla zvedá (false: táhne ho dolů); null, kde to z výkresu poznat nejde (píst
+ * v přímce s čepem, křídlo se středem nad čepem).
  *
  * Délka pístu L splňuje L² = D² + r² − 2·D·r·cos γ, kde D je vzdálenost paty od čepu, r
  * vzdálenost úchytu od čepu a γ úhel mezi nimi. Největší je v úvrati (γ = 180°), kde píst
  * leží v přímce s čepem a nemá žádné rameno; zdvih, který by vedl za ni, dá kosinus −1.
  * Jen sčítání, násobení, dělení a odmocnina, aby pravidlo vyšlo ve všech prohlížečích stejně.
  */
-export function otoceniKridla(navrh: NavrhMostu, uroven: Uroven, pist: PrutNavrhu): { cos: number } | null {
+export function otoceniKridla(navrh: NavrhMostu, uroven: Uroven, pist: PrutNavrhu): { cos: number; zveda: boolean | null } | null {
   const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
   const a = podleId.get(pist.a);
   const b = podleId.get(pist.b);
@@ -442,15 +444,22 @@ export function otoceniKridla(navrh: NavrhMostu, uroven: Uroven, pist: PrutNavrh
   const L02 = (pata.x - uchyt.x) * (pata.x - uchyt.x) + (pata.y - uchyt.y) * (pata.y - uchyt.y);
   if (!(D2 > 0) || !(r2 > 0) || !(L02 > 0)) return null;
   const L0 = Math.sqrt(L02);
-  const L = L0 + zdvihPistu(pist.zdvih, L0);
+  const zdvih = zdvihPistu(pist.zdvih, L0);
+  const L = L0 + zdvih;
+  // Zvedá píst konec křídla? Křídlo vpravo od čepu se zvedá otáčením proti směru hodin, vlevo
+  // po směru; píst se při tom prodlužuje, když jeho osa míří po směru pohybu úchytu.
+  let vpravo = 0;
+  for (const id of kridlo) vpravo += (podleId.get(id)?.x ?? cep.x) - cep.x;
+  const prodlouzeni = (uchyt.y - pata.y) * (uchyt.x - cep.x) - (uchyt.x - pata.x) * (uchyt.y - cep.y);
+  const zveda = vpravo === 0 || prodlouzeni === 0 || zdvih === 0 ? null : vpravo > 0 === prodlouzeni > 0 === zdvih > 0;
   const dvaDr = 2 * Math.sqrt(D2 * r2);
   const cos0 = (D2 + r2 - L02) / dvaDr;
   const cosT = (D2 + r2 - L * L) / dvaDr;
   // Délka, na kterou píst v žádné poloze křídla nedosáhne (za úvratí, nebo kratší než složený).
-  if (!(cosT > -1 && cosT < 1)) return { cos: -1 };
+  if (!(cosT > -1 && cosT < 1)) return { cos: -1, zveda };
   const sin0 = Math.sqrt(Math.max(0, 1 - cos0 * cos0));
   const sinT = Math.sqrt(1 - cosT * cosT);
-  return { cos: cosT * cos0 + sinT * sin0 };
+  return { cos: cosT * cos0 + sinT * sin0, zveda };
 }
 
 /**

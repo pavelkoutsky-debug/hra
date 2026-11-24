@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ChybaDat } from "../src/data/kontrola";
 import { VERZE_UROVNE, nactiUroven, vyskaTerenu } from "../src/data/uroven";
-import { SOUBORY_UROVNI, nactiUrovne } from "../urovne/index";
+import { cenaNavrhu } from "../src/data/cena";
+import { TEXTY } from "../src/ui/slovnik";
+import { SOUBORY_UROVNI, nactiKampan, nactiUrovne } from "../urovne/index";
+import { RESENI } from "../urovne/reseni";
+import { ukazkaUrovne } from "../urovne/ukazky";
+import { RESENI_ZKOUSEK } from "../urovne/zkousky/index";
 import zkusebniVykres from "../urovne/0-00.json";
 
 /** Hluboká kopie platné úrovně, kterou lze v testu pokazit. */
@@ -217,6 +222,30 @@ describe("verze formátu úrovně", () => {
     expect(druha).toHaveLength(5);
     expect(druha.every((u) => u.osaFrekvenci)).toBe(true);
   });
+  it("zkouška kapitoly je pátá úroveň, nemá ukázku ani nápovědu a její rozpočty jsou těsné", () => {
+    const kampan = nactiKampan();
+    const zkousky = kampan.filter((u) => u.zkouskova);
+    // Zkouškové jsou právě páté úrovně kapitol, každá kapitola má jednu.
+    expect(zkousky.map((u) => u.id)).toEqual(kampan.filter((u) => u.id.endsWith("-05")).map((u) => u.id));
+    expect(zkousky.map((u) => u.id).sort()).toEqual(Object.keys(RESENI_ZKOUSEK).sort());
+    expect(zkousky).toHaveLength(new Set(kampan.map((u) => u.id.split("-")[0])).size);
+    for (const u of zkousky) {
+      // Nic neučí: žádná ukázka, žádné „Více o úloze“, žádný odstavec o skutečných mostech.
+      expect(ukazkaUrovne(u), u.id).toBeNull();
+      for (const jazyk of ["cs", "en"] as const) {
+        const texty = TEXTY[jazyk] as Record<string, string | undefined>;
+        expect(texty[`zadani.${u.id}`], `${u.id} ${jazyk}`).toBeTruthy();
+        expect(texty[`zadani.${u.id}.vice`], `${u.id} ${jazyk}`).toBeUndefined();
+        expect(texty[`skutecnost.${u.id}`], `${u.id} ${jazyk}`).toBeUndefined();
+      }
+      // Rozpočet nejvýš 20 % nad inženýrským a ten 2,5 až 3 % nad mostem pro mistrovskou.
+      expect(u.rozpocet! / u.inzenyrskyRozpocet!, u.id).toBeLessThanOrEqual(1.2);
+      const nadMistrovskou = u.inzenyrskyRozpocet! / cenaNavrhu(RESENI[u.id]!.mistrovska) - 1;
+      expect(nadMistrovskou, u.id).toBeGreaterThanOrEqual(0.025);
+      expect(nadMistrovskou, u.id).toBeLessThanOrEqual(0.03);
+    }
+  });
+
   it("verze 3 se převede: nerovnost vozovky žádná, i když ji soubor uváděl", () => {
     // Starší úrovně třídu nerovnosti nesly, ale hra ji nepočítala; jsou vyladěné na rovné vozovce.
     const treti = {

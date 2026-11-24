@@ -59,7 +59,7 @@ export const reseni: ReseniUrovne = {
   rozpocet: hole(5, 6, 2.75),
   // Trojúhelník pod křídlem mezi styčníky 5 a 10 m, píst do jeho spodního vrcholu (7, −2):
   // píst tlačí kolměji a přední vzpěra z těžké oceli podpírá mostovku deset metrů od čepu,
-  // takže převislý konec měří jen deset metrů. Zdvih 3,75 m křídlo zvedne o 61°.
+  // takže převislý konec měří jen deset metrů. Zdvih 3,75 m křídlo zvedne o 60°.
   mistrovska: navrh((k) => {
     kridlo(k, [5, 10, 15]);
     k.prut(O, [5, 0], [7, -2]);
@@ -74,7 +74,7 @@ export const reseni: ReseniUrovne = {
     // Most pro mistrovskou ze 7-04: mělká kotva, píst sedm metrů od čepu.
     { nazev: "tvar ze 7-04: píst z mělké kotvy 7 m od čepu zvednuté křídlo neudrží", navrh: hole(3, 7, 1.75, [4, 7, 11, 16]) },
     // Jen jedna lekce: správný píst (hluboká kotva, co nejdál od čepu), ale zdvih jako v 7-03.
-    { nazev: "správný píst s malým zdvihem: křídlo se zvedne jen o 42° a loď narazí", navrh: hole(5, 6, 2.25) },
+    { nazev: "správný píst s malým zdvihem: křídlo se zvedne jen o 41° a loď narazí", navrh: hole(5, 6, 2.25) },
     // Jen jedna lekce: velký zdvih z mělké kotvy blízko čepu (křídlo se ani nezvedne).
     { nazev: "píst z mělké kotvy 4 m od čepu křídlo nezvedne", navrh: hole(3, 4, 1.5, [4, 9, 15]) },
     {
@@ -93,45 +93,4 @@ export const reseni: ReseniUrovne = {
       }),
     },
   ],
-};
-
-/**
- * Další mosty, na kterých je úroveň vyladěná. Referenční nejsou, ale zpráva o úrovni
- * (`recenze-docasne/m12c/7-05.md`) o nich mluví a dočasný test ověření je měří: jiné tvary,
- * které dají mistrovskou medaili, a jiné tvary, které projdou jen s rozpočtovou.
- */
-export const dalsi: Record<string, NavrhMostu> = {
-  // Konzola ze dvou krátkých prutů mezi kotvami vynese patu pístu dva metry od zdi; píst pak
-  // dosáhne osm metrů od čepu. Nejlevnější známý most s mistrovskou medailí (635 625 Kč).
-  "mistrovská konzolou pod patou pístu": navrh((k) => {
-    kridlo(k, [4, 8, 14]);
-    k.prut(O, [0, -3], [2, -4]);
-    k.prut(O, [0, -5], [2, -4]);
-    k.prut("pist", [2, -4], [8, 0], { zdvih: 3.5 });
-  }),
-  // Úsporný trojúhelník nad kořenem (zadní táhlo ze styčníku 3 m, přední k 10 m): mistrovská
-  // tvarem, který kapitola ukázala (668 350 Kč).
-  "mistrovská trojúhelníkem nad kořenem": navrh((k) => {
-    kridlo(k, [3, 6, 10, 15]);
-    pist(k, 5, [6, 0], 2.75);
-    k.prut(O, [3, 0], [6, 2]);
-    k.prut(O, [6, 0], [6, 2]);
-    k.prut(O, [6, 2], [10, 0]);
-  }),
-  // Dva písty (hluboká kotva blíž, mělká dál): projde a vejde se do inženýrského rozpočtu,
-  // ohyb nezmenší.
-  "rozpočtová dvěma písty": navrh((k) => {
-    kridlo(k, [5, 7, 12, 16]);
-    pist(k, 5, [5, 0], 2.5);
-    pist(k, 3, [7, 0], 2);
-  }),
-  // Roh pod kořenem křídla bez přední vzpěry: píst má delší rameno a křídlo dosedá měkčeji,
-  // ohyb mostovky ale zůstává.
-  "rozpočtová rohem pod křídlem": navrh((k) => {
-    kridlo(k, [4, 6, 11, 16]);
-    k.prut(O, [4, 0], [6, -2]);
-    k.prut(O, [6, 0], [6, -2]);
-    pist(k, 5, [6, -2], 3.25);
-  }),
-  "rozpočtová pístem 5 m od čepu": hole(5, 5, 2.5, [5, 10, 15]),
 };

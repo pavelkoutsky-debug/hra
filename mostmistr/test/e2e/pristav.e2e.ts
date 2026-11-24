@@ -262,6 +262,26 @@ describe("zvedací most", () => {
     expect(await stranka.locator('[data-udaj="vysledek-medaile"] [data-ziskana="drive"]').first().innerText()).toContain("už ji máš z dřívějška");
   }, 240_000);
 
+  it("nesvařená mostovka se při zvedání zalomí: výsledek to řekne a neviní zdvih pístu", async () => {
+    await akce("upravit").click();
+    const pad = RESENI["7-01"]!.pady.find((p) => p.nazev.includes("nesvařená mostovka"))!;
+    await nactiMost(navrhNaText(pad.navrh));
+    await spust();
+    expect(await naKonec()).toBe("MOST NEOBSTÁL");
+    expect(await stranka.locator("body").getAttribute("data-pricina-pohybu")).toBe("zalomeno");
+    const shrnuti = await udaj("vysledek-shrnuti");
+    expect(shrnuti).toContain("Křídlo se zalomilo");
+    expect(shrnuti).toContain("Svař styčníky mostovky");
+    expect(shrnuti).not.toContain("moc velký zdvih");
+    expect(await stranka.locator("body").getAttribute("data-pricina")).toContain("Křídlo se zalomilo");
+    // Řádek o zvedání jde po čase: co se stalo dřív, stojí dřív.
+    const radek = await udaj("vysledek-pohyb");
+    const casy = [...radek.matchAll(/\sv\s(\d+),(\d)\ss/g)].map((m) => Number(`${m[1]}.${m[2]}`));
+    expect(casy.length).toBeGreaterThan(1);
+    expect(casy).toEqual([...casy].sort((x, y) => x - y));
+    await stranka.screenshot({ path: `${SLOZKA}/p5a-zalomene-kridlo.png` });
+  }, 240_000);
+
   it("zámek ve styčníku, kam vede i píst, by spojoval tři části: hra zkoušku nepustí a řekne proč", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["7-01"]!.rozpocet));

@@ -17,7 +17,7 @@ import { najdiSlozeni } from "./slozeni";
 import { POCET_TVARU_ODEZVY, rezonancniKrivka, zakladOdezvy, zmenenyZaklad, type ZakladOdezvy } from "../jadro/odezva";
 import { LANO, sestavSoustavu, type PopisSoustavy, type Soustava } from "../jadro/soustava";
 import { volneStupne } from "../jadro/stupne";
-import { mostovkaTrasy, mostSLidmi, odhadniKmitani, POCET_TVARU_ODHADU, type OdhadKmitani, type TlumicOdhadu, type VolbyOdhadu } from "./odhad";
+import { mostovkaTrasy, mostSLidmi, odhadniKmitani, POCET_TVARU_ODHADU, type OdhadKmitani, type SlozkaOdhadu, type TlumicOdhadu, type VolbyOdhadu } from "./odhad";
 import { jeClovek } from "./provoz";
 import type { RadaKTlumici, RozborMostu } from "./protokol";
 import { sestavMost, type StavbaMostu } from "./stavba";
@@ -236,30 +236,88 @@ function kmitaniPodLidmi(uroven: Uroven, navrh: NavrhMostu, stavba: StavbaMostu,
     /** Tlumiče, se kterými se zkouší ladění na `f`: ty z návrhu, nebo jeden nový. */
     const naladene = (f: number): TlumicOdhadu[] =>
       tlumice.length > 0 ? tlumice.map((t) => tlumicOdhadu(t.misto, t.hmota, f)) : kam >= 0 ? [tlumicOdhadu(kam, nejvetsi, f)] : [];
-    // Cíl ladění: nejsilnější složka kroku, a když je jich víc srovnatelných, ta, na kterou
-    // naladěný tlumič odhad sníží nejvíc (tlumič zkrotí jen jednu).
-    const kandidati = nejhorsi.slozky.filter(
-      (sl, i, vse) => sl.zrychleni >= SROVNATELNA_SLOZKA * vse[0]!.zrychleni && vse.findIndex((x) => naKrokLadeni(x.frekvence) === naKrokLadeni(sl.frekvence)) === i,
-    );
-    let cil = kandidati[0] ?? nejhorsi.slozky[0]!;
-    let sCilem: number | null = null;
-    if (kandidati.length > 1 && naladene(1).length > 0) {
-      for (const kandidat of kandidati) {
-        const a = hrube(zaklad, naladene(naKrokLadeni(kandidat.frekvence)));
-        if (sCilem === null || a < sCilem) {
-          sCilem = a;
-          cil = kandidat;
+    /**
+     * Cíl ladění pro most s odhadem `podle`: nejsilnější složka kroku skupiny, která ho rozkmitá
+     * nejvíc, a když je jich víc srovnatelných, ta, se kterou tlumiče `sada(f)` odhad sníží
+     * nejvíc (tlumič zkrotí jen jednu). `a` je odhad s takovou sadou, pokud se počítal.
+     */
+    const vyberCil = (podle: OdhadKmitani, sada: (f: number) => readonly TlumicOdhadu[]): { slozka: SlozkaOdhadu; f: number; a: number | null } => {
+      const horsi = podle.skupiny.reduce((x, y) => (y.zrychleni > x.zrychleni ? y : x));
+      const kandidati = horsi.slozky.filter(
+        (sl, i, vse) => sl.zrychleni >= SROVNATELNA_SLOZKA * vse[0]!.zrychleni && vse.findIndex((x) => naKrokLadeni(x.frekvence) === naKrokLadeni(sl.frekvence)) === i,
+      );
+      let slozka = kandidati[0] ?? horsi.slozky[0]!;
+      let a: number | null = null;
+      if (kandidati.length > 1 && sada(1).length > 0) {
+        for (const kandidat of kandidati) {
+          const odhadSKandidatem = hrube(zaklad, sada(naKrokLadeni(kandidat.frekvence)));
+          if (a === null || odhadSKandidatem < a) {
+            a = odhadSKandidatem;
+            slozka = kandidat;
+          }
         }
       }
-    }
-    const f = naKrokLadeni(cil.frekvence);
-    const tlumic: RadaKTlumici = { cil: f, polozka: cil.polozka, nasobek: cil.nasobek, novy: null, preladeny: null, tezsi: null, jinde: null, jindeX: null };
+      return { slozka, f: naKrokLadeni(slozka.frekvence), a };
+    };
+    const { slozka: cil, f, a: sCilem } = vyberCil(bezTlumicu, naladene);
+    const tlumic: RadaKTlumici = {
+      cil: f,
+      polozka: cil.polozka,
+      nasobek: cil.nasobek,
+      novy: null,
+      preladeny: null,
+      tezsi: null,
+      jinde: null,
+      jindeX: null,
+      zbyly: null,
+      cile: [],
+      dalsi: null,
+      dalsiX: null,
+      jeden: null,
+    };
     vysledek.tlumic = tlumic;
+    const kDnesku = (a: number | null, t: readonly TlumicOdhadu[]): number => {
+      dnes ??= hrube(zaklad, tlumice);
+      return dnes > 0 ? (a ?? hrube(zaklad, t)) / dnes : 1;
+    };
+    if (tlumice.length > 0) {
+      // Most s tlumiči: který rytmus ho rozkmitá i s nimi. Na ten patří další tlumič, zavěšený
+      // tam, kde most kmitá teď (ve styčníku návrhu, kde ještě žádný nevisí).
+      const horsi = odhad.skupiny.reduce((x, y) => (y.zrychleni > x.zrychleni ? y : x));
+      let kamDalsi = -1;
+      for (let j = 0; j < xs.length; j++) {
+        if (mista[j]! >= stavba.stycnikuNavrhu || tlumice.some((t) => t.misto === j)) continue;
+        if (zaklad.fi.subarray(j * zaklad.omega.length, (j + 1) * zaklad.omega.length).every((x) => x === 0)) continue;
+        if (kamDalsi < 0 || Math.abs(xs[j]! - xs[horsi.stycnik]!) < Math.abs(xs[kamDalsi]! - xs[horsi.stycnik]!) - 1e-9) kamDalsi = j;
+      }
+      const sDalsim = (fDalsi: number): TlumicOdhadu[] => (kamDalsi >= 0 ? [...tlumice, tlumicOdhadu(kamDalsi, nejvetsi, fDalsi)] : []);
+      const zbyly = vyberCil(odhad, sDalsim);
+      tlumic.zbyly = { cil: zbyly.f, polozka: zbyly.slozka.polozka, nasobek: zbyly.slozka.nasobek };
+      if (radit && kamDalsi >= 0 && uroven.nejvetsiTlumic > 0) {
+        tlumic.dalsi = kDnesku(zbyly.a, sDalsim(zbyly.f));
+        tlumic.dalsiX = xs[kamDalsi]! - xs[0]!;
+      }
+      // Na co ladit každý z tlumičů, když ostatní zůstanou, jak jsou: na rytmus, který most
+      // s těmi ostatními rozkmitá nejvíc. Jediný tlumič má cíl mostu bez tlumičů.
+      tlumice.forEach((t, j) => {
+        const stycnik = mista[t.misto]!;
+        if (tlumice.length === 1) {
+          tlumic.cile.push({ stycnik, cil: f, polozka: cil.polozka, nasobek: cil.nasobek });
+          return;
+        }
+        const ostatni = tlumice.filter((_, k) => k !== j);
+        const bezNej = odhadniKmitani(uroven, zaklad, xs, { ...volby, tlumice: ostatni, hrube: true });
+        if (!bezNej || bezNej.skupiny.length === 0) return;
+        const sNim = (fj: number): TlumicOdhadu[] => [...ostatni, tlumicOdhadu(t.misto, t.hmota, fj)];
+        const jeho = vyberCil(bezNej, sNim);
+        tlumic.cile.push({ stycnik, cil: jeho.f, polozka: jeho.slozka.polozka, nasobek: jeho.slozka.nasobek });
+        // Jeden tlumič přeladěný na svůj cíl: počítá se jen tomu, který tak naladěný není.
+        if (!radit || Math.abs(t.frekvence - jeho.f) <= NALADENO * jeho.f) return;
+        const pomer = kDnesku(jeho.a, sNim(jeho.f));
+        if (tlumic.jeden === null || pomer < tlumic.jeden.pomer) tlumic.jeden = { pomer, cil: jeho.f, x: xs[t.misto]! - xs[0]! };
+      });
+    }
     if (radit) {
-      const kDnesku = (a: number | null, t: readonly TlumicOdhadu[]): number => {
-        dnes ??= hrube(zaklad, tlumice);
-        return dnes > 0 ? (a ?? hrube(zaklad, t)) / dnes : 1;
-      };
       if (tlumice.length === 0) {
         if (kam >= 0 && uroven.nejvetsiTlumic > 0) tlumic.novy = kDnesku(sCilem, naladene(f));
       } else {
@@ -306,7 +364,7 @@ function kmitaniPodLidmi(uroven: Uroven, navrh: NavrhMostu, stavba: StavbaMostu,
   }
 
   // Tužší, nebo těžší most? U mostu s tlumičem jen tehdy, když úprava tlumiče nepomůže.
-  const tlumicPomuze = tlumic !== null && [tlumic.preladeny, tlumic.tezsi, tlumic.jinde].some((x) => x !== null && x <= 0.9);
+  const tlumicPomuze = tlumic !== null && [tlumic.preladeny, tlumic.tezsi, tlumic.jinde, tlumic.dalsi, tlumic.jeden?.pomer ?? null].some((x) => x !== null && x <= 0.9);
   if (radit && !(tlumice.length > 0 && tlumicPomuze)) {
     const zmena = (tuhost: number, hmota: number): number => pomer(zmenenyZaklad(zaklad, tuhost, hmota), tlumice);
     vysledek.smer = {
