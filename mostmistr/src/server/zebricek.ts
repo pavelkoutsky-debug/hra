@@ -11,7 +11,9 @@
 //
 // Proti zahlcení: jedna žádost pustí nejvýš jednu zkoušku (zápis ze zkoušky do zlomu smí přijít
 // až po zápisu z běžné zkoušky téhož mostu); zkouška se započítá do denního stropu a do stropu
-// adresy dřív, než se pustí; most, který server už přepočítal, se nepočítá znovu; a v jednom
+// skupiny adres dřív, než se pustí; žádost, u které se adresa nepozná, server odmítne (kód
+// `bez-adresy`), jinak by všichni bez adresy sdíleli jeden strop nebo si ho obcházeli podvrženou
+// hlavičkou; most, který server už přepočítal, se nepočítá znovu; a v jednom
 // měřítku má jeden most (nezávisle na id a pořadí kreslení) jediný řádek, toho, kdo ho zapsal
 // první. Opsaný most poslaný pod stovkou čísel hráče tak žebříček nezaplní.
 //
@@ -19,7 +21,7 @@
 //   zebricek/<v>/<úroveň>-<otisk zadání>.json            zápisy tří měřítek (`UlozenyZebricek`)
 //   overeno/<v>/<úroveň>-<otisk>/<otisk kódu>.json       výsledek ověření mostu (`OverenyMost`)
 //   zebricek-den/<den>.json                              počty dne (ověření, zápisy, odmítnutí)
-//   zebricek-adresa/<den>/<otisk adresy>.json            kolik zkoušek si ten den vyžádala adresa
+//   adresa/zebricek/<den>/<otisk adresy>.json           kolik zkoušek si ten den vyžádala skupina adres (`adresa.ts`)
 // Žebříček se zapisuje s podmínkou (`zapisPokud`): dva zápisy ve stejnou chvíli se nepřepíšou.
 // Po změně fyziky, pravidel žebříčků nebo zadání úrovně začíná žebříček od nuly (jiný klíč);
 // staré zápisy zůstávají v úložišti a nikde se neukazují.
@@ -44,18 +46,22 @@ import {
   type ZadostOZapis,
   type ZebricekUrovne,
 } from "../data/zebricek";
+import { adresaZadosti, zapocitejAdresu } from "./adresa";
 import { chyba, denZ, odpoved, teloJson, zCizihoWebu, type ProstrediServeru } from "./obsluha";
 import type { OvereniZlomu, Overovac } from "./overeni";
-import type { SkladZaznamu } from "./sklad";
+import { jeNevhodnaPrezdivka } from "./prezdivky";
+import { SoubehZapisu, upravSPodminkou as uprav, type SkladZaznamu } from "./sklad";
 
 /** Největší tělo žádosti o zápis: kód mostu a pár krátkých polí. */
 export const NEJVETSI_ZAPIS = 16 * 1024;
-/** Kolik mostů server za den nejvýš přepočítá; další zápisy odmítne (zkouška stojí čas funkce). */
-export const NEJVIC_OVERENI_DENNE = 3000;
-/** Kolik zkoušek za den smí vyžádat jedna adresa: hráč jich za večer udělá pár desítek. */
+/**
+ * Kolik mostů server za den nejvýš přepočítá; další zápisy odmítne. Zkouška stojí čas funkce
+ * (až desítky sekund na nejtěžších úrovních) a doba běhu funkcí je v tarifu Netlify omezená;
+ * po nasazení změřit a podle tarifu upravit.
+ */
+export const NEJVIC_OVERENI_DENNE = 1000;
+/** Kolik zkoušek za den smí vyžádat jedna skupina adres: hráč jich za večer udělá pár desítek. */
 export const NEJVIC_OVERENI_NA_ADRESU = 60;
-/** Kolikrát se zkusí zápis žebříčku, když ho mezitím změnil někdo jiný. */
-const POKUSU_O_ZAPIS = 6;
 
 const ID_UROVNE = /^[1-8]-\d{2}$/;
 
@@ -97,9 +103,6 @@ export interface PoctyZebricku {
   zlepseni: number;
   odmitnuto: Partial<Record<KodOdmitnuti, number>>;
 }
-
-/** Zápis žebříčku se ani po opakování nepovedl: někdo ho pořád měnil. */
-class SoubehZapisu extends Error {}
 
 const prazdnyZebricek = (): UlozenyZebricek => ({ cena: [], hmotnost: [], zlom: [] });
 const prazdnePocty = (): PoctyZebricku => ({ overeni: 0, prijato: 0, zlepseni: 0, odmitnuto: {} });
@@ -148,20 +151,6 @@ const klicZebricku = (over: Overovac, klicUrovne: string): string => `zebricek/$
 const klicOvereni = (over: Overovac, klicUrovne: string, most: string): string => `overeno/${koren(over)}/${klicUrovne}/${most}.json`;
 const klicPoctu = (den: string): string => `zebricek-den/${den}.json`;
 
-/**
- * Zápis s podmínkou a s opakováním: přečte, upraví, zapíše; když mezitím zapsal někdo jiný,
- * znovu. Když se to nepovede ani napotřetí… pošesté, vzdá to (`SoubehZapisu`): zápis bez
- * podmínky by přepsal cizí zápis, a to je horší než požádat hráče, ať to zkusí znovu.
- */
-async function uprav<T>(sklad: SkladZaznamu, klic: string, zmena: (dnes: unknown) => { zapsat: unknown; vysledek: T }): Promise<T> {
-  for (let pokus = 0; pokus < POKUSU_O_ZAPIS; pokus++) {
-    const { hodnota, znacka } = await sklad.ctiSeZnackou(klic);
-    const { zapsat, vysledek } = zmena(hodnota);
-    if (zapsat === undefined || (await sklad.zapisPokud(klic, zapsat, znacka))) return vysledek;
-  }
-  throw new SoubehZapisu(klic);
-}
-
 async function zapocitej(p: ProstrediServeru, zmena: (pocty: PoctyZebricku) => void): Promise<void> {
   try {
     await uprav(p.sklad, klicPoctu(denZ(p.ted())), (dnes) => {
@@ -179,31 +168,16 @@ async function otiskTextu(text: string): Promise<string> {
   return Array.from(bajty.slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Adresa, ze které žádost přišla (hlavičky, které přidává Netlify); prázdná, když se nepozná. */
-function adresaZadosti(zadost: Request): string {
-  return (zadost.headers.get("x-nf-client-connection-ip") ?? zadost.headers.get("x-forwarded-for")?.split(",")[0] ?? "").trim();
-}
-
 /**
- * Započítá jednu zkoušku do denního stropu a do stropu adresy, ještě než se pustí: zkouška,
- * která spadne nebo se nestihne, se tak počítá taky. Vrací, proč zkoušku pustit nejde, nebo null.
- * Adresa se neukládá, jen její otisk s dnem (jiný den, jiný otisk).
+ * Započítá jednu zkoušku do denního stropu a do stropu skupiny adres, ještě než se pustí:
+ * zkouška, která spadne nebo se nestihne, se tak počítá taky. Vrací, proč zkoušku pustit nejde,
+ * nebo null. Adresa se neukládá, jen její otisk se solí dne (`adresa.ts`).
  */
-async function rezervujZkousku(p: ProstrediServeru, zadost: Request): Promise<"plno" | "adresa" | null> {
+async function rezervujZkousku(p: ProstrediServeru, skupina: string): Promise<"plno" | "adresa" | null> {
   const den = denZ(p.ted());
   if (nactiPocty(await p.sklad.cti(klicPoctu(den))).overeni >= NEJVIC_OVERENI_DENNE) return "plno";
-  const klicAdresy = `zebricek-adresa/${den}/${(await otiskTextu(`${den}|${adresaZadosti(zadost)}`)).slice(0, 24)}.json`;
-  const pocet = (h: unknown): number => (typeof h === "object" && h !== null && typeof (h as { overeni?: unknown }).overeni === "number" ? (h as { overeni: number }).overeni : 0);
-  let plnaAdresa = false;
-  try {
-    await uprav(p.sklad, klicAdresy, (dnes) => {
-      plnaAdresa = pocet(dnes) >= NEJVIC_OVERENI_NA_ADRESU;
-      return { zapsat: plnaAdresa ? undefined : { overeni: pocet(dnes) + 1 }, vysledek: null };
-    });
-  } catch {
-    // Počítadlo adresy se zrovna měnilo: zkoušku to nezastaví, denní strop platí dál.
-  }
-  if (plnaAdresa) return "adresa";
+  // Počítadlo, které se zrovna pořád měnilo (`soubeh`), zkoušku nezastaví: denní strop platí dál.
+  if ((await zapocitejAdresu(p, "zebricek", skupina, den, NEJVIC_OVERENI_NA_ADRESU)) === "plno") return "adresa";
   await zapocitej(p, (pocty) => void (pocty.overeni += 1));
   return null;
 }
@@ -306,6 +280,10 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
       ? odmitnuto(429, "plno", "server dnes už ověřil tolik mostů, kolik smí; zkus to prosím zítra")
       : odmitnuto(429, "adresa", "z téhle adresy dnes server ověřil už tolik mostů, kolik smí; zkus to prosím zítra");
   if (!z) return odmitnuto(400, "tvar", "zápis do žebříčku nemá očekávaný tvar");
+  // Bez adresy by strop na adresu nešel počítat: zápis se odmítne dřív, než cokoli stojí.
+  const skupina = adresaZadosti(zadost, p);
+  if (skupina === null) return odmitnuto(503, "bez-adresy", "server nepozná, odkud zápis přichází, a žebříček ho proto nepřijme; zkus to prosím později");
+  if (jeNevhodnaPrezdivka(z.jmeno)) return odmitnuto(422, "prezdivka", "tuhle přezdívku žebříček nepřijme; zvol si jinou");
   const uroven = over.uroven(z.uroven);
   if (!uroven) return odmitnuto(404, "uroven", "taková úroveň v kampani není");
   if (z.verze !== over.verze) return odmitnuto(409, "verze", "hra v prohlížeči počítá jinou verzí fyziky než server; načti stránku znovu");
@@ -324,7 +302,7 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
     // Zkouška do zlomu se pouští jen mostu, kterému už server ověřil běžnou zkoušku: jedna žádost
     // tak stojí nejvýš jednu zkoušku a nejde jí vynutit dvě s vymyšleným otiskem.
     if (z.zkouska === "zlom") return odmitnuto(409, "nejdriv", "nejdřív zapiš most po běžné zkoušce, potom po zkoušce do zlomu");
-    const strop = await rezervujZkousku(p, zadost);
+    const strop = await rezervujZkousku(p, skupina);
     if (strop) return plno(strop);
     const bezna = over.bezna(uroven, z.kod);
     overeny = { ...bezna, tvar: await otiskTextu(pripraveny.kanon), zlom: null, ...(bezna.plati ? { kod: z.kod } : {}) };
@@ -337,7 +315,7 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
   if (!overeny.plati) return odmitnuto(422, "neprosel", "most na serveru zkouškou neprošel bez porušení");
   if (z.zkouska === "zlom") {
     if (overeny.zlom === null) {
-      const strop = await rezervujZkousku(p, zadost);
+      const strop = await rezervujZkousku(p, skupina);
       if (strop) return plno(strop);
       overeny = { ...overeny, zlom: over.zlom(uroven, z.kod) ?? false };
       await p.sklad.zapis(klicMostu, overeny);
@@ -466,6 +444,38 @@ export async function smazZeZebricku(sklad: SkladZaznamu, verze: number, znacka:
     });
   }
   return smazano;
+}
+
+/**
+ * Správa: smaže řádky hráče s číslem `hrac` ze všech žebříčků (všech verzí). Číslo hráče je
+ * neveřejné; řádek najde jen ten, kdo ho zná. Vrací počet smazaných zápisů a kolik žebříčků
+ * prošel (jeden žebříček je jedno čtení a nejvýš jeden zápis). Začíná za klíčem `za` a skončí,
+ * když prošel `nejvic` žebříčků; `posledni` je pak klíč, kde skončil (null = prošel všechny).
+ */
+export async function smazHraceZeZebricku(
+  sklad: SkladZaznamu,
+  hrac: string,
+  za: string | null,
+  nejvic: number,
+): Promise<{ smazano: number; precteno: number; posledni: string | null }> {
+  const klice = (await sklad.klice("zebricek/")).filter((k) => za === null || k > za);
+  let smazano = 0;
+  let precteno = 0;
+  for (const klic of klice) {
+    if (precteno >= nejvic) return { smazano, precteno, posledni: klice[precteno - 1] ?? za };
+    precteno += 1;
+    smazano += await uprav(sklad, klic, (dnes) => {
+      const zebricek = nactiUlozeny(dnes);
+      let pryc = 0;
+      for (const mira of MIRY_ZEBRICKU) {
+        const zbyle = zebricek[mira].filter((z) => z.hrac !== hrac);
+        pryc += zebricek[mira].length - zbyle.length;
+        zebricek[mira] = zbyle;
+      }
+      return { zapsat: pryc > 0 ? zebricek : undefined, vysledek: pryc };
+    });
+  }
+  return { smazano, precteno, posledni: null };
 }
 
 /** Správa: počty žebříčků za den (kolik mostů se přepočítalo, kolik zápisů prošlo, kolik bylo odmítnuto a proč). */

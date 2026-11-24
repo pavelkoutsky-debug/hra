@@ -18,6 +18,11 @@
 //   GET  /api/sprava?co=export&den=…&preskocit=N   dávky dne tak, jak přišly, po částech
 //   POST /api/sprava?co=smazat                { vazba: id } smaže zpětnou vazbu,
 //                                             { den } smaže deník toho dne
+// (smazání všeho od jednoho hráče a úklid starých dat jsou v `uklid.ts`)
+//
+// Stropy: deník přijme od jedné skupiny adres nejvýš `NEJVIC_DAVEK_NA_ADRESU` dávek za den a
+// zpětná vazba nejvýš `NEJVIC_VAZEB_NA_ADRESU` zpráv (počítadla pod otiskem adresy, `adresa.ts`);
+// zpráv dohromady nejvýš `NEJVIC_VAZEB_DENNE`.
 //
 // Dávky deníku leží pod klíči `denik/<den>/<čas příjmu>-<hráč>-<začátek sezení>-<sezení>-
 // <pořadí>-<náhoda>.json`. Čas příjmu je vpředu schválně: nové dávky tak přibývají vždy na
@@ -47,6 +52,7 @@ import {
   type StavVazby,
   type UdalostDeniku,
 } from "../denik/udalosti";
+import { adresaZadosti, zapocitejAdresu, type PametSoli } from "./adresa";
 import type { SkladZaznamu } from "./sklad";
 
 /** Největší tělo žádosti v bajtech: dávka deníku a zpětná vazba s přiloženým mostem. */
@@ -60,8 +66,22 @@ export const NEJVETSI_VAZBA = 400 * 1024;
 export const NEJVIC_DAVEK_NAJEDNOU = 400;
 /** Nejvíc dávek v jedné části vývozu: odpověď funkce smí mít jen pár megabajtů. */
 export const NEJVIC_DAVEK_VE_VYVOZU = 200;
-/** Nejvíc zpětných vazeb přijatých za jeden den; další server odmítne (ochrana před zahlcením). */
+/** Nejvíc zpětných vazeb přijatých za jeden den; další server odmítne (pojistka úložiště). */
 export const NEJVIC_VAZEB_DENNE = 300;
+/**
+ * Nejvíc zpětných vazeb za den z jedné skupiny adres: jeden člověk tak nezavře zpětnou vazbu
+ * všem ostatním. Žádosti, u kterých se adresa nepozná, hlídá jen společný strop.
+ */
+export const NEJVIC_VAZEB_NA_ADRESU = 20;
+/**
+ * Nejvíc dávek deníku za den z jedné skupiny adres. Hráč pošle dávku nejvýš jednou za dvacet
+ * sekund (celý den hraní je přes 4 000 dávek) a za jednou adresou může hrát celá školní třída.
+ * Žádosti bez poznané adresy sdílejí jedno počitadlo se stejným stropem: deník musí běžet dál,
+ * i kdyby hlavička s adresou nechodila.
+ */
+export const NEJVIC_DAVEK_NA_ADRESU = 5000;
+/** Nejkratší heslo správce: je to jediná ochrana zpráv hráčů a jejich e-mailů. */
+export const NEJKRATSI_HESLO_SPRAVCE = 16;
 /** Jak dlouho po půlnoci (UTC) se den ještě nepokládá za uzavřený, ms: dávka z 23:59 se může opozdit. */
 const ODKLAD_UZAVERKY = 10 * 60 * 1000;
 /**
@@ -89,6 +109,13 @@ export interface ProstrediServeru {
    * nic jiného. Null nebo nenastavené: rozbor jde ukládat jen s heslem správce.
    */
   hesloRozboru?: string | null;
+  /**
+   * Adresa, ze které žádost přišla (místní server, testy). Bez ní se adresa bere jen z hlavičky
+   * `x-nf-client-connection-ip`, kterou přidává Netlify (viz `adresa.ts`).
+   */
+  adresa?: (zadost: Request) => string | null;
+  /** Soli dnů v paměti instance funkce (viz `adresa.ts`); bez ní se drží u objektu úložiště. */
+  pametSoli?: PametSoli;
 }
 
 /** Zpětná vazba v seznamu: bez přiloženého mostu a událostí, s textem zkráceným na ukázku. */
@@ -213,14 +240,14 @@ export function denZ(cas: Date): string {
 }
 
 export const DEN = /^\d{4}-\d{2}-\d{2}$/;
-const ID_HRACE = /^[0-9a-f]{8,32}$/;
+export const ID_HRACE = /^[0-9a-f]{8,32}$/;
 const ID_VAZBY = /^\d{8}T\d{6}-[0-9a-f]{4,12}$/;
 const SLOZKA_SEZENI = /^\d{13,15}-[0-9a-f]{8,32}$/;
 /** Jméno dávky deníku v úložišti: čas příjmu, hráč, začátek sezení, sezení, pořadí, náhoda. */
 const JMENO_DAVKY = /^(\d{13})-([0-9a-f]{8,32})-(\d{13,15})-([0-9a-f]{8,32})-(\d{5,})-[0-9a-f]+\.json$/;
 
 /** Co o dávce říká její klíč; null u klíče, který dávce deníku nepatří. */
-function zKliceDavky(klic: string): { prijato: number; hrac: string; slozka: string; zacatek: number; sezeni: string; poradi: number } | null {
+export function zKliceDavky(klic: string): { prijato: number; hrac: string; slozka: string; zacatek: number; sezeni: string; poradi: number } | null {
   const shoda = JMENO_DAVKY.exec(klic.slice(klic.lastIndexOf("/") + 1));
   if (!shoda) return null;
   return {
@@ -268,6 +295,11 @@ export async function prijmiDenik(zadost: Request, p: ProstrediServeru): Promise
     return chyba(400, e instanceof ChybaDat ? e.message : "dávka nemá očekávaný tvar");
   }
   const cas = p.ted();
+  // Strop dávek na skupinu adres a den. Když se počítadlo pořád měnilo, dávka se přijme:
+  // deník se kvůli počitadlu ztrácet nemá.
+  if ((await zapocitejAdresu(p, "denik", adresaZadosti(zadost, p), denZ(cas), NEJVIC_DAVEK_NA_ADRESU)) === "plno") {
+    return chyba(429, "z tohoto připojení dnes přišlo příliš mnoho záznamů hraní");
+  }
   const { hrac, sezeni, zacatek } = davka.hlavicka;
   // Klíč začíná časem příjmu, takže dávky dne jdou v úložišti za sebou tak, jak přišly, a nové
   // přibývají na konec. Náhodný dovětek brání přepsání: dvě stránky téhož sezení (zdvojený
@@ -308,6 +340,12 @@ export async function prijmiVazbu(zadost: Request, p: ProstrediServeru): Promise
   if ((await p.sklad.klice(`vazba-seznam/${razitko.slice(0, 8)}`)).length >= NEJVIC_VAZEB_DENNE) {
     return chyba(429, "dnes už přišlo příliš mnoho zpráv, zkus to prosím zítra");
   }
+  // Strop na skupinu adres: jeden člověk nesmí vyčerpat společný strop všem. Bez poznané adresy
+  // platí jen společný strop; počitadlo, které se pořád měnilo, zprávu nezastaví.
+  const skupina = adresaZadosti(zadost, p);
+  if (skupina !== null && (await zapocitejAdresu(p, "vazba", skupina, denZ(cas), NEJVIC_VAZEB_NA_ADRESU)) === "plno") {
+    return chyba(429, "z tohoto připojení dnes přišlo příliš mnoho zpráv, zkus to prosím zítra");
+  }
   const id = `${razitko}-${p.nahoda()}`;
   const zaznam: EvidovanaVazba = {
     ...vazba,
@@ -318,8 +356,20 @@ export async function prijmiVazbu(zadost: Request, p: ProstrediServeru): Promise
     poznamka: "",
     upraveno: null,
   };
-  await p.sklad.zapis(`vazba/${id}.json`, zaznam);
-  await p.sklad.zapis(`vazba-seznam/${id}.json`, polozkaSeznamu(zaznam));
+  // Nejdřív položka seznamu, pak zpráva: když úložiště mezi zápisy vypadne, nezůstane zpráva,
+  // kterou správa v seznamu neukáže (sirotek by se objevil jen v podkladech rozboru). Položka bez
+  // zprávy se uklidí hned, a kdyby ani to nešlo, správa u ní řekne, že zpráva není.
+  try {
+    await p.sklad.zapis(`vazba-seznam/${id}.json`, polozkaSeznamu(zaznam));
+    try {
+      await p.sklad.zapis(`vazba/${id}.json`, zaznam);
+    } catch (vypadek) {
+      await p.sklad.smaz(`vazba-seznam/${id}.json`).catch(() => undefined);
+      throw vypadek;
+    }
+  } catch {
+    return chyba(503, "zprávu se teď nepodařilo uložit, zkus to prosím za chvíli");
+  }
   return odpoved(201, { id });
 }
 
@@ -339,8 +389,9 @@ export async function stejne(a: string, b: string): Promise<boolean> {
 
 /** Ověří heslo správce; vrací odpověď s chybou, když nesedí nebo není nastavené. */
 export async function overSpravce(zadost: Request, p: ProstrediServeru): Promise<Response | null> {
-  if (p.hesloSpravce === null || p.hesloSpravce.length < 8) {
-    return chyba(503, "heslo správce není nastavené (proměnná prostředí MM_SPRAVCE_HESLO, aspoň 8 znaků)");
+  // Odpověď nejmenuje proměnnou prostředí: kdo ji nastavuje, to ví ze stránky správce a z dokumentace.
+  if (p.hesloSpravce === null || p.hesloSpravce.length < NEJKRATSI_HESLO_SPRAVCE) {
+    return chyba(503, "správa na serveru není nastavená");
   }
   const hlavicka = zadost.headers.get("authorization") ?? "";
   const heslo = hlavicka.startsWith("Bearer ") ? hlavicka.slice(7) : "";
@@ -349,7 +400,7 @@ export async function overSpravce(zadost: Request, p: ProstrediServeru): Promise
 }
 
 /** Provede práci pro každý klíč, několik souběžně; výsledky vrací v pořadí klíčů. */
-async function provedVse<T>(klice: readonly string[], prace: (klic: string) => Promise<T>): Promise<T[]> {
+export async function provedVse<T>(klice: readonly string[], prace: (klic: string) => Promise<T>): Promise<T[]> {
   const vysledky = new Array<T>(klice.length);
   let dalsi = 0;
   const pracuj = async (): Promise<void> => {
@@ -390,12 +441,12 @@ function jeDavka(h: unknown): h is DavkaDeniku & { prijato: string; prostredi: s
  * Klíče dávek deníku jednoho dne v pořadí, v jakém dávky přišly. Cizí záznamy ve složce dne
  * (dávky uložené starším tvarem klíče) se vynechají; `vse` je vrátí také, kvůli mazání.
  */
-async function kliceDne(sklad: SkladZaznamu, den: string, vse = false): Promise<string[]> {
+export async function kliceDne(sklad: SkladZaznamu, den: string, vse = false): Promise<string[]> {
   const klice = (await sklad.klice(`denik/${den}/`)).sort();
   return vse ? klice : klice.filter((klic) => zKliceDavky(klic) !== null);
 }
 
-const klicVytahu = (den: string): string => `vytah/${den}.json`;
+export const klicVytahu = (den: string): string => `vytah/${den}.json`;
 
 /**
  * Výtah jednoho dne. Server si ho ukládá i s klíčem poslední započtené dávky a příště přečte

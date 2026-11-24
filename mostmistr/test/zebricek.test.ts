@@ -47,8 +47,12 @@ const over = overovacKampane();
 const ANNA = "a".repeat(32);
 const BORIS = "b".repeat(32);
 
-function server(sklad: SkladZaznamu = new SkladVPameti(), ted = new Date("2026-11-24T10:00:00Z")): ProstrediServeru {
-  return { sklad, ted: () => ted, nahoda: () => "abcdef", prostredi: "test", hesloSpravce: "tajne-heslo-spravce" };
+/**
+ * Prostředí serveru. Adresu žádosti dodá funkce (jako místní server); `adresa: null` znamená
+ * prostředí bez ní, kde se adresa bere jen z hlavičky Netlify (jako na Netlify).
+ */
+function server(sklad: SkladZaznamu = new SkladVPameti(), ted = new Date("2026-11-24T10:00:00Z"), adresa: string | null = "192.0.2.1"): ProstrediServeru {
+  return { sklad, ted: () => ted, nahoda: () => "abcdef", prostredi: "test", hesloSpravce: "tajne-heslo-spravce", ...(adresa === null ? {} : { adresa: () => adresa }) };
 }
 
 /** Co by o mostě věděla hra: otisk běžné zkoušky a zkoušky do zlomu. */
@@ -398,7 +402,8 @@ describe("zápis do žebříčku", () => {
   }, 60_000);
 
   it("jedna adresa si za den vyžádá jen omezený počet zkoušek; jiné adresy to nezastaví", async () => {
-    const p = server();
+    // Bez funkce `adresa`: adresa jde z hlavičky Netlify, jako na Netlify.
+    const p = server(undefined, undefined, null);
     const zAdresy = (i: number, adresa: string): Promise<Response> =>
       obsluzZebricek(posli(zapis(mistrovsky, { kod: `kod-${i}`, otisk: "0".repeat(16), hrac: i.toString(16).padStart(32, "d") }), { "x-nf-client-connection-ip": adresa }), p, levny);
     for (let i = 0; i < NEJVIC_OVERENI_NA_ADRESU; i++) expect((await zAdresy(i, "203.0.113.7")).status, String(i)).toBe(200);
@@ -412,8 +417,8 @@ describe("zápis do žebříčku", () => {
     expect(pocty.overeni).toBe(NEJVIC_OVERENI_NA_ADRESU + 1);
     expect(pocty.odmitnuto.adresa).toBe(1);
     // Adresa se neukládá, jen její otisk; a druhý den má adresa čistý štít.
-    expect(JSON.stringify([...(await p.sklad.klice("zebricek-adresa/"))])).not.toContain("203.0.113.7");
-    expect((await obsluzZebricek(posli(zapis(mistrovsky, { kod: "kod-2000", otisk: "0".repeat(16) }), { "x-nf-client-connection-ip": "203.0.113.7" }), server(p.sklad, new Date("2026-11-25T08:00:00Z")), levny)).status).toBe(200);
+    expect(JSON.stringify([...(await p.sklad.klice("adresa/"))])).not.toContain("203.0.113.7");
+    expect((await obsluzZebricek(posli(zapis(mistrovsky, { kod: "kod-2000", otisk: "0".repeat(16) }), { "x-nf-client-connection-ip": "203.0.113.7" }), server(p.sklad, new Date("2026-11-25T08:00:00Z"), null), levny)).status).toBe(200);
   });
 
   it("zkouška se do stropu počítá dřív, než se pustí, a pád výpočtu zápis neprojde", async () => {
