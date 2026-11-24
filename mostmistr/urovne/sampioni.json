@@ -1,5 +1,5 @@
 {
-  "verzeFyziky": 8,
+  "verzeFyziky": 9,
   "urovne": {
     "1-01": {
       "cena": {
@@ -1049,6 +1049,126 @@
         "otisk": "56c04379",
         "upravy": [
           {"stycnik":6,"pryc":true}
+        ]
+      }
+    },
+    "8-01": {
+      "cena": {
+        "z": "mistrovska",
+        "otisk": "e2aabb43",
+        "upravy": [
+          {"prut":27,"pryc":true},
+          {"prut":39,"prvek":"lano"},
+          {"prut":46,"prvek":"ocel-lehka"},
+          {"prut":50,"prvek":"ocel-lehka"},
+          {"prut":54,"prvek":"ocel-lehka"},
+          {"stycnik":26,"x":102,"y":21},
+          {"prut":55,"pryc":true},
+          {"stycnik":7,"pryc":true},
+          {"stycnik":9,"pryc":true},
+          {"stycnik":34,"x":56,"y":3},
+          {"stycnik":31,"x":40,"y":3},
+          {"stycnik":34,"x":56,"y":2},
+          {"stycnik":33,"x":51,"y":3},
+          {"stycnik":32,"x":45,"y":3},
+          {"stycnik":31,"x":41,"y":2},
+          {"stycnik":32,"x":46,"y":2},
+          {"stycnik":33,"x":50,"y":2},
+          {"stycnik":27,"x":102,"y":19},
+          {"stycnik":26,"x":102,"y":20},
+          {"stycnik":27,"x":102,"y":18},
+          {"stycnik":33,"x":50,"y":1},
+          {"stycnik":31,"x":42,"y":2},
+          {"stycnik":34,"x":55,"y":2},
+          {"stycnik":21,"x":-6,"y":21},
+          {"stycnik":13,"pryc":true},
+          {"stycnik":22,"x":-6,"y":19},
+          {"stycnik":34,"x":54,"y":2}
+        ]
+      },
+      "hmotnost": {
+        "z": "mistrovska",
+        "otisk": "e2aabb43",
+        "upravy": [
+          {"stycnik":21,"x":-6,"y":21},
+          {"stycnik":26,"x":102,"y":21},
+          {"prut":27,"prvek":"lano"},
+          {"prut":39,"prvek":"lano"},
+          {"prut":46,"prvek":"ocel-lehka"},
+          {"prut":50,"prvek":"ocel-lehka"},
+          {"prut":54,"prvek":"ocel-lehka"},
+          {"prut":37,"pryc":true},
+          {"prut":58,"pryc":true},
+          {"stycnik":7,"pryc":true},
+          {"stycnik":9,"pryc":true},
+          {"stycnik":11,"pryc":true},
+          {"stycnik":31,"x":40,"y":3},
+          {"stycnik":34,"x":56,"y":3},
+          {"stycnik":31,"x":41,"y":2},
+          {"stycnik":32,"x":45,"y":3},
+          {"stycnik":33,"x":51,"y":3},
+          {"stycnik":34,"x":55,"y":2},
+          {"stycnik":32,"x":46,"y":2},
+          {"stycnik":33,"x":50,"y":2},
+          {"stycnik":22,"x":-6,"y":19},
+          {"stycnik":21,"x":-6,"y":20},
+          {"stycnik":27,"x":102,"y":19},
+          {"stycnik":26,"x":102,"y":20},
+          {"stycnik":22,"x":-6,"y":18},
+          {"stycnik":27,"x":102,"y":18},
+          {"stycnik":27,"x":102,"y":17},
+          {"stycnik":31,"x":42,"y":2}
+        ]
+      }
+    },
+    "8-02": {
+      "cena": {
+        "z": "rozpocet",
+        "otisk": "c2084853",
+        "upravy": [
+          {"prut":20,"pryc":true},
+          {"stycnik":11,"x":1,"y":8},
+          {"stycnik":11,"x":2,"y":7},
+          {"stycnik":11,"x":3,"y":6},
+          {"stycnik":13,"x":59,"y":8},
+          {"stycnik":13,"x":58,"y":7},
+          {"stycnik":11,"x":4,"y":5},
+          {"stycnik":13,"x":57,"y":6},
+          {"stycnik":13,"x":56,"y":5},
+          {"stycnik":4,"tlumic":300},
+          {"stycnik":4,"tlumic":150},
+          {"stycnik":11,"x":5,"y":5},
+          {"stycnik":11,"x":6,"y":5},
+          {"stycnik":13,"x":55,"y":5},
+          {"prut":15,"pryc":true},
+          {"stycnik":4,"tlumic":0},
+          {"prut":21,"pryc":true},
+          {"prut":11,"pryc":true},
+          {"stycnik":6,"tlumic":300},
+          {"stycnik":6,"tlumic":150},
+          {"stycnik":6,"tlumic":50},
+          {"stycnik":6,"tlumic":0}
+        ]
+      },
+      "hmotnost": {
+        "z": "pruchod",
+        "otisk": "7f96672b",
+        "upravy": [
+          {"stycnik":4,"tlumic":0},
+          {"stycnik":6,"tlumic":0},
+          {"stycnik":7,"tlumic":0},
+          {"stycnik":3,"tlumic":600},
+          {"prut":20,"pryc":true},
+          {"stycnik":11,"x":1,"y":7},
+          {"stycnik":13,"x":59,"y":7},
+          {"stycnik":11,"x":2,"y":6},
+          {"stycnik":13,"x":58,"y":7},
+          {"stycnik":11,"x":3,"y":6},
+          {"stycnik":3,"tlumic":0},
+          {"stycnik":13,"x":58,"y":6},
+          {"stycnik":13,"x":58,"y":5},
+          {"stycnik":11,"x":4,"y":5},
+          {"prut":22,"pryc":true}
         ]
       }
     },

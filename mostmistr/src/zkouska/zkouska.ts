@@ -9,7 +9,16 @@ import type { Medaile } from "../data/ulozeni";
 import type { Uroven } from "../data/uroven";
 import { pridejSilyBremen, vytvorBremena, type Bremena, type PopisBremene } from "../jadro/bremena";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
-import { MEZE_KOMFORTU, tridaKomfortu, vytvorMereniKomfortu, zkopirujMereniKomfortu, zmerKomfort, type MereniKomfortu } from "../jadro/komfort";
+import {
+  MEZE_KOMFORTU,
+  prodluzKlid,
+  tridaKomfortu,
+  vytvorMereniKomfortu,
+  zkopirujMereniKomfortu,
+  zmerKomfort,
+  type KlidPoPoruseni,
+  type MereniKomfortu,
+} from "../jadro/komfort";
 import { vytvorLoziska } from "../jadro/loziska";
 import { najdiRovnovahu, vlastniTvarySoustavy } from "../jadro/matice";
 import { najdiKlid } from "../jadro/ustaleni";
@@ -84,6 +93,12 @@ const KROK_MERENI_BUDICE = 0.1;
  * které by se dal most navrhnout. Filtry měření mezitím běží dál.
  */
 const KLID_PO_PORUSENI = 3;
+/**
+ * Kolik sekund ticha po porušeních zkouška dá nejvýš dohromady (tři oddělená porušení). Most,
+ * kterému povoluje prut za prutem v rozestupech pod `KLID_PO_PORUSENI`, by jinak neměl kmitání
+ * změřené vůbec a prošel by.
+ */
+const NEJDELSI_KLID_PO_PORUSENI = 9;
 /** Po kolika krocích se aktualizuje obálka namáhání; shodně s posudkem v simulaci. */
 const INTERVAL_OBALKY = 4;
 /** Jak dlouho po povelu ke sklopení se nejdéle čeká, než zámky zapadnou, v sekundách. */
@@ -174,10 +189,11 @@ export class Zkouska {
   /**
    * Měření kmitání pod lidmi na mostě, který se porušil a stojí dál: pokračuje od prvního
    * porušení tam, kde `#komfort` skončil. Ráz samotného porušení se nepočítá (po každém je
-   * `KLID_PO_PORUSENI` ticho) a do výsledku jde, jen když z mostu nikdo nespadl.
+   * `KLID_PO_PORUSENI` ticho, dohromady nejvýš `NEJDELSI_KLID_PO_PORUSENI`) a do výsledku jde,
+   * jen když z mostu nikdo nespadl.
    */
   #komfortPoPoruseni: MereniKomfortu | null = null;
-  #komfortPocitatOd = 0;
+  readonly #klidKomfortu: KlidPoPoruseni = { pocitatOd: 0, zbyva: NEJDELSI_KLID_PO_PORUSENI };
   #porusenoKomfortu = 0;
   /**
    * Měření zrychlení karoserie každého autobusu a skříně každého osobního vozu zvlášť:
@@ -516,7 +532,7 @@ export class Zkouska {
     if (!this.#komfort) return 0;
     if (!this.simulace.porusena) return this.#komfort.okamzite;
     const po = this.#komfortPoPoruseni;
-    return po !== null && this.simulace.cas >= this.#komfortPocitatOd ? po.okamzite : 0;
+    return po !== null && this.simulace.cas >= this.#klidKomfortu.pocitatOd ? po.okamzite : 0;
   }
 
   /**
@@ -525,7 +541,9 @@ export class Zkouska {
    * mostu (po autě, když lidé odešli) se do meze nepočítá, stejně jako ve výsledku.
    */
   get kmitaniNadMezi(): boolean {
-    return this.#budic === null && this.#komfort !== null && this.#komfort.prekroceni >= 0;
+    if (this.#budic !== null || this.#komfort === null) return false;
+    // Po porušení platí totéž: kdo spadne, neprojde, a když nikdo nespadne, počítá se kmitání.
+    return this.#komfort.prekroceni >= 0 || (this.#komfortPoPoruseni !== null && this.#komfortPoPoruseni.prekroceni >= 0);
   }
 
   /** Provoz a po prvním porušení i dopad trosek mostu na terén a do vody. */
@@ -863,9 +881,9 @@ export class Zkouska {
         const poruseno = sim.udalosti.length + sim.sjeti.length;
         if (poruseno !== this.#porusenoKomfortu) {
           this.#porusenoKomfortu = poruseno;
-          this.#komfortPocitatOd = sim.cas + KLID_PO_PORUSENI;
+          prodluzKlid(this.#klidKomfortu, sim.cas, KLID_PO_PORUSENI);
         }
-        zmerKomfort(s, this.#komfortPoPoruseni, sim.dt, sim.cas, sim.cas >= this.#komfortPocitatOd && this.provoz.lideNaMoste(s));
+        zmerKomfort(s, this.#komfortPoPoruseni, sim.dt, sim.cas, sim.cas >= this.#klidKomfortu.pocitatOd && this.provoz.lideNaMoste(s));
       }
 
       // Cestující hodnotí jízdu po mostě, ne po silnici před ním; po zřícení už nehodnotí nic.

@@ -33,5 +33,10 @@
  *      pokračují v přímce a nic dalšího je tam nedrží (pilíře nad sebou i bez svaru). Zkouška
  *      do zlomu nezvyšuje zátěž, dokud přibývá plastická práce. Výsledky běžných zkoušek
  *      referenčních mostů se nezměnily; z otisků jen scénář zkoušky do zlomu.
+ * - 9: kmitání pod lidmi se měří i na mostě, který se porušil a stojí dál (milník M14). Ráz
+ *      samotného porušení se nepočítá a do výsledku jde měření po porušení, jen když z mostu
+ *      nikdo nespadl. Most, na kterém hned na začátku něco povolilo, dřív kmitání změřené neměl
+ *      a mohl projít; teď na kmitání propadne. Neporušených mostů se to netýká a otisky
+ *      regresní sady se nezměnily: změnilo se hodnocení.
  */
-export const VERZE_FYZIKY = 8;
+export const VERZE_FYZIKY = 9;

@@ -56,8 +56,13 @@ export interface RysyMostu {
   vzperyNavic: boolean;
   /** Most podepřený zdola má navíc pár prutů nad mostovkou (věšadlo). */
   vesadloNavic: boolean;
-  /** Kolik pylonů lanového mostu drží lana (místa, kde se lana sbíhají k pilíři); 0 u mostu bez lan. */
+  /**
+   * Kolik pylonů lanového mostu drží lana (místa, kde se lana sbíhají k pilíři nebo k hlavě
+   * ocelového stožáru); 0 u mostu bez lan.
+   */
   pylonu: number;
+  /** Pylony stojí na opěrách na koncích mostu (stožáry s kotevními lany za opěru), ne v údolí. */
+  pylonyNaOperach: boolean;
   /** Svary mostovky leží hlavně mezi pilíři, ne nad nimi. */
   svaryMeziPodporami: boolean;
 }
@@ -89,15 +94,22 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
     return st !== undefined && dolniKotvy.some((k) => k.x === st.x && k.y === st.y);
   };
   let opreno = false;
-  /** Kolik lan, pilířů a jiných prutů vede do každého styčníku. */
-  const doStycniku = new Map<number, { lana: number; pilire: number; jine: number }>();
+  /**
+   * Kolik lan, pilířů a jiných prutů vede do každého styčníku; z těch jiných zvlášť kolik je
+   * ocelových nebo dřevěných prutů (`pruty`) a kolik dílů mostovky.
+   */
+  const doStycniku = new Map<number, { lana: number; pilire: number; jine: number; pruty: number; mostovka: number }>();
   for (const p of navrh.pruty) {
     const druh = KATALOG[p.prvek].druh;
     for (const id of [p.a, p.b]) {
-      const pocty = doStycniku.get(id) ?? { lana: 0, pilire: 0, jine: 0 };
+      const pocty = doStycniku.get(id) ?? { lana: 0, pilire: 0, jine: 0, pruty: 0, mostovka: 0 };
       if (druh === "lano") pocty.lana += 1;
       else if (druh === "pilir") pocty.pilire += 1;
-      else pocty.jine += 1;
+      else {
+        pocty.jine += 1;
+        if (druh === "prut") pocty.pruty += 1;
+        else if (druh === "mostovka") pocty.mostovka += 1;
+      }
       doStycniku.set(id, pocty);
     }
     if (druh === "prut" && (naDolniKotve(p.a) || naDolniKotve(p.b))) opreno = true;
@@ -116,20 +128,40 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
   }
   // Styčník, ve kterém se potkávají jen lana, je bod nosného lana visutého mostu; kotva, do
   // které vedou dvě kotevní lana zavěšeného mostu, jím není. Kde se lana sbíhají k pilíři, je
-  // vrchol pylonu.
+  // vrchol pylonu; pylonem je i ocelový stožár (prut, na jehož volném horním konci se lana sbíhají).
   const jeKotva = (x: number, y: number): boolean => uroven.kotvy.some((k) => k.x === x && k.y === y) || uroven.zaklady.some((z) => z.x === x && z.y === y);
   let boduNosnehoLana = 0;
   const pylony = new Set<number>();
+  /** Hlavy ocelových stožárů: z každé vede dolů jediný prut. */
+  const hlavyStozaru: number[] = [];
   let svaruNadPilirem = 0;
   let svaruJinde = 0;
   for (const [id, pocty] of doStycniku) {
     const st = podleId.get(id);
     if (!st) continue;
     if (pocty.lana >= 2 && pocty.pilire === 0 && pocty.jine === 0 && !jeKotva(st.x, st.y)) boduNosnehoLana += 1;
-    if (pocty.lana >= 2 && pocty.pilire > 0) pylony.add(st.x);
+    if (pocty.lana >= 2 && (pocty.pilire > 0 || (pocty.pruty > 0 && pocty.mostovka === 0))) {
+      pylony.add(st.x);
+      if (pocty.pilire === 0 && pocty.pruty === 1) hlavyStozaru.push(id);
+    }
     if (st.svar === true) {
       if (pocty.pilire > 0) svaruNadPilirem += 1;
       else svaruJinde += 1;
+    }
+  }
+
+  // Pruty stožárů (od hlavy dolů, dokud řetěz nikde neodbočí a nedojde k mostovce) nejsou příhrada.
+  const prutyStozaru = new Set<number>();
+  for (const hlava of hlavyStozaru) {
+    let uzel = hlava;
+    for (let krok = 0; krok < navrh.pruty.length; krok++) {
+      const dalsi = navrh.pruty.findIndex((p, i) => !prutyStozaru.has(i) && KATALOG[p.prvek].druh === "prut" && (p.a === uzel || p.b === uzel));
+      if (dalsi < 0) break;
+      prutyStozaru.add(dalsi);
+      const prut = navrh.pruty[dalsi]!;
+      uzel = prut.a === uzel ? prut.b : prut.a;
+      const pocty = doStycniku.get(uzel);
+      if (!pocty || pocty.mostovka > 0 || pocty.pruty !== 2) break;
     }
   }
 
@@ -159,11 +191,12 @@ export function rysyMostu(navrh: NavrhMostu, uroven: Uroven): RysyMostu {
     viskozniTlumice: viskozni > 0,
     kridel: pisty === 0 ? 0 : zamkyNavrhu(navrh, uroven).some((z) => z.druh === "kridla") ? 2 : 1,
     zamek: navrh.stycniky.some((s) => s.zamek === true),
-    prihradaNavic: lanovy && pruty > NEJVIC_PRUTU_TROJUHELNIKU,
+    prihradaNavic: lanovy && pruty - prutyStozaru.size > NEJVIC_PRUTU_TROJUHELNIKU,
     ztuzeni: soustava === "zvedaci" && pruty > 0,
     vzperyNavic: opreno && nesNad,
     vesadloNavic: nesPod && nad > 0,
     pylonu: lanovy ? pylony.size : 0,
+    pylonyNaOperach: lanovy && pylony.size > 0 && [...pylony].every((x) => uroven.kotvy.some((k) => k.x === x)),
     svaryMeziPodporami: svaruJinde > svaruNadPilirem,
   };
 }

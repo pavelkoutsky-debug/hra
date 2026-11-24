@@ -189,6 +189,47 @@ describe("galerie mostů a závěrečný list", () => {
     expect(await s.locator('[data-akce="otevrit-list"]').innerText()).toBe("Závěrečný list ▸");
   }, 300_000);
 
+  it("kampaň dokončená jinou úrovní než poslední vede na list; karta ukazuje medaile mostu, ne úrovně", async () => {
+    const s = await cistaStranka();
+    await s.goto(adresa);
+    // Hráč přeskakoval: zbývá mu 1-03. V 1-02 má z dřívějška všechny tři medaile, ale galerie
+    // (novější než jeho postup) žádný most nemá.
+    const ulozeni = prazdneUlozeni();
+    for (const uroven of kampan) {
+      if (uroven.id === "1-03") continue;
+      const vsechny = uroven.id === "1-02";
+      ulozeni.rekordy[uroven.id] = vylepsiRekord(undefined, { pruchod: true, rozpocet: vsechny, mistrovska: vsechny }, cenaNavrhu(RESENI[uroven.id]!.pruchod), VERZE_FYZIKY, 1000);
+    }
+    await s.evaluate((zapis) => window.localStorage.setItem("mostmistr.ulozeni", zapis), ulozeniNaText(ulozeni));
+    // Do galerie se u 1-02 zapíše první most, kterým úroveň znovu projde: most pro průchod.
+    const pruchod = RESENI["1-02"]!.pruchod;
+    await postav(s, "1-02", pruchod, true);
+    await s.locator('[data-akce="na-konec"]').click();
+    await s.locator(".vysledek").waitFor({ state: "visible" });
+    // Kampaň ještě hotová není: odkaz vede na další úroveň.
+    const dalsi = s.locator('[data-akce="dalsi"]');
+    expect(await dalsi.getAttribute("data-dokoncena")).toBe("false");
+    expect(await dalsi.getAttribute("href")).toBe("?uroven=1-03");
+
+    await postav(s, "1-03", RESENI["1-03"]!.pruchod, true);
+    await s.locator('[data-akce="na-konec"]').click();
+    await s.locator(".vysledek").waitFor({ state: "visible" });
+    expect(await dalsi.getAttribute("data-dokoncena")).toBe("true");
+    expect(await dalsi.getAttribute("data-posledni")).toBe("false");
+    expect(await dalsi.innerText()).toBe("Kampaň dokončena · závěrečný list");
+    await dalsi.click();
+    await s.locator('body[data-rezim="list"]').waitFor();
+    expect(await telo(s, "list")).toBe("dokonceno");
+    // Karta 1-02 má jednu medaili (tu dostal most na obrázku), i když úroveň má v postupu tři.
+    expect(await stavKarty(s, "1-02")).toBe(`◆ ◇ ◇ · ${koruny(cenaNavrhu(pruchod))}`);
+    // Další zkouška téže úrovně už kampaň nedokončuje: odkaz vede zase na další úroveň.
+    await postav(s, "1-03", RESENI["1-03"]!.pruchod, true);
+    await s.locator('[data-akce="na-konec"]').click();
+    await s.locator(".vysledek").waitFor({ state: "visible" });
+    expect(await dalsi.getAttribute("data-dokoncena")).toBe("false");
+    expect(await dalsi.getAttribute("href")).toBe("?uroven=1-04");
+  }, 300_000);
+
   it("na telefonu list nepřetéká a anglicky je přeložený", async () => {
     const telefon = await cistaStranka({ ...devices["iPhone 13"], locale: "cs-CZ", deviceScaleFactor: undefined });
     await telefon.goto(adresa);

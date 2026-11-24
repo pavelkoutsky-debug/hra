@@ -277,6 +277,8 @@ interface Beh {
    * co pomůže místo nich; null, když lana dopnutá nejsou nebo dopnutí stačilo.
    */
   dopnutoMarne: KlicTextu | null;
+  /** Tahle zkouška prošla poslední chybějící úrovní kampaně: výsledek vede na závěrečný list. */
+  kampanDokoncena?: boolean;
   /** Pokus (brnknutí nebo budič), ne zkouška: nepočítá se do medailí ani do obálky. */
   pokus: boolean;
   /** Budič, kterým se most při pokusu rozkmitával; null u zkoušky a u brnknutí. */
@@ -3051,8 +3053,13 @@ export function spustUroven(
           // V pískovišti se nesoutěží: rekordy ani medaile se tam nevedou. Cizí most z odkazu
           // hráči také nic nezapíše: pruh hosta slibuje, že se nic neukládá, dokud se nerozhodne.
           if (!vysledek.rozpad && sandbox === null && !b.host) {
+            const projitaCela = (): boolean => kampan.every((u) => uloziste.rekord(u.id)?.medaile.pruchod === true);
+            const predtim = projitaCela();
             // Hmotnost mostu patří k výzvě o nejlehčí most; počítá se jen u mostu, který prošel.
             rekord = uloziste.zapocitej(uroven.id, vysledek.medaile, vysledek.cena, VERZE_FYZIKY, hmotnostNavrhu(b.navrh, uroven), neporuseny);
+            // Kampaň se dá dokončit kteroukoli úrovní (kapitoly se otevírají po dvou úrovních):
+            // na závěrečný list hra pošle po té, která byla poslední chybějící.
+            b.kampanDokoncena = !predtim && projitaCela();
           }
           // Galerie pro závěrečný list: nejlepší most, který úrovní prošel (víc medailí,
           // neporušený, levnější). Jen v kampani a jen vlastní most: cizí most z odkazu do
@@ -3805,9 +3812,11 @@ export function spustUroven(
     if (!vysledek || vysledek.pruchod || vysledek.rozpad || (b.pokus && !b.zlom)) return false;
     if (b.zaber.stav === "pripraven" && b.zaber.domov) return false;
     const kdy = slozeniBehu(b) ? ZABER.okamzikSlozeni : (prvniPorucha(b.udalosti)?.cas ?? null);
-    if (kdy !== null) return prehravani.cas >= kdy + VYSLEDEK_PO_PORUSE;
-    // Kmitání nad mezí úrovně: rozhodnuto je ve chvíli, kdy ji most překročil.
     const prekroceno = vysledek.komfort?.prekroceno ?? null;
+    // Most, na kterém něco povolilo, ale stál dál a neprošel až na kmitání pod lidmi: rozhodlo
+    // kmitání, ne porucha. Výsledek dvě sekundy po poruše by přišel dřív, než se most rozkmital.
+    if (kdy !== null && !(vysledek.spadlo === 0 && prekroceno !== null && prekroceno > kdy)) return prehravani.cas >= kdy + VYSLEDEK_PO_PORUSE;
+    // Kmitání nad mezí úrovně: rozhodnuto je ve chvíli, kdy ji most překročil.
     return prekroceno !== null && vysledek.spadlo === 0 && prehravani.cas >= prekroceno + VYSLEDEK_PO_KMITANI;
   }
 
@@ -4536,12 +4545,15 @@ export function spustUroven(
     // Za poslední úrovní kampaně už další není: odkaz vede zpátky na přehled. Dokončená je
     // kampaň, až když je projitá každá úroveň (poslední jde otevřít i adresou nebo odemknutím).
     const posledni = vKampani && dalsi === undefined;
-    const dokoncena = posledni && kampan.every((u) => uloziste.rekord(u.id)?.medaile.pruchod === true);
+    // Kampaň jde dokončit i jinou úrovní než poslední v pořadí (kapitoly se otevírají po dvou
+    // úrovních): na závěrečný list vede i výsledek, kterým hráč právě prošel poslední chybějící.
+    const dokoncena =
+      vKampani && !jePokus && (b.kampanDokoncena === true || (posledni && kampan.every((u) => uloziste.rekord(u.id)?.medaile.pruchod === true)));
     odkaz.hidden = !(projita && !jePokus && vKampani);
     odkaz.classList.toggle("tlacitko--hlavni", vysledek.pruchod);
     odkaz.textContent = t(dokoncena ? "vysledek.kampanDokoncena" : posledni ? "vysledek.naPrehled" : "vysledek.dalsi");
-    // Po poslední úrovni dokončené kampaně vede odkaz na závěrečný list se souhrnem a mosty hráče.
-    odkaz.href = dalsi ? `?uroven=${dalsi.id}` : dokoncena ? `${window.location.pathname}?list` : window.location.pathname;
+    // Po dokončení kampaně vede odkaz na závěrečný list se souhrnem a mosty hráče.
+    odkaz.href = dokoncena ? `${window.location.pathname}?list` : dalsi ? `?uroven=${dalsi.id}` : window.location.pathname;
     odkaz.dataset.posledni = String(posledni);
     odkaz.dataset.dokoncena = String(dokoncena);
     odkaz.onclick = () => zapis("ovladani", { co: dokoncena ? "kampan-dokoncena" : posledni ? "na-prehled" : "dalsi-uroven" });
@@ -4558,8 +4570,11 @@ export function spustUroven(
       const narazLodi = b.udalosti.find((u) => u.druh === "lod" && u.stav === "narazila");
       const vetaLodi = narazLodi && narazLodi.druh === "lod" ? t("zaber.lod", { prut: (narazLodi.prut ?? 0) + 1 }) : null;
       const dalsi = vety.slice(1).find((v) => v !== vetaNarazuLodi);
+      // Most, který se porušil, ale stál dál a všichni přešli, neprošel až na kmitání pod lidmi.
+      const rozhodloKmitani = pricinaKmitanim !== null && vysledek.spadlo === 0 && vysledek.prejelo === vysledek.ucastniku && (vysledek.komfort?.prekroceno ?? null) !== null;
       if (vetaMezery) pricina = prvniVeta(vetaMezery);
       else if (pricinaPohybu) pricina = prvniVeta(pricinaPohybu);
+      else if (rozhodloKmitani) pricina = pricinaKmitanim;
       else if (prvni?.druh === "poruseni") {
         pricina = t("vysledek.kratce.prvni", { prut: prvni.prut + 1, zpusob: t(nazevZpusobu(prvni.zpusob)) });
         // Nedopnutá lana jsou příčina, o které má hráč vědět hned, ne až v podrobnostech.

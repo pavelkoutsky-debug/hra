@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
 import type { NavrhMostu } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
-import { MEZE_KOMFORTU } from "../src/jadro/komfort";
+import { MEZE_KOMFORTU, prodluzKlid } from "../src/jadro/komfort";
 import type { VysledekZkousky } from "../src/zkouska/protokol";
 import { Zkouska } from "../src/zkouska/zkouska";
 import { nactiKampan, nasadaUrovne } from "../urovne/index";
@@ -65,5 +65,22 @@ describe("kmitání mostu, který se porušil", { timeout: 120_000 }, () => {
     // Do porušení po mostě nikdo nedošel tak daleko, aby ho rozkmital; trosky se nepočítají.
     expect(vysledek.komfort!.zrychleni).toBeLessThan(MEZE_KOMFORTU[lavka.nejhorsiKomfort - 1]!);
     expect(vysledek.komfort!.prekroceno).toBeNull();
+  });
+
+  it("ticho po porušení má strop: most, kterému povoluje prut za prutem, se nakonec změří", () => {
+    const klid = { pocitatOd: 0, zbyva: 9 };
+    // První porušení: tři sekundy ticha.
+    prodluzKlid(klid, 1, 3);
+    expect(klid).toEqual({ pocitatOd: 4, zbyva: 6 });
+    // Druhé hned po něm ticho jen prodlouží (o sekundu), nezačíná ho znovu ze zásoby.
+    prodluzKlid(klid, 2, 3);
+    expect(klid).toEqual({ pocitatOd: 5, zbyva: 5 });
+    // Porušení po dvou sekundách dokola: ticho skončí, když zásoba dojde, a dál se měří.
+    for (let cas = 4; cas <= 40; cas += 2) prodluzKlid(klid, cas, 3);
+    expect(klid.zbyva).toBe(0);
+    expect(klid.pocitatOd).toBe(10);
+    // Pozdní porušení bez zásoby už měření nezastaví.
+    prodluzKlid(klid, 60, 3);
+    expect(klid.pocitatOd).toBe(10);
   });
 });

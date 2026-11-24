@@ -131,6 +131,31 @@ describe("závěrečná kapitola", () => {
     await stranka.keyboard.press("Escape");
   });
 
+  it("8-02: skica nápovědy má stožáry na opěrách, ne pylon uprostřed lávky", async () => {
+    await otevri("8-02");
+    await akce("napoveda").click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await stranka.locator("#okno-napoveda").getAttribute("data-soustava")).toBe("zaveseny");
+    const princip = await udaj("napoveda-princip");
+    expect(princip).toContain("z pylonů");
+    expect(princip).toContain("laděný tlumič");
+    expect(princip).not.toContain("příhrada");
+    // Uprostřed lávky je vyhlídka a pod mostovkou se stavět nesmí: skica tam nad mostovkou
+    // nesmí nic kreslit (pylon uprostřed by vedl obojím). Mostovka je ve dvou třetinách výšky.
+    const nadStredem = await stranka.locator('[data-udaj="napoveda-skica"]').evaluate((prvek) => {
+      const platno = prvek as HTMLCanvasElement;
+      const ctx = platno.getContext("2d")!;
+      const vyska = Math.round(platno.height * 0.66) - 10;
+      const body = ctx.getImageData(Math.round(platno.width / 2) - 2, 0, 4, vyska).data;
+      let kreslenych = 0;
+      for (let i = 3; i < body.length; i += 4) if (body[i]! > 40) kreslenych += 1;
+      return kreslenych;
+    });
+    expect(nadStredem).toBe(0);
+    await stranka.screenshot({ path: `${SLOZKA}/f3-napoveda-8-02.png` });
+    await stranka.keyboard.press("Escape");
+  });
+
   for (const [id, cas] of [["8-01", 24], ["8-02", 30], ["8-03", 16]] as const) {
     it(`${id}: most autora pro mistrovskou projde se všemi třemi medailemi`, async () => {
       await otevri(id);

@@ -96,6 +96,10 @@ export interface PolozkaListu {
   /** Most do obrázku: nejlepší prošlý z galerie, jinak rozestavěný z výkresu, jinak žádný. */
   most: NavrhMostu | null;
   puvod: "galerie" | "rozestaveny" | "zadny";
+  /**
+   * Medaile ke kartě: u mostu z galerie ty, které dostal právě ten most (hráč může mít z dřívějška
+   * víc; součty listu počítají postup, ne galerii), jinak medaile úrovně z uloženého postupu.
+   */
   medaile: Medaile;
   /** Cena a hmotnost mostu v obrázku; null, když úroveň most nemá. */
   cena: number | null;
@@ -195,7 +199,12 @@ export function souhrnListu(kampan: readonly Uroven[], podklady: PodkladyListu):
       souhrn.rozpeti += rozpetiUrovne(uroven);
       souhrn.prutu += most.pruty.length;
     }
-    souhrn.polozky.push({ uroven, most, puvod, medaile, cena, hmotnost });
+    // Karta nesmí mostu z galerie připsat medaile, které získal jiný most hráče.
+    const medaileKarty: Medaile =
+      puvod === "galerie" && zGalerie
+        ? { pruchod: zGalerie.medaili >= 1, rozpocet: zGalerie.medaili >= 2, mistrovska: zGalerie.medaili >= 3 }
+        : medaile;
+    souhrn.polozky.push({ uroven, most, puvod, medaile: medaileKarty, cena, hmotnost });
   }
   souhrn.medaili = souhrn.pocty.pruchod + souhrn.pocty.rozpocet + souhrn.pocty.mistrovska;
   souhrn.dokonceno = kampan.length > 0 && souhrn.projito === kampan.length;

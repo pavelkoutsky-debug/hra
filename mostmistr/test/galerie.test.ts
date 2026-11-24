@@ -88,6 +88,23 @@ describe("souhrn pro závěrečný list", () => {
     expect(s).toMatchObject({ urovni: kampan.length, projito: 0, medaili: 0, medailiCelkem: 3 * kampan.length, mostu: 0, cena: 0, hmotnost: 0, rozpeti: 0, prutu: 0, dokonceno: false });
   });
 
+  it("karta mostu z galerie nese medaile toho mostu, ne medaile, které hráč získal jiným", () => {
+    // Hráč má v 1-03 z dřívějška všechny tři medaile a do galerie se mu zapsal most pro průchod
+    // (galerie vznikla později, nebo se zvedla verze fyziky): karta nesmí tvrdit, že ten most
+    // má mistrovskou. Součty listu dál počítají postup hráče.
+    const pruchod = RESENI["1-03"]!.pruchod;
+    const s = souhrnListu(kampan, {
+      medaile: (id) => (id === "1-03" ? medaile(true, true, true) : id === "1-04" ? medaile(true, true) : undefined),
+      galerie: { "1-03": zaznam(pruchod, 1) },
+      rozestaveny: () => undefined,
+    });
+    const podle = Object.fromEntries(s.polozky.map((p) => [p.uroven.id, p]));
+    expect(podle["1-03"]).toMatchObject({ puvod: "galerie", medaile: medaile(true) });
+    expect(s.pocty).toEqual({ pruchod: 2, rozpocet: 2, mistrovska: 1 });
+    // Úroveň bez mostu v galerii ukazuje medaile z postupu (a list přizná, že most chybí).
+    expect(podle["1-04"]).toMatchObject({ puvod: "zadny", medaile: medaile(true, true) });
+  });
+
   it("počítá medaile a sčítá jen mosty z galerie; rozestavěný most ukáže, ale nepočítá", () => {
     const u101 = kampan.find((u) => u.id === "1-01")!;
     const u103 = kampan.find((u) => u.id === "1-03")!;

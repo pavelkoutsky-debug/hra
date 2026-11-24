@@ -136,7 +136,8 @@ export const reseni: ReseniUrovne = {
   pady: [
     { nazev: "jen mostovka", navrh: navrh((k) => kolej(k)) },
     // Zavěšený most jako ve 4-03: lana a pylony bez ztužující příhrady. Střed pole visí jen na
-    // kolejišti, lana do 36 se pod vlakem přetíží a pylon se ohne.
+    // kolejišti, dopnutí ho v rovině neudrží (napínáky vyjdou záporné) a most povolí už vlastní
+    // vahou, dřív než přijede vlak: ohne se pylon a přetíží lana do 36.
     {
       nazev: "zavěšený most jako ve 4-03, bez příhrady",
       navrh: navrh((k) => {
