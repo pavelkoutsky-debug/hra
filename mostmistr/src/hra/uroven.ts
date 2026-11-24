@@ -464,7 +464,8 @@ export function spustUroven(
   const snimek: Snimek = prazdnySnimek();
   let rekord: Rekord | undefined = uloziste.rekord(uroven.id);
   /** Most, který úrovní projde: z něj je nápověda. Sandbox a zkušební výkres žádný nemají. */
-  const reseniUrovne = sandbox ? undefined : RESENI[uroven.id]?.pruchod;
+  // Zkoušková úroveň nápovědu nemá: referenční mosty jí slouží jen testům a výzvám.
+  const reseniUrovne = sandbox || uroven.zkouskova ? undefined : RESENI[uroven.id]?.pruchod;
   /** Nápověda úrovně (soupis a obrys mostu, který projde); null, kde úroveň referenční most nemá. */
   let napoveda: Napoveda | null = null;
   /** Kolik zkoušek s provozem v téhle návštěvě neprošlo; po třetí hra nápovědu nabídne. */
@@ -4418,7 +4419,8 @@ export function spustUroven(
   // ---- Okno se zadáním úrovně ----
 
   function naplnZadani(): void {
-    udaj("zadani-list").textContent = t("zadani.uroven", { id: uroven.id });
+    udaj("zadani-list").textContent = t(uroven.zkouskova ? "zadani.zkouska" : "zadani.uroven", { id: uroven.id });
+    udaj("zadani-zkouska").hidden = !uroven.zkouskova;
     udaj("zadani-nazev").textContent = nazevUrovne(uroven);
     const klic = `zadani.${uroven.id}`;
     textSPojmy(udaj("zadani-text"), jeKlicTextu(klic) ? t(klic) : "");

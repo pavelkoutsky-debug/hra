@@ -1800,6 +1800,18 @@ a.karta__obal:hover {
   font-size: 15px;
 }
 
+/* Štítek zkouškové úrovně: bez ukázky a bez nápovědy. Není to varování, proto ne žlutě. */
+.karta__stitek {
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--cara);
+  color: var(--cara);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .karta__stav {
   display: flex;
   flex-wrap: wrap;
@@ -2032,6 +2044,15 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 }
 
 .okno p.okno__zadani--vice {
+  color: var(--cara);
+  font-size: 13px;
+}
+
+/* Poznámka v zadání zkouškové úrovně. */
+.okno p.okno__zkouska {
+  margin: 0 0 16px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--cara);
   color: var(--cara);
   font-size: 13px;
 }
