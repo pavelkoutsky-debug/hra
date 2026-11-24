@@ -7,8 +7,9 @@
 // vyvažují. Tady visí vlevo dvakrát delší pole než vpravo, pylon to táhne doleva a všechno, co
 // ho drží, je kotevní lano do pravé opěry. Obyčejné lano na to nestačí (potřebuje nosné lano ze
 // 4-04, nebo aspoň dvě vedle sebe), nízký pylon dá lanům malý úhel a přetíží je, a příhrada na
-// pilíři projde, ale bez rezervy. Mistrovská chce pylon nakloněný nad delší pole, nebo vysoký
-// svislý s dvojitým kotvením.
+// pilíři projde, ale bez rezervy (rozpočtovou tak dá i most bez lan; je mezi mosty pro výzvy).
+// Mistrovská chce lana: pylon nakloněný nad delší pole, vysoký svislý s dvojitým kotvením, nebo
+// svislý dvacetimetrový s jediným nosným kotevním lanem (ten splní bonus jen těsně).
 
 import type { IdPrvku } from "../../src/data/katalog";
 import { Kreslic } from "../../src/data/kreslic";
