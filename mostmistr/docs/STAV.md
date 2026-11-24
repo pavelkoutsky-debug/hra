@@ -1,6 +1,6 @@
 # Mostmistr — stav vývoje
 
-Poslední aktualizace: 23. 11. 2026
+Poslední aktualizace: 24. 11. 2026
 
 ## Milníky
 
@@ -25,7 +25,7 @@ Poslední aktualizace: 23. 11. 2026
 | M11 Kmitání a nápověda | Hotovo (23. 11. 2026); nezávislé recenze viz „Nezávislé recenze M11“ a „Druhé kolo recenzí M11“ |
 | M12 Obtížnost a medaile | Hotovo: první část 23. 11. 2026 („M12 — výsledek první části“), zkouškové úrovně a příčiny u pohyblivých mostů 24. 11. 2026 („M12c — výsledek“) |
 | M13 Sdílení mostu | Hotovo (24. 11. 2026): odkaz na most, obrázek výkresu, výzva o cenu; viz „M13 — výsledek“ |
-| M14 Finále kampaně | Čeká |
+| M14 Finále kampaně | Hotovo (24. 11. 2026): závěrečná kapitola se třemi úrovněmi, galerie mostů a závěrečný list; viz „M14 — výsledek“ |
 | M15 Dílna a Havarijní komise | Čeká |
 | M16 Žebříčky a denní rozbor | Čeká; potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry |
 
@@ -41,7 +41,37 @@ Poslední aktualizace: 23. 11. 2026
 - **M12 Obtížnost a medaile**: první část je hotová (viz „M12 — výsledek první části“). Zbývá M12c (těžké varianty údolí, zkouškové úrovně bez návodu, příčiny v kapitole 7) a drobnosti vypsané na konci oddílu.
 - **M13 Sdílení mostu** je hotový a po recenzích opravený (viz „M13 — výsledek“ a „Nezávislé recenze M13“).
 - **M12c** (zkouškové úrovně bez návodu, příčiny u pohyblivých mostů) je hotový, viz „M12c — výsledek“.
-- **Rozpracováno (24. 11. 2026):** M14: galerie mostů a závěrečný list jsou v místní větvi `m14-priprava`, úrovně kapitoly 8 mají zadání v `recenze-docasne/m14/` a ověřeno je, že vlak na zvedacím mostě jádro unese. **Pomocným agentům došel 24. 11. limit modelu (obnoví se 29. 11.)**; do té doby se pracuje bez nich nebo s agenty jiného modelu.
+- **M14 Finále kampaně** je hotový, viz „M14 — výsledek“.
+- **Pomocným agentům došel 24. 11. limit hlavního modelu (obnoví se 29. 11.)**; návrhy úrovní a recenze od té doby běží na záložním modelu (Opus).
+- **Dál:** M15 (dílna a Havarijní komise) a M16 (žebříčky a denní rozbor; ten potřebuje od zadavatele heslo správce v Netlify a povolený přístup k webu hry).
+
+## M14 — výsledek
+
+Finále kampaně (návrh 14 z `docs/RECENZE.md`): závěrečná kapitola, která spojuje mechaniky starších kapitol, a zakončení kampaně listem s mosty hráče. Verze hry 0.20.0. Formát úrovně, návrhu ani uloženého postupu se nemění; fyzika zůstává ve verzi 8 (otisky regresní sady stejné), mění se jedno pravidlo hodnocení (kmitání po porušení, viz níže).
+
+**Kapitola 8 „Mistrovské dílo“.** Tři úrovně bez nového prvku a bez zkoušky; každá chce obě mechaniky, které spojuje, a má nápovědu, „Více o úloze“ i odstavec o skutečném mostě. Otevírá se jako každá kapitola po dvou úrovních té předchozí. Kampaň má 38 úrovní.
+
+| Úroveň | Co spojuje | Rozpočet / inženýrský | Bonus | Průchod | Rozpočtová | Mistrovská |
+|---|---|---|---|---|---|---|
+| 8-01 Trať na lanech | zavěšený most (kapitola 4) a těžký vlak, který na mostě stojí (kapitola 6): jedno pole 96 m, lana dosáhnou jen do dvou třetin, střed nese nízká příhrada | 4 500 000 / 4 440 000 | rezerva 62 % | 4 257 470 | 4 072 017 | 4 318 305 |
+| 8-02 Lávka na lanech | lana a stožáry (kapitola 4) a laděný tlumič proti kmitání pod lidmi (kapitoly 2 a 5): lávka 60 m, útvar 2 Hz a proti němu pomalé procesí | 1 600 000 / 1 411 000 | kmitání 0,83 | 1 482 078 | 1 333 506 | 1 369 506 |
+| 8-03 Přístavní trať | příhrada, která unese vlak (kapitola 6), a píst, který ji zvedne a měkce položí (kapitola 7): kanál 30 m, loď vysoká 14 m | 990 000 / 852 000 | dosednutí 680 kN | 918 364 | 768 166 | 829 666 |
+
+Úrovně navrhli tři agenti podle společného zadání a kontroly (`overUroven`: medaile po schodech, inženýrský rozpočet 2,5 až 3 % nad mostem pro mistrovskou, mosty, které selžou fyzikou, a pokusy úroveň obejít jen jednou z mechanik). Co prošlo jen jednou mechanikou, zavřeli zónou: v 8-01 zóny u opěr (konzolová příhrada s táhlem do kotvy místo lan), v 8-02 „vyhlídka“ nad středem lávky (visutá lávka a příhrada nad mostovkou projdou bez tlumiče) a druhá skupina lidí v jiném rytmu (poloviční visutá lávka). V 8-03 protizávaží nepomáhá (moment závaží je asi dvanáctkrát dražší než moment pístu), takže úroveň závaží nedovoluje a vyvážení dělá druhý píst. Mosty jsou v `urovne/finale/<id>.ts` a test vyhratelnosti je hlídá jako ostatní; šampioni výzev a únosnost na korunu jsou spočítané.
+
+**Galerie a závěrečný list** (`src/data/galerie.ts`, `src/hra/list.ts`, `src/vykres/list.ts`, adresa `?list`). Hra si pro každou úroveň kampaně pamatuje nejlepší most, který jí prošel (víc medailí, při shodě neporušený, pak levnější), a list ukazuje souhrn a mosty po kapitolách: z galerie, jinak rozestavěný most z výkresu (označený, do součtů se nepočítá). Dokud kampaň není projitá celá, jmenuje se „Moje mosty“ a vede na něj odkaz z přehledu; po poslední úrovni je z něj „Závěrečný list“ a hra na něj hráče pošle. Jde stáhnout jako obrázek. Galerie je ozdoba vedle uloženého postupu: medaile a rekordy z ní hra nikdy nečte.
+
+**Nápověda** (`src/data/rysy.ts`). Zavěšený most, jehož dvě kotevní lana vedou do jedné kotvy, už nápověda neoznačí za visutý; jedno křídlo se dvěma písty je jedno křídlo (počet křídel se pozná podle zámku mezi křídly, ne podle počtu pístů) a lanový most se ztužující příhradou to má ve větě o principu („Mostovku navíc ztužuje příhrada z prutů“).
+
+**Kmitání pod lidmi po porušení.** Měření kmitání dřív prvním porušením skončilo. Most, na kterém hned na začátku něco povolilo (plastické klouby svařené mostovky), ale stál dál, tak kmitání neměl změřené a dostal medaili za průchod, i když by na kmitání propadl (nález z návrhu 8-02). Teď se měří dál: ráz samotného porušení se nepočítá (tři sekundy ticha po každém) a do výsledku jde měření po porušení, jen když z mostu nikdo nespadl; most, který se zřítil, má dál jen kmitání do porušení. Rozpočtovou ani mistrovskou to nemění (porušený most je nedostane), neporušených mostů se to netýká, otisky regresní sady jsou stejné a verze fyziky se nezvedá. Hlídá `test/kmitaniPoPoruseni.test.ts`.
+
+**Testy.** `test/e2e/finale.e2e.ts` (přehled s osmou kapitolou, zadání a výkres tří úrovní, nápověda, mosty pro mistrovskou v prohlížeči), `test/e2e/list.e2e.ts` (list průběžný i závěrečný, stažení obrázku), `test/e2e/kampan.e2e.ts` projde všech 38 úrovní a skončí na závěrečném listu; `test/lana.test.ts` hlídá napínáky každé úrovně s lany (i 4-05 a kapitoly 8).
+
+**Co zůstává otevřené**
+- **8-01:** rozpočet úrovně je jen 1,4 % nad inženýrským (nejlevnější známý most bez lan stojí o 53 tisíc víc než rozpočet), rezervy mostů autora jsou těsné (mistrovská plní bonus na 93 % limitu) a most pro mistrovskou má po dopnutí průhyb 2,1 mm.
+- **8-02:** mistrovská má prakticky jednu cestu (stožáry 9 m a dva tlumiče 1 200 kg na 1,95 až 2,05 Hz); nejtěsnější zkoušený most bez tlumiče má 1,08 m/s² při mezi 1,0. Odhad kmitání měkkou poloviční visutou lávku nadsazuje o 31 % (verdikt je stejný; tolerance testu odhadu je pro mosty, které propadly, 1,4).
+- **8-03:** protizávaží jako lekce nefunguje (cena); zkouška nehlídá pruty, které se při zvedání otočí pod terén; ráz dosednutí se měří do konce zkoušky, tedy i pod vlakem.
+- Fakta v odstavcích „Ve skutečnosti“ (Øresundský most, Millennium Bridge, St. Charles Air Line Bridge) ověřili návrháři vyhledáním.
 
 ## M13 — výsledek
 
