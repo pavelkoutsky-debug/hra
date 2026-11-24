@@ -1,4 +1,5 @@
-// Stránka správce: zpětná vazba hráčů se stavem řešení a deník hraní po dnech a sezeních.
+// Stránka správce: zpětná vazba hráčů se stavem řešení, deník hraní po dnech a sezeních,
+// denní rozbory (píše je naplánovaná úloha, viz `docs/ROZBOR.md`) a žebříčky.
 // Je to nástroj pro zadavatele, ne součást hry; proto má texty přímo u sebe. Se serverem
 // mluví přes /api/sprava a každou žádost podepisuje heslem správce.
 
@@ -8,6 +9,8 @@ import { ID_SANDBOXU, MEZE_SANDBOXU, urovenSandboxu, vychoziSandbox } from "../d
 import type { Uroven } from "../data/uroven";
 import { STAVY_VAZBY, type EvidovanaVazba, type HlavickaDeniku, type StavVazby, type UdalostDeniku } from "../denik/udalosti";
 import type { OdpovedSouhrnu, PolozkaSeznamuVazeb, SezeniDne } from "../server/obsluha";
+import type { RozborDne } from "../server/rozbor";
+import type { ZebricekProSpravu } from "../server/zebricek";
 import { celyVyrez } from "../vykres/kamera";
 import { nakresliNavrh } from "../vykres/navrh";
 import { nakresliVykres } from "../vykres/vykres";
@@ -678,6 +681,128 @@ prvek("#export").addEventListener("click", () => {
   })();
 });
 
+// ---- Denní rozbor ----
+
+const vyberRozboru = prvek<HTMLSelectElement>("#rozbor-den");
+const NAZVY_NAROCNOSTI: Record<string, string> = { mala: "malá", stredni: "střední", velka: "velká" };
+
+async function ukazRozbor(den: string): Promise<void> {
+  const { rozbor } = await sprava<{ rozbor: RozborDne }>(`co=rozbor&den=${den}`);
+  prvek("#rozbor").hidden = false;
+  prvek("#rozbor-vznikl").textContent = `sepsán ${cas(rozbor.vytvoreno)}`;
+  // Rozbor přichází zvenčí (píše ho naplánovaná úloha): na stránku jde jen jako text.
+  prvek("#rozbor-shrnuti").textContent = rozbor.shrnuti;
+  prvek("#rozbor-text").textContent = rozbor.text;
+  const serazene = [...rozbor.navrhy].sort((a, b) => a.priorita - b.priorita);
+  prvek("#rozbor-navrhy").replaceChildren(
+    ...serazene.map((navrh) => {
+      const polozka = document.createElement("li");
+      const nazev = document.createElement("strong");
+      nazev.textContent = navrh.nazev;
+      const priorita = document.createElement("span");
+      priorita.className = "stitek";
+      priorita.dataset.priorita = String(navrh.priorita);
+      priorita.textContent = `priorita ${navrh.priorita}`;
+      const narocnost = document.createElement("span");
+      narocnost.className = "stitek";
+      narocnost.textContent = `náročnost ${NAZVY_NAROCNOSTI[navrh.narocnost] ?? navrh.narocnost}`;
+      const duvod = document.createElement("p");
+      duvod.textContent = `Proč: ${navrh.duvod}`;
+      const popis = document.createElement("p");
+      popis.textContent = `Co: ${navrh.popis}`;
+      polozka.append(nazev, priorita, narocnost, duvod, popis);
+      return polozka;
+    }),
+  );
+  if (rozbor.navrhy.length === 0) prvek("#rozbor-navrhy").textContent = "Tenhle rozbor žádný návrh nemá.";
+}
+
+async function nactiRozbory(): Promise<void> {
+  const { rozbory } = await sprava<{ rozbory: { den: string; shrnuti: string; navrhu: number }[] }>("co=rozbory");
+  vyberRozboru.replaceChildren(
+    ...rozbory.map((r) => {
+      const moznost = document.createElement("option");
+      moznost.value = r.den;
+      moznost.textContent = `${r.den} (${pocet(r.navrhu, "návrh", "návrhy", "návrhů")})`;
+      return moznost;
+    }),
+  );
+  document.body.dataset.rozboru = String(rozbory.length);
+  prvek("#rozbor-prazdno").hidden = rozbory.length > 0;
+  prvek("#rozbor").hidden = true;
+  prvek("#rozbor-vznikl").textContent = "";
+  if (rozbory.length > 0) await ukazRozbor(rozbory[0]!.den);
+}
+
+vyberRozboru.addEventListener("change", () => {
+  void ukazRozbor(vyberRozboru.value).catch((chyba: unknown) => ohlas(`Rozbor se nepodařilo načíst: ${(chyba as Error).message}`));
+});
+
+// ---- Žebříčky ----
+
+const NAZVY_MER: Record<string, string> = { cena: "nejlevnější (Kč)", hmotnost: "nejlehčí (kg)", zlom: "únosnost (t na 100 000 Kč)" };
+
+async function nactiZebricky(): Promise<void> {
+  const { verze, zebricky } = await sprava<{ verze: number; zebricky: ZebricekProSpravu[] }>("co=zebricky");
+  const radku = zebricky.reduce((n, z) => n + z.radky.length, 0);
+  document.body.dataset.zebricku = String(radku);
+  prvek("#zebricky-uvod").textContent =
+    radku === 0
+      ? `Žebříčky verze fyziky ${verze} jsou zatím prázdné.`
+      : `Žebříčky verze fyziky ${verze}: nejlepší řádky každého měřítka. Smazání odstraní všechny zápisy hráče v té úrovni (nevhodná přezdívka).`;
+  prvek("#zebricky tbody").replaceChildren(
+    ...zebricky.flatMap((z) =>
+      z.radky.map((r) => {
+        const radek = document.createElement("tr");
+        const otevrit = document.createElement("button");
+        otevrit.type = "button";
+        otevrit.textContent = "Otevřít";
+        otevrit.addEventListener("click", () => {
+          void (async () => {
+            try {
+              const { kod } = await sprava<{ kod: string }>(`co=zebricek-most&klic=${encodeURIComponent(z.klic)}&most=${r.most}`);
+              // Zkoušení správce do čísel o hráčích nepatří: odkaz záznam v tomhle prohlížeči vypne.
+              window.open(`./?most=${kod}&zaznam=vypnout&uroven=${z.uroven}`, "_blank", "noopener");
+            } catch (chyba) {
+              ohlas(`Most se nepodařilo načíst: ${(chyba as Error).message}`);
+            }
+          })();
+        });
+        const smazat = document.createElement("button");
+        smazat.type = "button";
+        smazat.textContent = "Smazat hráče";
+        smazat.addEventListener("click", () => {
+          if (!window.confirm(`Smazat z úrovně ${z.uroven} všechny zápisy hráče „${r.jmeno}“? Nejde to vrátit.`)) return;
+          void (async () => {
+            try {
+              const { smazano } = await sprava<{ smazano: number }>("co=zebricek-smazat", { znacka: r.znacka, uroven: z.uroven });
+              await nactiZebricky();
+              ohlas(`Smazáno zápisů: ${smazano}.`);
+            } catch (chyba) {
+              ohlas(`Smazat se nepodařilo: ${(chyba as Error).message}`);
+            }
+          })();
+        });
+        const bunkaMostu = document.createElement("td");
+        bunkaMostu.append(otevrit);
+        const bunkaSmazani = document.createElement("td");
+        bunkaSmazani.append(smazat);
+        radek.append(
+          bunka(z.uroven),
+          bunka(NAZVY_MER[r.mira] ?? r.mira),
+          bunka(String(r.poradi), "cislo"),
+          bunka(r.jmeno),
+          bunka(cislo(r.zobrazeno, r.mira === "zlom" ? 1 : 0), "cislo"),
+          bunka(cas(r.kdy)),
+          bunkaMostu,
+          bunkaSmazani,
+        );
+        return radek;
+      }),
+    ),
+  );
+}
+
 // ---- Přihlášení a záložky ----
 
 for (const zalozka of document.querySelectorAll<HTMLButtonElement>("[data-zalozka]")) {
@@ -724,6 +849,8 @@ async function prihlas(): Promise<void> {
   const potize: string[] = [];
   await nactiVazby().catch((chyba: unknown) => potize.push(`zpětnou vazbu (${(chyba as Error).message})`));
   await nactiDny().catch((chyba: unknown) => potize.push(`deník (${(chyba as Error).message})`));
+  await nactiRozbory().catch((chyba: unknown) => potize.push(`denní rozbory (${(chyba as Error).message})`));
+  await nactiZebricky().catch((chyba: unknown) => potize.push(`žebříčky (${(chyba as Error).message})`));
   if (potize.length > 0) ohlas(`Nepodařilo se načíst ${potize.join(" a ")}.`);
 }
 

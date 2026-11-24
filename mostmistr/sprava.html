@@ -36,6 +36,13 @@
       textarea { width: 100%; min-height: 70px; resize: vertical; }
       .rada { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
       .hlaseni { min-height: 1.5em; color: #ffd166; }
+      .rozbor-text { max-width: 96ch; white-space: pre-wrap; }
+      .navrhy { max-width: 96ch; padding-left: 22px; }
+      .navrhy li { margin-bottom: 12px; }
+      .navrhy strong { color: #fff; }
+      .navrhy .stitek { margin-left: 8px; padding: 0 6px; border: 1px solid currentColor; border-radius: 2px; color: #8fb4e6; white-space: nowrap; }
+      .navrhy .stitek[data-priorita="1"] { color: #ffd166; }
+      .navrhy p { margin: 2px 0 0; }
       .sloupce { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
       @media (max-width: 1000px) { .sloupce { grid-template-columns: minmax(0, 1fr); } }
       .tabulka { overflow-x: auto; }
@@ -94,6 +101,8 @@
       <div class="rada" role="tablist">
         <button type="button" role="tab" data-zalozka="vazby" aria-selected="true">Zpětná vazba</button>
         <button type="button" role="tab" data-zalozka="denik" aria-selected="false">Deník hraní</button>
+        <button type="button" role="tab" data-zalozka="rozbory" aria-selected="false">Denní rozbor</button>
+        <button type="button" role="tab" data-zalozka="zebricky" aria-selected="false">Žebříčky</button>
       </div>
 
       <section data-panel="vazby">
@@ -174,6 +183,40 @@
             <canvas class="most" id="sezeni-most" hidden></canvas>
             <div class="udalosti" id="sezeni-udalosti"></div>
           </div>
+        </div>
+      </section>
+
+      <section data-panel="rozbory" hidden>
+        <p>
+          Jednou za den projde naplánovaná úloha zpětnou vazbu a deník hraní za včerejšek, sepíše, co se dělo, a navrhne,
+          co ve hře změnit. Tady jsou její rozbory od nejnovějšího. Úloha běží mimo hru a zakládá se zvlášť (postup je
+          v <code>docs/ROZBOR.md</code>): potřebuje vlastní heslo <code>MM_ROZBOR_HESLO</code>, které otevírá jen podklady a rozbory.
+        </p>
+        <div class="rada">
+          <label for="rozbor-den">Rozbor dne (UTC)</label>
+          <select id="rozbor-den"></select>
+          <span id="rozbor-vznikl"></span>
+        </div>
+        <p id="rozbor-prazdno" hidden>Zatím tu žádný rozbor není. První vznikne po prvním běhu naplánované úlohy; dokud úloha není založená, nevznikne žádný.</p>
+        <div id="rozbor" hidden>
+          <h2>Shrnutí</h2>
+          <p id="rozbor-shrnuti" class="rozbor-text"></p>
+          <h2>Návrhy</h2>
+          <ol id="rozbor-navrhy" class="navrhy"></ol>
+          <h2>Celý rozbor</h2>
+          <div id="rozbor-text" class="rozbor-text"></div>
+        </div>
+      </section>
+
+      <section data-panel="zebricky" hidden>
+        <p id="zebricky-uvod"></p>
+        <div class="tabulka">
+          <table id="zebricky">
+            <thead>
+              <tr><th>Úroveň</th><th>Měřítko</th><th class="cislo">Pořadí</th><th>Přezdívka</th><th class="cislo">Hodnota</th><th>Zapsáno</th><th>Most</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
       </section>
     </div>
