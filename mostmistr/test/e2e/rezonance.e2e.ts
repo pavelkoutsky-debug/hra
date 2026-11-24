@@ -163,8 +163,9 @@ describe("osa frekvencí, závaží a tlumič", () => {
     expect(await ukazka.locator("[data-poznamka]").innerText()).toMatch(/^Pohyb mostu je \d+× zvětšený/);
     expect(await udaj("ukazka-popis")).toContain("píst ve válci s olejem");
     expect(await sbaleny("zadani-skutecnost")).toContain("Millennium Bridge");
-    // Během přehrávání ukazuje každá strana okamžité kmitání.
-    await expect.poll(() => bez.locator("[data-stav]").innerText(), { timeout: 15_000 }).toMatch(/kmitání \d,\d m\/s²/);
+    // Během přehrávání ukazuje každá strana největší dosavadní kmitání (okamžitá hodnota by
+    // podle chvíle čtení říkala pokaždé něco jiného).
+    await expect.poll(() => bez.locator("[data-stav]").innerText(), { timeout: 15_000 }).toMatch(/kmitání zatím nejvýš \d,\d m\/s²/);
     await stranka.waitForTimeout(9000);
     await stranka.screenshot({ path: `${SLOZKA}/41-zadani-prehlidka.png` });
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
