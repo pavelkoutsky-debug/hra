@@ -92,7 +92,7 @@
     },
     {
       "xMin": 28.5,
-      "yMin": 4.5,
+      "yMin": 4,
       "xMax": 67.5,
       "yMax": 30
     },
@@ -119,6 +119,18 @@
       "yMin": 0.5,
       "xMax": 101.5,
       "yMax": 10.5
+    },
+    {
+      "xMin": -5.5,
+      "yMin": 0.5,
+      "xMax": -4.5,
+      "yMax": 18
+    },
+    {
+      "xMin": 100.5,
+      "yMin": 0.5,
+      "xMax": 101.5,
+      "yMax": 18
     }
   ],
   "trasy": [
@@ -139,7 +151,7 @@
   "hmotnostVybaveni": 0,
   "nerovnost": "B",
   "rozpocet": 4500000,
-  "inzenyrskyRozpocet": 4440000,
+  "inzenyrskyRozpocet": 4410000,
   "mistrovska": {
     "druh": "rezerva",
     "limit": 0.62
