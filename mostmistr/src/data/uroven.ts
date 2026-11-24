@@ -45,7 +45,7 @@ export const TYPY_KOTEV = ["pevna", "posuvna", "vetknuti"] as const;
 export type TypKotvy = (typeof TYPY_KOTEV)[number];
 
 /** K čemu smí být kotva vyhrazená: zatím jen tlumiči (prvek druhu „tlumic“). */
-export const VYHRAZENI_KOTEV = ["tlumic"] as const;
+export const VYHRAZENI_KOTEV = ["tlumic", "lano"] as const;
 export type VyhrazeniKotvy = (typeof VYHRAZENI_KOTEV)[number];
 
 /** Podpora daná úrovní. Styčník návrhu na stejném místě je v ní uložen. */
@@ -54,7 +54,10 @@ export interface Kotva extends Bod {
   /**
    * Kotva vyhrazená jednomu druhu prutu: jiný do ní vést nesmí. Kotva pro tlumič ve svahu
    * pod lávkou je místo, kam se tlumič upne; vzpěra opřená o ni by lávku podepřela a úroveň,
-   * která učí tlumit, by šla projít bez tlumiče (nález kontroly obtížnosti M12).
+   * která učí tlumit, by šla projít bez tlumiče (nález kontroly obtížnosti M12). Kotva pro
+   * lano (obyčejné i nosné) je kotevní blok za opěrou: ocelové táhlo do ní by lana nahradilo
+   * a úroveň, která chce zavěšený most, by šla projít konzolovou příhradou bez jediného lana
+   * (8-01, kontrola po přeladění M14).
    */
   jen?: VyhrazeniKotvy;
 }

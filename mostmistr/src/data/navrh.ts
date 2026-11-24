@@ -197,6 +197,7 @@ export type DruhProblemu =
   | "zaklad-jen-pilir"
   | "pilir-pahyl"
   | "kotva-jen-tlumic"
+  | "kotva-jen-lano"
   | "stycnik-v-terenu"
   | "prut-v-zakazane-zone"
   | "zavazi-nepovolene"
@@ -306,6 +307,11 @@ export function zkontrolujNavrh(navrh: NavrhMostu, uroven: Uroven): ProblemNavrh
     if (polozka.druh !== "tlumic") {
       const vyhrazena = (s: StycnikNavrhu): boolean => uroven.kotvy.some((k) => k.jen === "tlumic" && k.x === s.x && k.y === s.y);
       if (vyhrazena(a) || vyhrazena(b)) problemy.push({ druh: "kotva-jen-tlumic", prut: p.id });
+    }
+    // Kotva vyhrazená lanu: ocelové táhlo ani jiný prut do ní nevede.
+    if (polozka.druh !== "lano") {
+      const proLano = (s: StycnikNavrhu): boolean => uroven.kotvy.some((k) => k.jen === "lano" && k.x === s.x && k.y === s.y);
+      if (proLano(a) || proLano(b)) problemy.push({ druh: "kotva-jen-lano", prut: p.id });
     }
     if (polozka.druh === "pilir") {
       // Pilíř je sloup: smí se naklonit, ale ne ležet. Položený by sloužil jako betonový trám
