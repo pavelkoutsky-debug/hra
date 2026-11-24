@@ -674,6 +674,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "paleta.zadaniOkno": "Brief",
   "paleta.zadaniOkno.popis": "Show the level brief: what the bridge must handle, who will cross it and what you build with",
   "zadani.uroven": "Level {id}",
+  "zadani.zkouska": "Chapter exam · {id}",
+  "zadani.zkouska.bez": "Exam: no demo and no hints. Everything you need, this chapter has already taught you.",
   "zadani.provoz": "Who will cross the bridge",
   "zadani.provoz.zadny": "No one; it is enough for the bridge to carry itself.",
   "zadani.pohyb":
@@ -1096,6 +1098,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "kapitola.7.nazev": "Harbour",
   "kapitola.7.tema": "A bridge that moves. The hydraulic cylinder, the span lock, the steel deck, ships and the bridge landing on its abutment.",
   "prehled.zamceno": "Locked: complete level {uroven} first.",
+  "prehled.zkouska": "exam",
+  "prehled.zkouska.popis": "Chapter exam: no demo and no hints.",
   "prehled.zamceno.kapitola": "Locked: complete {zbyva} levels of chapter {kapitola} first.",
   "prehled.zamceno.kapitola.jedna": "Locked: complete one more level of chapter {kapitola} first.",
   "prehled.nejlepsiCena": "cheapest bridge {cena}",

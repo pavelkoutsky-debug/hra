@@ -277,4 +277,17 @@ describe("verze formátu úrovně", () => {
     expect(sedma.kotvy[1]!.jen).toBeUndefined();
     ocekavejChybu({ ...zaklad, verze: 7, kotvy: kotvy.map((k, i) => (i === 0 ? { ...k, jen: "pilir" } : k)) }, "uroven.kotvy[0].jen");
   });
+
+  it("verze 7 se převede jako úroveň, která zkoušková není; od verze 8 to soubor říká sám", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const zaklad: Record<string, any> = { ...platna(), verze: 7, nejvetsiZavazi: 0, osaFrekvenci: false, nejvetsiTlumic: 0, rezonancniKrivka: false, budic: false, nejhorsiKomfort: 3, nerovnost: "zadna", pohyb: null, lode: [] };
+    const sedma = nactiUroven(zaklad);
+    expect(sedma.verze).toBe(VERZE_UROVNE);
+    expect(sedma.zkouskova).toBe(false);
+    expect(nactiUroven({ ...zaklad, verze: 8, zkouskova: true }).zkouskova).toBe(true);
+    expect(nactiUroven({ ...zaklad, verze: 8, zkouskova: false }).zkouskova).toBe(false);
+    // Ve verzi 8 je pole povinné a starší verze ho neznají.
+    ocekavejChybu({ ...zaklad, verze: 8 }, "uroven.zkouskova");
+    ocekavejChybu({ ...zaklad, verze: 8, zkouskova: "ano" }, "uroven.zkouskova");
+  });
 });
