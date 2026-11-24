@@ -4,10 +4,13 @@ Zadavatel chce (23. 11. 2026), aby se zpětná vazba hráčů a jejich hraní vy
 za 24 hodin, a aby z toho vznikaly návrhy dalších verzí. Tenhle dokument říká, jak to funguje,
 co k tomu musí být nastavené a jak zní zadání úlohy, která rozbor píše.
 
-**Stav (24. 11. 2026).** Server, stránka správce a zadání úlohy jsou hotové a otestované. Samotná
-naplánovaná úloha se zakládá až po nasazení M16 na ostrý web a po tom, co zadavatel nastaví heslo
-pro rozbor (oddíl „Co musí být nastavené“); do té doby žádné rozbory nevznikají. Až bude založená
-a první běh uloží rozbor, patří sem datum a čas, kdy denně běží.
+**Stav (24. 11. 2026).** Server, stránka správce a zadání úlohy jsou hotové a otestované. **Naplánovaná
+úloha zatím neexistuje a zakládá se až po zveřejnění hry** (rozhodnutí zadavatele): web je do té doby
+za přihlášením Netlify, takže úloze na každý dotaz odpoví chybou 401 už Netlify, a nikdo na něm
+nehraje. Připravené je prostředí úlohy „Mostmistr – denní rozbor“ (smí jen na
+`mostmistr.netlify.app`, heslo pro rozbor má uložené jako síťový tajný údaj); chybí proměnná
+`MM_ROZBOR_HESLO` na Netlify a úloha sama. Postup zveřejnění je v `docs/ZVEREJNENI.md`. Až bude
+úloha založená a první běh uloží rozbor, patří sem datum a čas, kdy denně běží.
 
 ## Jak to funguje
 
