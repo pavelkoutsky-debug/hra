@@ -31,6 +31,8 @@
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <div class="prehled__kapitoly"></div>
+        <!-- Havarijní komise: případy mimo kampaň (cizí most, který spadl, a oprava pár změnami). -->
+        <section class="komise" data-udaj="prehled-komise" hidden></section>
         <!-- Odemknutí všech úrovní je pomůcka pro zkoušení hry: ukáže se jen s ?vyvoj=1 v adrese. -->
         <label class="prehled__volba" data-jen-vyvoj hidden>
           <input type="checkbox" id="odemknout-vse" />
@@ -109,11 +111,23 @@
         Most otevřený z odkazu: vlastní most hráče je stranou a nic se neukládá, dokud se
         nerozhodne. Vlastní řádek pod lištou, ne přes výkres: cizí most má být celý vidět.
       -->
+      <!--
+        Havarijní komise: pruh s počtem změn opravy. Vlastní řádek pod lištou, ne přes výkres;
+        zůstává i při zkoušce, aby plátno při jejím spuštění nezměnilo výšku.
+      -->
+      <div class="host host--komise" data-udaj="komise" role="status" hidden>
+        <p class="host__text" data-udaj="komise-text"></p>
+        <div class="host__tlacitka">
+          <button type="button" class="tlacitko" data-akce="komise-spis" data-text="komise.spis" data-popis="komise.spis.popis"></button>
+          <button type="button" class="tlacitko" data-akce="komise-puvodni" data-text="komise.puvodni" data-popis="komise.puvodni.popis"></button>
+        </div>
+      </div>
       <div class="host" data-udaj="host" role="status" hidden>
         <p class="host__text" data-udaj="host-text"></p>
         <div class="host__tlacitka">
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="host-prekonat" data-text="sdileni.host.prekonat" data-popis="sdileni.host.prekonat.popis"></button>
           <button type="button" class="tlacitko" data-akce="host-nechat"></button>
+          <button type="button" class="tlacitko" data-akce="host-ulozit" data-text="dilna.host.ulozit" data-popis="dilna.host.ulozit.popis" hidden></button>
           <button type="button" class="tlacitko" data-akce="host-zpet"></button>
         </div>
         <!-- Kdo přijde odkazem, zadání neotevírá: upozornění na záznam hraní má vidět tady. -->
@@ -136,6 +150,9 @@
             </button>
             <button type="button" class="paleta__tlacitko" data-akce="sandbox" data-popis="sandbox.tlacitko.popis" hidden>
               <span data-text="sandbox.tlacitko"></span>
+            </button>
+            <button type="button" class="paleta__tlacitko" data-akce="dilna" data-popis="dilna.tlacitko.popis" hidden>
+              <span data-text="dilna.tlacitko"></span>
             </button>
           </div>
           <!-- Nástroje jsou hned pod zadáním: na dlouhé paletě (lana, pískoviště) by jinak byly až pod okrajem okna. -->
@@ -392,6 +409,7 @@
             <div class="vysledek__podrobnosti" id="vysledek-podrobnosti">
               <p class="vysledek__shrnuti" data-udaj="vysledek-shrnuti"></p>
               <p class="vysledek__prvni" data-udaj="vysledek-prvni" hidden></p>
+              <p class="vysledek__nalez" data-udaj="vysledek-nalez" hidden></p>
               <ul class="medaile" data-udaj="vysledek-medaile" data-jen-kampan></ul>
               <div class="vysledek__vyzvy" data-cast="vyzvy" hidden>
                 <h3 data-text="vyzvy.nadpis"></h3>
@@ -584,21 +602,64 @@
     <dialog class="okno okno--sandbox" id="okno-sandbox">
       <form method="dialog">
         <h2 data-text="sandbox.nadpis"></h2>
+        <div class="sandbox__obsah">
         <p data-text="sandbox.popis"></p>
+        <h3 data-text="sandbox.predlohy"></h3>
+        <div class="sandbox__predlohy" data-udaj="sandbox-predlohy"></div>
+        <h3 data-text="sandbox.udoli"></h3>
         <div class="sandbox__pole">
           <label><span data-text="sandbox.rozpeti"></span><input type="number" id="sandbox-rozpeti" inputmode="numeric" /><span>m</span></label>
           <label><span data-text="sandbox.hloubka"></span><input type="number" id="sandbox-hloubka" inputmode="numeric" /><span>m</span></label>
           <label><span data-text="sandbox.druh"></span><select id="sandbox-druh"></select></label>
           <label><span data-text="sandbox.zaklady"></span><input type="number" id="sandbox-zaklady" inputmode="numeric" /></label>
           <label class="sandbox__volba"><input type="checkbox" id="sandbox-voda" /><span data-text="sandbox.voda"></span></label>
+          <label class="sandbox__volba"><input type="checkbox" id="sandbox-zvedani" /><span data-text="sandbox.zvedani"></span></label>
+        </div>
+        <div class="sandbox__pole sandbox__pole--zvedani" data-udaj="sandbox-zvedani" hidden>
+          <label class="sandbox__volba"><span data-text="sandbox.kridla"></span><select id="sandbox-kridla"></select></label>
+          <label><span data-text="sandbox.zvednout"></span><input type="number" id="sandbox-zvednout" inputmode="numeric" /><span>s</span></label>
+          <label><span data-text="sandbox.lod"></span><input type="number" id="sandbox-lod" inputmode="numeric" /><span>m</span></label>
         </div>
         <h3 data-text="sandbox.provoz"></h3>
         <p class="okno__poznamka" data-text="sandbox.provoz.popis"></p>
         <ul class="sandbox__provoz" data-udaj="sandbox-provoz"></ul>
         <button type="button" class="tlacitko" data-akce="sandbox-pridat" data-text="sandbox.pridat"></button>
+        <h3 data-text="sandbox.cil"></h3>
+        <p class="okno__poznamka" data-text="sandbox.cil.popis"></p>
+        <div class="sandbox__pole">
+          <label><span data-text="sandbox.rozpocet"></span><input type="number" id="sandbox-rozpocet" inputmode="numeric" class="sandbox__castka" /><span>Kč</span></label>
+          <label><span data-text="sandbox.komfort"></span><select id="sandbox-komfort"></select></label>
+        </div>
+        </div>
         <p class="okno__hlaseni" data-udaj="sandbox-hlaseni" role="status"></p>
         <div class="okno__tlacitka">
           <button type="button" class="tlacitko tlacitko--hlavni" data-akce="sandbox-pouzit" data-text="sandbox.pouzit"></button>
+          <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="okno okno--dilna" id="okno-dilna">
+      <form method="dialog">
+        <h2 data-text="dilna.nadpis"></h2>
+        <div class="dilna__obsah">
+          <p data-text="dilna.popis"></p>
+          <div class="dilna__ulozit">
+            <label for="dilna-nazev" data-text="dilna.nazev"></label>
+            <input type="text" id="dilna-nazev" maxlength="40" autocomplete="off" />
+            <button type="button" class="tlacitko tlacitko--hlavni" data-akce="dilna-ulozit" data-text="dilna.ulozit"></button>
+          </div>
+          <div class="dilna__odkaz">
+            <label for="dilna-odkaz" data-text="dilna.odkaz"></label>
+            <input type="text" id="dilna-odkaz" readonly />
+            <button type="button" class="tlacitko" data-akce="dilna-kopirovat" data-text="dilna.kopirovat"></button>
+          </div>
+          <p class="okno__hlaseni" data-udaj="dilna-hlaseni" role="status"></p>
+          <h3 data-udaj="dilna-pocet"></h3>
+          <p class="okno__poznamka" data-udaj="dilna-prazdno" data-text="dilna.prazdno" hidden></p>
+          <ul class="dilna__prace" data-udaj="dilna-prace"></ul>
+        </div>
+        <div class="okno__tlacitka">
           <button class="tlacitko" value="zavrit" data-text="okno.zavrit"></button>
         </div>
       </form>
