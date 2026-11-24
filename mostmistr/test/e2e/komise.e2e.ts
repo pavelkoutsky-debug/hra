@@ -129,7 +129,7 @@ describe("Havarijní komise", () => {
     expect((await udaj(s, "zadani-list")).toLowerCase()).toBe("případ 1");
     expect(await udaj(s, "zadani-text")).toContain(`oprav ho nejvýš ${NEJVIC_ZMEN_OPRAVY} změnami`);
     // Pravidla jmenují jen změny, které paleta případu dovoluje (první případ nemá zámek ani lana).
-    expect(await udaj(s, "zadani-text")).toContain("Změna je přidaný, odebraný nebo vyměněný prut, posunutý styčník");
+    expect(await udaj(s, "zadani-text")).toContain("Změna je přidaný, odebraný, vyměněný nebo jedním koncem přepojený prut, posunutý styčník");
     expect(await udaj(s, "zadani-text")).not.toMatch(/zámek|Napínáky/);
     expect(await udaj(s, "zadani-text")).toContain("co s tím, je na tobě");
     expect(await s.locator('[data-udaj="zadani-medaile"]').isVisible()).toBe(false);
