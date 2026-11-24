@@ -127,6 +127,20 @@ describe("závěrečná kapitola", () => {
     expect(princip).toContain("visí na šikmých lanech");
     expect(princip).toContain("ztužuje příhrada");
     expect(princip).not.toContain("nosné lano");
+    // Pylony stojí na březích: skica pod mostovkou ve třetině rozpětí nic nekreslí (dřík pylonu
+    // by tam vedl do řeky, kam se stavět nesmí). Mostovka je ve dvou třetinách výšky.
+    const podMostovkou = await stranka.locator('[data-udaj="napoveda-skica"]').evaluate((prvek) => {
+      const platno = prvek as HTMLCanvasElement;
+      const ctx = platno.getContext("2d")!;
+      const od = Math.round(platno.height * 0.66) + 10;
+      let kreslenych = 0;
+      for (const podil of [0.3, 0.7]) {
+        const body = ctx.getImageData(Math.round(platno.width * podil) - 3, od, 6, platno.height - od - 8).data;
+        for (let i = 3; i < body.length; i += 4) if (body[i]! > 40) kreslenych += 1;
+      }
+      return kreslenych;
+    });
+    expect(podMostovkou).toBe(0);
     await stranka.screenshot({ path: `${SLOZKA}/f3-napoveda-8-01.png` });
     await stranka.keyboard.press("Escape");
   });
@@ -156,6 +170,20 @@ describe("závěrečná kapitola", () => {
     await stranka.keyboard.press("Escape");
   });
 
+  it("8-02: lávce bez tlumiče hra poradí laděný tlumič na rytmus útvaru, ne vyšší příhradu", async () => {
+    await otevri("8-02");
+    const bezTlumice = RESENI["8-02"]!.pady.find((p) => p.nazev === "zavěšená lávka bez tlumiče")!;
+    await nactiMost(navrhNaText(bezTlumice.navrh));
+    const osa = stranka.locator('[data-udaj="osa-frekvenci"]');
+    await stranka.locator('[data-udaj="osa-frekvenci"][data-odhad]').waitFor({ timeout: 60_000 });
+    // Odhad je kolem meze; rada jmenuje nástroj úrovně a jeho ladění.
+    expect(["u-meze", "nad-mezi"]).toContain(await osa.getAttribute("data-stav"));
+    const popis = await udaj("frekvence-popis");
+    expect(popis).toContain("Pomohl by laděný tlumič na 2,00 Hz");
+    expect(popis).not.toContain("vyšší příhrada");
+    await stranka.screenshot({ path: `${SLOZKA}/f3b-rada-8-02.png` });
+  }, 120_000);
+
   for (const [id, cas] of [["8-01", 24], ["8-02", 30], ["8-03", 16]] as const) {
     it(`${id}: most autora pro mistrovskou projde se všemi třemi medailemi`, async () => {
       await otevri(id);
@@ -180,6 +208,7 @@ describe("závěrečná kapitola", () => {
     await akce("napoveda").click();
     await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
     expect(await udaj("napoveda-princip")).toContain("jedno křídlo");
+    expect(await udaj("napoveda-princip")).toContain("Křídlo ztužují");
     await stranka.keyboard.press("Escape");
   });
 

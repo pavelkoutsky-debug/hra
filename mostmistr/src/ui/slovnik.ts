@@ -1458,6 +1458,17 @@ const CS = {
   "havarie.9-05.nalez": "Krajní šikmina nese celou reakci opěry, a čím nižší příhrada, tím víc: při výšce dvou metrů je v ní tlak přes trojnásobek reakce. Stavitel zesílil horní pás uprostřed, kde čekal největší namáhání, a lehké krajní šikminy se pod vlakem vzepřely. U nízké příhrady patří těžký profil i do krajních šikmin, a to na obou koncích.",
   "havarie.9-06.spis": "Sklopný most přes kanál u loděnice: jedno dvacetimetrové křídlo, které zvedá píst ze strojovny v levé zdi. Při prvním zvedání se vnější polovina křídla sklopila dolů a připlouvající loď do ní narazila. Po spuštění zámek na pravé opěře nezapadl a nákladní auto s autobusem skončily v kanálu.",
   "havarie.9-06.nalez": "Chyby byly dvě. Styčník mostovky deset metrů od čepu nebyl svařený, takže se v něm křídlo při zvedání zalomilo; a píst z mělké kotvy má k čepu krátké rameno: křídlo zvedne, ale zvednuté ho neudrží. Křídlo pohyblivého mostu musí být tuhé po celé délce a dlouhé křídlo patří na píst z hluboké kotvy s větším zdvihem.",
+  "dopnuti.rada.zbylo.kotveny": "Něco pod tahem lan uhýbá, i když pylony kotevní lana mají: kotevní lano je na tah vějíře slabé ({lano}), nebo mostovka visí tam, kam lana nedosáhnou ({mostovka}).",
+  "rada.ohyb.pylon.kotveny": "Ohnula ho lana, která ho táhnou víc na jednu stranu. Kotevní lano má, ale na tah lan z pole nestačí: {lano}, nebo pylon nakloň proti tahu.",
+  "rada.lano.silnejsi": "dej místo něj nosné lano, nebo přidej druhé",
+  "rada.lano.druhe": "přidej druhé",
+  "rada.mostovka.prihrada": "přidej lana, nebo ji ztuž příhradou",
+  "rada.mostovka.lana": "přidej lana",
+  "kmitani.rada.novyTlumic.malo": "Pomohl by laděný tlumič na {f} Hz: odhad asi {a} m/s². Jeden nejspíš stačit nebude; až ho most bude mít, hra poradí další.",
+  "kmitani.rada.tuzsi.lana": "Pomohl by tužší most (vyšší pylony, víc lan nebo strmější lana).",
+  "kmitani.rada.tuzsi.vyrazne.lana": "Pomohl by výrazně tužší most (o hodně vyšší pylony a víc lan).",
+  "napoveda.princip.ztuzeni.jedno": "Křídlo ztužují další pruty nad mostovkou.",
+  "vysledek.kampanDokoncena.veta": "Tím je kampaň dokončená: prošel jsi všechny úrovně.",
   "zadani.0-01":
     "Pískoviště: žádné medaile, všechny prvky. Postav most přes údolí a pusť na něj provoz; tlačítkem „Údolí a provoz“ nahoře v paletě si vybereš hotové údolí, nebo nastavíš vlastní: jak je široké a hluboké, jestli přes něj vede lávka, silnice nebo trať, kolik je na dně základů pro pilíře, jestli se most zvedá před lodí a kdo přes něj půjde nebo pojede. Můžeš si dát i vlastní cíl (rozpočet, klidný most pod lidmi). Zkouškou do zlomu zjistíš, kolik most unese; na lávce a na silnici najdeš budičem, kde rezonuje.",
   "prehled.bezPameti": "Prohlížeč nedovolil ukládat data, takže si hra postup nezapamatuje.",
@@ -1590,11 +1601,11 @@ const CS = {
   "zadani.8-02":
     "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést. Lana lávku unesou levně, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s².",
   "zadani.8-02.vice":
-    "Zavěšená lávka je lehká a levná, ale hlavy stožárů se houpou s kotevními lany a mostovka má vlastní frekvence přímo v rytmu kroku. Zpevnit ji tak, aby rytmu utekla, vyjde draho. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí.",
+    "Zavěšená lávka je lehká a levná, ale měkká: hlavy stožárů se houpou s kotevními lany a krok čtyřiceti lidí mostovku rozkmitá, i když žádnou její vlastní frekvenci přesně netrefí. Zpevnit ji tak, aby se pod nimi nehýbala, vyjde draho. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí, a na dva rytmy možná dva tlumiče.",
   "zadani.8-03":
     "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
   "zadani.8-03.vice":
-    "Křídlo, které unese vlak, je těžké, a těžké křídlo píst sotva zvedne. Pomůže tvar: příhrada nad kolejí nese vlak a váží málo, zatímco plná mostovka je těžká a slabá. Píst potřebuje dlouhé rameno, tedy hlubokou kotvu, a dost zdvihu pro loď. Kdo chce, aby křídlo dosedlo měkce, nesmí nechat píst pracovat na hraně jeho síly.",
+    "Křídlo, které unese vlak, je těžké, a těžké křídlo píst sotva zvedne. Pomůže tvar: příhrada nad kolejí nese vlak a váží málo, zatímco plná mostovka je těžká a slabá. Píst potřebuje dlouhé rameno, tedy hlubokou kotvu, a dost zdvihu pro loď. Kdo chce, aby křídlo dosedlo měkce, musí ho při spouštění přibrzdit: jediný píst ho pustí rychle, druhý píst z druhé kotvy ho zpomalí.",
   "zadani.2-04":
     "Přehlídka: útvar přejde třikrát, pomalým, běžným a rychlým pochodem, a každý rytmus rozhoupe jinak vysoký most. Buď najdi výšku, která se vyhne všem třem, nebo most utlum.",
   "zadani.2-04.vice":

@@ -3,8 +3,11 @@
 // leží konec křídla na ložisku se zámkem. Ráno přejede lokomotiva, pak se most zvedne pro loď
 // vysokou 14 m a po sklopení přes něj projede nákladní vlak se třemi loženými vozy.
 // Spojuje kapitolu 6 (vlak unese jen příhrada nad kolejí) a kapitolu 7 (píst z hluboké kotvy,
-// zdvih podle lodi, zámek na ložisku). Bonus je měkké dosednutí: písty nesmějí křídlo spouštět
-// na hraně své síly, takže mistrovská chce lehké křídlo a druhý píst.
+// zdvih podle lodi, zámek na ložisku). Bonus je měkké dosednutí: jediný píst křídlo spouští
+// rychle (konec dosedá kolem 3 m/s), s druhým pístem z druhé kotvy dosedne kolem 2 m/s.
+// Mistrovská proto chce lehké křídlo a druhý píst. Písty se přitom o tíhu nedělí: mají jinou
+// kinematiku a přetlačují se (při zvedání nese křídlo mělký píst na ventilu, při sklápění je
+// na ventilu hluboký a mělký křídlo brzdí); změřila to nezávislá kontrola výpočtů M14.
 
 import type { IdPrvku } from "../../src/data/katalog";
 import { Kreslic } from "../../src/data/kreslic";
@@ -83,9 +86,9 @@ const MELKY: Pist = { hloubka: 3, kam: 6, zdvih: 2 };
 export const reseni: ReseniUrovne = {
   // Most pro mistrovskou z 6-01 se správným pístem: projde, ale je těžký a drahý a dosedá tvrdě (1,5 MN).
   pruchod: kridlo({ pruty: warren([3, 5, 6, 5, 3]), pisty: [HLUBOKY] }),
-  // Nejlevnější známý most: nízký Langerův trám 2-3-3-2 a jeden píst, který pracuje na hraně síly.
+  // Nejlevnější známý most: nízký Langerův trám 2-3-3-2 a jeden píst; křídlo dosedá rychle.
   rozpocet: kridlo({ svar: true, pruty: langer([2, 3, 3, 2]), pisty: [HLUBOKY] }),
-  // Týž trám a druhý píst z mělké kotvy do téhož styčníku: písty se o křídlo dělí a spouštějí ho měkce.
+  // Týž trám a druhý píst z mělké kotvy do téhož styčníku: při sklápění křídlo brzdí a to dosedne měkce.
   mistrovska: kridlo({ svar: true, pruty: langer([2, 3, 3, 2]), pisty: [HLUBOKY, MELKY] }),
   pady: [
     // Svařené kolejiště se zámkem: zlomí ho už ranní lokomotiva.
