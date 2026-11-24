@@ -84,8 +84,9 @@ describe("kampaň od první úrovně do poslední", () => {
     expect(await stranka.locator(".karta").count()).toBe(kampan.length);
     expect(await zamceno(kampan[0]!.id)).toBe("false");
     for (const uroven of kampan.slice(1)) expect(await zamceno(uroven.id), uroven.id).toBe("true");
-    // Sedm kapitol po čtyřech úrovních a zkoušce: 35 úrovní, tři medaile a devět stupňů výzev na každou.
-    expect(kampan.length).toBe(35);
+    // Sedm kapitol po čtyřech úrovních a zkoušce a závěrečná kapitola se třemi úrovněmi:
+    // 38 úrovní, tři medaile a devět stupňů výzev na každou.
+    expect(kampan.length).toBe(38);
     expect(await udaj("prehled-postup")).toBe(`Projito 0 z ${kampan.length} úrovní · medaile 0 z ${3 * kampan.length} · stupně výzev 0 z ${9 * kampan.length}`);
     // Zkouška kapitoly má na kartě štítek; ostatní úrovně ne.
     for (const uroven of kampan) {

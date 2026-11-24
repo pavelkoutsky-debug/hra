@@ -349,13 +349,22 @@ describe("automatické dopnutí lan", () => {
   }, 60_000);
 
   it("referenční mosty kampaně s lany jsou dopnuté: mostovka pod vlastní tíhou drží tvar", () => {
-    for (const [uroven, reseni] of [[zavesena, RESENI["4-03"]!], [visuta, RESENI["4-04"]!]] as const) {
-      for (const navrh of [reseni.pruchod, reseni.rozpocet, reseni.mistrovska]) {
+    // Každá úroveň, jejíž most autora má lano: kapitola 4, její zkouška a závěrečná kapitola.
+    // Úrovně kapitoly 4 drží dva milimetry; dlouhé pole se ztužující příhradou (8-01) dopnutí
+    // srovná na tři.
+    const sLany: string[] = [];
+    for (const uroven of kampan.values()) {
+      const reseni = RESENI[uroven.id]!;
+      const mosty = [reseni.pruchod, reseni.rozpocet, reseni.mistrovska].filter((navrh) => navrh.pruty.some((p) => KATALOG[p.prvek].druh === "lano"));
+      if (mosty.length === 0) continue;
+      sLany.push(uroven.id);
+      for (const navrh of mosty) {
         const pruhyby = pruhybyMostovky(uroven, navrh)!;
-        expect(Math.max(...pruhyby.map(Math.abs)), uroven.id).toBeLessThan(0.002);
+        expect(Math.max(...pruhyby.map(Math.abs)), uroven.id).toBeLessThan(uroven.id.startsWith("4-0") && uroven.id < "4-05" ? 0.002 : 0.003);
       }
     }
-  });
+    expect(sLany).toEqual(expect.arrayContaining(["4-03", "4-04", "4-05", "8-01"]));
+  }, 120_000);
 
   it("bez lan, s mostem bez klidové polohy a s lany, která na nic nepůsobí, vrací null", () => {
     const uroven = udoli();

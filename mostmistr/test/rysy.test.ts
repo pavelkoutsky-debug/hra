@@ -47,6 +47,7 @@ const SOUSTAVY: Record<string, readonly [NosnaSoustava, NosnaSoustava, NosnaSous
   "7-03": ["zvedaci", "zvedaci", "zvedaci"],
   "7-04": ["zvedaci", "zvedaci", "zvedaci"],
   "8-01": ["zaveseny", "zaveseny", "zaveseny"],
+  "8-02": ["zaveseny", "zaveseny", "zaveseny"],
   "8-03": ["zvedaci", "zvedaci", "zvedaci"],
 };
 

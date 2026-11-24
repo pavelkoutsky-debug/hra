@@ -1,0 +1,150 @@
+{
+  "verze": 8,
+  "id": "8-02",
+  "nazev": "Lávka na lanech",
+  "vyrez": {
+    "xMin": -24,
+    "yMin": -21,
+    "xMax": 84,
+    "yMax": 24
+  },
+  "teren": [
+    {
+      "x": -24,
+      "y": 0
+    },
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 5,
+      "y": -12
+    },
+    {
+      "x": 14,
+      "y": -18
+    },
+    {
+      "x": 46,
+      "y": -18
+    },
+    {
+      "x": 55,
+      "y": -12
+    },
+    {
+      "x": 60,
+      "y": 0
+    },
+    {
+      "x": 84,
+      "y": 0
+    }
+  ],
+  "hladina": -15,
+  "kotvy": [
+    {
+      "x": 0,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 60,
+      "y": 0,
+      "typ": "posuvna"
+    },
+    {
+      "x": -16,
+      "y": 0,
+      "typ": "pevna"
+    },
+    {
+      "x": 76,
+      "y": 0,
+      "typ": "pevna"
+    }
+  ],
+  "zaklady": [
+    {
+      "x": -4,
+      "y": 0
+    },
+    {
+      "x": 64,
+      "y": 0
+    }
+  ],
+  "zakazaneZony": [
+    {
+      "xMin": 0,
+      "yMin": -21,
+      "xMax": 60,
+      "yMax": 0
+    },
+    {
+      "xMin": 28,
+      "yMin": 0.9,
+      "xMax": 32,
+      "yMax": 24
+    }
+  ],
+  "trasy": [
+    {
+      "id": "lavka",
+      "druh": "lavka",
+      "zacatek": {
+        "x": 0,
+        "y": 0
+      },
+      "konec": {
+        "x": 60,
+        "y": 0
+      }
+    }
+  ],
+  "sirkaMostovky": 3,
+  "hmotnostVybaveni": 40,
+  "nerovnost": "zadna",
+  "rozpocet": 1600000,
+  "inzenyrskyRozpocet": 1411000,
+  "mistrovska": {
+    "druh": "komfort-chodcu",
+    "limit": 0.83
+  },
+  "povolenePrvky": [
+    "mostovka-ocelobeton",
+    "ocel-lehka",
+    "lano",
+    "lano-nosne",
+    "pilir"
+  ],
+  "povoleneSvary": false,
+  "nejvetsiZavazi": 0,
+  "osaFrekvenci": true,
+  "nejvetsiTlumic": 1200,
+  "rezonancniKrivka": true,
+  "budic": true,
+  "nejhorsiKomfort": 2,
+  "jizdniRad": [
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": 1,
+      "druh": "utvar",
+      "pocet": 40,
+      "kadence": 2
+    },
+    {
+      "cas": 0,
+      "trasa": "lavka",
+      "smer": -1,
+      "druh": "utvar",
+      "pocet": 12,
+      "kadence": 1.6
+    }
+  ],
+  "pohyb": null,
+  "lode": [],
+  "zkouskova": false
+}

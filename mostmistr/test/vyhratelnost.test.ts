@@ -83,6 +83,7 @@ describe("kampaň", () => {
       "7-04",
       "7-05",
       "8-01",
+      "8-02",
       "8-03",
     ]);
     expect(Object.keys(RESENI).sort()).toEqual(kampan.map((u) => u.id).sort());

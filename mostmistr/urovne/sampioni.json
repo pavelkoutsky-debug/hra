@@ -1116,6 +1116,20 @@
           {"stycnik":6,"pryc":true}
         ]
       }
+    },
+    "8-03": {
+      "cena": {
+        "z": "rozpocet",
+        "otisk": "488ecff4",
+        "upravy": [
+          {"stycnik":2,"svar":false}
+        ]
+      },
+      "hmotnost": {
+        "z": "rozpocet",
+        "otisk": "488ecff4",
+        "upravy": []
+      }
     }
   }
 }

@@ -905,6 +905,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "the Pont Jacques Chaban-Delmas in Bordeaux, dating from 2013, does not tilt but lifts: its central span, over a hundred metres long and weighing around 2,600 tonnes, rises between four towers to a height of about 53 metres above the river. When it opened, it was the largest vertical-lift bridge in Europe.",
   "skutecnost.8-01":
     "the Øresund Bridge between Denmark and Sweden, opened on 1 July 2000, is a cable-stayed bridge with a 490-metre main span. Its double-track railway runs on the lower deck, and steel trusses linking the two decks stiffen the girder under heavy trains.",
+  "skutecnost.8-02":
+    "London's Millennium Bridge (main span 144 metres) opened on 10 June 2000 and was closed two days later: it swayed under pedestrians who fell into step with its motion. Viscous dampers and tuned mass dampers against vertical vibration were fitted in 2001 and 2002, and it reopened in February 2002.",
   "skutecnost.8-03":
     "railway bascule bridges use a counterweight instead of cylinders: it almost balances the leaf, so the machinery only has to turn it. When it opened in 1919, the St. Charles Air Line Bridge in Chicago, with a 260-foot (79 m) leaf, was the longest bascule bridge in the world: a truss above the track with a concrete counterweight. In 1930 the bridge was moved and shortened to about 220 feet.",
   "paleta.vyber": "Select",
@@ -1489,6 +1491,10 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "A railway crosses a river valley in a single ninety-six-metre span; an express is followed by a coal train that stops on the bridge. The pylons may stand only on the banks and only low structures are allowed above mid-river, so cables and a stiffening girder have to work together here.",
   "zadani.8-01.vice":
     "A train is several times heavier than road traffic. Cables from pylons on the banks reach only two thirds of the span, and the middle has to be carried by a low truss hanging from the outermost cables. The truss alone cannot span the gap, and cables without it leave the middle hanging from the track deck alone. The backstays carry the whole pull of the fan, so one ordinary cable is not enough. A catenary mast and a signal stand at each end of the bridge: the space above the track at the abutments must stay clear.",
+  "zadani.8-02":
+    "A ceremonial column of forty people marching at 2 Hz will cross this sixty-metre footbridge while a slow procession comes the other way; nothing may pass above the viewpoint in the middle. Cables will carry the deck cheaply, but the vibration under people must not exceed 1.0 m/s².",
+  "zadani.8-02.vice":
+    "A cable-stayed footbridge is light and cheap, but the mast heads sway on their backstays and the deck has natural frequencies right at walking pace. Stiffening it enough to escape the rhythm is expensive. A tuned mass damper set to the marching rhythm calms the vibration, but it carries nothing by itself: you need both.",
   "zadani.8-03":
     "A harbour railway crosses a thirty-metre shipping canal: a locomotive crosses in the morning, then the bridge must make way for a ship fourteen metres tall, and as soon as it is down again a loaded freight train rolls over it. The machinery, with the pivot and the cylinder anchors, is in the left wall; the right bank has only a bearing.",
   "zadani.8-03.vice":
@@ -1540,5 +1546,6 @@ export const NAZVY_UROVNI_EN: Readonly<Record<string, string>> = {
   "7-04": "Great Harbour",
   "7-05": "A Single Leaf",
   "8-01": "Rail on Cables",
+  "8-02": "Footbridge on Cables",
   "8-03": "Harbour Line",
 };

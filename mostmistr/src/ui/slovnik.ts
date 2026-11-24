@@ -875,6 +875,8 @@ const CS = {
     "most Jacquese Chabana-Delmase v Bordeaux z roku 2013 se nesklápí, ale zdvihá: střední pole dlouhé přes sto metrů a těžké kolem 2 600 tun vyjede mezi čtyřmi věžemi do výšky asi 53 metrů nad řeku. V době otevření to byl největší zdvižný most v Evropě.",
   "skutecnost.8-01":
     "Øresundský most mezi Dánskem a Švédskem, otevřený 1. července 2000, je zavěšený most s hlavním polem 490 metrů. Dvojkolejná železnice vede po spodním patře a obě patra spojují ocelové příhrady, které mostovku ztužují pod těžkými vlaky.",
+  "skutecnost.8-02":
+    "londýnský Millennium Bridge (hlavní pole 144 metrů) otevřeli 10. června 2000 a o dva dny později zavřeli: rozhoupal se pod chodci, kteří srovnali krok s jeho kmitáním. V letech 2001 a 2002 do něj vestavěli viskózní tlumiče a laděné tlumiče proti svislému kmitání a v únoru 2002 ho otevřeli znovu.",
   "skutecnost.8-03":
     "železniční zvedací mosty mají místo pístů protizávaží, které křídlo skoro vyváží, takže ho stroj jen pootáčí. Most St. Charles Air Line v Chicagu byl v roce 1919 se svým křídlem dlouhým 260 stop (79 metrů) nejdelším sklopným mostem na světě: příhrada nad kolejí s betonovým protizávažím. V roce 1930 most posunuli a zkrátili asi na 220 stop.",
   "paleta.vyber": "Výběr",
@@ -1456,6 +1458,10 @@ const CS = {
     "Přes údolí s řekou povede železnice v jediném poli dlouhém šestadevadesát metrů; za rychlíkem přijede uhelný vlak, který na mostě zastaví. Pylony smějí stát jen na březích a nad středem řeky se smí stavět jen nízko, takže se tu lana a ztužující nosník musí doplnit.",
   "zadani.8-01.vice":
     "Vlak je několikrát těžší než silniční provoz. Lana z pylonů na březích dosáhnou jen do dvou třetin pole a střed musí přenést nízká příhrada zavěšená na krajních lanech. Sama příhrada takové pole nepřeklene a samotná lana bez ní nechají střed viset jen na kolejišti. Kotevní lana nesou celý tah vějíře, takže jedno obyčejné nestačí. U vjezdů na most stojí stožár trakčního vedení a návěstidlo: prostor nad kolejí u opěr musí zůstat volný.",
+  "zadani.8-02":
+    "Přes šedesátimetrovou lávku půjde slavnostní útvar čtyřiceti lidí v kroku 2 Hz a proti němu pomalé procesí; uprostřed je vyhlídka, nad kterou nesmí nic vést. Lana lávku unesou levně, kmitání pod lidmi ale nesmí přesáhnout 1,0 m/s².",
+  "zadani.8-02.vice":
+    "Zavěšená lávka je lehká a levná, ale hlavy stožárů se houpou s kotevními lany a mostovka má vlastní frekvence přímo v rytmu kroku. Zpevnit ji tak, aby rytmu utekla, vyjde draho. Laděný tlumič naladěný na rytmus útvaru kmitání stáhne, ale sám neunese nic: potřebuješ obojí.",
   "zadani.8-03":
     "Přístavní trať vede přes plavební kanál široký třicet metrů: ráno přejede lokomotiva, pak musí most uhnout lodi vysoké čtrnáct metrů a hned po sklopení přes něj projede ložený nákladní vlak. Strojovna s čepem a kotvami pro píst je v levé zdi, na pravém břehu je jen ložisko.",
   "zadani.8-03.vice":

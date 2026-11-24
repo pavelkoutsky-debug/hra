@@ -36,6 +36,7 @@ import dlouheKridlo from "./7-03.json";
 import velkyPristav from "./7-04.json";
 import jedineKridlo from "./7-05.json";
 import tratNaLanech from "./8-01.json";
+import lavkaNaLanech from "./8-02.json";
 import pristavniTrat from "./8-03.json";
 
 /**
@@ -79,6 +80,7 @@ const SOUBORY_KAMPANE: readonly unknown[] = [
   velkyPristav,
   jedineKridlo,
   tratNaLanech,
+  lavkaNaLanech,
   pristavniTrat,
 ];
 
