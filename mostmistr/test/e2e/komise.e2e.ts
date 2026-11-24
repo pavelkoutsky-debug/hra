@@ -228,6 +228,31 @@ describe("Havarijní komise", () => {
     await s.screenshot({ path: `${SLOZKA}/k6-moc-zmen.png` });
   }, 120_000);
 
+  it("oprava, při které se pod provozem něco poruší, případ neuzavře", async () => {
+    // Případ 3: nohy do V jako komise, jen z lehkého profilu. Kolona přejede, ale nohy se vzepřou.
+    const treti = PRIPADY[2]!;
+    const pridane = new Set(stavOpravy(treti, treti.oprava).zmeny.flatMap((z) => (z.druh === "prut-pridan" ? [z.prut] : [])));
+    expect(pridane.size).toBe(2);
+    const lehke: NavrhMostu = { ...treti.oprava, pruty: treti.oprava.pruty.map((p) => (pridane.has(p.id) ? { ...p, prvek: "ocel-lehka" as const } : p)) };
+    expect(stavOpravy(treti, lehke).zmeny.length).toBe(2);
+    const s = await cistaStranka();
+    await s.goto(`${adresa}?uroven=${treti.uroven.id}`);
+    await s.locator(PLATNO).waitFor();
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    await nactiMost(s, lehke);
+    expect(await telo(s, "zmen")).toBe("2");
+    expect(await zkousej(s)).toBe("MOST OBSTÁL");
+    expect(await telo(s, "pripad-uzavren")).toBe("");
+    expect(await udaj(s, "vysledek-veta")).toContain("takovou opravu komise neuzná");
+    expect(await s.locator('[data-udaj="vysledek-nalez"]').isVisible()).toBe(false);
+    expect(await s.evaluate(() => window.localStorage.getItem("mostmistr.havarie"))).toBeNull();
+    // Oprava komise (těžký profil) projde bez porušení a případ uzavře.
+    await akce(s, "upravit").click();
+    await nactiMost(s, treti.oprava);
+    expect(await zkousej(s)).toBe("MOST OBSTÁL");
+    expect(await telo(s, "pripad-uzavren")).toBe("2");
+  }, 300_000);
+
   it("anglicky je případ přeložený a na telefonu pruh komise nepřetéká", async () => {
     const en = await cistaStranka({ locale: "en-US" });
     await en.goto(`${adresa}?uroven=${prvni.uroven.id}&jazyk=en`);

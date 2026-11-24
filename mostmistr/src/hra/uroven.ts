@@ -3155,9 +3155,11 @@ export function spustUroven(
           }
           // Havarijní komise: případ je uzavřený, když opravený most projde a liší se od spadlého
           // nejvýš dovoleným počtem změn (aspoň jednou: spadlý most sám neprojde).
+          // Oprava, při které se pod provozem něco poruší, opravou není (i když auta přejedou):
+          // případ uzavírá jen most, který prošel bez porušení, stejně jako oprava komise.
           if (havarie && vysledek.pruchod && !vysledek.rozpad && !b.host) {
             const zmen = stavOpravy(havarie, b.navrh).zmeny.length;
-            if (zmen >= 1 && zmen <= NEJVIC_ZMEN_OPRAVY) {
+            if (zmen >= 1 && zmen <= NEJVIC_ZMEN_OPRAVY && neporuseny) {
               const drive = uloziste.havarie[uroven.id];
               b.pripadUzavren = { zmen, lepsi: drive === undefined || zmen < drive };
               uloziste.zapisHavarii(uroven.id, zmen);
@@ -4749,6 +4751,8 @@ export function spustUroven(
     if (havarie && !jePokus) {
       if (b.pripadUzavren) vetaKomise = vetaUzavreni(b.pripadUzavren.zmen);
       else if (!vysledek.pruchod && stavOpravy(havarie, b.navrh).zmeny.length === 0) vetaKomise = t("komise.vysledek.puvodni", { nejvic: NEJVIC_ZMEN_OPRAVY });
+      // Most přejeli, ale něco na něm povolilo: komise takovou opravu neuzná a řekne proč.
+      else if (vysledek.pruchod && !vysledek.neporuseny) vetaKomise = t("komise.vysledek.poruseno");
     }
     document.body.dataset.pripadUzavren = b.pripadUzavren ? String(b.pripadUzavren.zmen) : "";
     const poleNalezu = udaj("vysledek-nalez");

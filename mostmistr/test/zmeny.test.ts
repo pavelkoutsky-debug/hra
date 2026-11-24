@@ -96,7 +96,9 @@ describe("změny mezi dvěma návrhy mostu", () => {
     // Styčník, který si nechal aspoň jeden prut ke stejnému sousedovi, posunutý je: posun a
     // jeden odebraný prut jsou dvě změny místo tří.
     const kSousedovi = pridejPrut(smaz(sirsi, new Set(), new Set([stareId])), { x: 4, y: 0 }, { x: 6, y: 2 }, "drevo-lehke");
-    expect(druhy(zmenyMostu(sirsi, kSousedovi)).sort()).toEqual(["prut-odebran", "stycnik-posunut"]);
+    // (Stejně dobře jde o prut přepojený jedním koncem jinam a jeden odebraný: taky dvě změny.)
+    expect(zmenyMostu(sirsi, kSousedovi)).toHaveLength(2);
+    expect(druhy(zmenyMostu(sirsi, kSousedovi))).toContain("prut-odebran");
   });
 
   it("svar, závaží, laděný tlumič a zámek jsou změna za každý styčník; stejná hodnota změna není", () => {
@@ -208,5 +210,26 @@ describe("změny mezi dvěma návrhy mostu", () => {
     expect(zmenyMostu(tlumeny, jinde)).toEqual([{ druh: "tlumic-presunut", stycnik: b.id }]);
     const preladeny = nastavLadenyTlumic(nastavLadenyTlumic(tlumeny, new Set([a.id]), () => undefined), new Set([b.id]), () => ({ hmota: 600, frekvence: 2.2 }));
     expect(druhy(zmenyMostu(tlumeny, preladeny))).toEqual(["tlumic", "tlumic"]);
+  });
+
+  it("prut přepojený jedním koncem jinam je jedna změna; jiný prvek nebo oba konce jinde jsou dvě", () => {
+    // Pylon ze dvou dílů a kotevní lano uchycené v půli výšky; oprava ho přepojí na hlavu.
+    const stav = (kam: [number, number], prvek: "lano" | "lano-nosne" = "lano", odkud: [number, number] = [-4, 0]): NavrhMostu => {
+      const k = new Kreslic("4-03");
+      k.prut("mostovka-ocel", [0, 0], [6, 0]);
+      k.prut("ocel-tezka", [0, 0], [0, 4]);
+      k.prut("ocel-tezka", [0, 4], [0, 8]);
+      k.prut("lano", [0, 8], [6, 0]);
+      k.prut(prvek, odkud, kam);
+      return k.navrh();
+    };
+    const nizko = stav([0, 4]);
+    expect(druhy(zmenyMostu(nizko, stav([0, 8])))).toEqual(["prut-prepojen"]);
+    expect(druhy(zmenyMostu(nizko, stav([0, 8], "lano-nosne"))).sort()).toEqual(["prut-odebran", "prut-pridan"]);
+    expect(druhy(zmenyMostu(nizko, stav([0, 8], "lano", [-2, 0]))).sort()).toEqual(["prut-odebran", "prut-pridan"]);
+    // Pořadí zápisu prutů a id na počtu nic nemění.
+    const jinak = stav([0, 8]);
+    const prehazeny: NavrhMostu = { ...jinak, pruty: [...jinak.pruty].reverse().map((p, i) => ({ ...p, id: 50 + i })) };
+    expect(druhy(zmenyMostu(nizko, prehazeny))).toEqual(["prut-prepojen"]);
   });
 });

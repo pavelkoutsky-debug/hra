@@ -6,7 +6,8 @@
 // materiálu, prut jinak nastavený (zdvih pístu, tlumič), posunutý styčník (se všemi svými
 // pruty dohromady), svar, zámek, závaží nebo laděný tlumič ve styčníku. Napínáky lan se počítají
 // dohromady jako jedna změna: tlačítko Dopnout lana je přenastaví všechny naráz. Závaží nebo
-// laděný tlumič přenesený beze změny do jiného styčníku je taky jedna změna (ne odebrání a přidání).
+// laděný tlumič přenesený beze změny do jiného styčníku je taky jedna změna (ne odebrání a přidání),
+// a stejně tak prut přepojený jedním koncem jinam (kotevní lano z dříku pylonu na jeho hlavu).
 //
 // Počítá se výsledek, ne cesta k němu: stejný opravený most má stejný počet změn, ať k němu
 // hráč došel jakkoli. Porovnává se proto jen tvar (místa styčníků a co je mezi nimi), nikdy id:
@@ -26,6 +27,8 @@ export type ZmenaMostu =
   | { druh: "prut-odebran"; prut: number }
   /** Prut na stejném místě z jiného prvku (id v novém návrhu). */
   | { druh: "prvek"; prut: number }
+  /** Prut přepojený jedním koncem do jiného styčníku: tentýž prvek, druhý konec zůstal (id v novém návrhu). */
+  | { druh: "prut-prepojen"; prut: number }
   /** Jiné nastavení prutu: zdvih pístu, tlumení, tuhost (id v novém návrhu). */
   | { druh: "nastaveni"; prut: number }
   /** Přenastavené napínáky lan: všechny dohromady jedna změna; `lan` říká, kolika lan se týká. */
@@ -170,7 +173,6 @@ function posud(puvodni: Most, novy: Most, vyklad: Vyklad): Posudek {
     if (seznam) seznam.push(p);
     else volne.set(klic, [p]);
   }
-  const odebraneZmeny: ZmenaMostu[] = [];
   const zmenene: ZmenaMostu[] = [];
   const odebrane: PrutNaMiste[] = [];
   let napinaku = 0;
@@ -180,7 +182,6 @@ function posud(puvodni: Most, novy: Most, vyklad: Vyklad): Posudek {
     const protejsek = a !== undefined && b !== undefined ? volne.get(klicPrutu(a, b))?.shift() : undefined;
     if (!protejsek) {
       odebrane.push(stary);
-      odebraneZmeny.push({ druh: "prut-odebran", prut: stary.prut.id });
       continue;
     }
     if (protejsek.prut.prvek !== stary.prut.prvek) zmenene.push({ druh: "prvek", prut: protejsek.prut.id });
@@ -189,10 +190,27 @@ function posud(puvodni: Most, novy: Most, vyklad: Vyklad): Posudek {
       if (Math.abs((stary.prut.predpeti ?? 0) - (protejsek.prut.predpeti ?? 0)) > STEJNE) napinaku += 1;
     }
   }
-  for (const p of puvodni.bezKoncu) odebraneZmeny.push({ druh: "prut-odebran", prut: p.id });
   // Co v novém mostě zbylo bez protějšku, je přidané (i prut nakreslený dvakrát na stejné místo).
   const pridane = novy.pruty.filter((p) => volne.get(klicPrutu(p.a, p.b))?.includes(p));
-  const pridaneZmeny: ZmenaMostu[] = pridane.map((p) => ({ druh: "prut-pridan", prut: p.prut.id }));
+
+  // Prut přepojený jedním koncem jinam: původní prut bez protějšku a nový prut z téhož prvku,
+  // který s ním jeden konec sdílí. Jedna změna místo odebrání a přidání. Páruje se v pořadí
+  // míst, ne zápisu, aby počet nezávisel na tom, v jakém pořadí hráč kreslil.
+  const podleMista = (x: PrutNaMiste, y: PrutNaMiste): number => (klicPrutu(x.a, x.b) < klicPrutu(y.a, y.b) ? -1 : 1);
+  const volnePridane = [...pridane].sort(podleMista);
+  const prepojene: ZmenaMostu[] = [];
+  const odebraneZmeny: ZmenaMostu[] = [];
+  for (const stary of [...odebrane].sort(podleMista)) {
+    const a = vyklad.get(stary.a);
+    const b = vyklad.get(stary.b);
+    const i = volnePridane.findIndex(
+      (n) => n.prut.prvek === stary.prut.prvek && ((a !== undefined && (n.a === a || n.b === a)) || (b !== undefined && (n.a === b || n.b === b))),
+    );
+    if (i < 0) odebraneZmeny.push({ druh: "prut-odebran", prut: stary.prut.id });
+    else prepojene.push({ druh: "prut-prepojen", prut: volnePridane.splice(i, 1)[0]!.prut.id });
+  }
+  for (const p of puvodni.bezKoncu) odebraneZmeny.push({ druh: "prut-odebran", prut: p.id });
+  const pridaneZmeny: ZmenaMostu[] = volnePridane.map((p) => ({ druh: "prut-pridan", prut: p.prut.id }));
 
   // Svary, zámky, závaží a tlumiče: posunutý styčník si je veze s sebou.
   const naStycnicich: ZmenaNaStycniku[] = [];
@@ -207,7 +225,7 @@ function posud(puvodni: Most, novy: Most, vyklad: Vyklad): Posudek {
     if (!obsazene.has(misto)) for (const zmena of zmenyStycniku(undefined, dnes)) naStycnicich.push({ zmena, stary: undefined, dnes });
   }
 
-  const zmeny = [...posuny, ...odebraneZmeny, ...zmenene, ...pridaneZmeny];
+  const zmeny = [...posuny, ...odebraneZmeny, ...prepojene, ...zmenene, ...pridaneZmeny];
   if (napinaku > 0) zmeny.push({ druh: "napinaky", lan: napinaku });
   zmeny.push(...slucPresuny(naStycnicich));
   return { zmeny, odebrane, pridane };
@@ -237,8 +255,8 @@ function navrhniPosuny(vyklad: Vyklad, posudek: Posudek, pevne: ReadonlySet<stri
 
 /**
  * Čím se `novy` návrh liší od `puvodniho`: nejmenší počet změn, jakým jde rozdíl vyložit.
- * Pořadí: posunuté styčníky, odebrané pruty, pruty změněné na místě, přidané pruty, napínáky,
- * a nakonec svary, zámky, závaží a tlumiče.
+ * Pořadí: posunuté styčníky, odebrané pruty, přepojené pruty, pruty změněné na místě, přidané
+ * pruty, napínáky, a nakonec svary, zámky, závaží a tlumiče.
  */
 export function zmenyMostu(puvodni: NavrhMostu, novy: NavrhMostu): ZmenaMostu[] {
   const stary = rozloz(puvodni);

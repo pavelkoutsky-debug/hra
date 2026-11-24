@@ -9,14 +9,16 @@
 // se posouvají: vodorovně most nedrží nic. Brzdící kolona most potáhne doprava, noha se nakloní,
 // mostovka sjíždí z ložisek a příhrada se nad nohou zlomí.
 //
-// Co hráč uvidí: první poruší vzpěr diagonály nad nohou (24, 0)–(30, 3) zhruba v páté sekundě,
-// když kolona brzdí; noha sama je skoro nevyužitá. Slepá oprava je zesílit tu diagonálu nebo
+// Co hráč uvidí: když kolona brzdí, mostovka nejdřív sjede z obou ložisek (4,9 s) a hned potom
+// se vzepře diagonála nad nohou (24, 0)–(30, 3) (5,0 s); noha sama je skoro nevyužitá. Slepá oprava je zesílit tu diagonálu nebo
 // přidat jednu šikmou nohu. Bez brzdění by týž most prošel (79 %): příčina je vodorovná síla,
 // kterou nemá co zachytit.
 //
 // Oprava komise (dvě změny): dvě šikmé nohy z těžkého profilu ze skály do styčníků 18 a 30.
 // S nohou do V je skála pevný bod mostu a příhrada má podpory po 18 a 6 metrech; nic nejede přes
 // 60 %. Jediná šikmá noha nestačí: pod brzdící kolonou se přetíží diagonála nad svislou nohou.
+// Nohy do V z lehkého profilu kolonu převedou, ale samy se vzepřou: takovou opravu komise
+// neuzná (případ uzavírá jen most, který prošel bez porušení).
 
 import type { IdPrvku } from "../../src/data/katalog";
 import { Kreslic } from "../../src/data/kreslic";
