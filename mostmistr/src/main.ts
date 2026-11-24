@@ -3,7 +3,7 @@
 
 import { nactiKampan, nactiUrovne } from "../urovne/index";
 import { ChybaDat } from "./data/kontrola";
-import { PARAMETR_MOSTU, rozkodujMost } from "./data/sdileni";
+import { PARAMETR_MOSTU, rozkodujMost, ocistiKodMostu } from "./data/sdileni";
 import { sandboxZTextu, urovenSandboxu } from "./data/sandbox";
 import { denikHry } from "./denik/prohlizec";
 import { spustList } from "./hra/list";
@@ -24,7 +24,8 @@ try {
   const kampan = nactiKampan();
   // Most z odkazu (sdílení): kód v adrese nese most i jeho úroveň. Poškozený odkaz hru
   // nezastaví: otevře se úroveň z adresy (nebo přehled) a hráč se dozví, co se stalo.
-  const kodMostu = new URLSearchParams(window.location.search).get(PARAMETR_MOSTU);
+  const kodZAdresy = new URLSearchParams(window.location.search).get(PARAMETR_MOSTU);
+  const kodMostu = kodZAdresy === null ? null : ocistiKodMostu(kodZAdresy);
   let mostZOdkazu: MostZOdkazu | null = null;
   if (kodMostu !== null) {
     try {

@@ -9,13 +9,17 @@
 //
 // Bez prohlížeče: stejný kód vyrobí hra i test v Node.
 
+import { KATALOG } from "./katalog";
 import { ChybaDat } from "./kontrola";
 import { nactiNavrh, VERZE_NAVRHU, type NavrhMostu, type PrutNavrhu, type StycnikNavrhu } from "./navrh";
 
 /** Verze rozložení bajtů v kódu mostu (ne formátu návrhu; ten kód nese zvlášť). */
 export const VERZE_KODU_MOSTU = 1;
 
-/** Delší kód hra nečte: největší most kampaně má pod tisíc znaků. */
+/**
+ * Delší kód hra nečte ani nenabízí (zhruba 600 prutů): největší most kampaně má pod tisíc znaků.
+ * Sdílení se ptá `vejdeSeDoOdkazu`, aby hra nikdy nedala odkaz, který sama odmítne.
+ */
 export const NEJDELSI_KOD_MOSTU = 6000;
 
 /** Jméno parametru adresy, který kód mostu nese. */
@@ -42,14 +46,37 @@ function poskozeny(duvod: string): ChybaDat {
   return new ChybaDat("odkaz", `odkaz na most je poškozený nebo neúplný (${duvod})`, "odkaz-poskozeny");
 }
 
-/** Kontrolní součet (FNV-1a, dolních 16 bitů) bajtů `od` až `po`. */
+/** Kód z novější hry, než je tahle: hráči pomůže načíst stránku znovu, ne prosit o nový odkaz. */
+function novejsi(duvod: string): ChybaDat {
+  return new ChybaDat("odkaz", duvod, "novejsi-verze");
+}
+
+/** Kolik bajtů má kontrolní součet na konci kódu. */
+const BAJTU_SOUCTU = 4;
+
+/**
+ * Kontrolní součet prvních `po` bajtů: FNV-1a, všech 32 bitů. Šestnáct bitů by nestačilo:
+ * záměna jediného znaku by zhruba jednou z šedesáti tisíc případů otevřela jiný most, a to
+ * se u odkazů, které lidé přepisují a zkracují, stane.
+ */
 function soucet(bajty: ArrayLike<number>, po: number): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < po; i++) {
     h ^= bajty[i]!;
     h = Math.imul(h, 0x01000193) >>> 0;
   }
-  return (h ^ (h >>> 16)) & 0xffff;
+  return h >>> 0;
+}
+
+/** Sedí kontrolní součet na konci `bajty`? */
+function soucetSedi(bajty: ArrayLike<number>): boolean {
+  const konec = bajty.length - BAJTU_SOUCTU;
+  if (konec < 2) return false;
+  const h = soucet(bajty, konec);
+  for (let i = 0; i < BAJTU_SOUCTU; i++) {
+    if (bajty[konec + i] !== ((h >>> (8 * i)) & 255)) return false;
+  }
+  return true;
 }
 
 class Zapis {
@@ -114,7 +141,11 @@ class Cteni {
     for (let i = 0; i < 8; i++) {
       const b = this.#bajt();
       n += (b & 127) * rad;
-      if (b < 128) return n;
+      if (b < 128) {
+        // Větší číslo by se zaokrouhlilo: jiné id, než jaké most měl, a kód, který nejde zapsat zpátky.
+        if (!Number.isSafeInteger(n)) throw poskozeny("číslo je větší, než kód dovoluje");
+        return n;
+      }
       rad *= 128;
     }
     throw poskozeny("číslo je delší, než kód dovoluje");
@@ -240,7 +271,7 @@ export function zakodujMost(navrh: NavrhMostu): string {
   }
 
   const kontrola = soucet(z.bajty, z.bajty.length);
-  z.bajty.push(kontrola & 255, kontrola >> 8);
+  for (let i = 0; i < BAJTU_SOUCTU; i++) z.bajty.push((kontrola >>> (8 * i)) & 255);
   return naZnaky(z.bajty);
 }
 
@@ -252,27 +283,31 @@ export function zakodujMost(navrh: NavrhMostu): string {
 export function rozkodujMost(kod: string): NavrhMostu {
   if (kod.length > NEJDELSI_KOD_MOSTU) throw poskozeny("je delší, než hra čte");
   const bajty = zeZnaku(kod);
-  if (bajty.length < 4) throw poskozeny("je příliš krátký");
-  const konec = bajty.length - 2;
-  if (soucet(bajty, konec) !== (bajty[konec]! | (bajty[konec + 1]! << 8))) throw poskozeny("nesedí kontrolní součet");
+  if (bajty.length < BAJTU_SOUCTU + 2) throw poskozeny("je příliš krátký");
+  const konec = bajty.length - BAJTU_SOUCTU;
+  if (!soucetSedi(bajty)) throw poskozeny("nesedí kontrolní součet");
 
   const c = new Cteni(bajty, konec);
   const verzeKodu = c.cele();
-  if (verzeKodu > VERZE_KODU_MOSTU) {
-    throw new ChybaDat("odkaz", `odkaz je z novější verze hry (kód mostu verze ${verzeKodu})`, "novejsi-verze");
-  }
+  if (verzeKodu > VERZE_KODU_MOSTU) throw novejsi(`odkaz je z novější verze hry (kód mostu verze ${verzeKodu})`);
   if (verzeKodu < 1) throw poskozeny("neznámá verze");
   const verze = c.cele();
-  if (verze > VERZE_NAVRHU) {
-    throw new ChybaDat("odkaz", `most je z novější verze hry (formát návrhu ${verze})`, "novejsi-verze");
-  }
+  if (verze > VERZE_NAVRHU) throw novejsi(`most je z novější verze hry (formát návrhu ${verze})`);
   const uroven = c.text();
 
   const prvky: string[] = [];
   const druhu = c.pocet(2);
-  for (let i = 0; i < druhu; i++) prvky.push(c.text());
+  for (let i = 0; i < druhu; i++) {
+    const prvek = c.text();
+    // Prvek, který katalog nezná, přibyl v novější hře (nebo z ní zmizel): kód poškozený není.
+    if (!Object.hasOwn(KATALOG, prvek)) throw novejsi(`most používá prvek „${prvek}“, který tahle verze hry nezná`);
+    prvky.push(prvek);
+  }
 
   const priznaky = c.cele();
+  // Bit, který tahle verze nezná, nese pole návrhu přidané později: číst dál by znamenalo
+  // přečíst jeho hodnotu jako něco jiného.
+  if ((priznaky & ~(ID_STYCNIKU_PO_RADE | ID_PRUTU_PO_RADE)) !== 0) throw novejsi("most má příznaky, které tahle verze hry nezná");
   const stycnikyPoRade = (priznaky & ID_STYCNIKU_PO_RADE) !== 0;
   const prutyPoRade = (priznaky & ID_PRUTU_PO_RADE) !== 0;
 
@@ -281,6 +316,7 @@ export function rozkodujMost(kod: string): NavrhMostu {
   for (let i = 0; i < pocetStycniku; i++) {
     const s: StycnikNavrhu = { id: i, x: c.cislo(), y: c.cislo() };
     const co = c.cele();
+    if ((co & ~(SVAR | ZAMEK | ZAVAZI | TLUMIC)) !== 0) throw novejsi("styčník má vlastnost, kterou tahle verze hry nezná");
     if (co & SVAR) s.svar = true;
     if (co & ZAMEK) s.zamek = true;
     if (co & ZAVAZI) s.zavazi = c.cislo();
@@ -298,6 +334,7 @@ export function rozkodujMost(kod: string): NavrhMostu {
     if (!a || !b || prvek === undefined) throw poskozeny("prut odkazuje mimo most");
     const p: Record<string, unknown> = { id: i, a: a.id, b: b.id, prvek };
     const co = c.cele();
+    if ((co & ~(PREDPETI | TUHOST | TLUMENI | ZDVIH)) !== 0) throw novejsi("prut má vlastnost, kterou tahle verze hry nezná");
     if (co & PREDPETI) p.predpeti = c.cislo();
     if (co & TUHOST) p.tuhost = c.cislo();
     if (co & TLUMENI) p.tlumeni = c.cislo();
@@ -323,10 +360,23 @@ export function mostBezVypnutych(navrh: NavrhMostu): NavrhMostu {
   };
 }
 
-/** Odkaz, který most otevře v jeho úrovni: adresa hry (`zaklad`, bez dotazu) a dva parametry. */
+/**
+ * Odkaz, který most otevře v jeho úrovni: adresa hry (`zaklad`, bez dotazu) a dva parametry.
+ * Kód mostu je první a úroveň poslední: kód může končit pomlčkou nebo podtržítkem a ty na
+ * konci odkazu některé aplikace odříznou; číslo úrovně na konci přežije (a kdyby ne, most ji
+ * nese v kódu sám).
+ */
 export function odkazNaMost(zaklad: string, navrh: NavrhMostu): string {
   const bezDotazu = zaklad.replace(/[?#].*$/, "");
-  return `${bezDotazu}?uroven=${encodeURIComponent(navrh.uroven)}&${PARAMETR_MOSTU}=${zakodujMost(navrh)}`;
+  return `${bezDotazu}?${PARAMETR_MOSTU}=${zakodujMost(navrh)}&uroven=${encodeURIComponent(navrh.uroven)}`;
+}
+
+/**
+ * Kód mostu z adresy, jak ho předala aplikace, kterou odkaz prošel: bez mezer a zalomení
+ * uvnitř a bez interpunkce, která se k odkazu přilepila na konci věty (tečka, závorka).
+ */
+export function ocistiKodMostu(kod: string): string {
+  return kod.replace(/\s+/g, "").replace(/[^A-Za-z0-9_-]+$/, "");
 }
 
 /**
@@ -337,7 +387,23 @@ export function kodMostuVTextu(text: string): string | null {
   const cisty = text.trim();
   const vOdkazu = new RegExp(`[?&]${PARAMETR_MOSTU}=([A-Za-z0-9_-]+)`).exec(cisty);
   if (vOdkazu) return vOdkazu[1]!;
-  return /^[A-Za-z0-9_-]{8,}$/.test(cisty) ? cisty : null;
+  // Samotný kód: jen když mu sedí kontrolní součet. Obyčejné slovo („mostovka“) kód není
+  // a Import o něm má říct, že to není most, ne že je odkaz poškozený.
+  if (!/^[A-Za-z0-9_-]{8,}$/.test(cisty)) return null;
+  try {
+    return soucetSedi(zeZnaku(cisty)) ? cisty : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Vejde se most do odkazu, který hra zase přečte? Větší most (nebo id mimo rozsah) odkaz nedostane. */
+export function vejdeSeDoOdkazu(navrh: NavrhMostu): boolean {
+  try {
+    return zakodujMost(navrh).length <= NEJDELSI_KOD_MOSTU;
+  } catch {
+    return false;
+  }
 }
 
 /** Jak si most stojí proti výzvě z odkazu. */

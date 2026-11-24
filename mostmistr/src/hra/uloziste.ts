@@ -79,6 +79,11 @@ export function skladProhlizece(): Sklad | null {
 export class Uloziste {
   readonly #sklad: Sklad | null;
   #ulozeni: Ulozeni;
+  /**
+   * Text postupu, jak ho tahle stránka naposledy četla nebo zapsala. Když je v paměti prohlížeče
+   * jiný, zapsala ho mezitím jiná záložka a postup se před čtením i zápisem načte znovu.
+   */
+  #znamyZapis: string | null = null;
   /** Uložený postup nešel přečíst; hra začala s prázdným a původní text odložila stranou. */
   readonly poskozeno: boolean;
 
@@ -89,7 +94,14 @@ export class Uloziste {
     const zapis = this.#cti(KLIC_ULOZENI);
     if (zapis !== null) {
       try {
-        ulozeni = ulozeniZTextu(zapis);
+        const zahozene: string[] = [];
+        ulozeni = ulozeniZTextu(zapis, zahozene);
+        // Most, který nešel přečíst, hra zahodila a jede dál; původní zápis zůstane stranou
+        // pro případ, že by ho někdo chtěl zachránit ručně.
+        if (zahozene.length > 0) {
+          this.#pis(KLIC_POSKOZENEHO, zapis);
+          this.#pis(KLIC_ULOZENI, ulozeniNaText(ulozeni));
+        }
         const puvodni = verzeZapisuUlozeni(zapis);
         if (puvodni !== null && puvodni < ulozeni.verze) {
           // Starší formát se hned zapíše v novém: převod by jinak proběhl při každém načtení
@@ -108,6 +120,24 @@ export class Uloziste {
     }
     this.#ulozeni = ulozeni;
     this.poskozeno = poskozeno;
+    this.#znamyZapis = this.#cti(KLIC_ULOZENI);
+  }
+
+  /**
+   * Srovná postup s pamětí prohlížeče. Hra otevřená ve dvou záložkách (odkaz na cizí most se
+   * typicky otevře vedle rozehrané hry) má v každé vlastní snímek postupu; bez srovnání by
+   * zápis z jedné vrátil druhé starý most i medaile. Zápis, který nejde přečíst nebo je
+   * z novější hry, se nebere: stránka pokračuje se svým.
+   */
+  #srovnej(): void {
+    const zapis = this.#cti(KLIC_ULOZENI);
+    if (zapis === null || zapis === this.#znamyZapis) return;
+    this.#znamyZapis = zapis;
+    try {
+      this.#ulozeni = ulozeniZTextu(zapis);
+    } catch {
+      // Nečitelný zápis cizí záložky: zůstává postup téhle stránky.
+    }
   }
 
   /**
@@ -129,25 +159,30 @@ export class Uloziste {
   }
 
   get ulozeni(): Ulozeni {
+    this.#srovnej();
     return this.#ulozeni;
   }
 
   navrh(idUrovne: string): NavrhMostu | undefined {
+    this.#srovnej();
     return this.#ulozeni.navrhy[idUrovne];
   }
 
   rekord(idUrovne: string): Rekord | undefined {
+    this.#srovnej();
     return this.#ulozeni.rekordy[idUrovne];
   }
 
   /** Uloží rozpracovaný most úrovně, ke které patří. */
   ulozNavrh(navrh: NavrhMostu): void {
+    this.#srovnej();
     this.#ulozeni = { ...this.#ulozeni, navrhy: { ...this.#ulozeni.navrhy, [navrh.uroven]: navrh } };
     this.#zapis();
   }
 
   /** Započítá výsledek zkoušky do rekordu úrovně a vrátí nový rekord. */
   zapocitej(idUrovne: string, medaile: Medaile, cena: number, verzeFyziky: number, hmotnost?: number, celistvy = true): Rekord {
+    this.#srovnej();
     const rekord = vylepsiRekord(this.#ulozeni.rekordy[idUrovne], medaile, cena, verzeFyziky, hmotnost, celistvy);
     this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
     this.#zapis();
@@ -156,6 +191,7 @@ export class Uloziste {
 
   /** Započítá výsledek zkoušky do zlomu (únosnost na korunu, N/Kč) a vrátí nový rekord. */
   zapocitejZlom(idUrovne: string, unosnostNaKorunu: number, verzeFyziky: number): Rekord {
+    this.#srovnej();
     const rekord = vylepsiZlom(this.#ulozeni.rekordy[idUrovne], unosnostNaKorunu, verzeFyziky);
     this.#ulozeni = { ...this.#ulozeni, rekordy: { ...this.#ulozeni.rekordy, [idUrovne]: rekord } };
     this.#zapis();
@@ -330,6 +366,7 @@ export class Uloziste {
 
   /** Smaže rozpracovaný most úrovně (sandbox po změně údolí). */
   smazNavrh(idUrovne: string): void {
+    this.#srovnej();
     if (!(idUrovne in this.#ulozeni.navrhy)) return;
     const navrhy = { ...this.#ulozeni.navrhy };
     delete navrhy[idUrovne];
@@ -338,7 +375,10 @@ export class Uloziste {
   }
 
   #zapis(): void {
-    this.#pis(KLIC_ULOZENI, ulozeniNaText(this.#ulozeni));
+    const zapis = ulozeniNaText(this.#ulozeni);
+    this.#pis(KLIC_ULOZENI, zapis);
+    // Co se opravdu zapsalo (plná paměť nezapíše nic): podle toho se pozná zápis cizí záložky.
+    this.#znamyZapis = this.#cti(KLIC_ULOZENI) ?? zapis;
   }
 
   #cti(klic: string): string | null {

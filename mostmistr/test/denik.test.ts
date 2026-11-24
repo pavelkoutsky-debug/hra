@@ -973,6 +973,15 @@ describe("souhrn deníku", () => {
     expect(souhrnDeniku([])).toMatchObject({ hracu: 0, sezeni: 0, urovne: [], chyby: [] });
   });
 
+  it("zkouška cizího mostu z odkazu se do čísel o úrovni nepočítá", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const cizi = (t: number): UdalostDeniku => u(t, "zkouska.konec", "1-03", { pruchod: true, pokus: null, host: true, cena: 98985, sekund: t });
+    const zlomCizi = (t: number): UdalostDeniku => u(t, "zkouska.konec", "1-03", { pruchod: false, pokus: "zlom", host: true, zlom: 400 });
+    const uroven = souhrnDeniku([davka([u(0, "uroven.otevrena", "1-03"), cizi(10), zlomCizi(20)], 0, anna)]).urovne[0]!;
+    // Hráčka úroveň otevřela, ale nic svého nezkoušela.
+    expect(uroven).toMatchObject({ hracu: 1, zkousek: 0, pruchodu: 0, hracuBezZkousky: 1, zkousekDoZlomu: 0 });
+  });
+
   it("počítá nápovědu a zkoušky do zlomu; zkouška do zlomu není zkouška s provozem", () => {
     const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
     const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");

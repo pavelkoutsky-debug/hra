@@ -246,7 +246,11 @@ describe("zvedací most", () => {
     const shrnuti = await udaj("vysledek-shrnuti");
     // Výsledek řekne, do kterého prutu loď narazila, a proč se most nezvedl.
     expect(shrnuti).toMatch(/Loď narazila do mostu: v jejím plavebním profilu zůstal prut \d+ \(ocelová mostovka\)/);
-    expect(shrnuti).toContain("Píst most nezvedl");
+    // Příčina je chybějící zámek, ne slabý píst (ten se o zamčený most jen opřel).
+    expect(shrnuti).toContain("Most se neodemkl: nemá zámek");
+    expect(shrnuti).not.toContain("Píst most nezvedl");
+    expect(await stranka.locator("body").getAttribute("data-pricina-pohybu")).toBe("bez-zamku");
+    expect(await stranka.locator("body").getAttribute("data-pricina")).toContain("Most se neodemkl");
     expect(await stranka.locator('[data-udaj="vysledek-pohyb"]').getAttribute("data-narazilo")).toBe("1");
     const radek = await udaj("vysledek-pohyb");
     expect(radek).toMatch(/loď narazila v .* do prutu \d+/);

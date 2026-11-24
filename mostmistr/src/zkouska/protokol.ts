@@ -220,6 +220,24 @@ export interface PohybZkousky {
   pretizenychPistu: number;
   /** Největší síla v pístu za zkoušku, N (velikost). */
   nejvetsiSilaPistu: number;
+  /**
+   * Kosinus největšího úhlu, o který se mostovka při zvedání otočila proti výkresu (1 = nepohnula
+   * se). Kosinus, ne úhel: zkouška počítá jen sčítáním, násobením, dělením a odmocninou.
+   */
+  kosinusOtoceni: number;
+  /**
+   * Co dělaly písty ve chvíli, kdy loď narazila: `zveda` ještě nedojely na konec zdvihu, `drzi`
+   * stály na konci zdvihu (křídlo je nahoře, jak vysoko jen píst dosáhne), `klesl` už nahoře byly,
+   * ale přetlakový ventil povolil a křídlo kleslo. null, když žádná loď nenarazila nebo se most
+   * už sklápěl.
+   */
+  pistyPriNarazu: "zveda" | "drzi" | "klesl" | null;
+  /**
+   * Proč zámek po sklopení nezapadl: jestli písty dojely zpátky, o kolik se konce zámku na konci
+   * zkoušky míjely (m; svisle kladně, když konec se zámkem visí níž) a jak rychle se vůči sobě
+   * hýbaly (m/s). null, když zámky zapadly, most žádný odemčený zámek nemá nebo se nesklápěl.
+   */
+  nezamceno: { pistyVCili: boolean; vodorovne: number; svisle: number; rychlost: number } | null;
 }
 
 /** Co most unesl při zkoušce do zlomu. */

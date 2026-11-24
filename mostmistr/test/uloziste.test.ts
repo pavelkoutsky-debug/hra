@@ -191,6 +191,64 @@ describe("úložiště postupu", () => {
   });
 });
 
+describe("postup s jedním mostem, který nejde přečíst", () => {
+  it("zahodí jen ten most, medaile nechá a původní zápis odloží stranou", () => {
+    const sklad = new SkladVPameti();
+    const prvni = new Uloziste(sklad);
+    prvni.ulozNavrh(most());
+    prvni.zapocitej("1-01", PRUCHOD, 12_000, 1);
+    prvni.zapocitej("1-02", PRUCHOD, 30_000, 1);
+    // Do postupu se dostal most se dvěma pruty téhož id.
+    const zapis = JSON.parse(sklad.getItem(KLIC_ULOZENI)!) as { navrhy: Record<string, { pruty: unknown[] }> };
+    zapis.navrhy["1-01"]!.pruty.push(zapis.navrhy["1-01"]!.pruty[0]);
+    const vadny = JSON.stringify(zapis);
+    sklad.setItem(KLIC_ULOZENI, vadny);
+    const po = new Uloziste(sklad);
+    expect(po.poskozeno).toBe(false);
+    expect(po.navrh("1-01")).toBeUndefined();
+    expect(po.rekord("1-01")?.medaile.pruchod).toBe(true);
+    expect(po.rekord("1-02")?.medaile.pruchod).toBe(true);
+    expect(sklad.getItem(KLIC_POSKOZENEHO)).toBe(vadny);
+    // Postup je zapsaný čistý: další start už nic nezahazuje.
+    expect(JSON.parse(sklad.getItem(KLIC_ULOZENI)!).navrhy).toEqual({});
+  });
+});
+
+describe("hra otevřená ve dvou záložkách", () => {
+  it("zápis z jedné záložky nevrátí druhé starý most ani nesmaže její medaile", () => {
+    const sklad = new SkladVPameti();
+    const a = new Uloziste(sklad);
+    a.ulozNavrh(most());
+    // Záložka B se otevře (třeba odkazem na cizí most) a drží snímek s původním mostem.
+    const b = new Uloziste(sklad);
+    // V A hráč most přestaví a získá medaili.
+    const k = new Kreslic("1-01");
+    k.prut("mostovka-drevo", [0, 0], [8, 0]);
+    const novy = k.navrh();
+    a.ulozNavrh(novy);
+    a.zapocitej("1-01", PRUCHOD, 12_000, 1);
+    // B vidí, co A mezitím uložila, a její zápis (rekord jiné úrovně) to nepřepíše.
+    expect(b.navrh("1-01")).toEqual(novy);
+    b.zapocitej("1-02", PRUCHOD, 30_000, 1);
+    const pote = new Uloziste(sklad);
+    expect(pote.navrh("1-01")).toEqual(novy);
+    expect(pote.rekord("1-01")?.medaile.pruchod).toBe(true);
+    expect(pote.rekord("1-02")?.medaile.pruchod).toBe(true);
+    // A o rekordu z B ví také.
+    expect(a.rekord("1-02")?.medaile.pruchod).toBe(true);
+  });
+
+  it("nečitelný zápis cizí záložky postup téhle stránky nezahodí", () => {
+    const sklad = new SkladVPameti();
+    const a = new Uloziste(sklad);
+    a.ulozNavrh(most());
+    sklad.setItem(KLIC_ULOZENI, "{tohle není postup");
+    expect(a.navrh("1-01")).toEqual(most());
+    a.zapocitej("1-01", PRUCHOD, 12_000, 1);
+    expect(new Uloziste(sklad).navrh("1-01")).toEqual(most());
+  });
+});
+
 describe("postup uložený před M12", () => {
   const STARY = JSON.stringify({
     verze: 3,
