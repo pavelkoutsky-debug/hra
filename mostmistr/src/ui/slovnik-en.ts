@@ -852,7 +852,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "ukazka.4-04.a": "Cables as laid out in the drawing",
   "ukazka.4-04.b": "After automatic tensioning",
   "ukazka.4-04.popis":
-    "The same bridge, the same cables. Under the weight of the deck the main cable settles into the curve that matches the load, regardless of how it was drawn. Hangers cut to the drawn lengths then lift the deck in some places and let it drop by almost a metre in others. Tensioning adjusts the length of each hanger so that the deck stays level.",
+    "The same bridge, the same cables. Under the weight of the deck the main cable settles into the curve that matches the load, regardless of how it was drawn. Hangers cut to the drawn lengths then let the deck drop by as much as three quarters of a metre. Tensioning adjusts the length of each hanger so that the deck stays level.",
   "skutecnost.4-01":
     "the Millau Viaduct in southern France carries a motorway across the valley of the River Tarn on seven concrete piers. The tallest of them is 245 metres high, and 343 metres with the pylon above the roadway, more than the Eiffel Tower. It opened in December 2004.",
   "skutecnost.4-02":
@@ -1666,9 +1666,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.4-03.vice":
     "A pylon with cables down to the deck is a cable-stayed bridge. A cable can only pull and may be up to sixty metres long. The longer span pulls the pylon head towards itself, and only the anchor cable to the left abutment holds it: left slack, it first has to stretch, the pylon bends in the meantime and breaks under the convoy. The Tension cables button (N) sets the turnbuckles so that the deck stays level under its own weight; fine-tune individual cables with the Cable turnbuckle item.",
   "zadani.4-04":
-    "Seventy-two metres across a ravine where there is nowhere to put a pier; a low-loader carrying a hundred and twenty tonnes will cross, followed by two lorries. Build a suspension bridge: two pylons, a main cable over their heads and hangers from it to the deck.",
+    "Seventy-two metres across a ravine where there is nowhere to put a pier; a low-loader carrying a hundred and twenty tonnes will cross, followed by two lorries. Build a suspension bridge: two pylons, a main cable over their heads along the free band above the ravine, and vertical hangers from it to the deck.",
   "zadani.4-04.vice":
-    "The pylons stand on the footings on the banks; between them the main cable sags in a curve, and behind the pylons you fix it to the anchors in the ground. The hangers run vertically to the deck joints. The main cable is four times stronger than an ordinary one, which would snap here. Under the weight of the deck it settles into a curve by itself and the hangers must match it in length: without tensioning (N) the deck will sag by tens of centimetres.",
+    "The pylons stand on the footings on the banks; between them the main cable sags in a curve, and behind the pylons you fix it to the anchors in the ground. Above the ravine only a band between the no-build zones is left free for it, and the hangers run vertically through slots down to the deck joints: sloping cables from the pylons straight to the deck are ruled out here, as are steel members. The main cable is four times stronger than an ordinary one, which would snap here; for the hangers an ordinary cable is enough. Under the weight of the deck it settles into a curve by itself and the hangers must match it in length: without tensioning (N) the deck will sag by tens of centimetres.",
   "zadani.4-05": "A seventy-two-metre road across a valley where only one pier can be founded, and not in the middle: forty-eight metres from the left bank. Nothing may be built under the longer span and all you have is the pier and cables; two articulated lorries will cross, a convoy of three trucks will meet them, and finally a lorry will meet a bus.",
   "zadani.5-01":
     "A footbridge on the embankment, forty-eight metres, and a crowd on it: a hundred and twenty people, each at their own pace of around 1.7 Hz. The promenade should be calm: vibration must not exceed 0.5 m/s².",

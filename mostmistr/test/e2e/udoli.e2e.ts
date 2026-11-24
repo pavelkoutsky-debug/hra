@@ -6,7 +6,7 @@ import { preview, type PreviewServer } from "vite";
 import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Kreslic } from "../../src/data/kreslic";
-import { navrhNaText, navrhZTextu } from "../../src/data/navrh";
+import { navrhNaText, navrhZTextu, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
@@ -28,6 +28,9 @@ const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const pridavek = (jmeno: string) => stranka.locator(`.paleta__prvky button[data-pridavek="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 const hlaseni = (): Promise<string> => udaj("hlaseni");
+/** Svislý prut (závěs visutého mostu): oba konce mají stejné x. */
+const jeSvisly = (most: NavrhMostu, prut: NavrhMostu["pruty"][number]): boolean =>
+  most.stycniky.find((s) => s.id === prut.a)!.x === most.stycniky.find((s) => s.id === prut.b)!.x;
 
 async function bodSveta(x: number, y: number): Promise<{ x: number; y: number }> {
   return stranka.evaluate(
@@ -357,8 +360,11 @@ describe("náklad století: visutý most", () => {
     await akce("dopnout").click();
     await stranka.locator('body[data-dopnuti="hotovo"]').waitFor({ timeout: 90_000 });
     expect(await hlaseni()).toMatch(/^Lana jsou dopnutá\. Mostovka pod vlastní tíhou klesala nejvýš o \d{3} mm, teď o 0,\d mm\.$/);
-    // Některé závěsy dopnutí prodloužilo: jsou delší než nakreslené.
-    const zavesy = (await mostNaVykresu()).pruty.filter((p) => p.prvek === "lano").map((p) => p.predpeti!);
+    // Některé závěsy dopnutí prodloužilo: jsou delší než nakreslené. Závěsy jsou svislá lana
+    // (u mostu pro průchod z nosného lana).
+    const dopnuty = await mostNaVykresu();
+    const zavesy = dopnuty.pruty.filter((p) => p.prvek.startsWith("lano") && jeSvisly(dopnuty, p)).map((p) => p.predpeti!);
+    expect(zavesy).toHaveLength(11);
     expect(Math.min(...zavesy)).toBeLessThan(-1);
     await spust();
     await nastavCas(18);
@@ -373,38 +379,44 @@ describe("náklad století: visutý most", () => {
     expect(await udaj("vysledek-shrnuti")).toMatch(/^(Přešli a přejeli|Přešli|Přejeli) všichni \(3\)\.$/);
   }, 360_000);
 
-  it("nové nosné lano se volbou závěsů nepřepíše a rovné lano dopnutí přizná", async () => {
+  it("nové nosné lano se volbou závěsů nepřepíše a lana, která tvar neudrží, dopnutí přizná", async () => {
     await otevri("4-04");
 
-    // Pylony, mostovka a nosné lano natažené rovně mezi hlavami pylonů; závěsy zatím chybí.
+    // Pylony 13 m, mostovka a nosné lano volným pásem nad roklí; chybí první díl lana a závěsy.
+    const OBLOUK = [8, 5, 3, 2, 1, 1, 1, 2, 3, 5, 8];
     const k = new Kreslic("4-04");
     for (let x = 0; x < 72; x += 6) k.prut("mostovka-ocelobeton", [x, 0], [x + 6, 0]);
-    for (const x of [-4, 76]) k.prut("pilir", [x, 0], [x, 12]);
-    const body: [number, number][] = [[-4, 12], ...Array.from({ length: 11 }, (_, i): [number, number] => [6 * (i + 1), 12]), [76, 12]];
+    for (const x of [-4, 76]) {
+      k.prut("pilir", [x, 0], [x, 12]);
+      k.prut("pilir", [x, 12], [x, 13]);
+    }
+    const body: [number, number][] = [[-4, 13], ...OBLOUK.map((y, i): [number, number] => [6 * (i + 1), y]), [76, 13]];
     for (let i = 1; i + 1 < body.length; i++) k.prut("lano-nosne", body[i]!, body[i + 1]!);
-    k.prut("lano-nosne", [-4, 12], [-18, 0]);
-    k.prut("lano-nosne", [76, 12], [90, 0]);
+    k.prut("lano-nosne", [-4, 13], [-18, 0]);
+    k.prut("lano-nosne", [76, 13], [90, 0]);
     await nactiMost(navrhNaText(k.navrh()));
     const prutuPred = Number(await telo("pruty"));
 
     // Poslední díl nosného lana hráč dokreslí a sáhne v paletě po závěsech: díl zůstává nosným lanem.
     await stranka.locator('.paleta__prvky button[data-prvek="lano-nosne"]').click();
-    await tahni([-4, 12], [6, 12]);
+    await tahni([-4, 13], [6, 8]);
     expect(Number(await telo("pruty"))).toBe(prutuPred + 1);
     const cenaPred = await udaj("cena");
     await stranka.locator('.paleta__prvky button[data-prvek="lano"]').click();
     expect(await udaj("cena")).toBe(cenaPred);
     expect((await mostNaVykresu()).pruty.at(-1)!.prvek).toBe("lano-nosne");
     expect(await stranka.locator('[data-nastaveni="predpeti"]').isVisible()).toBe(false);
-    for (const [x] of body.slice(1, -1)) await tahni([x, 12], [x, 0]);
+    for (const [x, y] of body.slice(1, -1)) await tahni([x, y], [x, 0]);
     expect((await mostNaVykresu()).pruty.filter((p) => p.prvek === "lano")).toHaveLength(11);
 
-    // Rovné lano by muselo nést mnohonásobek pevnosti: dopnutí to řekne a poradí průvěs.
+    // Nosné lano z obyčejného lana by muselo nést víc, než unese: dopnutí to řekne a poradí.
+    // (Rovné nosné lano, které tu bylo do M17, úroveň už nepustí: nad roklí je volný jen pás.)
     await stranka.keyboard.press("Escape");
+    await nactiMost(navrhNaText(RESENI["4-04"]!.pady.find((p) => p.nazev === "obyčejné lano místo nosného")!.navrh));
     await akce("dopnout").click();
     await stranka.locator('body[data-dopnuti="hotovo"]').waitFor({ timeout: 90_000 });
-    expect(await hlaseni()).toMatch(/^Lana mostovku do výkresu nedotáhnou: mostovka zůstává až \d+ mm pod výkresem a lana už teď nesou \d\d % své pevnosti\. Lana by musela nést víc, než bezpečně unesou: dej nosnému lanu větší průvěs/);
-    await stranka.screenshot({ path: `${SLOZKA}/99d-rovne-lano-dopnuti.png` });
+    expect(await hlaseni()).toMatch(/^Lana mostovku do výkresu nedotáhnou: mostovka zůstává až \d+ mm pod výkresem a lana už teď nesou \d+ % své pevnosti\. Lana by musela nést víc, než bezpečně unesou: dej nosnému lanu větší průvěs/);
+    await stranka.screenshot({ path: `${SLOZKA}/99d-slabe-lano-dopnuti.png` });
     // Zkouška skončí obyčejným pádem, ne rozpadem výpočtu. Dopnutí už proběhlo a nestačilo:
     // výsledek ho neradí znovu (hráč by se točil v kruhu), ale řekne, co pomůže místo něj.
     await spust();
@@ -414,7 +426,7 @@ describe("náklad století: visutý most", () => {
     expect(poDopnuti).toContain("dej nosnému lanu větší průvěs");
     expect(poDopnuti).not.toContain("Lana nejsou dopnutá");
     expect(await udaj("vysledek-veta")).not.toContain("Dopnout lana");
-    await stranka.screenshot({ path: `${SLOZKA}/99e-rovne-lano-vysledek.png` });
+    await stranka.screenshot({ path: `${SLOZKA}/99e-slabe-lano-vysledek.png` });
     await akce("upravit").click();
   }, 360_000);
 

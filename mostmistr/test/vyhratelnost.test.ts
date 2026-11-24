@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { cenaNavrhu } from "../src/data/cena";
 import { KATALOG } from "../src/data/katalog";
 import { zkontrolujNavrh, type NavrhMostu } from "../src/data/navrh";
+import { rysyMostu } from "../src/data/rysy";
 import type { Uroven } from "../src/data/uroven";
 import type { VysledekZkousky } from "../src/zkouska/protokol";
 import { Kreslic } from "../src/zkouska/regrese";
@@ -222,6 +223,39 @@ describe("lekce, které nejde obejít", () => {
     expect(problemy.length).toBeGreaterThan(0);
     expect(new Set(problemy.map((p) => p.druh))).toEqual(new Set(["prvek-nepovoleny"]));
     for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) expect(zkontrolujNavrh(RESENI["4-05"]![klic], uroven), klic).toEqual([]);
+  });
+
+  it("4-04: visutý most nejde nahradit příhradou ani lany z pylonů rovnou do mostovky", () => {
+    // Recenze obtížnosti M17 našla dvě levnější cesty bez nosného lana mezi pylony, obě s rozpočtovou
+    // medailí a zlatem všech tří výzev: příhradu z lehké oceli pod mostovkou (Z1, 2 003 207 Kč) a
+    // zavěšený most, vějíř obyčejných lan z dvanáctimetrových pylonů (Z2, 1 903 186 Kč; most autora
+    // pro rozpočtovou stál 2 046 528 Kč). Strojové hledání při přeladění našlo ještě levnější cestu,
+    // kterou samotná paleta nezavře: kloubová mostovka visí mezi několika nosnými lany z nízkých
+    // pylonů jako řetěz a její tah drží pevná opěra (1 962 647 Kč s rozpočtovou medailí, tři lana
+    // z každého pylonu); se svislými závěsy na koncích lan a napínáky na krajní mezi 1 756 706 Kč.
+    // Úroveň proto nemá ocel a nad roklí jí zakázané zóny nechávají volný jen pás, kudy vede nosné
+    // lano, a svislé štěrbiny pro závěsy ve styčnících: šikmé lano do mostovky ani k závěsu z pylonu
+    // neprojde (při přeladění ověřeno na stovkách tvarů).
+    const uroven = kampan.find((u) => u.id === "4-04")!;
+    expect(uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut")).toEqual([]);
+    const mosty = JSON.parse(readFileSync(new URL("./data/4-04-obejiti.json", import.meta.url), "utf8")) as Record<string, NavrhMostu>;
+    expect(Object.keys(mosty).length).toBe(4);
+    const druhy = (navrh: NavrhMostu): Set<string> => new Set(zkontrolujNavrh(navrh, uroven).map((p) => p.druh));
+    for (const [nazev, most] of Object.entries(mosty)) {
+      // Všechny by se do rozpočtu úrovně vešly; odmítne je pravidlo, ne cena.
+      expect(cenaNavrhu(most), nazev).toBeLessThan(uroven.inzenyrskyRozpocet!);
+      expect(druhy(most).has("nad-rozpocet"), nazev).toBe(false);
+    }
+    expect(druhy(mosty["příhrada pod mostovkou (recenze M17, Z1)"]!)).toEqual(new Set(["prvek-nepovoleny"]));
+    for (const nazev of ["zavěšený most z obyčejných lan (recenze M17, Z2)", "mostovka jako řetěz na šesti nosných lanech", "řetěz na nosných lanech se závěsy"]) {
+      expect(druhy(mosty[nazev]!).has("prut-v-zakazane-zone"), nazev).toBe(true);
+      expect([...druhy(mosty[nazev]!)].every((d) => d === "prut-v-zakazane-zone" || d === "stycnik-v-zakazane-zone"), nazev).toBe(true);
+    }
+    // Mosty autora pásem projdou a jsou visuté (nosné lano přes hlavy pylonů a svislé závěsy).
+    for (const klic of ["pruchod", "rozpocet", "mistrovska"] as const) {
+      expect(zkontrolujNavrh(RESENI["4-04"]![klic], uroven), klic).toEqual([]);
+      expect(rysyMostu(RESENI["4-04"]![klic], uroven).soustava, klic).toBe("visuty");
+    }
   });
 
   it("8-01: zavěšený most bez ztužující příhrady nejde postavit; lana dosáhnou jen do styčníku 37", () => {

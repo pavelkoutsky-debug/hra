@@ -30,6 +30,16 @@ const kampan = new Map(nactiKampan().map((u) => [u.id, u]));
 const zavesena = kampan.get("4-03")!;
 const visuta = kampan.get("4-04")!;
 /**
+ * Údolí 4-04, jak bylo do M17: s ocelí v paletě a bez zakázaných zón. Úroveň samotná dnes nad
+ * roklí nechává volný jen pás pro nosné lano (recenze obtížnosti M17); testy editoru kreslí lana
+ * a ocel kamkoli, a tak je kreslí sem.
+ */
+const visutaDrive: Uroven = {
+  ...visuta,
+  povolenePrvky: ["mostovka-ocelobeton", "ocel-lehka", "ocel-tezka", "lano", "lano-nosne", "pilir"],
+  zakazaneZony: [],
+};
+/**
  * Úroveň 4-03 se základem uprostřed údolí, jak ji hra měla do M12 (dnes leží o pole vlevo, aby
  * dopnutí lan rozhodovalo). Testy editoru a napínáků kreslí vlastní souměrný most s pylonem
  * v x = 30; na tom, kde základ je, v nich nezáleží.
@@ -329,20 +339,23 @@ describe("automatické dopnutí lan", () => {
     const dopnuty = sPredpetim(nedopnuty, dopnuti.predpeti);
     expect(zkontrolujNavrh(dopnuty, visuta)).toEqual([]);
     // Některé závěsy se k tomu musely prodloužit (záporné předpětí), jiné zkrátit o víc než na mez pevnosti.
-    const zavesy = dopnuty.pruty.filter((p) => p.prvek === "lano").map((p) => p.predpeti!);
+    // Závěsy jsou svislá lana (u mostu pro průchod z nosného lana).
+    const stycnik = new Map(dopnuty.stycniky.map((st) => [st.id, st]));
+    const zavesy = dopnuty.pruty.filter((p) => KATALOG[p.prvek].druh === "lano" && stycnik.get(p.a)!.x === stycnik.get(p.b)!.x).map((p) => p.predpeti!);
+    expect(zavesy).toHaveLength(11);
     expect(Math.min(...zavesy)).toBeLessThan(-1);
     expect(Math.max(...zavesy)).toBeGreaterThan(1);
-    // Hlavy pylonů: vodorovně na místě do centimetru (šestnáctimetrový pylon se o tolik nakloní
+    // Hlavy pylonů: vodorovně na místě do centimetru (třináctimetrový pylon se o tolik nakloní
     // bez povšimnutí; přesnější srovnání by stálo zbytečný tah v kotevních lanech).
     const s = sestavSoustavu(sestavMost(visuta, dopnuty).popis);
     expect(najdiKlid(s, volneStupne(s), TIHOVE_ZRYCHLENI)).toBe(true);
     dopnuty.stycniky.forEach((st, i) => {
-      if (st.y === 16 && (st.x === -4 || st.x === 76)) expect(Math.abs(s.x[i]! - st.x)).toBeLessThan(0.01);
+      if (st.y === 13 && (st.x === -4 || st.x === 76)) expect(Math.abs(s.x[i]! - st.x)).toBeLessThan(0.01);
     });
     // Skutečný tah v nosném laně odpovídá vzorci pro parabolu H = q·L²/(8·f) aspoň řádově:
     // mostovka s vybavením váží 4 240 kg/m, rozpětí lana 80 m, průvěs kolem 12 m.
     const tahy = rozeberMost(visuta, dopnuty).tahyLan;
-    const nosna = dopnuty.pruty.flatMap((p, i) => (p.prvek === "lano-nosne" ? [tahy[i]!] : []));
+    const nosna = dopnuty.pruty.flatMap((p, i) => (p.prvek === "lano-nosne" && stycnik.get(p.a)!.x !== stycnik.get(p.b)!.x ? [tahy[i]!] : []));
     const vodorovny = (4240 * TIHOVE_ZRYCHLENI * 80 * 80) / (8 * 12);
     expect(Math.min(...nosna)).toBeGreaterThan(0.8 * vodorovny);
     expect(Math.max(...nosna)).toBeLessThan(1.8 * vodorovny);
@@ -541,7 +554,7 @@ describe("nálezy nezávislých recenzí M4b", () => {
   });
 
   it("právě nakreslené lano se volbou jiného prvku nepřepíše a zrcadlení neomezí", () => {
-    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    const e = new Editor(visutaDrive, prazdnyNavrh(visutaDrive.id));
     expect(nakresli(e, "pilir", [-4, 0], [-4, 12])).toBe(true);
     expect(nakresli(e, "lano-nosne", [-4, 12], [6, 8])).toBe(true);
     expect(e.vybranePruty.size).toBe(1);
@@ -558,7 +571,7 @@ describe("nálezy nezávislých recenzí M4b", () => {
   });
 
   it("lano vybrané kliknutím přepsat jde a napínák si přitom nechá stejnou délku", () => {
-    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    const e = new Editor(visutaDrive, prazdnyNavrh(visutaDrive.id));
     // Lano z opěry, ne z hlavy pilíře: na té smí být jen lano a změnu na ocel by návrh odmítl
     // (další test).
     nakresli(e, "lano", [0, 0], [6, 8]);
@@ -579,7 +592,7 @@ describe("nálezy nezávislých recenzí M4b", () => {
   });
 
   it("lano z hlavy pilíře na ocel změnit nejde: na hlavě pilíře pod lany smí být jen lano", () => {
-    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    const e = new Editor(visutaDrive, prazdnyNavrh(visutaDrive.id));
     nakresli(e, "pilir", [-4, 0], [-4, 12]);
     nakresli(e, "lano", [-4, 12], [6, 12]);
     klikni(e, 1, 12);
@@ -589,7 +602,7 @@ describe("nálezy nezávislých recenzí M4b", () => {
   });
 
   it("u různě nastavených lan ukáže napínák oba krajní stavy", () => {
-    const e = new Editor(visuta, prazdnyNavrh(visuta.id));
+    const e = new Editor(visutaDrive, prazdnyNavrh(visutaDrive.id));
     nakresli(e, "pilir", [-4, 0], [-4, 12]);
     nakresli(e, "lano", [-4, 12], [6, 12]);
     e.zmenPredpeti(-90);
