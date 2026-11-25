@@ -223,13 +223,36 @@ export const OVERUJE_NEJDELE = 120_000;
 
 const klicZnacky = (den: string, otisk: string): string => `overuje/${den}/${otisk}.json`;
 
-/** Běží právě zkouška, kterou označuje `klic`? Značka starší než `OVERUJE_NEJDELE` neplatí. */
-async function overujeSe(p: ProstrediServeru, klic: string): Promise<boolean> {
-  const znacka = await p.sklad.cti(klic);
-  if (typeof znacka !== "object" || znacka === null) return false;
-  const od = (znacka as { od?: unknown }).od;
-  const stari = typeof od === "number" ? p.ted().getTime() - od : Number.NaN;
-  return stari >= 0 && stari < OVERUJE_NEJDELE;
+/**
+ * Běží právě zkouška s tímhle otiskem? Značka je pod dnem, kdy zkouška začala, takže se hledá
+ * i pod včerejškem (zkouška puštěná těsně před půlnocí). Značka starší než `OVERUJE_NEJDELE`
+ * neplatí; na znaménku stáří nezáleží, hodiny dvou běhů funkce nemusí jít stejně.
+ */
+async function overujeSe(p: ProstrediServeru, otisk: string): Promise<boolean> {
+  const ted = p.ted().getTime();
+  for (const den of new Set([denZ(new Date(ted)), denZ(new Date(ted - OVERUJE_NEJDELE))])) {
+    const znacka = await p.sklad.cti(klicZnacky(den, otisk));
+    const od = typeof znacka === "object" && znacka !== null ? (znacka as { od?: unknown }).od : undefined;
+    if (typeof od === "number" && Math.abs(ted - od) < OVERUJE_NEJDELE) return true;
+  }
+  return false;
+}
+
+/**
+ * Pustí zkoušku se značkou, že běží. Značku po zkoušce smaže, i když zkouška skončí chybou (jinak
+ * by hráč dvě minuty slyšel „server most ověřuje“ o zkoušce, která už neběží); zůstane jen po
+ * funkci, kterou ukončil hosting, a o tu jde. Mezi dotazem na značku a jejím zápisem je krátké
+ * okno: dvě žádosti o týž nový most ve stejné desetině sekundy pustí zkoušky dvě. Stojí to jednu
+ * zkoušku navíc a místo ve stropech, nic se tím nerozbije.
+ */
+async function seZnackou<T>(p: ProstrediServeru, otisk: string, zkouska: () => Promise<T>): Promise<T> {
+  const znacka = klicZnacky(denZ(p.ted()), otisk);
+  await p.sklad.zapis(znacka, { od: p.ted().getTime() });
+  try {
+    return await zkouska();
+  } finally {
+    await p.sklad.smaz(znacka);
+  }
 }
 
 function odmitni(stav: number, kod: KodOdmitnuti, zprava: string): Response {
@@ -331,15 +354,16 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
     // Zkouška do zlomu se pouští jen mostu, kterému už server ověřil běžnou zkoušku: jedna žádost
     // tak stojí nejvýš jednu zkoušku a nejde jí vynutit dvě s vymyšleným otiskem.
     if (z.zkouska === "zlom") return odmitnuto(409, "nejdriv", "nejdřív zapiš most po běžné zkoušce, potom po zkoušce do zlomu");
-    const znacka = klicZnacky(denZ(p.ted()), await otiskTextu(`${klicMostu} bezna`));
+    const znacka = await otiskTextu(`${klicMostu} bezna`);
     if (await overujeSe(p, znacka)) return pocita();
     const strop = await rezervujZkousku(p, skupina);
     if (strop) return plno(strop);
-    await p.sklad.zapis(znacka, { od: p.ted().getTime() });
-    const bezna = over.bezna(uroven, z.kod);
-    overeny = { ...bezna, tvar: await otiskTextu(pripraveny.kanon), zlom: null, ...(bezna.plati ? { kod: z.kod } : {}) };
-    await p.sklad.zapis(klicMostu, overeny);
-    await p.sklad.smaz(znacka);
+    overeny = await seZnackou(p, znacka, async () => {
+      const bezna = over.bezna(uroven, z.kod);
+      const novy: OverenyMost = { ...bezna, tvar: await otiskTextu(pripraveny.kanon), zlom: null, ...(bezna.plati ? { kod: z.kod } : {}) };
+      await p.sklad.zapis(klicMostu, novy);
+      return novy;
+    });
   }
   // Otisk běžné zkoušky musí sedět u zápisu z běžné zkoušky, otisk zlomu u zápisu ze zlomu.
   if (z.zkouska === "bezna" && z.otisk !== overeny.otisk) {
@@ -348,14 +372,16 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
   if (!overeny.plati) return odmitnuto(422, "neprosel", "most na serveru zkouškou neprošel bez porušení");
   if (z.zkouska === "zlom") {
     if (overeny.zlom === null) {
-      const znacka = klicZnacky(denZ(p.ted()), await otiskTextu(`${klicMostu} zlom`));
+      const znacka = await otiskTextu(`${klicMostu} zlom`);
       if (await overujeSe(p, znacka)) return pocita();
       const strop = await rezervujZkousku(p, skupina);
       if (strop) return plno(strop);
-      await p.sklad.zapis(znacka, { od: p.ted().getTime() });
-      overeny = { ...overeny, zlom: over.zlom(uroven, z.kod) ?? false };
-      await p.sklad.zapis(klicMostu, overeny);
-      await p.sklad.smaz(znacka);
+      const bezZlomu = overeny;
+      overeny = await seZnackou(p, znacka, async () => {
+        const novy: OverenyMost = { ...bezZlomu, zlom: over.zlom(uroven, z.kod) ?? false };
+        await p.sklad.zapis(klicMostu, novy);
+        return novy;
+      });
     }
     if (!overeny.zlom) return odmitnuto(422, "neprosel", "zkouška do zlomu na serveru neproběhla");
     if (z.otisk !== overeny.zlom.otisk) {

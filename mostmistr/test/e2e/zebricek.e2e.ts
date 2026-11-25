@@ -422,18 +422,13 @@ describe("žebříčky", () => {
     expect(await radky(s, "cena").count()).toBe(1);
     expect(await radky(s, "cena").first().getAttribute("data-ja")).toBe("ano");
     expect(bezMezer(await radky(s, "cena").first().innerText())).toContain("Cyril");
-    expect(await udaj(s, "zebricek-hlaseni")).toContain("Nejlevnější:");
+    // Server na opakovanou žádost hlásí „stejnou hodnotu už máš“ (zapsala ji ta první); pro hráče
+    // je to nový zápis a hra to tak řekne.
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Nejlevnější: jsi 1.");
+    expect(await udaj(s, "zebricek-hlaseni")).not.toContain("už zapsanou máš");
 
     // Server, který most nestihne ani za dobu, po kterou hra čeká, dostane vlastní větu, ne „zkus to za chvíli“.
     const pomaly = await cistaStranka();
-    await pomaly.addInitScript(() => {
-      // Čas hry běží rychleji: čekání mezi pokusy (5 s) i mez (100 s) uběhnou za pár sekund testu.
-      const puvodni = performance.now.bind(performance);
-      const od = puvodni();
-      performance.now = () => od + (puvodni() - od) * 40;
-      const casovac = window.setTimeout.bind(window);
-      window.setTimeout = ((f: TimerHandler, ms?: number, ...dalsi: unknown[]) => casovac(f, (ms ?? 0) / 40, ...dalsi)) as typeof window.setTimeout;
-    });
     await pomaly.route("**/api/zebricek", (cesta) =>
       cesta.request().method() === "POST" ? cesta.fulfill({ status: 504, contentType: "text/html", body: "<HTML>Inactivity Timeout</HTML>" }) : cesta.fallback(),
     );
@@ -442,6 +437,16 @@ describe("žebříčky", () => {
     await zkousej(pomaly);
     await otevriZebricek(pomaly);
     await pomaly.locator("#zebricek-jmeno").fill("Dana");
+    // Od téhle chvíle běží hodiny hry čtyřicetkrát rychleji a pětisekundové čekání mezi pokusy se
+    // krátí stejně: sto sekund, po které hra zápis zkouší, uběhne za pár sekund testu. Jiné
+    // časovače (čekání na odpověď serveru) zůstávají, jak jsou.
+    await pomaly.evaluate(() => {
+      const puvodni = performance.now.bind(performance);
+      const od = puvodni();
+      performance.now = () => od + (puvodni() - od) * 40;
+      const casovac = window.setTimeout.bind(window);
+      window.setTimeout = ((f: TimerHandler, ms?: number, ...dalsi: unknown[]) => casovac(f, ms === 5000 ? 125 : ms, ...dalsi)) as typeof window.setTimeout;
+    });
     await akce(pomaly, "zebricek-zapsat").click();
     await pomaly.locator('#okno-zebricek[data-stav="odmitnuto"]').waitFor({ timeout: 90_000 });
     expect(await udaj(pomaly, "zebricek-hlaseni")).toBe("Server most nestihl přepočítat: je na jeho zkoušku moc velký, nebo má server zrovna hodně práce. Zkus ho zapsat znovu za pár minut.");

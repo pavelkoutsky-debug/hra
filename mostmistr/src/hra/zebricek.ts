@@ -216,13 +216,18 @@ export function pripojZebricek(m: MoznostiZebricku): { otevri(): void } {
   }
 
   /** Věta o tom, kde hráč po zápisu stojí. */
-  function vetaOMiste(mira: MiraZebricku, misto: MistoHrace): string {
+  /**
+   * Věta o místě v žebříčku. `opakovano`: odpověď přišla až na opakovanou žádost, takže řádek
+   * mohla zapsat už ta první (brána na její odpověď nepočkala) a server teď hlásí „stejnou
+   * hodnotu už máš“; pro hráče je to ale jeho nový zápis.
+   */
+  function vetaOMiste(mira: MiraZebricku, misto: MistoHrace, opakovano: boolean): string {
     const hodnoty = { mira: t(`zebricek.mira.${mira}`), poradi: misto.poradi === null ? "" : celeCislo(misto.poradi), hodnota: zapisVyzvy(mira, misto.nejlepsi) };
     if (misto.obsazeno) return t("zebricek.misto.obsazeno", hodnoty);
     if (misto.poradi === null) return t("zebricek.misto.mimo", hodnoty);
-    if (misto.zlepseni) return t("zebricek.misto.zlepseni", hodnoty);
     // Stejná hodnota, jakou už hráč zapsanou má, není „horší most“.
     const shoda = zobrazenaHodnota(mira, misto.hodnota) === zobrazenaHodnota(mira, misto.nejlepsi);
+    if (misto.zlepseni || (opakovano && shoda)) return t("zebricek.misto.zlepseni", hodnoty);
     return t(shoda ? "zebricek.misto.shoda" : "zebricek.misto.beze.zmeny", hodnoty);
   }
 
@@ -260,7 +265,9 @@ export function pripojZebricek(m: MoznostiZebricku): { otevri(): void } {
       const telo: ZadostOZapis = { uroven: m.uroven, kod: most.kod, zkouska, otisk: most.otisk, verze: VERZE_FYZIKY, hrac: ja.hrac, jmeno: ja.jmeno };
       const od = performance.now();
       let odpoved = await zadost(ADRESA, CEKANI_NA_ZAPIS, telo);
+      let opakovano = false;
       while (serverPocita(odpoved) && performance.now() - od < NEJDELSI_ZAPIS) {
+        opakovano = true;
         okno.dataset.pocita = "ano";
         rekni(t("zebricek.pocita"));
         await new Promise((hotovo) => window.setTimeout(hotovo, ZKUSIT_ZNOVU_PO));
@@ -271,7 +278,7 @@ export function pripojZebricek(m: MoznostiZebricku): { otevri(): void } {
         zebricek = prijato.zebricek;
         for (const mira of MIRY_ZEBRICKU) {
           const misto = prijato.moje[mira];
-          if (misto) vety.push(vetaOMiste(mira, misto));
+          if (misto) vety.push(vetaOMiste(mira, misto, opakovano));
         }
         m.zapis({ co: "zapis", zkouska, stav: "ok", poradi: Math.min(999, ...Object.values(prijato.moje).map((x) => x.poradi ?? 999)) });
         continue;

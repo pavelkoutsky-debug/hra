@@ -440,70 +440,105 @@ describe("zápis do žebříčku", () => {
     expect(over.priprav(uroven, zakodujMost(RESENI["1-02"]!.pruchod))).toEqual({ stav: "pravidla" });
   });
 
-  it("most, který se právě ověřuje, druhá žádost nepouští znovu: dostane 202 „pocita“ a nic ji to nestojí", async () => {
-    // Netlify spojení bez odpovědi po 30 s ukončí (504) a funkce běží dál; hra to mezitím zkouší
-    // znovu. Tady zkoušku „v běhu“ představuje ověřovač, který nedoběhne (jako funkce ukončená
-    // hostingem): značka po něm zůstane.
-    const sklad = new SkladVPameti();
-    const zacatek = new Date("2026-11-24T10:00:00Z");
-    let beznych = 0;
-    const nedobehne: Overovac = {
-      ...levny,
-      bezna: () => {
-        beznych += 1;
-        throw new Error("funkce skončila dřív než zkouška");
-      },
+  /**
+   * Úložiště funkce, kterou hosting ukončil uprostřed zkoušky: značka běžící zkoušky se zapíše,
+   * ale smazat ji už nemá kdo (dokud je `ukoncena`).
+   */
+  class SkladUkonceneFunkce extends SkladVPameti {
+    ukoncena = true;
+    override smaz(klic: string): Promise<void> {
+      return this.ukoncena && klic.startsWith("overuje/") ? Promise.resolve() : super.smaz(klic);
+    }
+  }
+  /** Ověřovač, jehož zkouška nedoběhne (funkce skončila dřív); počítá, kolikrát se o ni pokusil. */
+  function nedobehne(): { over: Overovac; pokusu: () => number } {
+    let pokusu = 0;
+    const spadni = (): never => {
+      pokusu += 1;
+      throw new Error("funkce skončila dřív než zkouška");
     };
+    return { over: { ...levny, bezna: spadni, zlom: spadni }, pokusu: () => pokusu };
+  }
+
+  it("most, který se právě ověřuje, druhá žádost nepouští znovu: dostane 202 „pocita“ a nic ji to nestojí", async () => {
+    // Netlify spojení bez odpovědi po 30 s ukončí (504) a funkce běží dál; hra to mezitím zkouší znovu.
+    const sklad = new SkladUkonceneFunkce();
+    const zacatek = new Date("2026-11-24T10:00:00Z");
+    const pomaly = nedobehne();
     const zadost = (): Request => posli(zapis(mistrovsky, { kod: "kod-7", otisk: "0".repeat(16) }));
-    await expect(obsluzZebricek(zadost(), server(sklad, zacatek), nedobehne)).rejects.toThrow();
+    await expect(obsluzZebricek(zadost(), server(sklad, zacatek), pomaly.over)).rejects.toThrow();
     expect(await sklad.klice("overuje/")).toHaveLength(1);
     expect((await sklad.klice("overuje/"))[0]).toMatch(/^overuje\/2026-11-24\/[0-9a-f]+\.json$/);
 
     // Za pět sekund i těsně před koncem platnosti značky: žádná další zkouška, žádné místo ve stropu.
     for (const posun of [5_000, OVERUJE_NEJDELE - 1]) {
-      const odpoved = await obsluzZebricek(zadost(), server(sklad, new Date(zacatek.getTime() + posun)), nedobehne);
+      const odpoved = await obsluzZebricek(zadost(), server(sklad, new Date(zacatek.getTime() + posun)), pomaly.over);
       expect(odpoved.status).toBe(202);
       expect((await telo(odpoved)).kod).toBe("pocita");
     }
-    expect(beznych).toBe(1);
+    // Hodiny druhého běhu funkce o pár sekund pozadu značku nezneplatní.
+    expect((await obsluzZebricek(zadost(), server(sklad, new Date(zacatek.getTime() - 3_000)), pomaly.over)).status).toBe(202);
+    expect(pomaly.pokusu()).toBe(1);
     const pocty = await poctyZebricku(sklad, "2026-11-24");
     expect(pocty.overeni).toBe(1);
     expect(pocty.odmitnuto).toEqual({});
-    // Jiný most a jiný hráč s týmž mostem: značka patří mostu, ne hráči.
+    // Značka patří mostu, ne hráči: jiný most projde, jiný hráč s týmž mostem čeká taky.
+    sklad.ukoncena = false;
     expect((await obsluzZebricek(posli(zapis(mistrovsky, { kod: "kod-8", otisk: "0".repeat(16) })), server(sklad, zacatek), levny)).status).toBe(200);
-    expect((await obsluzZebricek(posli(zapis(mistrovsky, { kod: "kod-7", otisk: "0".repeat(16), hrac: BORIS, jmeno: "Boris" })), server(sklad, zacatek), nedobehne)).status).toBe(202);
+    sklad.ukoncena = true;
+    expect((await obsluzZebricek(posli(zapis(mistrovsky, { kod: "kod-7", otisk: "0".repeat(16), hrac: BORIS, jmeno: "Boris" })), server(sklad, zacatek), pomaly.over)).status).toBe(202);
 
     // Značka, která dožila (zkouška se do limitu funkce nevešla), další pokus nezastaví; a zkouška,
     // která doběhne, značku uklidí a most si zapamatuje.
+    sklad.ukoncena = false;
     const pozdeji = server(sklad, new Date(zacatek.getTime() + OVERUJE_NEJDELE));
     const napodruhe = await obsluzZebricek(zadost(), pozdeji, levny);
     expect(napodruhe.status).toBe(200);
     expect(await sklad.klice("overuje/")).toEqual([]);
-    expect((await obsluzZebricek(zadost(), pozdeji, nedobehne)).status).toBe(200);
-    expect(beznych).toBe(1);
+    expect((await obsluzZebricek(zadost(), pozdeji, pomaly.over)).status).toBe(200);
+    expect(pomaly.pokusu()).toBe(1);
+  });
+
+  it("zkouška puštěná těsně před půlnocí je po půlnoci pořád „v běhu“", async () => {
+    const sklad = new SkladUkonceneFunkce();
+    const pomaly = nedobehne();
+    const zadost = (): Request => posli(zapis(mistrovsky, { kod: "kod-7", otisk: "0".repeat(16) }));
+    await expect(obsluzZebricek(zadost(), server(sklad, new Date("2026-11-24T23:59:40Z")), pomaly.over)).rejects.toThrow();
+    const poPulnoci = await obsluzZebricek(zadost(), server(sklad, new Date("2026-11-25T00:00:05Z")), pomaly.over);
+    expect(poPulnoci.status).toBe(202);
+    expect(pomaly.pokusu()).toBe(1);
+    expect((await poctyZebricku(sklad, "2026-11-25")).overeni).toBe(0);
+  });
+
+  it("zkouška, která skončí chybou, po sobě značku nenechá: další pokus nečeká na nic, co neběží", async () => {
+    const sklad = new SkladVPameti();
+    const p = server(sklad);
+    const pomaly = nedobehne();
+    const zadost = (): Request => posli(zapis(mistrovsky, { kod: "kod-7", otisk: "0".repeat(16) }));
+    await expect(obsluzZebricek(zadost(), p, pomaly.over)).rejects.toThrow();
+    expect(await sklad.klice("overuje/")).toEqual([]);
+    await expect(obsluzZebricek(zadost(), p, pomaly.over)).rejects.toThrow();
+    expect(pomaly.pokusu()).toBe(2);
+    expect((await obsluzZebricek(zadost(), p, levny)).status).toBe(200);
   });
 
   it("totéž platí pro zkoušku do zlomu: běžící zlom se nepouští podruhé", async () => {
-    const sklad = new SkladVPameti();
+    const sklad = new SkladUkonceneFunkce();
     const zacatek = new Date("2026-11-24T10:00:00Z");
-    let zlomu = 0;
-    const nedobehne: Overovac = {
-      ...levny,
-      zlom: () => {
-        zlomu += 1;
-        throw new Error("funkce skončila dřív než zkouška");
-      },
-    };
+    const pomaly = nedobehne();
     const bezna = zapis(mistrovsky, { kod: "kod-9", otisk: "0".repeat(16) });
     const zlom = { ...bezna, zkouska: "zlom" as const, otisk: "1".repeat(16) };
-    expect((await obsluzZebricek(posli(bezna), server(sklad, zacatek), nedobehne)).status).toBe(200);
-    await expect(obsluzZebricek(posli(zlom), server(sklad, zacatek), nedobehne)).rejects.toThrow();
-    const hned = await obsluzZebricek(posli(zlom), server(sklad, new Date(zacatek.getTime() + 8_000)), nedobehne);
+    sklad.ukoncena = false;
+    expect((await obsluzZebricek(posli(bezna), server(sklad, zacatek), levny)).status).toBe(200);
+    sklad.ukoncena = true;
+    await expect(obsluzZebricek(posli(zlom), server(sklad, zacatek), pomaly.over)).rejects.toThrow();
+    const hned = await obsluzZebricek(posli(zlom), server(sklad, new Date(zacatek.getTime() + 8_000)), pomaly.over);
     expect(hned.status).toBe(202);
     expect((await telo(hned)).kod).toBe("pocita");
-    expect(zlomu).toBe(1);
+    expect(pomaly.pokusu()).toBe(1);
     // Běžný zápis téhož mostu mezitím projde: jeho zkoušku server zná.
-    expect((await obsluzZebricek(posli(bezna), server(sklad, new Date(zacatek.getTime() + 8_000)), nedobehne)).status).toBe(200);
+    expect((await obsluzZebricek(posli(bezna), server(sklad, new Date(zacatek.getTime() + 8_000)), pomaly.over)).status).toBe(200);
+    sklad.ukoncena = false;
     const pozdeji = await obsluzZebricek(posli(zlom), server(sklad, new Date(zacatek.getTime() + OVERUJE_NEJDELE)), levny);
     expect(pozdeji.status).toBe(200);
     expect(await sklad.klice("overuje/")).toEqual([]);
