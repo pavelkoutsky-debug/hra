@@ -48,7 +48,7 @@ export async function uklid(sklad: SkladZaznamu, ted: Date): Promise<{ smazano: 
   // Soli a počitadla adres: starší než dva dny už nic nepočítají.
   const mezAdres = denPred(dnes, DNI_UCHOVANI_ADRES);
   await smaz((await sklad.klice("sul/")).filter((k) => k < `sul/${mezAdres}`));
-  const slozkyPocitadel = [...(await sklad.slozky("adresa/")).map((druh) => `adresa/${druh}/`), "zebricek-adresa/"];
+  const slozkyPocitadel = [...(await sklad.slozky("adresa/")).map((druh) => `adresa/${druh}/`), "zebricek-adresa/", "overuje/"];
   for (const slozka of slozkyPocitadel) {
     for (const den of await sklad.slozky(slozka)) {
       if (zbyva <= 0) return { smazano: NEJVIC_UKLIDU, hotovo: false };

@@ -49,7 +49,7 @@ Den jde stáhnout jako JSON k vlastnímu rozboru a smazat.
 
 Adresy, na které hra posílá deník a zpětnou vazbu, jsou veřejné; jinak by na ně hra nemohla. Proti zahlcení mají:
 
-- omezení počtu žádostí z jedné adresy (deník 30 za minutu, zpětná vazba 10 za minutu, správa 120 za minutu; nastavení je u funkcí v `netlify/functions/`),
+- omezení počtu žádostí z jedné adresy (deník 30 za minutu, zpětná vazba 10 za minutu, správa 120 za minutu; nastavení je u funkcí v `netlify/functions/`); na ostrém webu se po zveřejnění z prostředí vývoje neprojevilo a čeká na zkoušku z jednoho připojení, viz `docs/ZVEREJNENI.md`),
 - strop na síťovou adresu a den: deník 5 000 dávek, zpětná vazba 20 zpráv, žebříček 60 zkoušek (adresa se bere jen z hlavičky Netlify `x-nf-client-connection-ip`, u IPv6 jen předpona /64; neukládá se, počitadla jsou pod jejím otiskem se solí dne a po dvou dnech se mažou i se solí),
 - společný strop 300 zpráv zpětné vazby a 1 000 zkoušek žebříčku za den,
 - žebříček navíc odmítne zápis, u kterého adresu nepozná, a přezdívku z krátkého seznamu hrubých výrazů,
@@ -80,5 +80,7 @@ Kdyby někdo deník přesto zaplnil nesmysly, den jde na stránce správce smaza
 Klíče v úložišti: `denik/<den>/<čas příjmu>-<hráč>-<začátek sezení>-<sezení>-<pořadí>-<náhodný dovětek>.json` (nic se nepřepisuje; čas příjmu je vpředu, aby nové dávky přibývaly na konec a souhrn nemusel číst znovu to, co už započítal), `vazba/<číslo>.json` a k ní malý záznam do seznamu `vazba-seznam/<číslo>.json`, `vytah/<den>.json` (uložený mezivýsledek souhrnu dne i s klíčem poslední započtené dávky; jde kdykoli smazat, spočítá se znovu; po půlnoci UTC se den jednou přepočítá celý a pak se už jen čte). Úložiště `mostmistr` patří ostrému webu, `mostmistr-nahled` náhledům.
 
 ## Co ověřeno není
+
+Po zveřejnění (25. 11. 2026) se ostrý web ověřoval přímo; co prošlo, co se našlo a co zbývá, je v `docs/ZVEREJNENI.md` („Co se po zveřejnění ověřilo“). Odstavec níže popisuje stav před zveřejněním.
 
 Funkce Netlify se z vývojového prostředí nedají zavolat. Neověřené je proto hlavně: zda Netlify přijme nastavení omezení počtu žádostí tak, jak je zapsané (podle dokumentace ano), zda funkce pozná druh nasazení z kontextu (jinak všechno skončí v úložišti náhledů a stránka správce to řekne) a zda kontrola hlavičky Origin sedí s adresou, pod kterou funkce žádost vidí (jinak by deník končil chybou 403 a na stránce správce by žádný nebyl). Otestovaná je celá cesta od hry po stránku správce se skutečnou serverovou obsluhou a se skutečnou knihovnou Netlify Blobs proti jejímu místnímu serveru; samotné nasazení na Netlify ověří až první náhled pull requestu.

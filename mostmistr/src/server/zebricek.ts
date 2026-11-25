@@ -2,6 +2,7 @@
 //
 //   GET  /api/zebricek?uroven=1-01     žebříček úrovně (tři měřítka, nejlepší řádky)
 //   POST /api/zebricek                 zápis mostu (`ZadostOZapis`) → 200 `OdpovedNaZapis`,
+//                                      202 { chyba, kod: "pocita" } (týž most se právě ověřuje),
 //                                      nebo 4xx/5xx { chyba, kod } (`KodOdmitnuti`)
 //
 // Hře se nevěří nic: most z kódu server sám postaví, zkontroluje proti pravidlům úrovně a pustí
@@ -17,9 +18,16 @@
 // měřítku má jeden most (nezávisle na id a pořadí kreslení) jediný řádek, toho, kdo ho zapsal
 // první. Opsaný most poslaný pod stovkou čísel hráče tak žebříček nezaplní.
 //
+// Zkouška velkého mostu trvá na serveru déle, než Netlify čeká na odpověď (změřeno po zveřejnění:
+// most autora 8-01 27 až 31 s; Netlify spojení bez odpovědi po 30 s ukončí chybou 504, funkce ale
+// běží dál až do svého limitu 60 s a výsledek si zapamatuje). Hra proto po takové chybě zkouší
+// zápis znovu a server si na dobu zkoušky dělá značku: druhá žádost o týž most zkoušku nepouští
+// podruhé (stála by čas funkce i místo ve stropech), dostane 202 s kódem `pocita`.
+//
 // Úložiště (v je verze fyziky a verze pravidel žebříčků, např. `v9.1`):
 //   zebricek/<v>/<úroveň>-<otisk zadání>.json            zápisy tří měřítek (`UlozenyZebricek`)
 //   overeno/<v>/<úroveň>-<otisk>/<otisk kódu>.json       výsledek ověření mostu (`OverenyMost`)
+//   overuje/<den>/<otisk klíče a zkoušky>.json           značka zkoušky, která právě běží (`uklid` maže staré dny)
 //   zebricek-den/<den>.json                              počty dne (ověření, zápisy, odmítnutí)
 //   adresa/zebricek/<den>/<otisk adresy>.json           kolik zkoušek si ten den vyžádala skupina adres (`adresa.ts`)
 // Žebříček se zapisuje s podmínkou (`zapisPokud`): dva zápisy ve stejnou chvíli se nepřepíšou.
@@ -206,6 +214,47 @@ export function verejnyZebricek(uroven: string, verze: number, ulozeny: UlozenyZ
   return { uroven, verze, miry };
 }
 
+/**
+ * Jak dlouho platí značka běžící zkoušky, ms. Funkce Netlify běží nejvýš 60 s; značka musí platit
+ * déle, než hra zápis zkouší znovu (`NEJDELSI_ZAPIS` v `src/hra/zebricek.ts`), jinak by most,
+ * který se do limitu funkce nevejde, při každém opakování pustil zkoušku znovu.
+ */
+export const OVERUJE_NEJDELE = 120_000;
+
+const klicZnacky = (den: string, otisk: string): string => `overuje/${den}/${otisk}.json`;
+
+/**
+ * Běží právě zkouška s tímhle otiskem? Značka je pod dnem, kdy zkouška začala, takže se hledá
+ * i pod včerejškem (zkouška puštěná těsně před půlnocí). Značka starší než `OVERUJE_NEJDELE`
+ * neplatí; na znaménku stáří nezáleží, hodiny dvou běhů funkce nemusí jít stejně.
+ */
+async function overujeSe(p: ProstrediServeru, otisk: string): Promise<boolean> {
+  const ted = p.ted().getTime();
+  for (const den of new Set([denZ(new Date(ted)), denZ(new Date(ted - OVERUJE_NEJDELE))])) {
+    const znacka = await p.sklad.cti(klicZnacky(den, otisk));
+    const od = typeof znacka === "object" && znacka !== null ? (znacka as { od?: unknown }).od : undefined;
+    if (typeof od === "number" && Math.abs(ted - od) < OVERUJE_NEJDELE) return true;
+  }
+  return false;
+}
+
+/**
+ * Pustí zkoušku se značkou, že běží. Značku po zkoušce smaže, i když zkouška skončí chybou (jinak
+ * by hráč dvě minuty slyšel „server most ověřuje“ o zkoušce, která už neběží); zůstane jen po
+ * funkci, kterou ukončil hosting, a o tu jde. Mezi dotazem na značku a jejím zápisem je krátké
+ * okno: dvě žádosti o týž nový most ve stejné desetině sekundy pustí zkoušky dvě. Stojí to jednu
+ * zkoušku navíc a místo ve stropech, nic se tím nerozbije.
+ */
+async function seZnackou<T>(p: ProstrediServeru, otisk: string, zkouska: () => Promise<T>): Promise<T> {
+  const znacka = klicZnacky(denZ(p.ted()), otisk);
+  await p.sklad.zapis(znacka, { od: p.ted().getTime() });
+  try {
+    return await zkouska();
+  } finally {
+    await p.sklad.smaz(znacka);
+  }
+}
+
 function odmitni(stav: number, kod: KodOdmitnuti, zprava: string): Response {
   return odpoved(stav, { chyba: zprava, kod });
 }
@@ -279,6 +328,9 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
     duvod === "plno"
       ? odmitnuto(429, "plno", "server dnes už ověřil tolik mostů, kolik smí; zkus to prosím zítra")
       : odmitnuto(429, "adresa", "z téhle adresy dnes server ověřil už tolik mostů, kolik smí; zkus to prosím zítra");
+  // Týž most se právě ověřuje jinou žádostí (typicky tou, kterou Netlify po 30 s ukončil): není to
+  // odmítnutí, do počtů dne nejde a hra to zkusí za chvíli znovu.
+  const pocita = (): Response => odmitni(202, "pocita", "server tenhle most právě ověřuje; zkus to za chvíli znovu");
   if (!z) return odmitnuto(400, "tvar", "zápis do žebříčku nemá očekávaný tvar");
   // Bez adresy by strop na adresu nešel počítat: zápis se odmítne dřív, než cokoli stojí.
   const skupina = adresaZadosti(zadost, p);
@@ -302,11 +354,16 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
     // Zkouška do zlomu se pouští jen mostu, kterému už server ověřil běžnou zkoušku: jedna žádost
     // tak stojí nejvýš jednu zkoušku a nejde jí vynutit dvě s vymyšleným otiskem.
     if (z.zkouska === "zlom") return odmitnuto(409, "nejdriv", "nejdřív zapiš most po běžné zkoušce, potom po zkoušce do zlomu");
+    const znacka = await otiskTextu(`${klicMostu} bezna`);
+    if (await overujeSe(p, znacka)) return pocita();
     const strop = await rezervujZkousku(p, skupina);
     if (strop) return plno(strop);
-    const bezna = over.bezna(uroven, z.kod);
-    overeny = { ...bezna, tvar: await otiskTextu(pripraveny.kanon), zlom: null, ...(bezna.plati ? { kod: z.kod } : {}) };
-    await p.sklad.zapis(klicMostu, overeny);
+    overeny = await seZnackou(p, znacka, async () => {
+      const bezna = over.bezna(uroven, z.kod);
+      const novy: OverenyMost = { ...bezna, tvar: await otiskTextu(pripraveny.kanon), zlom: null, ...(bezna.plati ? { kod: z.kod } : {}) };
+      await p.sklad.zapis(klicMostu, novy);
+      return novy;
+    });
   }
   // Otisk běžné zkoušky musí sedět u zápisu z běžné zkoušky, otisk zlomu u zápisu ze zlomu.
   if (z.zkouska === "bezna" && z.otisk !== overeny.otisk) {
@@ -315,10 +372,16 @@ export async function obsluzZebricek(zadost: Request, p: ProstrediServeru, over:
   if (!overeny.plati) return odmitnuto(422, "neprosel", "most na serveru zkouškou neprošel bez porušení");
   if (z.zkouska === "zlom") {
     if (overeny.zlom === null) {
+      const znacka = await otiskTextu(`${klicMostu} zlom`);
+      if (await overujeSe(p, znacka)) return pocita();
       const strop = await rezervujZkousku(p, skupina);
       if (strop) return plno(strop);
-      overeny = { ...overeny, zlom: over.zlom(uroven, z.kod) ?? false };
-      await p.sklad.zapis(klicMostu, overeny);
+      const bezZlomu = overeny;
+      overeny = await seZnackou(p, znacka, async () => {
+        const novy: OverenyMost = { ...bezZlomu, zlom: over.zlom(uroven, z.kod) ?? false };
+        await p.sklad.zapis(klicMostu, novy);
+        return novy;
+      });
     }
     if (!overeny.zlom) return odmitnuto(422, "neprosel", "zkouška do zlomu na serveru neproběhla");
     if (z.otisk !== overeny.zlom.otisk) {

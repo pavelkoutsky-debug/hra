@@ -90,7 +90,8 @@ export interface OdpovedNaZapis {
  * kolik smí z jedné adresy. `nejdriv`: zápis ze zkoušky do zlomu přišel dřív než zápis z běžné
  * zkoušky téhož mostu. `soubeh`: žebříček se zrovna měnil a zápis se nepovedl (zkusit znovu).
  * `bez-adresy`: server nepozná, odkud zápis přichází, a bez toho stropy nehlídá. `prezdivka`:
- * přezdívka je na seznamu nevhodných výrazů (`src/server/prezdivky.ts`).
+ * přezdívka je na seznamu nevhodných výrazů (`src/server/prezdivky.ts`). `pocita` (odpověď 202)
+ * není odmítnutí: server týž most právě ověřuje jinou žádostí a hra to má za chvíli zkusit znovu.
  */
 export const KODY_ODMITNUTI = [
   "tvar",
@@ -106,6 +107,7 @@ export const KODY_ODMITNUTI = [
   "soubeh",
   "bez-adresy",
   "prezdivka",
+  "pocita",
 ] as const;
 export type KodOdmitnuti = (typeof KODY_ODMITNUTI)[number];
 
