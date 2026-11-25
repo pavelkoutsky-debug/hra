@@ -444,6 +444,8 @@ describe("úklid starých dat", () => {
       await sklad.zapis(`adresa/denik/${denPred(dni)}/0123456789abcdef01234567.json`, { pocet: 1 });
       await sklad.zapis(`adresa/vazba/${denPred(dni)}/bez-adresy.json`, { pocet: 1 });
       await sklad.zapis(`zebricek-adresa/${denPred(dni)}/0123456789abcdef01234567.json`, { overeni: 1 });
+      // Značka zkoušky, kterou server nedopočítal (funkci ukončil hosting): zůstala by navždy.
+      await sklad.zapis(`overuje/${denPred(dni)}/0123abcd.json`, { od: 1 });
     }
     for (const dni of [DNI_UCHOVANI_DENIKU + 1, DNI_UCHOVANI_DENIKU - 1]) {
       const den = denPred(dni);
@@ -462,8 +464,9 @@ describe("úklid starých dat", () => {
 
   it("smaže soli a počitadla starší než dva dny, deník po roce a zprávy po dvou letech; nic jiného", async () => {
     const sklad = await naplnene();
-    expect(await uklid(sklad, new Date(`${DNES}T05:00:00Z`))).toEqual({ smazano: 4 * 2 + 2 + 2, hotovo: true });
+    expect(await uklid(sklad, new Date(`${DNES}T05:00:00Z`))).toEqual({ smazano: 5 * 2 + 2 + 2, hotovo: true });
     expect(await sklad.klice("sul/")).toEqual([0, 1, 2].map((d) => `sul/${denPred(d)}.json`).reverse());
+    expect(await sklad.slozky("overuje/")).toEqual([2, 1, 0].map(denPred));
     expect(await sklad.slozky("adresa/denik/")).toEqual([2, 1, 0].map(denPred));
     expect(await sklad.slozky("zebricek-adresa/")).toEqual([2, 1, 0].map(denPred));
     expect(await sklad.slozky("denik/")).toEqual([denPred(DNI_UCHOVANI_DENIKU - 1)]);

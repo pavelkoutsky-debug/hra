@@ -50,7 +50,8 @@ async function cistaStranka(volby: Parameters<Browser["newContext"]>[0] = {}): P
   stranka.on("console", (zprava) => {
     // Odmítnutý zápis je odpověď 4xx: prohlížeč ji hlásí do konzole, chyba hry to není.
     // Server, který test schválně odřízne, taky ne.
-    if (zprava.type() === "error" && !/status of 4\d\d|net::ERR_FAILED/.test(zprava.text())) chyby.push(zprava.text());
+    // Odpověď 504 je brána hostingu, která na zkoušku velkého mostu nepočkala (test ji napodobuje).
+    if (zprava.type() === "error" && !/status of (4\d\d|504)|net::ERR_FAILED/.test(zprava.text())) chyby.push(zprava.text());
   });
   return stranka;
 }
@@ -383,6 +384,68 @@ describe("žebříčky", () => {
     await akce(s, "zebricek-zapsat").click({ force: true });
     expect(await okno(s).getAttribute("data-stav")).toBe("nedostupny");
   }, 200_000);
+
+  it("velký most: brána na odpověď nepočká (504), hra to zkouší znovu a zápis dokončí sama", async () => {
+    // Na Netlify trvá zkouška největšího mostu přes 30 s: brána spojení ukončí chybou 504, funkce
+    // ale doběhne a výsledek si zapamatuje (změřeno na ostrém webu po zveřejnění). Tady server
+    // první zápis zpracuje, hra místo jeho odpovědi dostane 504; na druhý pokus odpoví „pocita“
+    // (server týž most ještě ověřuje) a třetí pokus projde ke skutečnému serveru.
+    const s = await cistaStranka();
+    const pokusy: string[] = [];
+    await s.route("**/api/zebricek", async (cesta) => {
+      if (cesta.request().method() !== "POST") return cesta.fallback();
+      pokusy.push(new Date().toISOString());
+      if (pokusy.length === 1) {
+        await cesta.fetch();
+        return cesta.fulfill({ status: 504, contentType: "text/html", body: "<HTML><HEAD><TITLE>Inactivity Timeout</TITLE></HEAD></HTML>" });
+      }
+      if (pokusy.length === 2) {
+        return cesta.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ chyba: "server tenhle most právě ověřuje", kod: "pocita" }) });
+      }
+      return cesta.fallback();
+    });
+    await otevriUroven(s, "1-02");
+    await nactiMost(s, RESENI["1-02"]!.mistrovska);
+    await zkousej(s);
+    await otevriZebricek(s);
+    await s.locator("#zebricek-jmeno").fill("Cyril");
+    await akce(s, "zebricek-zapsat").click();
+    // Dokud server počítá, okno to říká a zůstává ve stavu „zapisuje“.
+    await s.locator('#okno-zebricek[data-pocita="ano"]').waitFor({ timeout: 30_000 });
+    expect(await okno(s).getAttribute("data-stav")).toBe("zapisuje");
+    expect(await udaj(s, "zebricek-hlaseni")).toBe("Server most pořád přepočítává; u největších mostů to trvá až minutu. Nech okno otevřené, zápis se dokončí sám.");
+    await s.screenshot({ path: `${SLOZKA}/z6-server-pocita.png` });
+    await s.locator('#okno-zebricek[data-stav="zapsano"]').waitFor({ timeout: 60_000 });
+    expect(pokusy).toHaveLength(3);
+    expect(await okno(s).getAttribute("data-pocita")).toBeNull();
+    // Řádek zapsal už první pokus (ten, na jehož odpověď brána nepočkala): hráč v žebříčku je.
+    expect(await radky(s, "cena").count()).toBe(1);
+    expect(await radky(s, "cena").first().getAttribute("data-ja")).toBe("ano");
+    expect(bezMezer(await radky(s, "cena").first().innerText())).toContain("Cyril");
+    expect(await udaj(s, "zebricek-hlaseni")).toContain("Nejlevnější:");
+
+    // Server, který most nestihne ani za dobu, po kterou hra čeká, dostane vlastní větu, ne „zkus to za chvíli“.
+    const pomaly = await cistaStranka();
+    await pomaly.addInitScript(() => {
+      // Čas hry běží rychleji: čekání mezi pokusy (5 s) i mez (100 s) uběhnou za pár sekund testu.
+      const puvodni = performance.now.bind(performance);
+      const od = puvodni();
+      performance.now = () => od + (puvodni() - od) * 40;
+      const casovac = window.setTimeout.bind(window);
+      window.setTimeout = ((f: TimerHandler, ms?: number, ...dalsi: unknown[]) => casovac(f, (ms ?? 0) / 40, ...dalsi)) as typeof window.setTimeout;
+    });
+    await pomaly.route("**/api/zebricek", (cesta) =>
+      cesta.request().method() === "POST" ? cesta.fulfill({ status: 504, contentType: "text/html", body: "<HTML>Inactivity Timeout</HTML>" }) : cesta.fallback(),
+    );
+    await otevriUroven(pomaly, "1-02");
+    await nactiMost(pomaly, RESENI["1-02"]!.rozpocet);
+    await zkousej(pomaly);
+    await otevriZebricek(pomaly);
+    await pomaly.locator("#zebricek-jmeno").fill("Dana");
+    await akce(pomaly, "zebricek-zapsat").click();
+    await pomaly.locator('#okno-zebricek[data-stav="odmitnuto"]').waitFor({ timeout: 90_000 });
+    expect(await udaj(pomaly, "zebricek-hlaseni")).toBe("Server most nestihl přepočítat: je na jeho zkoušku moc velký, nebo má server zrovna hodně práce. Zkus ho zapsat znovu za pár minut.");
+  }, 400_000);
 
   it("správce vidí zápisy i s mostem a umí smazat nevhodnou přezdívku", async () => {
     const hlavicky = { authorization: `Bearer ${HESLO}` };

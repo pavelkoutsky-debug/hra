@@ -29,6 +29,7 @@ Poslední aktualizace: 24. 11. 2026
 | M15 Dílna a Havarijní komise | Hotovo (24. 11. 2026): pískoviště jako dílna a režim Havarijní komise; viz „M15 — výsledek“ |
 | M16 Žebříčky a denní rozbor | Kód hotový a po třech recenzích opravený (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. **Naplánovaná úloha se zakládá až po zveřejnění hry** (rozhodnutí zadavatele 24. 11. 2026; postup je v `docs/ZVEREJNENI.md`) |
 | M17 Před zveřejněním | Hotovo (24. 11. 2026): závěrečná recenze celku třemi nezávislými recenzenty, známé slabiny (8-02, 4-04), okno Soukromí a kontakt, zpevnění serveru, web připravený na zveřejnění, shoda výpočtu ve třech strojích JavaScriptu; viz „M17 — výsledek“ |
+| Zveřejnění | **Hra je veřejná od 25. 11. 2026** (verze 0.23.1): zadavatel nastavil hesla a vypnul přihlášení, denní rozbor běží, ostrý web prošel zkouškami z `docs/ZVEREJNENI.md`; nalezený časový limit zápisu velkého mostu do žebříčku je opravený; viz „Po zveřejnění“ |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -46,8 +47,29 @@ Poslední aktualizace: 24. 11. 2026
 - **Pomocným agentům došel 24. 11. limit hlavního modelu (obnoví se 29. 11.)**; návrhy úrovní a recenze od té doby běží na záložním modelu (Opus).
 - **M15 Dílna a Havarijní komise** je hotový, viz „M15 — výsledek“.
 - **M16 Žebříčky a denní rozbor**: kód je hotový a po recenzích opravený, viz „M16 — výsledek“ a „Nezávislé recenze M16“. Naplánovaná úloha denního rozboru se zakládá až po zveřejnění (viz M17), takže druhá půlka kritéria M16 („rozbor za poslední den vznikne bez zásahu člověka“) do té doby splněná není.
-- **Hra není veřejná.** Web `mostmistr.netlify.app` je za přihlášením Netlify a vidí ho jen zadavatel; zveřejní ho, až se řekne, že je hotovo. Co k tomu udělat a co potom ověřit, je v `docs/ZVEREJNENI.md`.
-- **M17 Před zveřejněním** (zadavatel 24. 11. 2026: dořešit známé slabiny a pustit závěrečnou recenzi celku) je hotový, viz „M17 — výsledek“. Zbývá to, co bez zadavatele nejde: zveřejnění samo, hesla na Netlify, kontrola `/otisky.html` ve skutečném Firefoxu a Safari a po zveřejnění založení denní úlohy.
+- **Hra je veřejná od 25. 11. 2026** (`mostmistr.netlify.app`; zadavatel nastavil hesla správce a rozboru a vypnul přihlášení Netlify). Co se při tom dělalo a ověřilo, je v `docs/ZVEREJNENI.md` a níž v oddíle „Po zveřejnění“.
+- **M17 Před zveřejněním** je hotový, viz „M17 — výsledek“.
+- **Denní rozbor běží** (kritérium M16 „rozbor za poslední den vznikne bez zásahu člověka“ je splněné): naplánovaná úloha každý den ve 4:43 našeho času, první rozbor je za 24. 11. 2026. Návrhy dalších verzí teď mají vycházet z něj (stránka správce, záložka Denní rozbor).
+- **Zbývá na zadavateli:** `/otisky.html` ve skutečném Firefoxu, v Safari a na telefonu, náhled odkazu v chatu, zkouška omezení počtu žádostí z jednoho připojení, smazání zkušebních dat ve správě a po týdnu spotřeba v přehledu Netlify.
+
+## Po zveřejnění (25. 11. 2026)
+
+Verze hry 0.23.1. Fyzika, formáty ani uložený postup se nemění.
+
+**Co se ověřilo na ostrém webu** (bezhlavý prohlížeč a přímé žádosti z prostředí denního rozboru, se záznamem hraní vypnutým): načtení hry bez přihlášení a bez chyby v konzoli, zpráva z okna Napiš nám, zápis mostu do žebříčku a jeho přečtení (server adresu hráče z hlavičky Netlify dostává), dva zápisy do téhož žebříčku ve stejnou chvíli (oba se zapsaly), odkaz na most u příjemce, stažení obrázku mostu a listu, zvuk, zkušebna, stránka zvuků, správa, shoda výpočtu (23 z 23 otisků), stránka 404, značky a obrázek náhledu odkazu, heslo rozboru a první běh denní úlohy. Podrobně v `docs/ZVEREJNENI.md`.
+
+**Nález a oprava: zápis velkého mostu do žebříčku končil chybou.** Server ověřuje most autora 8-01 běžnou zkouškou 27 až 31 s (funkce Netlify je asi třikrát pomalejší než vývojový stroj: místně 9,7 s) a Netlify spojení, na kterém 30 s nic nepřišlo, ukončí chybou 504. Funkce přitom doběhne (limit 60 s) a výsledek si zapamatuje: řádek se zapsal, ale hráč viděl „Zápis se nepovedl. Zkus to za chvíli.“ Oprava:
+- **Hra** po odpovědi brány (502, 504) a po odpovědi `pocita` zkouší zápis sama znovu po 5 s, nejdéle 100 s od první žádosti, a říká, že server most pořád přepočítává; když to server nestihne ani tak, řekne to vlastní větou (`zebricek.odmitnuto.pocita`).
+- **Server** si na dobu zkoušky dělá značku (`overuje/<den>/…`, platí 120 s): druhá žádost o týž most zkoušku nepouští podruhé, nestojí místo ve stropech ani se nepočítá mezi odmítnutí a dostane 202 s kódem `pocita`. Značku po zkoušce maže; ty, po kterých funkce nedoběhla, uklidí denní úklid.
+- Texty říkají „půl minuty na každou zkoušku“ místo „čtvrt minuty“.
+- Testy: `test/zebricek.test.ts` (značka běžné zkoušky i zlomu, platnost, stropy), `test/server-ochrana.test.ts` (úklid značek), `test/e2e/zebricek.e2e.ts` (brána odpoví 504, hra zápis dokončí sama; server, který nestihne, dostane vlastní větu).
+- Doby ověření ostatních úrovní (most autora pro mistrovskou, místní měření × 3,2): 5-01 asi 17 s, zlom 6-04 asi 16 s, 6-05 asi 12 s, 4-04 asi 10 s, ostatní pod 10 s. Větší most hráče na 8-01 nebo 5-01 se přes 30 s dostane snadno; do 60 s ho oprava pokryje.
+
+**Nepotvrzeno: omezení počtu žádostí na Netlify.** Z prostředí vývoje se neprojevilo žádné ze čtyř pravidel u funkcí (ani 46 žádostí za minutu při stropu 10). Příčina není jistá (žádosti z více adres, nebo tarif pravidla neuplatňuje); zkouška z jednoho připojení je v `docs/ZVEREJNENI.md`. Stropy na adresu a den, které hlídá server sám, platí nezávisle na tom.
+
+**Zkušební data na ostrém webu** (ke smazání ve správě): zpráva „Zkouška po zveřejnění…“ a řádky žebříčků s přezdívkami „zkouska A“ a „zkouska C“ v úrovních 1-01, 1-02 a 8-01.
+
+**Nezkoušeno:** skutečný Firefox, Safari a telefon; vývoz ve správě (chce heslo správce); spotřeba úložiště a času funkcí proti tarifu; most hráče, jehož ověření by trvalo přes 60 s (hra ho odmítne větou o velikosti, ale změřené to na ostrém webu není).
 
 ## M17 — výsledek
 

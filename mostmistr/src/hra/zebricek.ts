@@ -26,6 +26,15 @@ const ADRESA = "/api/zebricek";
 /** Jak dlouho se čeká na server, ms: zápis znamená zkoušku mostu na serveru. */
 const CEKANI_NA_CTENI = 15_000;
 const CEKANI_NA_ZAPIS = 70_000;
+/**
+ * Zkouška velkého mostu trvá na serveru déle, než Netlify čeká na odpověď: spojení po 30 s ukončí
+ * chybou 504, funkce ale běží dál a výsledek si zapamatuje. Hra proto zápis po takové chybě (a po
+ * odpovědi „pocita“: server týž most právě ověřuje) zkouší znovu, po `ZKUSIT_ZNOVU_PO` ms, dokud
+ * od první žádosti neuplyne `NEJDELSI_ZAPIS`. Musí to být míň, než kolik na serveru platí značka
+ * běžící zkoušky (`OVERUJE_NEJDELE` v `src/server/zebricek.ts`).
+ */
+const ZKUSIT_ZNOVU_PO = 5_000;
+const NEJDELSI_ZAPIS = 100_000;
 
 /** Most připravený k zápisu: kód a otisk zkoušky, kterou s ním hráč právě prošel. */
 export interface MostKZapisu {
@@ -52,6 +61,21 @@ export interface MoznostiZebricku {
   kZapisu: () => { bezna: MostKZapisu | null; zlom: MostKZapisu | null; duvod: DuvodBezZapisu | null };
   /** Zápis do deníku hraní: jen kódy a čísla, nikdy přezdívka. */
   zapis: (data: Record<string, string | number | boolean>) => void;
+}
+
+/** Kód z odpovědi serveru (`KodOdmitnuti`), nebo undefined, když odpověď žádný nenese. */
+function kodOdpovedi(odpoved: { stav: number; data: unknown } | null): unknown {
+  return typeof odpoved?.data === "object" && odpoved.data !== null ? (odpoved.data as { kod?: unknown }).kod : undefined;
+}
+
+/**
+ * Počítá server most dál? Řekne to sám (kód `pocita`), nebo místo něj odpoví brána hostingu,
+ * která na odpověď funkce přestala čekat (502 a 504 bez kódu hry).
+ */
+function serverPocita(odpoved: { stav: number; data: unknown } | null): boolean {
+  if (odpoved === null) return false;
+  const kod = kodOdpovedi(odpoved);
+  return kod === "pocita" || ((odpoved.stav === 502 || odpoved.stav === 504) && typeof kod !== "string");
 }
 
 async function zadost(adresa: string, cekani: number, telo?: unknown): Promise<{ stav: number; data: unknown } | null> {
@@ -234,7 +258,14 @@ export function pripojZebricek(m: MoznostiZebricku): { otevri(): void } {
     for (const [zkouska, most] of [["bezna", pripraveno.bezna], ["zlom", pripraveno.zlom]] as const) {
       if (most === null) continue;
       const telo: ZadostOZapis = { uroven: m.uroven, kod: most.kod, zkouska, otisk: most.otisk, verze: VERZE_FYZIKY, hrac: ja.hrac, jmeno: ja.jmeno };
-      const odpoved = await zadost(ADRESA, CEKANI_NA_ZAPIS, telo);
+      const od = performance.now();
+      let odpoved = await zadost(ADRESA, CEKANI_NA_ZAPIS, telo);
+      while (serverPocita(odpoved) && performance.now() - od < NEJDELSI_ZAPIS) {
+        okno.dataset.pocita = "ano";
+        rekni(t("zebricek.pocita"));
+        await new Promise((hotovo) => window.setTimeout(hotovo, ZKUSIT_ZNOVU_PO));
+        odpoved = await zadost(ADRESA, CEKANI_NA_ZAPIS, telo);
+      }
       const prijato = odpoved?.stav === 200 ? nactiOdpovedNaZapis(odpoved.data) : null;
       if (prijato) {
         zebricek = prijato.zebricek;
@@ -245,7 +276,8 @@ export function pripojZebricek(m: MoznostiZebricku): { otevri(): void } {
         m.zapis({ co: "zapis", zkouska, stav: "ok", poradi: Math.min(999, ...Object.values(prijato.moje).map((x) => x.poradi ?? 999)) });
         continue;
       }
-      const kod = typeof odpoved?.data === "object" && odpoved.data !== null ? (odpoved.data as { kod?: unknown }).kod : undefined;
+      // Brána, která to vzdala i napodruhé, znamená totéž co „pocita“: server most nestihl.
+      const kod = serverPocita(odpoved) ? "pocita" : kodOdpovedi(odpoved);
       const klic = `zebricek.odmitnuto.${typeof kod === "string" ? kod : ""}`;
       // Server neodpověděl včas: zápis se mohl i nemusel povést, a hráč to má vědět.
       chyba = odpoved === null ? t("zebricek.bezOdpovedi") : jeKlicTextu(klic) ? t(klic) : t("zebricek.odmitnuto.jine");
@@ -253,6 +285,7 @@ export function pripojZebricek(m: MoznostiZebricku): { otevri(): void } {
       break;
     }
     pracuje = false;
+    delete okno.dataset.pocita;
     okno.dataset.stav = chyba === null ? "zapsano" : "odmitnuto";
     if (chyba !== null) rekni([...vety, chyba].join(" "), "varovani");
     else rekni(vety.join(" "));
