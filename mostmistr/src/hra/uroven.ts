@@ -85,6 +85,7 @@ import { casyPadu, najdiSplouchnuti, najdiZlomy, type Splouchnuti, type Zlom } f
 import { pricinyPohybu, type PricinaPohybu } from "../zkouska/pricinaPohybu";
 import { BEZ_NALEZU, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
 import { dalsiDilMostovky, type KrokVedeni } from "../data/vedeni";
+import { mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, type NalezMezery } from "../data/mezery";
 import { nakresliVedeni } from "../vykres/vedeni";
 import { POJMY, textSPojmy, UDALOST_SLOVNICKU, ukazBublinu } from "../ui/pojmy";
 import {
@@ -836,13 +837,19 @@ export function spustUroven(
     if (stavi && !editor.tah) {
       // Most, který by se složil vlastní vahou: značka, kde a proč. Při tažení prutu nepřekáží.
       const nalez = nalezStavby();
-      if (nalez.slozeni) nakresliSlozeni(ctx, kamera, rozmer, nalez.slozeni.misto, t("slozeni.nadpis"), kratceOSlozeni(nalez.slozeni));
+      // Mostovka, která na trase chybí nebo leží mimo ni: lidé by tam propadli.
+      const mezera = mezeraStavby();
+      const zaBrehem = mezera ? null : zaBrehemStavby();
+      if (mezera) nakresliSlozeni(ctx, kamera, rozmer, mezera.misto, ...textyMezery(mezera));
+      else if (nalez.slozeni) nakresliSlozeni(ctx, kamera, rozmer, nalez.slozeni.misto, t("slozeni.nadpis"), kratceOSlozeni(nalez.slozeni));
       else if (nalez.volny) {
         nakresliSlozeni(ctx, kamera, rozmer, nalez.volny.misto, t("volny.nadpis"), t("volny.kratce", { prut: nalez.volny.prut + 1 }));
       }
       // Po zkoušce, která neprošla: kde to povolilo první. Zůstává do první úpravy mostu.
       else if (posledniPorucha && posledniPorucha.navrh === editor.navrh) {
         nakresliSlozeni(ctx, kamera, rozmer, posledniPorucha.misto, t("stavba.porucha.nadpis"), posledniPorucha.popis);
+      } else if (zaBrehem) {
+        nakresliSlozeni(ctx, kamera, rozmer, zaBrehem.misto, t("zaBrehem.nadpis"), t("zaBrehem.kratce"));
       } else {
         // Most, který stojí, ale už vlastní vahou visí hluboko pod výkresem (nedopnutá lana).
         const pruves = pruvesStavby();
@@ -3075,10 +3082,13 @@ export function spustUroven(
     obnovOsu();
     // Kde na trase chybí mostovka, tam provoz spadne: hráč se to má dozvědět hned, ne až z výsledku.
     if (!pokus && !zlom) {
-      const mezera = mezeryTras(editor.navrh, uroven)[0];
-      if (mezera) {
-        const klic = mezera.trasa.druh === "kolej" ? "zkouska.mezera.kolej" : "zkouska.mezera";
-        ukazHlaseni(t(klic, { od: cislo(mezera.od, 0), do: cislo(mezera.do, 0) }), "varovani", false);
+      const nalez = rozborMezery(editor.navrh, uroven);
+      if (nalez) {
+        const { mezera } = nalez;
+        // Proč tam mostovka nenese, když na výkresu nějaká je (přes kraj břehu, mimo trasu).
+        const klic =
+          nalez.druh === "presah" ? "zkouska.mezera.presah" : nalez.druh === "mimo-trasu" ? "zkouska.mezera.mimo" : mezera.trasa.druh === "kolej" ? "zkouska.mezera.kolej" : "zkouska.mezera";
+        ukazHlaseni(t(klic, { od: cislo(mezera.od, 0), do: cislo(mezera.do, 0), x: cislo(nalez.misto.x, 0) }), "varovani", false);
       }
     }
   }
@@ -3813,6 +3823,63 @@ export function spustUroven(
   }
 
   /**
+   * Mezera v mostovce, o které má výkres při stavbě říct, kde a proč tam nikdo nepůjde. Ukáže
+   * se, když hráč most nejspíš považuje za hotový: mostovka přejíždí kraj břehu bez styčníku,
+   * mostovka (třeba mimo trasu) pokrývá celé rozpětí, nebo tenhle most už zkouškou kvůli
+   * mezeře neprošel. Dokud hráč teprve staví, mezery jsou samozřejmé a značka by překážela;
+   * v první úrovni ukazuje chybějící díl vedení.
+   */
+  function mezeraStavby(): NalezMezery | null {
+    if (rezim !== "stavba" || krokVedeni()) return null;
+    const nalez = rozborMezery(editor.navrh, uroven);
+    if (!nalez) return null;
+    const poZkousce = beh !== null && beh.navrh === editor.navrh && beh.vysledek?.mezera === true;
+    return nalez.druh === "presah" || poZkousce || mostovkaVypadaHotove(editor.navrh, uroven) ? nalez : null;
+  }
+
+  /** Nadpis a krátká věta značky o mezeře. */
+  function textyMezery(m: NalezMezery): [string, string] {
+    const cisla = { od: cislo(m.mezera.od, 0), do: cislo(m.mezera.do, 0), x: cislo(m.misto.x, 0) };
+    if (m.druh === "presah") return [t("mezera.nadpis.presah"), t("mezera.kratce.presah", cisla)];
+    if (m.druh === "mimo-trasu") return [t("mezera.nadpis.mimo"), t("mezera.kratce.mimo", cisla)];
+    return [t(m.druh === "breh" ? "mezera.nadpis.breh" : "mezera.nadpis.uprostred"), t("mezera.kratce", cisla)];
+  }
+
+  /** Mostovka celá za koncem trasy, na břehu: značka, když žádná jiná značka stavby není. */
+  function zaBrehemStavby(): { prut: number; misto: Bod } | null {
+    if (rezim !== "stavba") return null;
+    const nalez = nalezStavby();
+    if (nalez.slozeni || nalez.volny || (posledniPorucha !== null && posledniPorucha.navrh === editor.navrh)) return null;
+    return mostovkaZaBrehem(editor.navrh, uroven);
+  }
+
+  /** Která značka o mostovce mimo trasu naposledy šla do deníku (aby se nezapisovala znovu). */
+  let ohlasenaZnacka: string | null = null;
+
+  /**
+   * Háčky pro testy (`body[data-mezera]`: druh;x;y, `body[data-za-brehem]`: x;y) a událost
+   * deníku, když se značka objeví nebo změní.
+   */
+  function oznacMezeru(): void {
+    const mezera = mezeraStavby();
+    const zaBrehem = mezera ? null : zaBrehemStavby();
+    if (mezera) document.body.dataset.mezera = `${mezera.druh};${mezera.misto.x};${mezera.misto.y}`;
+    else delete document.body.dataset.mezera;
+    if (zaBrehem) document.body.dataset.zaBrehem = `${zaBrehem.misto.x};${zaBrehem.misto.y}`;
+    else delete document.body.dataset.zaBrehem;
+    const klic = mezera ? `mezera;${mezera.druh};${mezera.mezera.od};${mezera.mezera.do}` : zaBrehem ? "za-brehem" : null;
+    if (klic !== null && klic !== ohlasenaZnacka) {
+      zapis(
+        "stavba.znacka",
+        mezera
+          ? { co: "mezera", druh: mezera.druh, od: mezera.mezera.od, do: mezera.mezera.do, cena: cenaNavrhu(editor.navrh) }
+          : { co: "za-brehem", cena: cenaNavrhu(editor.navrh) },
+      );
+    }
+    if (rezim === "stavba") ohlasenaZnacka = klic;
+  }
+
+  /**
    * Průvěs mostovky pod vlastní tíhou, když stojí za řeč: most má klidovou polohu, mostovka vede
    * od břehu k břehu a některý její styčník leží víc než `PRUVES_K_HLASENI` od výkresu. Vrací
    * místo toho styčníku na výkresu a průvěs.
@@ -3843,7 +3910,12 @@ export function spustUroven(
     else delete document.body.dataset.slozeni;
     if (misto) document.body.dataset.slozeniMisto = `${misto.x};${misto.y}`;
     else delete document.body.dataset.slozeniMisto;
-    const jinaZnacka = nalez.slozeni !== null || nalez.volny !== null || (posledniPorucha !== null && posledniPorucha.navrh === editor.navrh);
+    oznacMezeru();
+    const jinaZnacka =
+      nalez.slozeni !== null ||
+      nalez.volny !== null ||
+      (posledniPorucha !== null && posledniPorucha.navrh === editor.navrh) ||
+      document.body.dataset.zaBrehem !== undefined;
     const pruves = rezim === "stavba" && !jinaZnacka ? pruvesStavby() : null;
     if (pruves) document.body.dataset.pruves = String(Math.round(1000 * pruves.metru));
     else delete document.body.dataset.pruves;
@@ -4504,10 +4576,16 @@ export function spustUroven(
     // Kdo spadl proto, že na trase kus mostovky chybí, se to má dozvědět: jinak výsledek
     // hlásí pád a žádné porušení.
     if (!jePokus && !vysledek.rozpad && vysledek.spadlo > 0) {
-      const mezera = mezeryTras(b.navrh, uroven)[0];
-      if (mezera) {
-        const klicMezery = ({ kolej: "vysledek.shrnuti.chybiKolejiste", silnice: "vysledek.shrnuti.chybiMostovka", lavka: "vysledek.shrnuti.chybiLavka" } as const)[mezera.trasa.druh];
-        vety.push(t(klicMezery, { od: cislo(mezera.od, 0), do: cislo(mezera.do, 0) }));
+      const nalez = rozborMezery(b.navrh, uroven);
+      if (nalez) {
+        const { mezera } = nalez;
+        const klicMezery =
+          nalez.druh === "presah"
+            ? "vysledek.shrnuti.presah"
+            : nalez.druh === "mimo-trasu"
+              ? "vysledek.shrnuti.mimoTrasu"
+              : ({ kolej: "vysledek.shrnuti.chybiKolejiste", silnice: "vysledek.shrnuti.chybiMostovka", lavka: "vysledek.shrnuti.chybiLavka" } as const)[mezera.trasa.druh];
+        vety.push(t(klicMezery, { od: cislo(mezera.od, 0), do: cislo(mezera.do, 0), x: cislo(nalez.misto.x, 0) }));
       }
     }
     // Most, který zkouškou prošel, klidovou polohu našel (jen ne hned napoprvé); věta by mátla.

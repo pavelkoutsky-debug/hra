@@ -166,22 +166,58 @@ export class Editor {
     if (!(kroku >= 1) || !Number.isInteger(kroku)) return null;
     const nejvicKroku = Math.floor(polozka.nejvetsiDelka / (delka / kroku) + 1e-9);
     if (nejvicKroku < 1) return null;
-    const dilu = Math.ceil(kroku / nejvicKroku);
+    // Mostovka, kterou tah vede přes konec trasy nebo přes kotvu, tam musí mít styčník: díl
+    // přes kraj břehu by provoz nenesl (nese jen mostovka s oběma konci na trase) a kotvy by
+    // se nedotkl. Tah se tam rozdělí a každý úsek pak na co nejstejnější díly.
+    const zlomy = [0, ...this.#povinneStycniky(od, k, kroku), kroku];
+    const useky: number[] = [];
+    for (let i = 1; i < zlomy.length; i++) {
+      const krokuUseku = zlomy[i]! - zlomy[i - 1]!;
+      const dilu = Math.ceil(krokuUseku / nejvicKroku);
+      // Delší díly napřed: 5 kroků na dva díly jsou 3 + 2.
+      for (let j = 0; j < dilu; j++) useky.push(Math.floor(krokuUseku / dilu) + (j < krokuUseku % dilu ? 1 : 0));
+    }
+    const dilu = useky.length;
     if (dilu < 2 || dilu > 40) return null;
     let navrh = this.#navrh;
     const deleni: number[] = [];
     let hotovo = 0;
     for (let i = 0; i < dilu; i++) {
-      // Delší díly napřed: 5 kroků na dva díly jsou 3 + 2.
-      const dil = Math.floor(kroku / dilu) + (i < kroku % dilu ? 1 : 0);
       const a = { x: od.x + (dx / kroku) * hotovo, y: od.y + (dy / kroku) * hotovo };
-      hotovo += dil;
+      hotovo += useky[i]!;
       const b = { x: od.x + (dx / kroku) * hotovo, y: od.y + (dy / kroku) * hotovo };
       if (duvodProtiPrutu(navrh, this.uroven, a, b, this.prvek)) return null;
       navrh = pridejPrut(navrh, a, b, this.prvek);
       if (i < dilu - 1) deleni.push(hotovo / kroku);
     }
     return { navrh, dilu, deleni };
+  }
+
+  /**
+   * Kroky tahu mostovky (0 až `kroku`, bez krajů), ve kterých musí být styčník: konce tras
+   * úrovně a kotvy, které leží na tahu uvnitř. Seřazené; u pilíře žádné.
+   */
+  /** Vede tah mostovky přes konec trasy nebo kotvu, kde musí mít styčník? */
+  #vedePresStycnik(od: Bod, k: Bod): boolean {
+    let kroku = Math.abs(k.x - od.x);
+    for (let zbytek = Math.abs(k.y - od.y); zbytek !== 0; ) [kroku, zbytek] = [zbytek, kroku % zbytek];
+    return kroku >= 2 && Number.isInteger(kroku) && this.#povinneStycniky(od, k, kroku).length > 0;
+  }
+
+  #povinneStycniky(od: Bod, k: Bod, kroku: number): number[] {
+    if (KATALOG[this.prvek].druh !== "mostovka") return [];
+    const dx = (k.x - od.x) / kroku;
+    const dy = (k.y - od.y) / kroku;
+    const body: Bod[] = [...this.uroven.kotvy];
+    for (const t of this.uroven.trasy) body.push(t.zacatek, t.konec);
+    const kroky = new Set<number>();
+    for (const b of body) {
+      // Na tahu leží, jen když padne přesně na některý krok (styčníky jsou na rastru).
+      const i = dx !== 0 ? (b.x - od.x) / dx : (b.y - od.y) / dy;
+      if (!Number.isInteger(i) || i <= 0 || i >= kroku) continue;
+      if (od.x + dx * i === b.x && od.y + dy * i === b.y) kroky.add(i);
+    }
+    return [...kroky].sort((p, q) => p - q);
   }
 
   /** Z výběru vyřadí to, co v návrhu už není. */
@@ -324,7 +360,8 @@ export class Editor {
       delete tah.dilu;
       delete tah.deleni;
       // Dlouhý tah mostovky nebo pilíře se rozdělí na díly; odmítne se, jen když to nejde.
-      if (tah.duvod === "prut-dlouhy") {
+      // Mostovka přes konec trasy nebo přes kotvu se tam rozdělí, i když je krátká.
+      if (tah.duvod === "prut-dlouhy" || (tah.duvod === null && this.#vedePresStycnik(tah.od, tah.k))) {
         const dily = this.#rozdelNaDily(tah.od, tah.k);
         if (dily) {
           tah.duvod = null;
