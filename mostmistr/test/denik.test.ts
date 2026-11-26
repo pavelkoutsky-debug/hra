@@ -16,7 +16,7 @@ import {
   type ProstrediDeniku,
   type VysledekOdeslani,
 } from "../src/denik/denik";
-import { slucVytahy, souhrnDeniku, souhrnZVytahu, vytahDeniku } from "../src/denik/souhrn";
+import { jeVytah, slucVytahy, souhrnDeniku, souhrnZVytahu, vytahDeniku } from "../src/denik/souhrn";
 import {
   nactiDavku,
   nactiVazbu,
@@ -973,6 +973,11 @@ describe("souhrn deníku", () => {
       hracuSObrysem: 0,
       hracuDoZlomu: 0,
       zkousekDoZlomu: 0,
+      rady: {},
+      hracuSRadou: 0,
+      hracuSRadouPrusli: 0,
+      zkousekPoRade: null,
+      hracuNapovedaZRady: 0,
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
     expect(souhrnDeniku([])).toMatchObject({ hracu: 0, sezeni: 0, urovne: [], chyby: [] });
@@ -1007,6 +1012,41 @@ describe("souhrn deníku", () => {
     for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.napoveda, delete z.zlomu;
     expect(souhrnZVytahu(slucVytahy([prvni, druhy])).urovne[0]).toMatchObject({ hracuSNapovedou: 2, hracuSObrysem: 1, zkousekDoZlomu: 2 });
     expect(souhrnZVytahu(slucVytahy([prvni, stary])).urovne[0]).toMatchObject({ hracuSNapovedou: 1, hracuSObrysem: 1, zkousekDoZlomu: 0 });
+  });
+
+  it("počítá radu po druhém stejném nezdaru: kdo ji viděl, kdo potom prošel a za kolik zkoušek, kdo z ní otevřel nápovědu", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const cyril = hlavicka("c3c3c3c3c3c3c3c3", "3333333333333333");
+    const zkouska = (t: number, pruchod: boolean, navic: UdalostDeniku["data"] = {}): UdalostDeniku =>
+      u(t, "zkouska.konec", "1-03", { pruchod, sekund: t, pokus: null, medaile: { pruchod, rozpocet: false, mistrovska: false }, ...navic });
+    const vzper = (t: number): UdalostDeniku => zkouska(t, false, { prvni: { prvek: "drevo-lehke", zpusob: "vzper", cas: 3 } });
+    const rada = (t: number, data: { [k: string]: string | number | boolean | null }): UdalostDeniku => u(t, "rada.ukazana", "1-03", data);
+    const davky = [
+      // Anna: dvakrát vzpěr, rada, z rady nápověda a na čtvrtou zkoušku prošla (dvě zkoušky po radě).
+      davka([u(0, "uroven.otevrena", "1-03"), vzper(10), vzper(20), rada(21, { druh: "vzper", prvek: "drevo-lehke", zkousek: 2 }), u(22, "rada.napoveda", "1-03", { druh: "vzper" }), vzper(30), zkouska(40, true)], 0, anna),
+      // Bob: rada ke kmitání a dál nic. Podvržené hodnoty souhrn nebere.
+      davka([u(0, "uroven.otevrena", "1-03"), vzper(10), rada(15, { druh: "kmitani", prvek: null }), rada(16, { druh: "cokoli" }), rada(17, { druh: "vzper", prvek: "drak" }), u(18, "rada.napoveda", "1-03", { druh: "x" })], 0, bob),
+      // Cyril radu neviděl.
+      davka([u(0, "uroven.otevrena", "1-03"), zkouska(10, true)], 0, cyril),
+    ];
+    const uroven = souhrnDeniku(davky).urovne[0]!;
+    expect(uroven).toMatchObject({
+      rady: { "drevo-lehke/vzper": 1, kmitani: 1, vzper: 1 },
+      hracuSRadou: 2,
+      hracuSRadouPrusli: 1,
+      zkousekPoRade: 2,
+      hracuNapovedaZRady: 1,
+    });
+    // Výtahy jdou sloučit (Annin den rozdělený za radou) a starší výtah bez rad nic nerozbije.
+    const pred = vytahDeniku([davka(davky[0]!.udalosti.slice(0, 4), 0, anna)]);
+    const po = vytahDeniku([davka(davky[0]!.udalosti.slice(4), 1, anna)]);
+    expect(souhrnZVytahu(slucVytahy([pred, po])).urovne[0]).toMatchObject({ hracuSRadou: 1, hracuSRadouPrusli: 1, zkousekPoRade: 2, hracuNapovedaZRady: 1 });
+    const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[2]!]))) as ReturnType<typeof vytahDeniku>;
+    delete stary.rady;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.radaZkousek, delete z.radaNapoveda;
+    expect(jeVytah(stary)).toBe(true);
+    expect(souhrnZVytahu(slucVytahy([stary, vytahDeniku([davky[0]!])])).urovne[0]).toMatchObject({ hracuSRadou: 1, hracuSRadouPrusli: 1 });
   });
 
   it("výtahy jdou slučovat: deník rozdělený v kterémkoli místě dá stejný souhrn jako celý", () => {

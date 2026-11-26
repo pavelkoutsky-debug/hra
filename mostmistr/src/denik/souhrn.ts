@@ -11,6 +11,7 @@
 // verze hry může mít jiná data.
 
 import { ID_PRVKU } from "../data/katalog";
+import { DRUHY_RADY } from "../hra/radaPoNezdaru";
 import type { DavkaDeniku, HodnotaDeniku, UdalostDeniku } from "./udalosti";
 
 export interface SouhrnUrovne {
@@ -42,6 +43,16 @@ export interface SouhrnUrovne {
   /** Kolik hráčů zkusilo zkoušku do zlomu a kolik těch zkoušek bylo. */
   hracuDoZlomu: number;
   zkousekDoZlomu: number;
+  /**
+   * Rada po druhém stejném nezdaru (`rada.ukazana`): kolikrát zazněla která („prvek/způsob“
+   * u porušení, jinak druh), kolik hráčů ji vidělo, kolik z nich úroveň potom prošlo, medián
+   * zkoušek od rady do průchodu a kolik hráčů z rady otevřelo nápovědu.
+   */
+  rady: Record<string, number>;
+  hracuSRadou: number;
+  hracuSRadouPrusli: number;
+  zkousekPoRade: number | null;
+  hracuNapovedaZRady: number;
 }
 
 export interface SouhrnDeniku {
@@ -80,6 +91,12 @@ export interface HracVUrovni {
    */
   napoveda?: number;
   zlomu?: number;
+  /**
+   * Kolik zkoušek měl hráč za sebou, když poprvé uviděl radu po druhém stejném nezdaru (null:
+   * žádnou), a jestli z ní otevřel nápovědu. Starší výtahy je nemají.
+   */
+  radaZkousek?: number | null;
+  radaNapoveda?: boolean;
 }
 
 export interface HracVeVytahu {
@@ -108,6 +125,7 @@ const NEJVIC_DILU = 40;
 // posílá (známé prvky a způsoby porušení, časy a ceny v rozumných mezích).
 const ZNAME_PRVKY: ReadonlySet<string> = new Set<string>(ID_PRVKU);
 const ZNAME_ZPUSOBY: ReadonlySet<string> = new Set(["tah", "tlak", "ohyb", "smyk", "vzper"]);
+const ZNAME_RADY: ReadonlySet<string> = new Set<string>(DRUHY_RADY);
 
 /**
  * Výtah z deníku: mezivýsledek, který jde slučovat. Vše je po hráčích, takže sloučením
@@ -126,6 +144,8 @@ export interface VytahDeniku {
   selhani: Record<string, Record<string, number>>;
   /** úroveň → prvek → kolik prutů z něj hráči nakreslili */
   prvky: Record<string, Record<string, number>>;
+  /** úroveň → rada („prvek/způsob“ nebo druh) → kolikrát se ukázala; starší výtahy ho nemají */
+  rady?: Record<string, Record<string, number>>;
 }
 
 function median(hodnoty: number[]): number | null {
@@ -164,6 +184,7 @@ export function prazdnyVytah(): VytahDeniku {
     urovne: slovnik(),
     selhani: slovnik(),
     prvky: slovnik(),
+    rady: slovnik(),
   };
 }
 
@@ -178,6 +199,7 @@ export function jeVytah(h: unknown): h is VytahDeniku {
     jeObjekt(h.urovne) &&
     jeObjekt(h.selhani) &&
     jeObjekt(h.prvky) &&
+    (h.rady === undefined || jeObjekt(h.rady)) &&
     jeObjekt(h.chyby) &&
     typeof h.udalosti === "number" &&
     typeof h.chyb === "number" &&
@@ -207,6 +229,8 @@ function novyHracVUrovni(): HracVUrovni {
     nejlevnejsi: null,
     napoveda: 0,
     zlomu: 0,
+    radaZkousek: null,
+    radaNapoveda: false,
   };
 }
 
@@ -273,6 +297,16 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
       const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
       zaznam.napoveda = Math.max(zaznam.napoveda ?? 0, krok);
+    } else if (u.druh === "rada.ukazana" || u.druh === "rada.napoveda") {
+      // Rada po druhém stejném nezdaru: jen druhy, které hra posílá; prvek jen známý.
+      const druh = textZ(data.druh);
+      if (druh === null || !ZNAME_RADY.has(druh)) return;
+      if (u.druh === "rada.napoveda") zaznam.radaNapoveda = true;
+      else {
+        const prvek = znamyPrvek(data.prvek);
+        pricti(((v.rady ??= slovnik())[u.uroven] ??= slovnik()), prvek !== null ? `${prvek}/${druh}` : druh, 1);
+        if (zaznam.radaZkousek === null || zaznam.radaZkousek === undefined) zaznam.radaZkousek = zaznam.zkousek;
+      }
     } else if (u.druh === "zkouska.konec" && data.host === true) {
       // Zkouška cizího mostu z odkazu: není to hráčova stavba a do čísel o úrovni nepatří.
     } else if (u.druh === "zkouska.konec" && data.pokus === "zlom") {
@@ -351,6 +385,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
       const cilUrovne = (s.urovne[uroven] ??= slovnik());
       for (const [hrac, z] of Object.entries(hraci)) {
         const cil = (cilUrovne[hrac] ??= novyHracVUrovni());
+        if ((cil.radaZkousek ?? null) === null && (z.radaZkousek ?? null) !== null) cil.radaZkousek = cil.zkousek + z.radaZkousek!;
+        cil.radaNapoveda = (cil.radaNapoveda ?? false) || (z.radaNapoveda ?? false);
         if (cil.zkousekDoPruchodu === null && z.zkousekDoPruchodu !== null) {
           cil.zkousekDoPruchodu = cil.zkousek + z.zkousekDoPruchodu;
           cil.sekundDoPruchodu = cil.sekundDriv + (z.sekundDoPruchodu ?? 0);
@@ -375,6 +411,10 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
       const cil = (s.prvky[uroven] ??= slovnik());
       for (const [prvek, pocet] of Object.entries(pocty)) pricti(cil, prvek, pocet);
     }
+    for (const [uroven, pocty] of Object.entries(v.rady ?? {})) {
+      const cil = ((s.rady ??= slovnik())[uroven] ??= slovnik());
+      for (const [rada, pocet] of Object.entries(pocty)) pricti(cil, rada, pocet);
+    }
   }
   return s;
 }
@@ -393,6 +433,9 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
       const minut = median(zaznamy.flatMap((z) => (z.sekundDoPruchodu === null ? [] : [z.sekundDoPruchodu / 60])));
       const ceny = zaznamy.flatMap((z) => (z.nejlevnejsi === null ? [] : [z.nejlevnejsi]));
       const cena = median(ceny);
+      // Hráči, kteří radu viděli, a kolik zkoušek od ní potřebovali ti, kdo potom prošli.
+      const sRadou = zaznamy.filter((z) => (z.radaZkousek ?? null) !== null);
+      const poRade = sRadou.flatMap((z) => (z.zkousekDoPruchodu !== null && z.zkousekDoPruchodu > z.radaZkousek! ? [z.zkousekDoPruchodu - z.radaZkousek!] : []));
       return {
         uroven,
         hracu: zaznamy.length,
@@ -416,6 +459,11 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         hracuSObrysem: zaznamy.filter((z) => (z.napoveda ?? 0) >= 2).length,
         hracuDoZlomu: zaznamy.filter((z) => (z.zlomu ?? 0) > 0).length,
         zkousekDoZlomu: zaznamy.reduce((soucet, z) => soucet + (z.zlomu ?? 0), 0),
+        rady: odNejcastejsiho(v.rady?.[uroven]),
+        hracuSRadou: sRadou.length,
+        hracuSRadouPrusli: poRade.length,
+        zkousekPoRade: median(poRade),
+        hracuNapovedaZRady: zaznamy.filter((z) => z.radaNapoveda === true).length,
       };
     });
 

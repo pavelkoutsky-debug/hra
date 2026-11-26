@@ -1335,6 +1335,36 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   gap: 6px;
 }
 
+/*
+ * Rada po druhém stejném nezdaru: celý řádek pruhu pod verdiktem, žádné okno. Zůstává vidět
+ * i se sbalenými podrobnostmi; tlačítko vede do nápovědy úrovně.
+ */
+.vysledek__rada {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--varovani);
+  background: rgb(207 227 255 / 0.08);
+}
+
+.vysledek__rada[hidden] {
+  display: none;
+}
+
+.vysledek__rada p {
+  flex: 1 1 260px;
+  min-width: 0;
+  color: var(--cara-silna);
+  font-size: 12px;
+}
+
+.vysledek__rada strong {
+  color: var(--varovani);
+}
+
 .vysledek__podrobnosti {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3386,6 +3416,22 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 
   .vysledek__pruh [data-akce="prehrat-znovu"] {
     display: none;
+  }
+
+  /* Rada pod verdiktem: text a tlačítko v jednom toku, ať pruh nezakryje most. */
+  .vysledek__rada {
+    display: block;
+    padding: 4px 6px;
+  }
+
+  .vysledek__rada p {
+    display: inline;
+    font-size: 11px;
+  }
+
+  .vysledek__rada .tlacitko {
+    margin-left: 6px;
+    vertical-align: middle;
   }
 
   .vysledek__pruh [data-akce="prehrat-poruseni"] {
