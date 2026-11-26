@@ -67,6 +67,12 @@ export interface SouhrnUrovne {
   posunu: number;
   posunuVic: number;
   posunuKlavesou: number;
+  /**
+   * Značky o mostovce mimo trasu, které hra při stavbě ukázala (`stavba.znacka`), a kolikrát:
+   * mostovka přes kraj břehu bez styčníku, mimo trasu, mezera u břehu a uprostřed, mostovka za
+   * koncem trasy. Jedna značka se počítá jednou, dokud se nezmění.
+   */
+  znacky: Record<string, number>;
 }
 
 /**
@@ -225,6 +231,18 @@ function obrazovkaUrovne(id: string): (typeof OBRAZOVKY)[number] {
 const ZNAME_RADY: ReadonlySet<string> = new Set<string>(DRUHY_RADY);
 
 /**
+ * Jak souhrn jmenuje značky o mostovce mimo trasu (`stavba.znacka`: `co` „za-brehem“, nebo
+ * „mezera“ s druhem z `src/data/mezery.ts`). Jiné hodnoty hra neposílá.
+ */
+export const POPISY_ZNACEK: Readonly<Record<string, string>> = {
+  presah: "mostovka přes kraj břehu bez styčníku",
+  "mimo-trasu": "mostovka mimo trasu",
+  breh: "mezera u břehu",
+  uprostred: "mezera uprostřed",
+  "za-brehem": "mostovka za koncem trasy",
+};
+
+/**
  * Výtah z deníku: mezivýsledek, který jde slučovat. Vše je po hráčích, takže sloučením
  * výtahů dvou dnů vyjdou počty různých hráčů správně.
  */
@@ -243,6 +261,8 @@ export interface VytahDeniku {
   prvky: Record<string, Record<string, number>>;
   /** úroveň → rada („prvek/způsob“ nebo druh) → kolikrát se ukázala; starší výtahy ho nemají */
   rady?: Record<string, Record<string, number>>;
+  /** úroveň → značka o mostovce mimo trasu → kolikrát se ukázala; starší výtahy ho nemají */
+  znacky?: Record<string, Record<string, number>>;
 }
 
 function median(hodnoty: number[]): number | null {
@@ -282,6 +302,7 @@ export function prazdnyVytah(): VytahDeniku {
     selhani: slovnik(),
     prvky: slovnik(),
     rady: slovnik(),
+    znacky: slovnik(),
   };
 }
 
@@ -297,6 +318,7 @@ export function jeVytah(h: unknown): h is VytahDeniku {
     jeObjekt(h.selhani) &&
     jeObjekt(h.prvky) &&
     (h.rady === undefined || jeObjekt(h.rady)) &&
+    (h.znacky === undefined || jeObjekt(h.znacky)) &&
     jeObjekt(h.chyby) &&
     typeof h.udalosti === "number" &&
     typeof h.chyb === "number" &&
@@ -434,6 +456,10 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
         pricti(((v.rady ??= slovnik())[u.uroven] ??= slovnik()), prvek !== null ? `${prvek}/${druh}` : druh, 1);
         if (zaznam.radaZkousek === null || zaznam.radaZkousek === undefined) zaznam.radaZkousek = zaznam.zkousek;
       }
+    } else if (u.druh === "stavba.znacka") {
+      const klic = data.co === "za-brehem" ? "za-brehem" : data.co === "mezera" ? textZ(data.druh) : null;
+      const popis = klic === null || !Object.hasOwn(POPISY_ZNACEK, klic) ? null : POPISY_ZNACEK[klic]!;
+      if (popis !== null) pricti(((v.znacky ??= slovnik())[u.uroven] ??= slovnik()), popis, 1);
     } else if (u.druh === "zkouska.konec" && data.host === true) {
       // Zkouška cizího mostu z odkazu: není to hráčova stavba a do čísel o úrovni nepatří.
     } else if (u.druh === "zkouska.konec" && data.pokus === "zlom") {
@@ -556,6 +582,10 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
       const cil = ((s.rady ??= slovnik())[uroven] ??= slovnik());
       for (const [rada, pocet] of Object.entries(pocty)) pricti(cil, rada, pocet);
     }
+    for (const [uroven, pocty] of Object.entries(v.znacky ?? {})) {
+      const cil = ((s.znacky ??= slovnik())[uroven] ??= slovnik());
+      for (const [znacka, pocet] of Object.entries(pocty)) pricti(cil, znacka, pocet);
+    }
   }
   return s;
 }
@@ -612,6 +642,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         posunu: soucet((z) => z.posunu ?? 0),
         posunuVic: soucet((z) => z.posunuVic ?? 0),
         posunuKlavesou: soucet((z) => z.posunuKlavesou ?? 0),
+        znacky: odNejcastejsiho(v.znacky?.[uroven]),
       };
     });
 

@@ -378,7 +378,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Campaign progress, your bridges, settings and a random player number are kept in this browser's storage (these are not cookies). If you clear the site's data in your browser, it is all gone.",
   "soukromi.denik.nadpis": "Play log",
   "soukromi.denik":
-    "Until you turn it off, the game sends its authors a play log under this browser's random number, starting the first time you open the game: which levels you open, how you build (including the shape of the bridge), how the tests turn out, the window size, the language and browser errors. No name, email or location. It is used only to tune the game.",
+    "Until you turn it off, the game sends its authors a play log under this browser's random number, starting the first time you open the game: which levels and screens you open, what you control the game with (mouse, touch, keyboard), how you build (including the shape of the bridge), how the tests turn out, which tips the game showed you, the window size, the language and browser errors. No name, email or location. It is used only to tune the game.",
   "soukromi.vazba.nadpis": "Messages to the authors",
   "soukromi.vazba":
     "A message from the Write to us window carries the text, its kind, your rating and the player number, optionally the attached bridge and your latest steps in the game, and an email only if you fill it in. The texts of messages, without the email field, are also read daily by an automated review (a language model) that suggests changes to the game; emails and phone numbers typed into the text are blacked out for it.",

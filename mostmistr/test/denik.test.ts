@@ -987,6 +987,7 @@ describe("souhrn deníku", () => {
       posunu: 0,
       posunuVic: 0,
       posunuKlavesou: 0,
+      znacky: {},
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
     expect(souhrnDeniku([])).toMatchObject({ hracu: 0, sezeni: 0, urovne: [], chyby: [] });
@@ -1008,6 +1009,34 @@ describe("souhrn deníku", () => {
     const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[1]!]))) as ReturnType<typeof vytahDeniku>;
     for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.posunu, delete z.posunuVic, delete z.posunuKlavesou;
     expect(souhrnZVytahu(slucVytahy([vytahDeniku([davky[0]!]), stary])).urovne[0]).toMatchObject({ hracuSPosunem: 1, posunu: 3, posunuVic: 2, posunuKlavesou: 1 });
+  });
+
+  it("značky o mostovce mimo trasu se počítají po úrovních a jen ty, které hra posílá", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const znacka = (t: number, data: Record<string, string | number>): UdalostDeniku => u(t, "stavba.znacka", "1-02", data);
+    const davky = [
+      davka([u(0, "uroven.otevrena", "1-02"), znacka(5, { co: "mezera", druh: "presah", od: 10, do: 12, cena: 30000 }), znacka(9, { co: "za-brehem", cena: 31000 })], 0, anna),
+      davka(
+        [
+          u(0, "uroven.otevrena", "1-02"),
+          znacka(4, { co: "mezera", druh: "presah", od: 10, do: 12, cena: 28000 }),
+          znacka(6, { co: "mezera", druh: "mimo-trasu", od: 0, do: 12, cena: 28000 }),
+          // Vymyšlené hodnoty souhrn nebere.
+          znacka(7, { co: "mezera", druh: "constructor", od: 0, do: 12 }),
+          znacka(8, { co: "neco" }),
+        ],
+        0,
+        bob,
+      ),
+    ];
+    const ocekavane = { "mostovka přes kraj břehu bez styčníku": 2, "mostovka za koncem trasy": 1, "mostovka mimo trasu": 1 };
+    expect(souhrnDeniku(davky).urovne[0]!.znacky).toEqual(ocekavane);
+    // Výtahy jdou sloučit a starší výtah bez značek nic nerozbije.
+    const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[1]!]))) as ReturnType<typeof vytahDeniku>;
+    delete stary.znacky;
+    expect(souhrnZVytahu(slucVytahy([vytahDeniku([davky[0]!]), vytahDeniku([davky[1]!])])).urovne[0]!.znacky).toEqual(ocekavane);
+    expect(souhrnZVytahu(slucVytahy([vytahDeniku([davky[0]!]), stary])).urovne[0]!.znacky).toEqual({ "mostovka přes kraj břehu bez styčníku": 1, "mostovka za koncem trasy": 1 });
   });
 
   it("zkouška cizího mostu z odkazu se do čísel o úrovni nepočítá", () => {

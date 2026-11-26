@@ -533,7 +533,8 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
         bunka(`${u.hracuDoZlomu ?? 0} / ${u.zkousekDoZlomu ?? 0}`, "cislo"),
         bunka(ceny),
         bunka(vypis(u.prvky)),
-        bunka(vypis(u.selhani)),
+        // Značky o mostovce mimo trasu, které hra při stavbě ukázala (starší souhrn je nemá).
+        bunka(`${vypis(u.selhani)}${u.znacky && Object.keys(u.znacky).length > 0 ? ` · značky při stavbě: ${vypis(u.znacky)}` : ""}`),
         bunka(`${u.hracuSPosunem ?? 0} / ${u.posunu ?? 0} (${u.posunuVic ?? 0} / ${u.posunuKlavesou ?? 0})`, "cislo"),
       );
       return radek;

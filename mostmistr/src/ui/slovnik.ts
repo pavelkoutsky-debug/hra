@@ -380,7 +380,7 @@ const CS = {
     "Postup kampaní, tvoje mosty, nastavení a náhodné číslo hráče si hra ukládá do paměti tohoto prohlížeče (nejsou to cookies). Když paměť stránky v prohlížeči smažeš, je všechno pryč.",
   "soukromi.denik.nadpis": "Záznam hraní",
   "soukromi.denik":
-    "Dokud ho nevypneš, hra odesílá autorům záznam hraní pod náhodným číslem tohoto prohlížeče, a to už od prvního otevření: které úrovně otevřeš, jak stavíš (i tvar mostu), jak dopadnou zkoušky, velikost okna, jazyk a chyby prohlížeče. Žádné jméno, e-mail ani poloha. Slouží jen k ladění hry.",
+    "Dokud ho nevypneš, hra odesílá autorům záznam hraní pod náhodným číslem tohoto prohlížeče, a to už od prvního otevření: které úrovně a obrazovky otevřeš, čím hru ovládáš (myš, dotyk, klávesnice), jak stavíš (i tvar mostu), jak dopadnou zkoušky, které rady ti hra ukázala, velikost okna, jazyk a chyby prohlížeče. Žádné jméno, e-mail ani poloha. Slouží jen k ladění hry.",
   "soukromi.vazba.nadpis": "Zprávy autorům",
   "soukromi.vazba":
     "Zpráva z okna Napiš nám nese text, druh, hodnocení a číslo hráče, případně přiložený most a poslední kroky ve hře, a e-mail, jen když ho vyplníš. Texty zpráv bez pole s e-mailem denně čte i automatický rozbor (jazykový model), který autorům navrhuje úpravy hry; e-maily a telefonní čísla napsané přímo do textu se pro něj začerní.",
