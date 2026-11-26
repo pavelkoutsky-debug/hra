@@ -90,8 +90,12 @@ function zalom(ctx: Kontext, text: string, sirka: number): string[] {
  * se překlopí na druhou stranu. Text, který by se na plátno nevešel (telefon), se zalomí.
  * Barvu čáry a průhlednost nechává, jak je nastavil volající.
  */
+/** Nejširší popisek značky na výkresu (px): delší text se láme. */
+const NEJSIRSI_POPISEK = 430;
+
 function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: number, popis: string, rada: string, vrch = 0): void {
-  const nejvic = Math.max(120, rozmer.sirka - 36);
+  // Dlouhá rada se láme do sloupce: řádek přes celou šířku výkresu by zakryl pás mostu pod sebou.
+  const nejvic = Math.max(120, Math.min(NEJSIRSI_POPISEK, rozmer.sirka - 36));
   ctx.font = `bold 13px ${PISMO}`;
   const radkyPopisu = zalom(ctx, popis, nejvic);
   const sirkaPopisu = Math.max(...radkyPopisu.map((r) => ctx.measureText(r).width));

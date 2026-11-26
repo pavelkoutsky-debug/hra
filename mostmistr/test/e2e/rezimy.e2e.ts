@@ -608,6 +608,10 @@ describe("nápověda", () => {
     for (let pokus = 1; pokus <= 3; pokus++) {
       await spust();
       expect(await naKonec()).toBe("MOST NEOBSTÁL");
+      // Kdo si podrobnosti s radou přečetl sám, tomu ji pruh při stejném nezdaru nevnucuje
+      // (`test/e2e/rada.e2e.ts`) a nápovědu pak připomene hlášení po třetím nezdaru.
+      if (pokus === 1) await akce("vysledek-sbalit").click();
+      expect(await stranka.locator('[data-udaj="vysledek-rada"]').isVisible()).toBe(false);
       await akce("upravit").click();
       const hlaseni = await udaj("hlaseni");
       if (pokus < 3) expect(hlaseni).not.toContain("Nedaří se?");

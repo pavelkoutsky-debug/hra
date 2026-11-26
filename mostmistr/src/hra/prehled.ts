@@ -222,6 +222,47 @@ export function postupKampani(
   return postup;
 }
 
+/** Krok nahoře v přehledu: kam hráče pustit a jestli je nový (nic neprošel a nic nerozestavěl). */
+export interface StartPrehledu {
+  uroven: Uroven;
+  novy: boolean;
+}
+
+/**
+ * Kam vede výrazný krok nahoře v přehledu. Nový hráč (žádná projitá ani rozestavěná úroveň
+ * kampaně) jde rovnou do první úrovně. Kdo už hrál, pokračuje rozestavěnou úrovní, kterou ještě
+ * neprošel, jinak první odemčenou neprojitou. Po projití celé kampaně null.
+ */
+export function startPrehledu(
+  kampan: readonly Uroven[],
+  stav: (id: string) => { projita: boolean; rozestavena: boolean },
+  odemcenoVse = false,
+): StartPrehledu | null {
+  const stavy = kampan.map((u) => stav(u.id));
+  const prvni = kampan[0];
+  if (!prvni) return null;
+  if (stavy.every((s) => !s.projita && !s.rozestavena)) return { uroven: prvni, novy: true };
+  const zamky = zamkyKampane(
+    kampan.map((u) => u.id),
+    (id) => stavy[kampan.findIndex((u) => u.id === id)]!,
+  );
+  const rozestavena = kampan.findIndex((_, i) => !stavy[i]!.projita && stavy[i]!.rozestavena);
+  const odemcena = kampan.findIndex((_, i) => !stavy[i]!.projita && (odemcenoVse || zamky[i] === null));
+  const kam = rozestavena >= 0 ? rozestavena : odemcena;
+  return kam >= 0 ? { uroven: kampan[kam]!, novy: false } : null;
+}
+
+/** Kam vede odkaz v přehledu, krátkým kódem pro deník; null u odkazů, které se nesledují. */
+function kamVedeOdkaz(odkaz: Element): string | null {
+  if (odkaz.matches('[data-akce="prehled-start"]')) return (odkaz as HTMLElement).dataset.stav ?? null;
+  if (odkaz.closest(".karta")) return "karta";
+  if (odkaz.closest(".pripad")) return "komise";
+  if (odkaz.matches('[data-akce="otevrit-sandbox"]')) return "sandbox";
+  if (odkaz.matches('[data-akce="otevrit-list"]')) return "list";
+  if ((odkaz.getAttribute("href") ?? "").endsWith("zkusebna.html")) return "zkusebna";
+  return null;
+}
+
 /** Spustí přehled kampaně. `hlaseni` je zpráva, kterou má přehled ukázat nahoře (neznámá úroveň). */
 export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, denik: Denik, hlaseni = ""): void {
   prvek("#obrazovka-prehled", HTMLElement).hidden = false;
@@ -320,6 +361,29 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
   odkazNaList.textContent = t(dokonceno ? "prehled.list.dokonceno" : "prehled.list");
   odkazNaList.parentElement!.hidden = postup.projito === 0;
   document.body.dataset.rezim = "prehled";
+
+  // Začátek: nový hráč jde jedním krokem rovnou do první úrovně, kdo už hrál, pokračuje tam,
+  // kde skončil. Zbytek přehledu zůstává, jak je.
+  const start = startPrehledu(
+    kampan,
+    (id) => ({ projita: uloziste.rekord(id)?.medaile.pruchod === true, rozestavena: (uloziste.navrh(id)?.pruty.length ?? 0) > 0 }),
+    uloziste.odemcenoVse,
+  );
+  const poleStartu = udaj("prehled-start");
+  poleStartu.hidden = start === null;
+  if (start) {
+    const odkaz = prvek('[data-akce="prehled-start"]', HTMLAnchorElement);
+    odkaz.href = `?uroven=${start.uroven.id}`;
+    odkaz.dataset.stav = start.novy ? "zacit" : "pokracovat";
+    odkaz.dataset.cil = start.uroven.id;
+    odkaz.textContent = start.novy ? t("prehled.start.novy") : t("prehled.start.pokracovat", { uroven: start.uroven.id, nazev: nazevUrovne(start.uroven) });
+  }
+  // Kam hráč z přehledu odešel (i do zkušebny, která deník nevede): jen kód cíle.
+  prvek("#obrazovka-prehled", HTMLElement).addEventListener("click", (udalost) => {
+    const odkaz = udalost.target instanceof Element ? udalost.target.closest("a[href]") : null;
+    const kam = odkaz ? kamVedeOdkaz(odkaz) : null;
+    if (kam !== null) denik.zapis("prehled.odkaz", { kam });
+  });
 
   // Zpětná vazba a deník hraní: v přehledu není most, který by šel přiložit.
   pripojVazbu(denik, { uroven: () => undefined, navrh: () => undefined });

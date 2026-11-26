@@ -43,6 +43,8 @@ export function pripojSoukromi(denik: Denik, vazba: OknoVazby): void {
   };
 
   const otevri = (): void => {
+    // Deník: jen že se okno otevřelo (kam hráči bez úrovně chodí), nic z jeho obsahu.
+    if (!okno.open) denik.zapis("soukromi.otevreno");
     obnov();
     kopirovat.textContent = t("soukromi.kopirovat");
     if (!okno.open) okno.showModal();

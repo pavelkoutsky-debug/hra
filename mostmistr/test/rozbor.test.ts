@@ -7,6 +7,7 @@ import { VERZE_DENIKU, type DavkaDeniku, type HlavickaDeniku, type UdalostDeniku
 import { VERZE_FYZIKY } from "../src/jadro/verze";
 import { prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../src/server/obsluha";
 import { overovacKampane } from "../src/server/overeni";
+import { CO_HRA_UMI, VYSVETLIVKY_PODKLADU } from "../src/server/coHraUmi";
 import { DNI_ZPET_PRO_ANALYTIKA, jePlatnyDen, NEJDELSI_SHRNUTI, NEJVIC_NAVRHU, NEJVIC_VAZEB_V_PODKLADECH, nactiRozbor, type PodkladyRozboru, type RozborDne } from "../src/server/rozbor";
 import { SkladVPameti } from "../src/server/sklad";
 import { spravujVse } from "../src/server/sprava";
@@ -92,6 +93,29 @@ describe("podklady denního rozboru", () => {
     expect(odpoved.status).toBe(200);
     const podklady = (await odpoved.json()) as PodkladyRozboru;
     expect(podklady.den).toBe("2026-11-22");
+    // Co hra už umí: text autorů, krátký (rozbor ho čte každý den) a bez prázdných řádků.
+    expect(podklady.hraUmi).toEqual([...CO_HRA_UMI]);
+    expect(CO_HRA_UMI.length).toBeGreaterThanOrEqual(10);
+    expect(CO_HRA_UMI.length).toBeLessThanOrEqual(24);
+    for (const veta of CO_HRA_UMI) {
+      expect(veta.trim()).toBe(veta);
+      expect(veta.length, veta).toBeGreaterThan(40);
+      expect(veta.length, veta).toBeLessThanOrEqual(400);
+    }
+    // Vysvětlivky čísel: mluví jen o polích, která podklady opravdu mají (pole přejmenované
+    // nebo zrušené by úlohu vedlo k číslu, které neexistuje).
+    expect(podklady.vysvetlivky).toEqual({ ...VYSVETLIVKY_PODKLADU });
+    const prvniUroven = podklady.souhrnDne.urovne[0]!;
+    const znama = new Set([...Object.keys(podklady), ...Object.keys(podklady.souhrnDne), ...Object.keys(podklady.souhrnDne.bezUrovne), ...Object.keys(prvniUroven), ...Object.keys(podklady.zebricky)]);
+    for (const [klic, veta] of Object.entries(VYSVETLIVKY_PODKLADU)) {
+      expect(veta.length, klic).toBeGreaterThan(40);
+      expect(veta.length, klic).toBeLessThanOrEqual(600);
+      if (klic.startsWith("souhrn.urovne[].")) expect(Object.keys(prvniUroven), klic).toContain(klic.slice("souhrn.urovne[].".length));
+      else if (klic.startsWith("souhrn.")) expect(Object.keys(podklady.souhrnDne), klic).toContain(klic.slice("souhrn.".length));
+      else if (klic !== "obecne") expect(Object.keys(podklady), klic).toContain(klic);
+      // Slova psaná jako identifikátory (hracuSRadou, bezAkce…) jsou jména polí.
+      for (const pole of veta.match(/\b[a-z]+[A-Z][A-Za-z]*\b/g) ?? []) expect(znama, `${klic}: ${pole}`).toContain(pole);
+    }
     expect(podklady.neuplne).toBe(false);
     expect(podklady.souhrnDne.hracu).toBe(1);
     expect(podklady.souhrnDne.urovne.find((u) => u.uroven === "1-01")).toMatchObject({ hracu: 1, hracuSPruchodem: 1, pruchodu: 1 });

@@ -464,13 +464,18 @@ describe("stránka správce", () => {
     const souhrn = stranka.locator('#souhrn tbody tr[data-uroven="1-01"] td');
     const bunky = await souhrn.allInnerTexts();
     expect(bunky.slice(0, 5)).toEqual(["1-01 Lávka přes potok", "1", "1", "1", "1"]);
+    // Na dotyku nikdo nehrál a hráč pruty kreslil.
+    expect(bunky[6]).toBe("0 / 0");
+    expect(bunky[7]).toBe("0");
     // Cena průchodu proti rozpočtům úrovně a z čeho hráč stavěl.
     // Nápovědu si hráč neotevřel a do zlomu nezkoušel.
-    expect(bunky[9]).toBe("0 / 0");
-    expect(bunky[10]).toBe("0 / 0");
-    expect(bunky[11]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 32 500 Kč");
+    expect(bunky[11]).toBe("0 / 0");
+    expect(bunky[12]).toBe("0 / 0");
+    expect(bunky[13]!.replace(/[\u202f\u00a0]/g, " ")).toBe("33 133 Kč · 33 133 Kč · rozpočet 45 000 Kč, inž. 32 500 Kč");
     // (Čtvrtý trám hráč nakreslil s vypnutým záznamem, takže o něm deník neví.)
-    expect(bunky[12]).toBe("drevo-lehke 3×, mostovka-drevo 2×");
+    expect(bunky[14]).toBe("drevo-lehke 3×, mostovka-drevo 2×");
+    // Hráč, který záznam hned vypnul, úroveň neotevřel: souhrn ho vede mezi hráči bez úrovně.
+    expect(await stranka.locator("#den-bez-urovne").innerText()).toMatch(/^Bez úrovně kampaně: 1 hráč/);
     // Souhrn za delší období: sčítá dny, ze kterých deník je.
     await stranka.locator("#obdobi").selectOption("30");
     await expect.poll(() => stranka.locator("#souhrn-nadpis").textContent()).toContain("(1 dní s deníkem)");

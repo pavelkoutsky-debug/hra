@@ -189,6 +189,58 @@ describe("editor", () => {
     expect(e.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 4, 8]);
   });
 
+  it("mostovka tažená přes kraj břehu má na konci trasy a na kotvě styčník (hlášení z 1-02)", () => {
+    // 1-02: trasa 0 až 12 m, posuvná kotva ve 12 m. Tah 0 → 13 m se dřív rozdělil na
+    // 4 + 3 + 3 + 3 m a díl 10 → 13 m přes kraj břehu provoz nenesl: lidé jím propadli.
+    const lavka = nactiUroven(JSON.parse(readFileSync(new URL("../urovne/1-02.json", import.meta.url), "utf8")));
+    const e = new Editor(lavka, prazdnyNavrh("1-02"));
+    // Tah z trasy za její konec teď končí na kraji břehu: metr mostovky na břehu nic nenese,
+    // při zkoušce se sklopí na zem a most kvůli němu neprojde (nález recenze hraním).
+    e.stiskni(B(0, 0));
+    e.tahni(B(13, 0));
+    expect(e.tah).toMatchObject({ duvod: null, k: { x: 12, y: 0 }, zkraceno: true, dilu: 3 });
+    expect(e.pust()).toBe(true);
+    expect(e.posledniPrut).toMatchObject({ zkraceno: true, k: { x: 12, y: 0 } });
+    expect(e.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 4, 8, 12]);
+    // Zprava doleva totéž: tah z 12 m za levý kraj končí v 0 m.
+    const zprava = new Editor(lavka, prazdnyNavrh("1-02"));
+    zprava.stiskni(B(12, 0));
+    zprava.tahni(B(-3, 0));
+    expect(zprava.tah).toMatchObject({ duvod: null, k: { x: 0, y: 0 }, zkraceno: true });
+    expect(zprava.pust()).toBe(true);
+    expect(zprava.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 4, 8, 12]);
+    // Kdo mostovku na břehu opravdu chce, nakreslí ji zvlášť od kraje (hra ji označí značkou):
+    // tah, který na konci trasy začíná, se nekrátí.
+    e.stiskni(B(12, 0));
+    e.tahni(B(13, 0));
+    expect(e.tah).toMatchObject({ duvod: null, k: { x: 13, y: 0 } });
+    expect((e.tah as { zkraceno?: boolean }).zkraceno).toBeUndefined();
+    expect(e.pust()).toBe(true);
+    expect(e.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([0, 4, 8, 12, 13]);
+    // Tah zkrácený na díl, který už leží, nic nepřidá (obrazovka k tomu řekne větu o kraji břehu).
+    const kratky = new Editor(lavka, prazdnyNavrh("1-02"));
+    kratky.stiskni(B(12, 0));
+    kratky.tahni(B(10, 0));
+    kratky.pust();
+    kratky.stiskni(B(10, 0));
+    kratky.tahni(B(13, 0));
+    expect(kratky.tah).toMatchObject({ k: { x: 12, y: 0 }, zkraceno: true });
+    kratky.pust();
+    expect(kratky.navrh.pruty).toHaveLength(1);
+    expect(kratky.navrh.stycniky.map((st) => st.x).sort((a, b) => a - b)).toEqual([10, 12]);
+    // Mostovka šikmo z trasy (po svahu dolů) se nekrátí: z přímky trasy odchází.
+    const sikmo = new Editor(lavka, prazdnyNavrh("1-02"));
+    sikmo.stiskni(B(0, 0));
+    sikmo.tahni(B(2, -3));
+    expect((sikmo.tah as { zkraceno?: boolean }).zkraceno).toBeUndefined();
+    // Tah, který žádnou kotvu ani konec trasy nepřejíždí, se nemění.
+    const bez = new Editor(lavka, prazdnyNavrh("1-02"));
+    bez.stiskni(B(0, 0));
+    bez.tahni(B(3, 0));
+    expect(bez.tah).toMatchObject({ duvod: null });
+    expect(bez.tah).not.toHaveProperty("dilu");
+  });
+
   it("z místa, kde nic není, se kreslit nezačne", () => {
     const { e, tahni } = novy();
     expect(tahni([4, 0], [6, 0])).toBe(false);

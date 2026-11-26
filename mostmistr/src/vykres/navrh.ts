@@ -281,7 +281,7 @@ export function nakresliNavrh(ctx: CanvasRenderingContext2D, kamera: Kamera, roz
     ctx.stroke();
   }
 
-  if (s.tah) nakresliTah(ctx, kamera, rozmer, s.tah, podleId);
+  if (s.tah) nakresliTah(ctx, kamera, rozmer, s.tah, podleId, s.navrh);
   ctx.restore();
 }
 
@@ -291,8 +291,42 @@ function nakresliTah(
   rozmer: Rozmer,
   tah: Tah,
   podleId: Map<number, Bod>,
+  navrh: NavrhMostu,
 ): void {
   const naObraz = (b: Bod): Bod => svetNaObraz(kamera, rozmer, b);
+  // Posun výběru: obrys toho, kam se posunuté styčníky a jejich pruty dostanou.
+  if (tah.druh === "posun" && tah.skupina && (tah.k.x !== tah.od.x || tah.k.y !== tah.od.y)) {
+    const skupina = new Set(tah.skupina);
+    const dx = tah.k.x - tah.od.x;
+    const dy = tah.k.y - tah.od.y;
+    const kam = (id: number): Bod | null => {
+      const st = podleId.get(id);
+      if (!st) return null;
+      return naObraz(skupina.has(id) ? { x: st.x + dx, y: st.y + dy } : st);
+    };
+    ctx.setLineDash([7, 5]);
+    ctx.strokeStyle = tah.duvod ? BARVY.varovani : BARVY.caraSilna;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const p of navrh.pruty) {
+      if (!skupina.has(p.a) && !skupina.has(p.b)) continue;
+      const a = kam(p.a);
+      const b = kam(p.b);
+      if (!a || !b) continue;
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const id of skupina) {
+      const b = kam(id);
+      if (!b) continue;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+    return;
+  }
   if (tah.druh === "obdelnik") {
     const a = naObraz(tah.od);
     const b = naObraz(tah.k);

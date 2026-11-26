@@ -16,8 +16,9 @@ import {
   type IdPrvku,
 } from "../data/katalog";
 import { otoceniKridla, zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type TlumicStycniku } from "../data/navrh";
+import { konecTahuMostovky } from "../data/mezery";
 import type { Uroven } from "../data/uroven";
-import { duvodProtiPosunu, duvodProtiPrutu, lzeZacit } from "./pravidla";
+import { duvodProtiPosunu, duvodProtiPosunuSkupiny, duvodProtiPrutu, jeVPodpore, lzeZacit } from "./pravidla";
 import {
   nastavLadenyTlumic,
   nastavPredpeti,
@@ -27,6 +28,7 @@ import {
   nastavZavazi,
   nastavZdvih,
   posunStycnik,
+  posunStycniky,
   pridejPrut,
   spojNaOse,
   prutMezi,
@@ -47,11 +49,16 @@ export type Tah =
   /**
    * Kreslení prutu z bodu `od`; `duvod` říká, proč by nešel položit. `dilu` je počet dílů,
    * na které se tah rozdělí, když je delší, než prvek dovoluje, a `deleni` místa nových
-   * styčníků jako podíl délky tahu (u dvou stejných dílů [0,5]).
+   * styčníků jako podíl délky tahu (u dvou stejných dílů [0,5]). `zkraceno`: tah mostovky vyjel
+   * za konec trasy a končí na něm (`konecTahuMostovky`).
    */
-  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number; deleni?: number[] }
-  /** Posun styčníku. */
-  | { druh: "posun"; stycnik: number; od: Bod; k: Bod; duvod: DruhProblemu | null }
+  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number; deleni?: number[]; zkraceno?: boolean }
+  /**
+   * Posun styčníku tažením (`od` a `k` jsou body rastru). Se `skupinou` se posouvá celý výběr:
+   * všechny styčníky ve `skupina` o stejný kus jako tažený styčník (ten v ní být nemusí, když
+   * stojí v podpoře).
+   */
+  | { druh: "posun"; stycnik: number; od: Bod; k: Bod; duvod: DruhProblemu | null; skupina?: readonly number[] }
   /** Výběr obdélníkem; `od` a `k` jsou nezaokrouhlené body světa. */
   | { druh: "obdelnik"; od: Bod; k: Bod };
 
@@ -104,7 +111,9 @@ export class Editor {
    * kam vede. Slouží deníku hraní; na chování editoru nemá vliv.
    */
   posledniAkce = "";
-  posledniPrut: { prvek: IdPrvku; od: Bod; k: Bod; dilu?: number } | null = null;
+  posledniPrut: { prvek: IdPrvku; od: Bod; k: Bod; dilu?: number; zkraceno?: boolean } | null = null;
+  /** U posunu: kolik styčníků se pohnulo, o kolik metrů a jak (tažením, klávesou). Pro deník. */
+  posledniPosun: { stycniku: number; dx: number; dy: number; jak: "tah" | "klavesa"; zPodpory?: boolean } | null = null;
 
   #navrh: NavrhMostu;
   readonly #zpet: NavrhMostu[] = [];
@@ -137,6 +146,7 @@ export class Editor {
     if (novy === this.#navrh) return false;
     this.posledniAkce = akce;
     if (akce !== "prut") this.posledniPrut = null;
+    if (akce !== "posun") this.posledniPosun = null;
     this.#zpet.push(this.#navrh);
     if (this.#zpet.length > DELKA_HISTORIE) this.#zpet.shift();
     this.#znovu.length = 0;
@@ -166,22 +176,60 @@ export class Editor {
     if (!(kroku >= 1) || !Number.isInteger(kroku)) return null;
     const nejvicKroku = Math.floor(polozka.nejvetsiDelka / (delka / kroku) + 1e-9);
     if (nejvicKroku < 1) return null;
-    const dilu = Math.ceil(kroku / nejvicKroku);
+    // Mostovka, kterou tah vede přes konec trasy nebo přes kotvu, tam musí mít styčník: díl
+    // přes kraj břehu by provoz nenesl (nese jen mostovka s oběma konci na trase) a kotvy by
+    // se nedotkl. Tah se tam rozdělí a každý úsek pak na co nejstejnější díly.
+    const zlomy = [0, ...this.#povinneStycniky(od, k, kroku), kroku];
+    const useky: number[] = [];
+    for (let i = 1; i < zlomy.length; i++) {
+      const krokuUseku = zlomy[i]! - zlomy[i - 1]!;
+      const dilu = Math.ceil(krokuUseku / nejvicKroku);
+      // Delší díly napřed: 5 kroků na dva díly jsou 3 + 2.
+      for (let j = 0; j < dilu; j++) useky.push(Math.floor(krokuUseku / dilu) + (j < krokuUseku % dilu ? 1 : 0));
+    }
+    const dilu = useky.length;
     if (dilu < 2 || dilu > 40) return null;
     let navrh = this.#navrh;
     const deleni: number[] = [];
     let hotovo = 0;
     for (let i = 0; i < dilu; i++) {
-      // Delší díly napřed: 5 kroků na dva díly jsou 3 + 2.
-      const dil = Math.floor(kroku / dilu) + (i < kroku % dilu ? 1 : 0);
       const a = { x: od.x + (dx / kroku) * hotovo, y: od.y + (dy / kroku) * hotovo };
-      hotovo += dil;
+      hotovo += useky[i]!;
       const b = { x: od.x + (dx / kroku) * hotovo, y: od.y + (dy / kroku) * hotovo };
       if (duvodProtiPrutu(navrh, this.uroven, a, b, this.prvek)) return null;
       navrh = pridejPrut(navrh, a, b, this.prvek);
       if (i < dilu - 1) deleni.push(hotovo / kroku);
     }
     return { navrh, dilu, deleni };
+  }
+
+  /**
+   * Kroky tahu mostovky (0 až `kroku`, bez krajů), ve kterých musí být styčník: konce tras
+   * úrovně a kotvy, které leží na tahu uvnitř. Seřazené; u pilíře žádné.
+   */
+  /** Vede tah mostovky přes konec trasy nebo kotvu, kde musí mít styčník? */
+  #vedePresStycnik(od: Bod, k: Bod): boolean {
+    let kroku = Math.abs(k.x - od.x);
+    for (let zbytek = Math.abs(k.y - od.y); zbytek !== 0; ) [kroku, zbytek] = [zbytek, kroku % zbytek];
+    return kroku >= 2 && Number.isInteger(kroku) && this.#povinneStycniky(od, k, kroku).length > 0;
+  }
+
+  #povinneStycniky(od: Bod, k: Bod, kroku: number): number[] {
+    if (KATALOG[this.prvek].druh !== "mostovka") return [];
+    const dx = (k.x - od.x) / kroku;
+    const dy = (k.y - od.y) / kroku;
+    // Kotvy vyhrazené jinému druhu prutu (lano, tlumič) mostovku nedrží: tah přes ně se nedělí,
+    // jinak by ho pravidlo vyhrazené kotvy celý odmítlo.
+    const body: Bod[] = this.uroven.kotvy.filter((kotva) => kotva.jen === undefined || kotva.jen === null);
+    for (const t of this.uroven.trasy) body.push(t.zacatek, t.konec);
+    const kroky = new Set<number>();
+    for (const b of body) {
+      // Na tahu leží, jen když padne přesně na některý krok (styčníky jsou na rastru).
+      const i = dx !== 0 ? (b.x - od.x) / dx : (b.y - od.y) / dy;
+      if (!Number.isInteger(i) || i <= 0 || i >= kroku) continue;
+      if (od.x + dx * i === b.x && od.y + dy * i === b.y) kroky.add(i);
+    }
+    return [...kroky].sort((p, q) => p - q);
   }
 
   /** Z výběru vyřadí to, co v návrhu už není. */
@@ -210,6 +258,7 @@ export class Editor {
     this.#znovu.length = 0;
     this.posledniAkce = "import";
     this.posledniPrut = null;
+    this.posledniPosun = null;
     if (navrh === this.#navrh) return;
     this.#navrh = navrh;
     this.#ocistiVyber();
@@ -241,6 +290,7 @@ export class Editor {
     this.#navrh = predchozi;
     this.posledniAkce = "zpet";
     this.posledniPrut = null;
+    this.posledniPosun = null;
     this.tah = null;
     this.#ocistiVyber();
     this.#poZmene();
@@ -253,16 +303,21 @@ export class Editor {
     this.#navrh = dalsi;
     this.posledniAkce = "znovu";
     this.posledniPrut = null;
+    this.posledniPosun = null;
     this.tah = null;
     this.#ocistiVyber();
     this.#poZmene();
   }
 
-  /** Styčník návrhu nejblíž bodu, pokud je v dosahu. */
-  stycnikU(bod: Bod): number | null {
+  /**
+   * Styčník návrhu nejblíž bodu, pokud je v dosahu (metry; výchozí je dosah myši). `jen`
+   * omezí hledání na dané styčníky.
+   */
+  stycnikU(bod: Bod, dosah = DOSAH_STYCNIKU, jen?: ReadonlySet<number>): number | null {
     let nejblizsi: number | null = null;
-    let nejmensi = DOSAH_STYCNIKU;
+    let nejmensi = Math.max(DOSAH_STYCNIKU, dosah);
     for (const s of this.#navrh.stycniky) {
+      if (jen && !jen.has(s.id)) continue;
       const d = Math.hypot(s.x - bod.x, s.y - bod.y);
       if (d <= nejmensi) {
         nejmensi = d;
@@ -293,16 +348,21 @@ export class Editor {
   /**
    * Stisk levého tlačítka v bodě světa. `pridat` (Shift) přidává k výběru,
    * `posouvat` (Alt nebo nástroj výběru) místo kreslení táhne styčníkem,
-   * `bezKresleni` (nástroj výběru) nezačne kreslit ani z kotvy.
+   * `bezKresleni` (nástroj výběru) nezačne kreslit ani z kotvy, `dosah` (metry) zvětší
+   * vzdálenost, ze které se ještě chytí styčník výběru (prst je širší než kurzor); ostatní
+   * styčníky se chytají z běžné vzdálenosti, aby šel rámeček začít i kousek vedle mostu.
    */
-  stiskni(bod: Bod, volby: { pridat?: boolean; posouvat?: boolean; bezKresleni?: boolean } = {}): void {
+  stiskni(bod: Bod, volby: { pridat?: boolean; posouvat?: boolean; bezKresleni?: boolean; dosah?: number } = {}): void {
     this.posledniDuvod = null;
     const mriz = naRastr(bod);
-    const stycnik = this.stycnikU(bod);
+    const stycnik = this.stycnikU(bod) ?? (volby.dosah ? this.stycnikU(bod, volby.dosah, this.#stycnikyVyberu()) : null);
     this.#stisk = { bod, stycnik, prut: stycnik === null ? this.prutU(bod) : null, pridat: volby.pridat === true };
     if (volby.posouvat && stycnik !== null) {
       const s = this.#navrh.stycniky.find((x) => x.id === stycnik)!;
       this.tah = { druh: "posun", stycnik, od: { x: s.x, y: s.y }, k: { x: s.x, y: s.y }, duvod: null };
+      // Tažený styčník patří do výběru víc styčníků: táhne se celý výběr.
+      const vyber = this.#stycnikyVyberu();
+      if (vyber.size > 1 && vyber.has(stycnik)) this.tah.skupina = [...this.#pohyblive(vyber)];
     } else if (
       !volby.bezKresleni &&
       lzeZacit(this.#navrh, this.uroven, mriz) &&
@@ -320,11 +380,19 @@ export class Editor {
     if (!tah) return;
     if (tah.druh === "prut") {
       tah.k = naRastr(bod);
+      // Mostovka tažená z trasy za její konec končí na kraji břehu: dál by ji nic neneslo.
+      delete tah.zkraceno;
+      const konec = konecTahuMostovky(this.prvek, tah.od, tah.k, this.uroven);
+      if (konec) {
+        tah.k = konec;
+        tah.zkraceno = true;
+      }
       tah.duvod = duvodProtiPrutu(this.#navrh, this.uroven, tah.od, tah.k, this.prvek);
       delete tah.dilu;
       delete tah.deleni;
       // Dlouhý tah mostovky nebo pilíře se rozdělí na díly; odmítne se, jen když to nejde.
-      if (tah.duvod === "prut-dlouhy") {
+      // Mostovka přes konec trasy nebo přes kotvu se tam rozdělí, i když je krátká.
+      if (tah.duvod === "prut-dlouhy" || (tah.duvod === null && this.#vedePresStycnik(tah.od, tah.k))) {
         const dily = this.#rozdelNaDily(tah.od, tah.k);
         if (dily) {
           tah.duvod = null;
@@ -333,9 +401,15 @@ export class Editor {
         }
       }
     } else if (tah.druh === "posun") {
-      tah.k = naRastr(bod);
+      // Styčník se posouvá o tolik celých metrů, o kolik se pohnul kurzor od místa stisku: kdo
+      // chytil styčník kousek vedle (prstem), tomu neposkočí o metr hned při prvním pohybu.
+      const chyceno = this.#stisk?.bod ?? tah.od;
+      tah.k = { x: tah.od.x + Math.round(bod.x - chyceno.x), y: tah.od.y + Math.round(bod.y - chyceno.y) };
       const beze = tah.k.x === tah.od.x && tah.k.y === tah.od.y;
-      tah.duvod = beze ? null : duvodProtiPosunu(this.#navrh, this.uroven, tah.stycnik, tah.k);
+      if (beze) tah.duvod = null;
+      else if (tah.skupina) {
+        tah.duvod = duvodProtiPosunuSkupiny(this.#navrh, this.uroven, new Set(tah.skupina), tah.k.x - tah.od.x, tah.k.y - tah.od.y);
+      } else tah.duvod = duvodProtiPosunu(this.#navrh, this.uroven, tah.stycnik, tah.k);
     } else {
       tah.k = bod;
     }
@@ -361,7 +435,7 @@ export class Editor {
         return false;
       }
       this.zrusVyber();
-      this.posledniPrut = { prvek: this.prvek, od: tah.od, k: tah.k };
+      this.posledniPrut = { prvek: this.prvek, od: tah.od, k: tah.k, ...(tah.zkraceno ? { zkraceno: true } : {}) };
       if (tah.dilu) {
         const dily = this.#rozdelNaDily(tah.od, tah.k);
         if (dily) this.posledniPrut.dilu = dily.dilu;
@@ -393,8 +467,21 @@ export class Editor {
         this.#poZmene();
         return false;
       }
+      const dx = tah.k.x - tah.od.x;
+      const dy = tah.k.y - tah.od.y;
+      if (tah.skupina) {
+        // Výběr zůstává: další tah nebo šipka posune tytéž styčníky.
+        const posunute = posunStycniky(this.#navrh, new Set(tah.skupina), dx, dy);
+        if (!posunute || posunute === this.#navrh) return false;
+        this.posledniPosun = { stycniku: tah.skupina.length, dx, dy, jak: "tah" };
+        return this.#zmen(posunute, "posun");
+      }
       const posunuty = posunStycnik(this.#navrh, tah.stycnik, tah.k);
-      return posunuty ? this.#zmen(posunuty, "posun") : false;
+      if (!posunuty) return false;
+      // Styčník odtažený z kotvy nebo základu: most se o ni tam přestal opírat (hra to řekne).
+      const zPodpory = jeVPodpore(this.uroven, tah.od) && !jeVPodpore(this.uroven, tah.k);
+      this.posledniPosun = { stycniku: 1, dx, dy, jak: "tah", ...(zPodpory ? { zPodpory: true } : {}) };
+      return this.#zmen(posunuty, "posun");
     }
 
     // Obdélník: nepatrný pohyb je kliknutí.
@@ -478,6 +565,59 @@ export class Editor {
     for (const p of this.#navrh.pruty) this.vybranePruty.add(p.id);
     for (const s of this.#navrh.stycniky) this.vybraneStycniky.add(s.id);
     this.#poZmene();
+  }
+
+  /** Styčníky výběru: vybrané styčníky a konce vybraných prutů. Výběr kvůli nastavení se nepočítá. */
+  #stycnikyVyberu(): Set<number> {
+    const ids = new Set<number>();
+    if (this.#vyberKNastaveni) return ids;
+    for (const id of this.vybraneStycniky) ids.add(id);
+    for (const p of this.#navrh.pruty) {
+      if (!this.vybranePruty.has(p.id)) continue;
+      ids.add(p.a);
+      ids.add(p.b);
+    }
+    return ids;
+  }
+
+  /** Z daných styčníků ty, které se smějí hýbat: styčník v kotvě nebo na základu stojí. */
+  #pohyblive(ids: ReadonlySet<number>): Set<number> {
+    const pohyblive = new Set<number>();
+    for (const s of this.#navrh.stycniky) if (ids.has(s.id) && !jeVPodpore(this.uroven, s)) pohyblive.add(s.id);
+    return pohyblive;
+  }
+
+  /**
+   * Co by posunul výběr (šipkami nebo tažením za vybraný styčník): kolik styčníků se pohne
+   * a kolik jich zůstane stát v podporách. Null, když hráč nic k posunu nevybral (ani lano
+   * vybrané samo kvůli napínáku se nepočítá: šipky pak posouvají pohled).
+   */
+  get posunVyberu(): { pohyblivych: number; vPodporach: number } | null {
+    const vyber = this.#stycnikyVyberu();
+    if (vyber.size === 0) return null;
+    const pohyblivych = this.#pohyblive(vyber).size;
+    return { pohyblivych, vPodporach: vyber.size - pohyblivych };
+  }
+
+  /**
+   * Posune vybrané styčníky (i konce vybraných prutů) o `dx`, `dy` metrů; styčníky v podporách
+   * zůstanou stát. Platí stejná pravidla jako pro tažení: když by výsledek některé porušil, nic
+   * se nestane a `posledniDuvod` řekne proč. Jeden posun je jeden krok historie.
+   */
+  posunVybrane(dx: number, dy: number): boolean {
+    this.posledniDuvod = null;
+    const ids = this.#pohyblive(this.#stycnikyVyberu());
+    if (ids.size === 0 || (dx === 0 && dy === 0)) return false;
+    const duvod = duvodProtiPosunuSkupiny(this.#navrh, this.uroven, ids, dx, dy);
+    if (duvod) {
+      this.posledniDuvod = duvod;
+      this.#poZmene();
+      return false;
+    }
+    const posunute = posunStycniky(this.#navrh, ids, dx, dy);
+    if (!posunute) return false;
+    this.posledniPosun = { stycniku: ids.size, dx, dy, jak: "klavesa" };
+    return this.#zmen(posunute, "posun");
   }
 
   get neconiJeVybrano(): boolean {
