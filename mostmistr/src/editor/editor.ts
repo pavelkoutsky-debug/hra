@@ -216,7 +216,9 @@ export class Editor {
     if (KATALOG[this.prvek].druh !== "mostovka") return [];
     const dx = (k.x - od.x) / kroku;
     const dy = (k.y - od.y) / kroku;
-    const body: Bod[] = [...this.uroven.kotvy];
+    // Kotvy vyhrazené jinému druhu prutu (lano, tlumič) mostovku nedrží: tah přes ně se nedělí,
+    // jinak by ho pravidlo vyhrazené kotvy celý odmítlo.
+    const body: Bod[] = this.uroven.kotvy.filter((kotva) => kotva.jen === undefined || kotva.jen === null);
     for (const t of this.uroven.trasy) body.push(t.zacatek, t.konec);
     const kroky = new Set<number>();
     for (const b of body) {

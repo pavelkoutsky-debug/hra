@@ -152,6 +152,8 @@ export interface HracVUrovni {
    */
   radaZkousek?: number | null;
   radaNapoveda?: boolean;
+  /** Kolik zkoušek po té radě hráč potřeboval k dalšímu průchodu (null: zatím neprošel). */
+  radaPruchodPo?: number | null;
   /** Posuny styčníků, z toho víc styčníků naráz a šipkou. Starší výtahy je nemají. */
   posunu?: number;
   posunuVic?: number;
@@ -352,6 +354,7 @@ function novyHracVUrovni(): HracVUrovni {
     prutu: 0,
     radaZkousek: null,
     radaNapoveda: false,
+    radaPruchodPo: null,
     posunu: 0,
     posunuVic: 0,
     posunuKlavesou: 0,
@@ -468,6 +471,8 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       zaznam.zkousek += 1;
       if (anoZ(data.pruchod)) {
         zaznam.pruchodu += 1;
+        // První průchod po radě: i u hráče, který úroveň prošel už dřív a radu dostal při zlevňování.
+        if ((zaznam.radaZkousek ?? null) !== null && (zaznam.radaPruchodPo ?? null) === null) zaznam.radaPruchodPo = zaznam.zkousek - zaznam.radaZkousek!;
         if (zaznam.zkousekDoPruchodu === null) {
           zaznam.zkousekDoPruchodu = zaznam.zkousek;
           zaznam.sekundDoPruchodu = zaznam.sekundDriv + vMezich(data.sekund, NEJVIC_SEKUND);
@@ -547,7 +552,15 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
       const cilUrovne = (s.urovne[uroven] ??= slovnik());
       for (const [hrac, z] of Object.entries(hraci)) {
         const cil = (cilUrovne[hrac] ??= novyHracVUrovni());
-        if ((cil.radaZkousek ?? null) === null && (z.radaZkousek ?? null) !== null) cil.radaZkousek = cil.zkousek + z.radaZkousek!;
+        if ((cil.radaZkousek ?? null) === null) {
+          if ((z.radaZkousek ?? null) !== null) {
+            cil.radaZkousek = cil.zkousek + z.radaZkousek!;
+            cil.radaPruchodPo = z.radaPruchodPo ?? null;
+          }
+        } else if ((cil.radaPruchodPo ?? null) === null && z.zkousekDoPruchodu !== null) {
+          // Rada zazněla v dřívější části: první průchod po ní je první průchod téhle části.
+          cil.radaPruchodPo = cil.zkousek - cil.radaZkousek! + z.zkousekDoPruchodu;
+        }
         cil.radaNapoveda = (cil.radaNapoveda ?? false) || (z.radaNapoveda ?? false);
         if (cil.zkousekDoPruchodu === null && z.zkousekDoPruchodu !== null) {
           cil.zkousekDoPruchodu = cil.zkousek + z.zkousekDoPruchodu;
@@ -606,7 +619,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
       const cena = median(ceny);
       // Hráči, kteří radu viděli, a kolik zkoušek od ní potřebovali ti, kdo potom prošli.
       const sRadou = zaznamy.filter((z) => (z.radaZkousek ?? null) !== null);
-      const poRade = sRadou.flatMap((z) => (z.zkousekDoPruchodu !== null && z.zkousekDoPruchodu > z.radaZkousek! ? [z.zkousekDoPruchodu - z.radaZkousek!] : []));
+      const poRade = sRadou.flatMap((z) => ((z.radaPruchodPo ?? null) !== null ? [z.radaPruchodPo!] : []));
       return {
         uroven,
         hracu: zaznamy.length,

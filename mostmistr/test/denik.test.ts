@@ -1094,6 +1094,16 @@ describe("souhrn deníku", () => {
       zkousekPoRade: 2,
       hracuNapovedaZRady: 1,
     });
+    // Dana úroveň prošla, pak most zlevňovala, dvakrát jí spadl stejně, dostala radu a prošla znovu:
+    // počítá se průchod po radě, ne ten první.
+    const dana = hlavicka("d4d4d4d4d4d4d4d4", "4444444444444444");
+    const zlevnovani = [u(0, "uroven.otevrena", "1-03"), zkouska(10, true), vzper(20), vzper(30), rada(31, { druh: "vzper", prvek: "drevo-lehke", zkousek: 3 }), vzper(40), vzper(50), zkouska(60, true), zkouska(70, true)];
+    expect(souhrnDeniku([davka(zlevnovani, 0, dana)]).urovne[0]).toMatchObject({ zkousekDoPruchodu: 1, hracuSRadou: 1, hracuSRadouPrusli: 1, zkousekPoRade: 3 });
+    // Totéž s deníkem rozděleným v kterémkoli místě.
+    for (let rez = 1; rez < zlevnovani.length; rez++) {
+      const casti = [vytahDeniku([davka(zlevnovani.slice(0, rez), 0, dana)]), vytahDeniku([davka(zlevnovani.slice(rez), 1, dana)])];
+      expect(souhrnZVytahu(slucVytahy(casti)).urovne[0], `řez ${rez}`).toMatchObject({ zkousekDoPruchodu: 1, hracuSRadou: 1, hracuSRadouPrusli: 1, zkousekPoRade: 3 });
+    }
     // Výtahy jdou sloučit (Annin den rozdělený za radou) a starší výtah bez rad nic nerozbije.
     const pred = vytahDeniku([davka(davky[0]!.udalosti.slice(0, 4), 0, anna)]);
     const po = vytahDeniku([davka(davky[0]!.udalosti.slice(4), 1, anna)]);

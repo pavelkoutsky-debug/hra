@@ -36,15 +36,15 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
   hraUmi:
     "Co hra už umí. Nic z toho nenavrhuj jako novinku; když čísla ukazují, že to nezabírá, navrhni, jak to udělat viditelnější nebo lepší.",
   "souhrn.bezUrovne":
-    "Hráči, kteří neotevřeli žádnou úroveň kampaně. jenPrehled: viděli jen přehled; piskoviste, komise, list, zkusebna, soukromi, vazba: kam šli místo toho (můžou se překrývat); bezObrazovky: stránka se nedonačetla. sAkci a bezAkce: jestli na stránce vůbec něco udělali (bezAkce bývá robot, který stahuje náhled odkazu, nebo okamžitý odchod); zbytek do hracu měl starší verzi hry, která akci nezapisovala.",
+    "Hráči, kteří neotevřeli žádnou úroveň kampaně. jenPrehled: viděli jen přehled; piskoviste, komise, list, zkusebna, soukromi, vazba: kam šli místo toho (můžou se překrývat); bezObrazovky: stránka se nedonačetla. sAkci a bezAkce: jestli na stránce vůbec něco udělali (bezAkce bývá robot, který stahuje náhled odkazu, nebo okamžitý odchod); zbytek do hracu je neznámý (starší verze hry, která akci nezapisovala, nebo sezení začaté před půlnocí).",
   "souhrn.urovne[].hracuBezZkousky":
-    "Otevřeli úroveň a nepustili ani jednu zkoušku. hracuNaDotyku: hráči úrovně na dotykovém zařízení; hracuBezZkouskyNaDotyku: kolik z hráčů bez zkoušky bylo na dotyku; hracuBezPrutu: kolik hráčů úrovně nenakreslilo ani jeden prut.",
+    "Otevřeli úroveň a nepustili ani jednu zkoušku. hracuNaDotyku: hráči úrovně na dotykovém zařízení; hracuBezZkouskyNaDotyku: kolik z hráčů bez zkoušky bylo na dotyku; hracuBezPrutu: kolik hráčů úrovně v ní za to období nenakreslilo ani jeden prut (patří sem i ten, kdo jen zkoušel most uložený dřív nebo cizí most z odkazu).",
   "souhrn.urovne[].selhani":
-    "Proč zkoušky neprošly a kolikrát. „prvek/způsob“ je prut, který povolil první (vzper je vybočení tlačeného prutu). Ostatní názvy jsou příčiny bez porušeného prutu: složil se vlastní vahou, mostovka nedosáhla na předmostí, kmitání nad mezí, průhyb nad mezí, opřel se o terén, sjel z podpory, někdo spadl, někdo nepřejel, loď narazila, pohyblivý most. „bez porušení“ jsou zkoušky ze starší verze hry, která příčinu neposílala.",
+    "Proč zkoušky neprošly a kolikrát. „prvek/způsob“ je prut, který povolil první (vzper je vybočení tlačeného prutu). Ostatní názvy jsou příčiny bez porušeného prutu: složil se vlastní vahou, mostovka nedosáhla na předmostí, kmitání nad mezí, průhyb nad mezí, opřel se o terén, sjel z podpory, někdo spadl, někdo nepřejel, loď narazila, křídlo se překlopilo, zámek nezapadl, pohyblivý most, povolil prut, výpočet se rozpadl. „bez porušení“ jsou zkoušky, u kterých příčina není známá: hlavně ze starší verze hry, která ji neposílala.",
   "souhrn.urovne[].hracuSNapovedou":
     "Hráči, kteří si otevřeli nápovědu úrovně; hracuSObrysem si nechali ukázat i obrys mostu na výkresu.",
   "souhrn.urovne[].rady":
-    "Rada po druhém stejném nezdaru za sebou (hra ji ukáže sama v pruhu výsledku) a kolikrát která zazněla. hracuSRadou: kolik hráčů ji vidělo; hracuSRadouPrusli: kolik z nich úroveň potom prošlo; zkousekPoRade: medián zkoušek od rady do průchodu; hracuNapovedaZRady: kolik z nich z rady otevřelo nápovědu.",
+    "Rada po druhém stejném nezdaru za sebou (hra ji ukáže sama v pruhu výsledku) a kolikrát která zazněla. hracuSRadou: kolik hráčů ji vidělo; hracuSRadouPrusli: kolik z nich potom zkouškou prošlo (počítá se první průchod po radě, i u hráče, který úroveň prošel už dřív a radu dostal při zlevňování); zkousekPoRade: medián zkoušek od rady do toho průchodu; hracuNapovedaZRady: kolik z nich z rady otevřelo nápovědu.",
   "souhrn.urovne[].posunu":
     "Posuny styčníků nástrojem Výběr a posun nebo šipkami. hracuSPosunem: kolik hráčů posun použilo; posunu: kolik posunů bylo; posunuVic: z toho víc styčníků naráz; posunuKlavesou: z toho šipkou.",
   "souhrn.urovne[].znacky":

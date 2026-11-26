@@ -591,6 +591,8 @@ export function spustUroven(
    * složení ji při stavbě opakuje, dokud hráč most nezmění. Háček `body[data-rada-u-prutu]`.
    */
   let radaNaVykresu: { navrh: NavrhMostu; druh: string; rada: string } | null = null;
+  /** Druhy rady, které patří ke značce prvního porušení na výkresu. */
+  const RADY_U_PRUTU: ReadonlySet<string> = new Set(["vzper", "tlak", "tah", "ohyb", "smyk", "nedopnuto"]);
   /** Horní okraj svislé osy rezonanční křivky; drží se, aby bylo vidět, že úprava špičku snížila. */
   let stropKrivky = 0;
   /** Který tvar kmitání se právě na výkresu předvádí (pořadí v rozboru); null žádný. */
@@ -874,7 +876,7 @@ export function spustUroven(
       // Po zkoušce, která neprošla: kde to povolilo první. Zůstává do první úpravy mostu.
       else if (posledniPorucha && posledniPorucha.navrh === editor.navrh) {
         // Po radě u výsledku ji značka u prutu opakuje: hráč ji má před očima, když most mění.
-        const rada = radaNaVykresu && radaNaVykresu.navrh === editor.navrh ? ` ${radaNaVykresu.rada}` : "";
+        const rada = radaNaVykresu && radaNaVykresu.navrh === editor.navrh && RADY_U_PRUTU.has(radaNaVykresu.druh) ? ` ${radaNaVykresu.rada}` : "";
         nakresliSlozeni(ctx, kamera, rozmer, posledniPorucha.misto, t("stavba.porucha.nadpis"), `${posledniPorucha.popis}${rada ? "." : ""}${rada}`);
       } else if (zaBrehem) {
         nakresliSlozeni(ctx, kamera, rozmer, zaBrehem.misto, t("zaBrehem.nadpis"), t("zaBrehem.kratce"));
@@ -2505,7 +2507,7 @@ export function spustUroven(
     else if (nastroj === "ladeny") klic = "rada.ladeny";
     else if (jePridavek(nastroj)) klic = "rada.pridavek";
     // Výběr, který jde posunout (hráč ho udělal sám): řádek říká, že šipky ho posunou.
-    else if (editor.posunVyberu !== null) klic = nastroj === "vyber" ? "rada.vyberPosun" : "rada.vybranoPosun";
+    else if (editor.posunVyberu !== null && (nastroj === "vyber" || editor.posunVyberu.pohyblivych > 0)) klic = nastroj === "vyber" ? "rada.vyberPosun" : "rada.vybranoPosun";
     else if (editor.vybranePruty.size > 0) klic = "rada.vybranePruty";
     else if (nastroj === "vyber") klic = "rada.vyber";
     pole.textContent = t(klic);
@@ -2992,9 +2994,15 @@ export function spustUroven(
    */
   function posunVyberSipkou(dx: number, dy: number): boolean {
     if (rezim !== "stavba" || otevreneOkno() || editor.tah !== null || brnk !== null) return false;
+    // Styčník, který vybral přídavek (závaží, svar, zámek, tlumič), není výběr k posunu: šipky
+    // posouvají výběr jen v nástrojích, které výběr dělají a ukazují (kreslení, Výběr a posun).
+    if (nastroj !== "kresleni" && nastroj !== "vyber") return false;
     const vyber = editor.posunVyberu;
     if (vyber === null) return false;
     if (vyber.pohyblivych === 0) {
+      // Jen styčníky v podporách: s nástrojem Výběr a posun hra řekne, proč se nic nehne; při
+      // kreslení (výběr zbyl po kliknutí) šipky dál posouvají pohled.
+      if (nastroj !== "vyber") return false;
       ukazHlaseni(t("posun.vPodporach"), "info", true);
       return true;
     }
@@ -3209,7 +3217,10 @@ export function spustUroven(
     posledniPorucha = beh ? mistoPrvniPoruchy(beh) : null;
     // Rada u výsledku zůstane i u značky na výkresu (první porušení, složení), dokud se most nezmění.
     radaNaVykresu = null;
-    if (beh?.rada && beh.vysledekUkazan && (posledniPorucha || beh.rada.druh.startsWith("slozeni-"))) {
+    // U značky prvního porušení jen rada k tomu porušení: rada ke kmitání mostu, na kterém mezitím
+    // něco povolilo, by tam stála vedle věty o prutu, se kterou nesouvisí (říká ji osa frekvencí).
+    const kPrutu = beh?.rada ? RADY_U_PRUTU.has(beh.rada.druh) : false;
+    if (beh?.rada && beh.vysledekUkazan && ((posledniPorucha && kPrutu) || beh.rada.druh.startsWith("slozeni-"))) {
       radaNaVykresu = { navrh: beh.navrh, druh: beh.rada.druh, rada: radaKNezdaru(beh, beh.rada) };
     }
     // Rada, kterou hráč neviděl (zkoušku zastavil před výsledkem), smí zaznít příště.
@@ -3240,7 +3251,9 @@ export function spustUroven(
     // Po první zkoušce, kterou hráč prošel, hra jednou (za prohlížeč) řekne, že most jde upravit
     // posunem styčníků: hráči most po průchodu přestavují, aby ho zlevnili, a posun nenacházeli.
     // Hlášení zmizí s další akcí na výkresu; nástroj v paletě zůstane zvýrazněný, dokud ho nezkusí.
-    const prosla = beh?.vysledek?.pruchod === true && !beh.pokus && !beh.host;
+    // Jen po výsledku, který hráč viděl: kdo se vrátí ke stavbě uprostřed přehrávání, ještě neví,
+    // že most prošel, a hra mu to nemá prozradit dřív než pruh výsledku.
+    const prosla = beh?.vysledek?.pruchod === true && beh.vysledekUkazan && !beh.pokus && !beh.host;
     // Bez paměti prohlížeče aspoň jednou za návštěvu stránky.
     if (prosla && !havarie && !uloziste.tipPosunu && document.body.dataset.tipPosunu !== "ukazan") {
       uloziste.tipPosunu = true;
@@ -3947,14 +3960,13 @@ export function spustUroven(
   }
 
   /** Rada ke složení bez věty o důvodu: jen to, co úroveň dovoluje. Prázdná u mostu bez ukotvení. */
-  function radaKSlozeni(s: Slozeni): string {
+  function radaKSlozeni(s: Slozeni, navrh: NavrhMostu = editor.navrh): string {
     const vety: string[] = [];
     if (s.duvod !== "podpory") {
       vety.push(t(`slozeni.rada.${s.duvod}`));
       if (uroven.povoleneSvary) vety.push(t("slozeni.rada.svar"));
       if (smiLana) vety.push(t("slozeni.rada.lano"));
       // Pilíř jen tam, kde je ho kam postavit: na základ, na kterém ještě žádný nestojí.
-      const navrh = editor.navrh;
       const volnyZaklad = uroven.zaklady.some(
         (z) => !navrh.stycniky.some((st) => st.x === z.x && st.y === z.y && navrh.pruty.some((p) => (p.a === st.id || p.b === st.id) && KATALOG[p.prvek].druh === "pilir")),
       );
@@ -4153,7 +4165,7 @@ export function spustUroven(
     if (n.druh === "nedopnuto") return t("rada.prvni.nedopnuto");
     if (n.druh.startsWith("slozeni-")) {
       const s = slozeniBehu(b);
-      return s ? radaKSlozeni(s) : "";
+      return s ? radaKSlozeni(s, b.navrh) : "";
     }
     const prvni = prvniPoruseni(b);
     if (prvni?.druh === "poruseni" && n.prvek !== null) return radaKPoruseni(prvni.zpusob, b.navrh, prvni.prut);

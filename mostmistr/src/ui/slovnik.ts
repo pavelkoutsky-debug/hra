@@ -786,7 +786,7 @@ const CS = {
   "zadani.stavba.zamek": "Dělicí zámek: {zaKus} za kus; patří na opěru s ložiskem nebo mezi dvě části mostu",
   "zadani.medaile": "Medaile",
   "zadani.ovladani":
-    "Prut nakreslíš tažením myší z kotvy nebo ze styčníku; postavené styčníky posuneš nástrojem Výběr a posun (V) tažením nebo šipkami. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",
+    "Prut nakreslíš tažením myší z kotvy nebo ze styčníku; postavené styčníky posuneš nástrojem Výběr a posun (V) tažením nebo šipkami. Výkres posuneš pravým tlačítkem myši a zvětšíš kolečkem. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",
   "zadani.ovladani.dotyk":
     "Prut nakreslíš tažením prstu z kotvy nebo ze styčníku; postavené styčníky posuneš nástrojem Výběr a posun. Dvěma prsty výkres posouváš a zvětšuješ. Zkoušku pustíš tlačítkem ▶ Zkouška a na časové ose ji můžeš zpomalit, krokovat i vracet.",
   "zadani.zacit": "Jdu stavět",

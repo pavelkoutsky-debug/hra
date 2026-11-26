@@ -57,15 +57,15 @@ export interface PodkladyPriciny {
 
 /**
  * Kód příčiny, proč most neprošel; null u mostu, který prošel, a u pokusu. Pořadí je stejné
- * jako u věty v pruhu výsledku (`ukazVysledek` v `src/hra/uroven.ts`): složení, mezera
+ * jako u věty v pruhu výsledku (`ukazVysledek` v `src/hra/uroven.ts`): rozpad výpočtu, složení, mezera
  * v mostovce, pohyblivý most, průhyb, kmitání (když všichni přešli), první porušení, kmitání,
  * a nakonec to, co je vidět na provozu.
  */
 export function kodPriciny(p: PodkladyPriciny): KodPriciny | null {
   const v = p.vysledek;
   if (p.pokus || v.pruchod) return null;
-  if (v.bezRovnovahy && p.slozeni) return "slozeni";
   if (v.rozpad) return "rozpad";
+  if (v.bezRovnovahy && p.slozeni) return "slozeni";
   if (v.mezera && v.spadlo === 0) return "mezera";
   if (p.pricinyPohybu.length > 0 && p.pricinyPohybu[0] !== "poruseno") return "pohyb";
   const prekrocenoPruhybem = v.pruhyb?.prekroceno ?? null;

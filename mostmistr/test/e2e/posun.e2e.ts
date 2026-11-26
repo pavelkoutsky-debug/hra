@@ -162,6 +162,16 @@ describe("posun víc styčníků naráz", () => {
     await s.locator(PLATNO).focus();
     await s.keyboard.press("Space");
     await s.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
+    // Kdo se vrátí ke stavbě dřív, než výsledek uvidí, ještě neví, že most prošel: rada o posunu
+    // mu to neprozradí a nespotřebuje se.
+    expect(await s.locator(".vysledek").isVisible()).toBe(false);
+    await s.keyboard.press("Space");
+    await s.locator('body[data-rezim="stavba"]').waitFor();
+    expect(await telo(s, "tip-posunu")).toBeNull();
+    expect(await s.locator('[data-akce="vyber"]').getAttribute("data-tip")).toBeNull();
+    await s.locator(PLATNO).focus();
+    await s.keyboard.press("Space");
+    await s.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
     await s.locator('[data-akce="na-konec"]').click();
     await s.locator(".vysledek").waitFor({ state: "visible" });
     expect(await s.locator(".vysledek").getAttribute("data-stav")).toBe("obstal");
@@ -191,6 +201,49 @@ describe("posun víc styčníků naráz", () => {
     expect(await telo(s, "tip-posunu")).toBeNull();
     await s.close();
   }, 300_000);
+});
+
+describe("šipky a styčník vybraný přídavkem", () => {
+  it("závaží pověšené kliknutím šipka neposune: posouvá pohled; s nástrojem Výběr a posun styčník posune", async () => {
+    const most = RESENI["2-03"]!.pruchod;
+    const p = await prohlizec.newPage({ locale: "cs-CZ", viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    p.on("pageerror", (chyba) => chyby.push(chyba.message));
+    await p.goto(`${adresa}?uroven=2-03&zaznam=vypnout`);
+    await p.locator(PLATNO).waitFor();
+    await p.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    await p.locator('#obrazovka-uroven .paleta [data-akce="import"]').click();
+    await p.locator("#okno-obsah").fill(navrhNaText(most));
+    await p.locator('[data-akce="okno-nacist"]').click();
+    const poloha = async (): Promise<{ x: number; y: number; zavazi: boolean } | null> => {
+      const st = (await mostNaVykresu(p)).stycniky.find((k) => k.x === 8 && Math.abs(k.y) <= 2);
+      return st ? { x: st.x, y: st.y, zavazi: (st.zavazi ?? 0) > 0 } : null;
+    };
+    expect(await poloha()).toEqual({ x: 8, y: 0, zavazi: false });
+    // Závaží na styčník mostovky v 8 m: nástroj styčník vybere kvůli nastavení hmotnosti.
+    await p.locator('button[data-pridavek="zavazi"]').click();
+    const misto = await bodSveta(p, 8, 0);
+    await p.mouse.click(misto.x, misto.y);
+    expect(await poloha()).toEqual({ x: 8, y: 0, zavazi: true });
+    await p.locator(PLATNO).focus();
+    const kamera = await p.locator(PLATNO).getAttribute("data-kamera");
+    await p.keyboard.press("ArrowUp");
+    expect(await poloha()).toEqual({ x: 8, y: 0, zavazi: true });
+    expect(await p.locator(PLATNO).getAttribute("data-kamera")).not.toBe(kamera);
+    // Tentýž styčník vybraný nástrojem Výběr a posun už šipka bere jako výběr k posunu: pohled
+    // stojí a hra buď styčník posune, nebo řekne, proč to nejde (lávka 2-03 má mostovku rovnou).
+    await p.locator('[data-akce="vyber"]').click();
+    const znovu = await bodSveta(p, 8, 0);
+    await p.mouse.click(znovu.x, znovu.y);
+    expect(await telo(p, "posun-vyberu")).toBe("1;0");
+    await p.locator(PLATNO).focus();
+    const predPosunem = await p.locator(PLATNO).getAttribute("data-kamera");
+    await p.keyboard.press("ArrowUp");
+    expect(await p.locator(PLATNO).getAttribute("data-kamera")).toBe(predPosunem);
+    const po = await poloha();
+    if (po === null || po.y === 0) expect((await udaj(p, "hlaseni")).length).toBeGreaterThan(10);
+    else expect(po).toEqual({ x: 8, y: 1, zavazi: true });
+    await p.close();
+  }, 60_000);
 });
 
 describe("posun prstem na telefonu", () => {

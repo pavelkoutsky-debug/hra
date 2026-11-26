@@ -795,7 +795,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.stavba.zamek": "Span lock: {zaKus} each; it belongs on an abutment with a bearing or between two parts of the bridge",
   "zadani.medaile": "Medals",
   "zadani.ovladani":
-    "Draw a member by dragging with the mouse from an anchor or a joint; move built joints with the Select & move tool (V) by dragging or with the arrow keys. Start the test with Space; on the timeline you can slow it down, step through it and rewind.",
+    "Draw a member by dragging with the mouse from an anchor or a joint; move built joints with the Select & move tool (V) by dragging or with the arrow keys. Pan the drawing with the right mouse button and zoom with the wheel. Start the test with Space; on the timeline you can slow it down, step through it and rewind.",
   "zadani.ovladani.dotyk":
     "Drag a finger from an anchor or a joint to draw a member; move built joints with the Select & move tool. Use two fingers to pan and zoom the drawing. Start the test with the ▶ Test button; on the timeline you can slow it down, step through it and rewind.",
   "zadani.zacit": "Start building",
