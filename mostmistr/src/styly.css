@@ -795,6 +795,14 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   color: var(--cara-silna);
 }
 
+/* Nástroj, na který hra právě upozornila (Výběr a posun po první prošlé zkoušce). */
+.paleta__tlacitko[data-tip] {
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+  outline: 2px solid var(--cara-silna);
+  outline-offset: 1px;
+}
+
 .paleta kbd {
   flex: none;
   min-width: 18px;
@@ -1018,6 +1026,12 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   gap: 6px;
   padding-inline: 6px;
   white-space: nowrap;
+}
+
+/* „Výběr a posun“ je delší než ostatní nástroje: smí na dva řádky, ať nerozšíří sloupec palety. */
+.paleta__nastroje [data-akce="vyber"] {
+  white-space: normal;
+  line-height: 1.15;
 }
 
 /* Medaile: seznam s podmínkami */

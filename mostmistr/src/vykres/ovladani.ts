@@ -11,10 +11,16 @@ export interface PosluchacOvladani {
   kurzor(bod: Bod | null): void;
   /** Levé tlačítko: kreslení a výběr. Bez něj levé tlačítko nedělá nic. */
   leve?: PosluchacLevehoTlacitka;
+  /**
+   * Šipka o krok rastru ve směru `dx`, `dy` (osa y nahoru). Vrátí true, když ji hra použila
+   * (posun vybraných styčníků); jinak šipka posune pohled.
+   */
+  sipka?(dx: number, dy: number): boolean;
 }
 
 export interface PosluchacLevehoTlacitka {
-  stisk(bod: Bod, klavesy: { shift: boolean; alt: boolean }): void;
+  /** `dotyk`: stiskl prst, ne myš (cíl na výkresu pak chce větší dosah). */
+  stisk(bod: Bod, klavesy: { shift: boolean; alt: boolean; dotyk: boolean }): void;
   /** Pohyb se stisknutým tlačítkem. */
   tah(bod: Bod): void;
   pusteni(bod: Bod): void;
@@ -30,6 +36,13 @@ export interface PosluchacLevehoTlacitka {
 
 const KROK_KLAVESNICE = 60; // pixelů na stisk šipky
 const ZOOM_KLAVESNICE = 1.25;
+/** Směr šipky ve světě (osa y nahoru). */
+const SMERY_SIPEK: Readonly<Record<string, readonly [number, number]>> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, 1],
+  ArrowDown: [0, -1],
+};
 
 /**
  * Dotyk se jako stisk ohlásí až po téhle době, nebo jakmile se prst pohne o `VULE_DOTYKU`.
@@ -89,7 +102,7 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
     // Levé tlačítko mezitím zabrala myš nebo se výkres táhne: dotyk se neohlásí.
     if (leve !== null || tazeni) return;
     leve = ukazatel;
-    posluchac.leve?.stisk(misto, { shift: false, alt: false });
+    posluchac.leve?.stisk(misto, { shift: false, alt: false, dotyk: true });
   };
   const zahodCekajici = (): void => {
     if (!cekajici) return;
@@ -212,7 +225,7 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
       udalost.preventDefault();
       leve = udalost.pointerId;
       canvas.setPointerCapture(udalost.pointerId);
-      posluchac.leve.stisk(mistoNaPlatne(udalost), { shift: udalost.shiftKey, alt: udalost.altKey });
+      posluchac.leve.stisk(mistoNaPlatne(udalost), { shift: udalost.shiftKey, alt: udalost.altKey, dotyk: false });
       return;
     }
     if (udalost.button !== 1 && udalost.button !== 2) return;
@@ -289,6 +302,11 @@ export function pripojOvladani(canvas: HTMLCanvasElement, posluchac: PosluchacOv
   window.addEventListener("keydown", (udalost) => {
     if (udalost.target instanceof HTMLElement && udalost.target.closest("input, textarea, select, dialog")) return;
     if (udalost.ctrlKey || udalost.metaKey || udalost.altKey) return;
+    const smer = SMERY_SIPEK[udalost.key];
+    if (smer && posluchac.sipka?.(smer[0], smer[1])) {
+      udalost.preventDefault();
+      return;
+    }
     switch (udalost.key) {
       case "ArrowLeft":
         posluchac.posun(KROK_KLAVESNICE, 0);

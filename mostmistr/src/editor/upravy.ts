@@ -234,6 +234,20 @@ export function posunStycnik(navrh: NavrhMostu, id: number, kam: Bod): NavrhMost
 }
 
 /**
+ * Posune dané styčníky všechny o stejný kus (`dx`, `dy` v metrech rastru); ostatní zůstanou
+ * stát a pruty k nim se natáhnou. Nastavení prutů (napínáky, zdvih, tlumení) i styčníků (svar,
+ * závaží, tlumič) zůstává, jak bylo, stejně jako při posunu jednoho styčníku. Vrací null, když
+ * by posunutý styčník padl na místo styčníku, který stojí: slít se nesmějí.
+ */
+export function posunStycniky(navrh: NavrhMostu, ids: ReadonlySet<number>, dx: number, dy: number): NavrhMostu | null {
+  if ((dx === 0 && dy === 0) || ids.size === 0) return navrh;
+  const stoji = new Set(navrh.stycniky.filter((s) => !ids.has(s.id)).map((s) => `${s.x};${s.y}`));
+  const stycniky = navrh.stycniky.map((s) => (ids.has(s.id) ? { ...s, x: s.x + dx, y: s.y + dy } : s));
+  if (stycniky.some((s) => ids.has(s.id) && stoji.has(`${s.x};${s.y}`))) return null;
+  return { ...navrh, stycniky };
+}
+
+/**
  * Spojí prut s jeho zrcadlovým obrazem, když se potkají ve styčníku na ose a nic dalšího do
  * něj nevede: z pásu dotaženého k ose a jeho obrazu je jeden průběžný prut místo dvou
  * s kloubem uprostřed (kloub v tlačeném pásu by most složil). Spojuje jen pruty stejného

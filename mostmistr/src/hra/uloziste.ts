@@ -39,6 +39,8 @@ export const KLIC_CISEL = "mostmistr.cisla";
 export const KLIC_ZVUKU = "mostmistr.zvuk";
 /** Volba hráče: zpomalený záběr na první porušení při zkoušce. */
 export const KLIC_ZABERU = "mostmistr.zaber";
+/** Hra už hráči řekla, že most jde upravit posunem styčníků (jednou za prohlížeč). */
+export const KLIC_TIPU_POSUNU = "mostmistr.tip-posun";
 /** Kreslit při zkoušce pohyb mostu zvětšeně, aby bylo kmitání vidět? */
 export const KLIC_ZVETSENI = "mostmistr.zvetseni";
 /** Zrychlovat při přehrávání zkoušky úseky, kdy se nic neděje? */
@@ -244,6 +246,15 @@ export class Uloziste {
 
   set zpomaleniPadu(zapnuto: boolean) {
     this.#pis(KLIC_ZABERU, zapnuto ? "1" : "0");
+  }
+
+  /** Řekla už hra hráči po prošlé zkoušce, že most jde upravit posunem styčníků? */
+  get tipPosunu(): boolean {
+    return this.#cti(KLIC_TIPU_POSUNU) === "1";
+  }
+
+  set tipPosunu(ukazan: boolean) {
+    this.#pis(KLIC_TIPU_POSUNU, ukazan ? "1" : "");
   }
 
   /** Zrychlit při přehrávání zkoušky čekání, kdy se na mostě nic neděje? Dokud hráč nezvolí jinak, ano. */

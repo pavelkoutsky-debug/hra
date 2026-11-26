@@ -6,7 +6,7 @@ import type { Bod } from "../data/geometrie";
 import type { IdPrvku } from "../data/katalog";
 import { zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type ProblemNavrhu } from "../data/navrh";
 import type { Uroven } from "../data/uroven";
-import { posunStycnik, pridejPrut, stycnikV } from "./upravy";
+import { posunStycnik, posunStycniky, pridejPrut, stycnikV } from "./upravy";
 
 /** Problémy, které kreslení neblokují: hráč je vyřeší později a zkouška na ně počká. */
 const NEBLOKUJE: ReadonlySet<DruhProblemu> = new Set(["nad-rozpocet"]);
@@ -45,6 +45,28 @@ export function duvodProtiPosunu(navrh: NavrhMostu, uroven: Uroven, stycnik: num
   const posunuty = posunStycnik(navrh, stycnik, kam);
   if (!posunuty) return "stycniky-na-stejnem-miste";
   return novyProblem(navrh, posunuty, uroven);
+}
+
+/** Proč nejde dané styčníky posunout všechny o (`dx`, `dy`); null, když jde. */
+export function duvodProtiPosunuSkupiny(
+  navrh: NavrhMostu,
+  uroven: Uroven,
+  stycniky: ReadonlySet<number>,
+  dx: number,
+  dy: number,
+): DruhProblemu | null {
+  const posunuty = posunStycniky(navrh, stycniky, dx, dy);
+  if (!posunuty) return "stycniky-na-stejnem-miste";
+  return novyProblem(navrh, posunuty, uroven);
+}
+
+/**
+ * Leží bod v podpoře úrovně (kotva, základ)? Takový styčník při posunu skupiny zůstává stát:
+ * kotvy a základy jsou dané úrovní a most bez nich by visel ve vzduchu.
+ */
+export function jeVPodpore(uroven: Uroven, bod: Bod): boolean {
+  const stejny = (b: Bod): boolean => b.x === bod.x && b.y === bod.y;
+  return uroven.kotvy.some(stejny) || uroven.zaklady.some(stejny);
 }
 
 /** Problémy, kvůli kterým zkoušku nelze spustit. */
