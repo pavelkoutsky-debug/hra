@@ -252,18 +252,32 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await s.screenshot({ path: `${SLOZKA}/zacatek-vyzva-zkousky-telefon.png` });
     await s.setViewportSize({ width: 1280, height: 720 });
 
-    // Most, který zkouška odmítne (nováček postaví trojúhelníky z mostovky a přetáhne rozpočet),
-    // ke zkoušce nevybízí: bublina by zakryla hlášení, proč zkouška nejde, a radila opak.
+    // Jakmile je mostovka hotová, má hráč v ruce levnější Lehký trám: z mostovky (první v paletě)
+    // jinak nováčci stavěli i podpěry a zkouška se kvůli rozpočtu nepustila.
+    const mostovka = s.locator('.paleta [data-prvek="mostovka-drevo"]');
+    const lehky = s.locator('.paleta [data-prvek="drevo-lehke"]');
+    expect(await telo(s, "prvek-prepnut")).toBe("drevo-lehke");
+    expect(await lehky.getAttribute("aria-pressed")).toBe("true");
+    expect(await mostovka.getAttribute("aria-pressed")).toBe("false");
+    // Most, který zkouška odmítne (kdo si mostovku vybere znovu, postaví z ní trojúhelníky
+    // a přetáhne rozpočet), ke zkoušce nevybízí: bublina by zakryla hlášení a radila opak.
+    await mostovka.click();
     for (const [a, b] of [[[0, 0], [2, 3]], [[2, 3], [4, 0]], [[4, 0], [6, 3]], [[6, 3], [8, 0]]] as [[number, number], [number, number]][]) await tahni(s, a, b);
     await expect.poll(() => telo(s, "pruty")).toBe("6");
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
     expect(await bublina.isVisible()).toBe(false);
     await tlacitko.click();
     expect(await telo(s, "rezim")).toBe("stavba");
-    expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toContain("Most je dražší než rozpočet");
+    // Hlášení říká, o kolik je most dražší a kde ušetřit (4 díly mostovky po 3,61 m navíc).
+    expect((await s.locator('[data-udaj="hlaseni"]').innerText()).replace(/[\u202f\u00a0]/g, " ")).toBe(
+      "Most je o 11 056 Kč dražší než rozpočet. Před zkouškou ho zlevni. Mostovka je nejdražší prvek a patří jen na cestu: pruty z ní mimo cestu vyber a zvol v paletě „Lehký trám“.",
+    );
     for (let i = 0; i < 4; i++) await s.locator('[data-akce="zpet"]').click();
     await expect.poll(() => telo(s, "pruty")).toBe("2");
     await expect.poll(() => telo(s, "vyzva-zkousky")).toBe("ano");
+    // Krok Zpět a Znovu přes dokončení mostovky prvek v ruce nepřepíná podruhé.
+    expect(await mostovka.getAttribute("aria-pressed")).toBe("true");
+    await lehky.click();
 
     const hrac = await cisloHrace(s);
     await pustADopocitej(s);
@@ -280,6 +294,11 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await s.locator('[data-akce="upravit"]').click();
     await s.waitForTimeout(200);
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
+    // Po první zkoušce, která neprošla, hra řekne, co dál a čím: mostovku podepřít lehkým trámem.
+    expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toBe(
+      "Mostovka sama neunese ani sebe: její prostřední styčník musí něco držet, třeba trojúhelník z prutů nad ní. V ruce máš prvek „Lehký trám“, je levnější než mostovka; ta patří jen na cestu.",
+    );
+    await s.screenshot({ path: `${SLOZKA}/zacatek-podepri.png` });
     await otevriUroven(s, "1-01");
     await s.waitForTimeout(200);
     expect(await telo(s, "vyzva-zkousky")).toBeNull();

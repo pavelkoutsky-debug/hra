@@ -86,7 +86,7 @@ import { pricinyPohybu, type PricinaPohybu } from "../zkouska/pricinaPohybu";
 import { kodPriciny } from "../zkouska/pricinaVysledku";
 import { BEZ_NALEZU, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
 import { dalsiDilMostovky, type KrokVedeni } from "../data/vedeni";
-import { mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, type NalezMezery } from "../data/mezery";
+import { levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, type NalezMezery } from "../data/mezery";
 import { nakresliVedeni } from "../vykres/vedeni";
 import { POJMY, textSPojmy, UDALOST_SLOVNICKU, ukazBublinu } from "../ui/pojmy";
 import {
@@ -1427,6 +1427,14 @@ export function spustUroven(
   }
 
   function textDuvodu(duvod: DruhProblemu, prvekPrutu: IdPrvku | null): string {
+    if (duvod === "nad-rozpocet" && uroven.rozpocet !== null) {
+      // O kolik a co s tím: nováček staví podpěry z mostovky (nejdražší prvek) a neví, kde ušetřit.
+      const vety = [t("duvod.nad-rozpocet.oKolik", { castka: koruny(cenaNavrhu(editor.navrh) - uroven.rozpocet) })];
+      const mostovka = editor.navrh.pruty.find((p) => KATALOG[p.prvek].druh === "mostovka")?.prvek;
+      const levnejsi = mostovka ? levnejsiPrut(uroven, mostovka) : null;
+      if (levnejsi && mostovkaMimoTrasy(editor.navrh, uroven) > 0) vety.push(t("duvod.nad-rozpocet.mostovka", { prvek: nazevPrvku(levnejsi) }));
+      return vety.join(" ");
+    }
     if (duvod === "prut-dlouhy") {
       return prvekPrutu
         ? t("duvod.prut-dlouhy", { prvek: nazevPrvku(prvekPrutu), delka: cislo(KATALOG[prvekPrutu].nejvetsiDelka, 0) })
@@ -1858,6 +1866,7 @@ export function spustUroven(
   function poZmeneNavrhu(): void {
     obnovRazitko();
     oznacPoruchu();
+    prepniNaPrutPoMostovce();
     if (editor.navrh !== naposledUlozeny) {
       // Krok se povedl: důvod, proč editor odmítl ten předchozí, už neplatí.
       if (poleHlaseni.dataset.odmitnuti) skryjHlaseni();
@@ -1868,6 +1877,29 @@ export function spustUroven(
       zapisUpravu();
     }
     obnovStavbu();
+  }
+
+  /**
+   * První úroveň: jakmile mostovka vede od břehu k břehu, vybere se místo ní nejlevnější prut
+   * úrovně. Mostovka je v paletě první a nováček z ní jinak postaví i podpěry: most pak stojí
+   * víc než rozpočet a zkouška se nepustí (první den po zveřejnění 71krát, u 24 hráčů ze 41).
+   * Jen jednou za návštěvu, jen dokud úroveň neprošel a jen když má mostovku pořád v ruce.
+   */
+  let mostovkaBylaHotova = false;
+  let prvekPrepnut: IdPrvku | null = null;
+  let radaOPodepreni = false;
+  function prepniNaPrutPoMostovce(): void {
+    const hotova = jePrvniUrovenKampane() && host === null && !rekord?.medaile.pruchod && editor.navrh.pruty.length > 0 && dalsiDilMostovky(editor.navrh, uroven) === null;
+    const prave = hotova && !mostovkaBylaHotova;
+    mostovkaBylaHotova = hotova;
+    if (!prave || prvekPrepnut !== null || rezim !== "stavba" || nastroj !== "kresleni" || KATALOG[editor.prvek].druh !== "mostovka") return;
+    // Volba prvku přepisuje vybrané pruty: s výběrem (po kroku Zpět nebo Znovu) se nepřepíná.
+    if (editor.vybranePruty.size > 0) return;
+    const prut = levnejsiPrut(uroven, editor.prvek);
+    if (!prut) return;
+    prvekPrepnut = prut;
+    editor.zvolPrvek(prut);
+    document.body.dataset.prvekPrepnut = prut;
   }
 
   /** Zapíše do deníku, čím se most právě změnil a jak teď vypadá. */
@@ -3286,6 +3318,13 @@ export function spustUroven(
       prvek('[data-akce="vyber"]', HTMLElement).dataset.tip = "posun";
       document.body.dataset.tipPosunu = "ukazan";
       zapis("posun.tip", { zkousek: zkousekVUrovni });
+    }
+    // První úroveň po zkoušce, která neprošla: mostovka chce podepřít a v ruce je levnější prut.
+    // Řekne se jednou, dokud hráč žádný prut mimo mostovku nenakreslil.
+    const jenMostovka = editor.navrh.pruty.length > 0 && editor.navrh.pruty.every((p) => KATALOG[p.prvek].druh === "mostovka");
+    if (prvekPrepnut !== null && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && editor.prvek === prvekPrepnut && jenMostovka) {
+      radaOPodepreni = true;
+      ukazHlaseni(t("vedeni.podepri", { prvek: nazevPrvku(prvekPrepnut) }), "info", false);
     }
     // Po třetí zkoušce, která neprošla, hra jednou připomene nápovědu (když ji už nenabídla rada u výsledku).
     if (napoveda && !napovedaNabidnuta && !napovedaPouzita && nezdaru >= 3 && rekord?.medaile.pruchod !== true) {

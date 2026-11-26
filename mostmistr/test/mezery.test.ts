@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
 import { KATALOG } from "../src/data/katalog";
-import { konecTahuMostovky, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery } from "../src/data/mezery";
+import { konecTahuMostovky, levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery } from "../src/data/mezery";
 import { mezeryTras } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { nactiKampan } from "../urovne/index";
@@ -21,6 +21,21 @@ function most(pruty: Prut[], id = "1-02") {
 }
 const D = "mostovka-drevo";
 const L = "drevo-lehke";
+
+describe("mostovka mimo cestu a levnější prut (hlášení o rozpočtu, první úroveň)", () => {
+  it("počítá pruty z mostovky, které neleží na trase", () => {
+    expect(mostovkaMimoTrasy(most([[D, [0, 0], [4, 0]], [D, [4, 0], [8, 0]], [D, [8, 0], [12, 0]]]), cyklostezka)).toBe(0);
+    expect(mostovkaMimoTrasy(most([[D, [0, 0], [4, 0]], [D, [2, -3], [4, 0]], [D, [12, 0], [13, 0]], [L, [10, -3], [8, 0]]]), cyklostezka)).toBe(2);
+    // Mosty autora mostovku mimo cestu nemají nikde.
+    for (const u of kampan) for (const jmeno of ["pruchod", "rozpocet", "mistrovska"] as const) expect(mostovkaMimoTrasy(RESENI[u.id]![jmeno], u), `${u.id} ${jmeno}`).toBe(0);
+  });
+
+  it("levnější prut je nejlevnější obyčejný prut úrovně, když je levnější než mostovka", () => {
+    expect(levnejsiPrut(uroven("1-01"), "mostovka-drevo")).toBe("drevo-lehke");
+    expect(levnejsiPrut(uroven("1-03"), "mostovka-drevo")).toBe("drevo-lehke");
+    expect(levnejsiPrut(uroven("1-01"), "drevo-lehke")).toBeNull();
+  });
+});
 
 describe("kde končí tah mostovky, který vyjede za konec trasy", () => {
   it("lávka 1-02 (trasa 0 až 12 m): tah z trasy za její konec končí na kraji břehu", () => {

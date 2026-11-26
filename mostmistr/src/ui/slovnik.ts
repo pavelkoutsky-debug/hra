@@ -103,6 +103,7 @@ const CS = {
   "vedeni.pevna.kratce": "pevná podpora",
   "vedeni.posuvna.kratce": "posuvná podpora",
   "vedeni.zkouska": "Mostovka je hotová. Teď most vyzkoušej: i když spadne, uvidíš proč.",
+  "vedeni.podepri": "Mostovka sama neunese ani sebe: její prostřední styčník musí něco držet, třeba trojúhelník z prutů nad ní. V ruce máš prvek „{prvek}“, je levnější než mostovka; ta patří jen na cestu.",
   "souradnice.bod": "x = {x} m · y = {y} m",
   "chyba.nacteni": "Výkres se nepodařilo načíst: {duvod}",
   "lista.zkusebna": "Zkušebna výpočtu",
@@ -1022,6 +1023,8 @@ const CS = {
   "duvod.kolejiste-mimo-kolej": "Kolejiště patří jen na kolej: polož ho na čárkovanou niveletu trati.",
   "duvod.mostovka-na-koleji": "Po koleji pojede vlak a po silniční mostovce nejede: sem patří kolejiště.",
   "duvod.nad-rozpocet": "Most je dražší než rozpočet. Před zkouškou ho zlevni.",
+  "duvod.nad-rozpocet.oKolik": "Most je o {castka} dražší než rozpočet. Před zkouškou ho zlevni.",
+  "duvod.nad-rozpocet.mostovka": "Mostovka je nejdražší prvek a patří jen na cestu: pruty z ní mimo cestu vyber a zvol v paletě „{prvek}“.",
 
   // Popisové pole
   "pole.cena": "Cena",

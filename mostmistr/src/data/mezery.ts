@@ -160,6 +160,34 @@ export function konecTahuMostovky(prvek: IdPrvku, od: Bod, k: Bod, uroven: Urove
 }
 
 /**
+ * Kolik prutů z mostovky leží mimo trasy úrovně (podpěry, vzpěry a trojúhelníky postavené
+ * z mostovky). Mostovka je nejdražší prvek a patří jen na cestu: nováček z ní staví celý most
+ * a přetáhne rozpočet (první den po zveřejnění hra jen na 1-01 kvůli tomu nepustila 71 zkoušek).
+ */
+export function mostovkaMimoTrasy(navrh: NavrhMostu, uroven: Uroven): number {
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  return navrh.pruty.filter((p) => {
+    if (KATALOG[p.prvek].druh !== "mostovka") return false;
+    const a = podleId.get(p.a);
+    const b = podleId.get(p.b);
+    return !a || !b || !uroven.trasy.some((t) => mostovkaProTrasu(p, t) && bodNaTrase(t, a) && bodNaTrase(t, b));
+  }).length;
+}
+
+/**
+ * Nejlevnější obyčejný prut, který úroveň dovoluje a který je levnější než `nez`; null, když
+ * žádný takový není. Na podpěry mostovky ho hra nabízí místo mostovky.
+ */
+export function levnejsiPrut(uroven: Uroven, nez: IdPrvku): IdPrvku | null {
+  const cena = (id: IdPrvku): number => {
+    const c = KATALOG[id].cena;
+    return "zaMetr" in c ? c.zaMetr : Number.POSITIVE_INFINITY;
+  };
+  const pruty = uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut" && KATALOG[id].hotovo && cena(id) < cena(nez));
+  return pruty.length === 0 ? null : pruty.reduce((a, b) => (cena(b) < cena(a) ? b : a));
+}
+
+/**
  * Vypadá mostovka na výkresu hotově, i když na trase mezera je? Mostovka správného druhu
  * (kdekoli, i mimo trasu) pokrývá v souřadnici x celou trasu bez děr. Pak hráč most za
  * hotový považuje a značka o mezeře mu nepřekáží; dokud staví, mezery jsou samozřejmé.
