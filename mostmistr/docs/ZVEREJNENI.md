@@ -19,6 +19,13 @@ co se potom ověřilo a s jakým výsledkem, co zbývá ověřit a co bylo k sou
 Kdyby se některé rozhodnutí změnilo, patří změna sem, do textů `soukromi.*` ve slovnících
 a do `docs/ZPETNA-VAZBA.md`.
 
+**Verze 0.24.0 (26. 11. 2026): záznam hraní nese víc.** Aby šlo poznat, proč lidé odcházejí
+v prvních minutách, zapisuje hra nově i to, které obrazovky hráč otevřel (přehled, pískoviště,
+komise, list, zkušebna, okna Soukromí a Napiš nám), čím udělal první akci na stránce (myš, dotyk,
+klávesa) a po kolika sekundách, proč zkouška neprošla, které značky a rady mu hra ukázala a jak
+posouval styčníky. Pořád jsou to čísla a krátké kódy pod náhodným číslem prohlížeče; rozhodnutí
+výše se nemění a text okna Soukromí (`soukromi.denik`, oba jazyky) nové údaje jmenuje.
+
 ## Před zveřejněním (Netlify)
 
 1. **Hesla** (Project configuration → Environment variables, rozsah Functions):

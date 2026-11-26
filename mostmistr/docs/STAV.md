@@ -1,6 +1,6 @@
 # Mostmistr — stav vývoje
 
-Poslední aktualizace: 24. 11. 2026
+Poslední aktualizace: 26. 11. 2026
 
 ## Milníky
 
@@ -30,6 +30,7 @@ Poslední aktualizace: 24. 11. 2026
 | M16 Žebříčky a denní rozbor | Kód hotový a po třech recenzích opravený (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. **Naplánovaná úloha se zakládá až po zveřejnění hry** (rozhodnutí zadavatele 24. 11. 2026; postup je v `docs/ZVEREJNENI.md`) |
 | M17 Před zveřejněním | Hotovo (24. 11. 2026): závěrečná recenze celku třemi nezávislými recenzenty, známé slabiny (8-02, 4-04), okno Soukromí a kontakt, zpevnění serveru, web připravený na zveřejnění, shoda výpočtu ve třech strojích JavaScriptu; viz „M17 — výsledek“ |
 | Zveřejnění | **Hra je veřejná od 25. 11. 2026** (verze 0.23.1): zadavatel nastavil hesla a vypnul přihlášení, denní rozbor běží, ostrý web prošel zkouškami z `docs/ZVEREJNENI.md`; nalezený časový limit zápisu velkého mostu do žebříčku je opravený; viz „Po zveřejnění“ |
+| M18 První minuty | Hotovo (26. 11. 2026, verze 0.24.0): první milník podle denního rozboru. Začátek hry, mostovka přes kraj břehu (hlášení z 1-02), rada po druhém stejném nezdaru, posun víc styčníků naráz, víc údajů v deníku a v podkladech rozboru; viz „M18 — výsledek“ |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -50,7 +51,40 @@ Poslední aktualizace: 24. 11. 2026
 - **Hra je veřejná od 25. 11. 2026** (`mostmistr.netlify.app`; zadavatel nastavil hesla správce a rozboru a vypnul přihlášení Netlify). Co se při tom dělalo a ověřilo, je v `docs/ZVEREJNENI.md` a níž v oddíle „Po zveřejnění“.
 - **M17 Před zveřejněním** je hotový, viz „M17 — výsledek“.
 - **Denní rozbor běží** (kritérium M16 „rozbor za poslední den vznikne bez zásahu člověka“ je splněné): naplánovaná úloha každý den ve 4:43 našeho času, první rozbor je za 24. 11. 2026. Návrhy dalších verzí teď mají vycházet z něj (stránka správce, záložka Denní rozbor).
+- **M18 První minuty** (verze 0.24.0) je hotový, viz „M18 — výsledek“. Je to první milník, který nevychází z koncepce ani z recenze, ale z čísel o hráčích: zadavatel 26. 11. 2026 vybral všechny čtyři návrhy prvního denního rozboru. **Další verze se plánují stejně:** rozbor (stránka správce, záložka Denní rozbor) navrhne, zadavatel vybere. Jestli M18 zabral, se pozná na číslech v oddíle „Jak poznat, že to zabralo“.
 - **Zbývá na zadavateli:** `/otisky.html` ve skutečném Firefoxu, v Safari a na telefonu, náhled odkazu v chatu, zkouška omezení počtu žádostí z jednoho připojení, smazání zkušebních dat ve správě a po týdnu spotřeba v přehledu Netlify.
+
+## M18 — výsledek
+
+Verze hry 0.24.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovně, návrhu ani uloženého postupu taky ne; uložený výtah deníku má verzi 3 (server dny spočítá znovu).
+
+**Proč vznikl: první den s hráči (25. 11. 2026).** 67 hráčů (64 nových, 24 na dotyku), 76 sezení, 5 si záznam vypnulo. Asi třetina neotevřela žádnou úroveň. 1-01 otevřelo 41 hráčů, prošlo 24 a 13 odešlo bez jediné zkoušky; z 57 zkoušek, které tam neprošly, se u 52 nic nezlomilo (souhrn je vedl jako „bez porušení“ a neuměl říct proč). 1-02 prošlo 20 z 21, 1-03 14 z 20 (75 zkoušek), 1-04 8 z 12 (67 zkoušek), 1-05 5 ze 7; do kapitoly 2 došli čtyři. Na 1-03 až 1-05 skončilo 68 zkoušek vzpěrem lehkého trámu a nápovědu si otevřeli čtyři hráči. Přišly dvě zprávy: chyba na 1-02 („lidé padají skrze položenou mostovku… viz pravá část“) a přání posouvat už postavené trámy. Denní rozbor z toho navrhl šest změn; zadavatel 26. 11. vybral čtyři (začátek hry, chyba na 1-02, rada po opakovaném pádu, posouvání mostu). Čísla prvního dne zkreslují zkoušky autorů v žebříčcích (tři odmítnutí `otisk` a asi polovina z 19 zápisů byly naše), v deníku ne (zkoušky autorů mají záznam vypnutý).
+
+**Začátek hry.** Přehled má nahoře jedno tlačítko: novému hráči „Postavit první most“ (rovnou do 1-01), vracejícímu se „Pokračovat: 1-02 Cyklostezka“ (první neprošlá odemčená úroveň). V 1-01 se po dokončení mostovky zvýrazní tlačítko Zkouška a bublina pod ním řekne, že teď má most vyzkoušet (dokud tam hráč první zkoušku nepustil; při omezeném pohybu bez animace).
+
+**Chyba na 1-02: mostovka přes kraj břehu.** Ověřeno v prohlížeči: tah mostovky 0 → 13 m editor rozdělil na díly 4+3+3+3 m, takže díl 10 → 13 m neměl styčník ve 12 m, kde končí trasa. Provoz nese jen mostovka s oběma konci na trase, a tak lidé mezi 10 a 12 m propadli dílem, který na výkresu ležel až na břehu (z 67 lidí spadlo 62), a výsledek tvrdil „mezi 10 a 12 m neleží mostovka“. Je to nejpravděpodobnější výklad hlášení (most hráče nemáme). Oprava:
+- **Editor** dělí tah mostovky i v koncích tras a v kotvách, přes které vede (i krátký tah, který se jinak nedělí).
+- **Značka při stavbě** (`src/data/mezery.ts`): mostovka přes kraj břehu bez styčníku (vždy), mostovka mimo trasu, třeba po dně údolí, a mezera u břehu nebo uprostřed (jen když mostovka vypadá hotově, nebo po zkoušce, která kvůli mezeře neprošla), a mostovka celá za koncem trasy (visí jako konzola a rozkmitá se). Hlášení při spuštění zkoušky i věta výsledku jmenují příčinu. Zkouška s mezerou se nezakazuje.
+- Žádný most autora žádnou značku nedostane (test).
+
+**Rada po druhém stejném nezdaru.** Když zkouška na téže úrovni neprojde podruhé po sobě stejně (stejný prvek a způsob prvního porušení, stejný důvod složení, kmitání nad mezí, nedopnutá lana), pruh výsledku pod verdiktem sám řekne „Podruhé za sebou stejně: lehký trám, vzpěr.“ a přidá radu, kterou hra už uměla spočítat, a tlačítko Otevřít nápovědu. Po návratu ke stavbě rada zůstává u značky prvního porušení, dokud se most nezmění. Táž rada přijde v jedné návštěvě úrovně jednou; hráči, který si v té řadě nezdarů sám otevřel Nápovědu nebo podrobnosti výsledku, se nevnucuje; Havarijní komise a zkoušky kapitol (x-05) neradí; pokusy a cizí most z odkazu se nepočítají. Kde rada zazněla, hlášení „Nedaří se?“ po třetím nezdaru už nepřijde. Rada „dej silnější prvek“ teď zazní jen tam, kde ho úroveň má (1-02 má jen lehké dřevo; jinak varianta `rada.*.bezSilnejsiho`).
+
+**Posun víc styčníků naráz.** Nástroj se jmenuje „Výběr a posun“ (V): tah za vybraný styčník posune celý výběr (vybrané styčníky a konce vybraných prutů), šipky ho posouvají po metru a výběr zůstává. Styčníky v podporách a na základech stojí a pruty k nim se natáhnou. Platí stejná kontrola jako pro jeden styčník (posun, kterým by přibyl problém, se neprovede a hra řekne proč), jeden posun je jeden krok Zpět, napínáky, svary a závaží zůstávají. Prst chytí vybraný styčník z 22 px. V komisi je posun N styčníků N změn. **Kde se to hráč dozví:** popis tlačítka, řádek rad při kreslení a při výběru, věta v návodu k ovládání v zadání, a po první prošlé zkoušce hlášení nad výkresem (jednou za prohlížeč; tlačítko nástroje má obrys, dokud ho hráč nezkusí).
+
+**Deník a denní rozbor.**
+- Deník nově nese: první akci na stránce (čím a po kolika sekundách), odkazy z přehledu, otevření okna Soukromí, kód příčiny neúspěchu zkoušky (`src/zkouska/pricinaVysledku.ts`: složení, mezera, pohyb, průhyb, kmitání, porušení, sjetí, opření, pád, nepřejel, loď, rozpad), značky o mostovce mimo trasu, rady po opakovaném nezdaru a u posunu styčníků počet, směr a způsob. Okno Soukromí to jmenuje (oba jazyky).
+- Souhrn: hráči bez úrovně kampaně a kam šli (`bezUrovne`; `bezAkce` jsou hlavně roboti náhledu odkazu a okamžité odchody), po úrovních hráči na dotyku, hráči bez prutu, příčiny místo „bez porušení“, rady (kolik hráčů ji vidělo a kolik potom prošlo), posuny a značky. Stránka správce to ukazuje.
+- Podklady rozboru nesou `hraUmi` (co hra už umí) a `vysvetlivky` (co která čísla znamenají); úloha repozitář nevidí a první rozbor proto navrhl i věci, které ve hře byly. Zadání úlohy v `docs/ROZBOR.md` je upravené a uložená úloha s ním.
+
+**Jak poznat, že to zabralo** (čísla ze souhrnu, proti 25. 11.): na 1-01 míň hráčů bez zkoušky (bylo 13 ze 41) a míň hráčů bez úrovně s akcí (`bezUrovne.sAkci`); na 1-02 žádná další zpráva o propadání a málo značek „mostovka přes kraj břehu“ (editor ji už nevyrobí; značku dostanou jen mosty uložené dřív nebo z Importu); na 1-03 až 1-05 `hracuSRadouPrusli` proti `hracuSRadou` a míň zkoušek do průchodu (bylo 75 zkoušek na 14 průchodů v 1-03); `hracuSPosunem` nad nulou.
+
+**Testy.** Jednotkové: `test/zacatek.test.ts`, `test/mezery.test.ts`, `test/radaPoNezdaru.test.ts`, `test/posun.test.ts`, doplněné `test/editor.test.ts`, `test/denik.test.ts` a `test/rozbor.test.ts` (vysvětlivky mluví jen o polích, která existují). V prohlížeči: `test/e2e/zacatek.e2e.ts`, `test/e2e/mezera.e2e.ts` (hlášený most, tah 0 → 13 myší, mostovka po svazích), `test/e2e/rada.e2e.ts` (podruhé ano, potřetí ne, jiná příčina ne, 1-05 ne, tlačítko nápovědy, anglicky na telefonu) a `test/e2e/posun.e2e.ts` (myš, klávesy, tip jednou, telefon prstem).
+
+**Vědomě neuděláno.**
+- Lidé, kteří z mostu spadli, narážejí jen do terénu a troskami mostu propadají; kmitání se měří i na mostovce za koncem trasy. Obojí by změnilo výsledky zkoušek (verzi fyziky); mostovku za koncem trasy aspoň jmenuje značka.
+- Mosty uložené dřív s dílem přes kraj břehu se samy neopraví; hra jim teď řekne proč.
+- V komisi může výčet změn u posunu víc než šesti styčníků říct jiný počet (strop hledání `NEJVIC_POSUNU`); na verdikt „moc změn“ to nemá vliv.
+- Tlačítko „Výběr a posun“ se na úzké paletě láme na dva řádky. Radu ke kmitání test v prohlížeči nezkouší (jednotkový ano).
 
 ## Po zveřejnění (25. 11. 2026)
 
@@ -66,6 +100,8 @@ Verze hry 0.23.1. Fyzika, formáty ani uložený postup se nemění.
 - Doby ověření ostatních úrovní (most autora pro mistrovskou, místní měření × 3,2): 5-01 asi 17 s, zlom 6-04 asi 16 s, 6-05 asi 12 s, 4-04 asi 10 s, ostatní pod 10 s. Větší most hráče na 8-01 nebo 5-01 se přes 30 s dostane snadno; do 60 s ho oprava pokryje.
 
 **Nezávislá recenze kódu opravy** (čerstvý agent na záložním modelu; rozbitý tok, který dřív fungoval, nenašel). Zapracováno: značka zkoušky puštěné těsně před půlnocí se po půlnoci hledá i pod včerejškem (jinak by opakovaná žádost pustila druhou zkoušku); zkouška, která skončí chybou, značku uklidí (hráč by jinak dvě minuty čekal na zkoušku, která neběží); odpověď na opakovanou žádost hra říká jako nový zápis, ne „stejnou hodnotu už zapsanou máš“ (řádek zapsala první žádost, na jejíž odpověď brána nepočkala); hodiny dvou běhů funkce o pár sekund vedle značku nezneplatní; test v prohlížeči zrychluje jen čekání mezi pokusy, ne všechny časovače hry. Nezapracováno: dvě žádosti o týž nový most ve stejné desetině sekundy pustí zkoušky dvě (okno mezi dotazem na značku a jejím zápisem; stojí jednu zkoušku navíc) a počet přijatých zápisů dne (`prijato`) se u zápisu dokončeného opakováním započítá dvakrát, takže ho denní rozbor u velkých mostů mírně nadhodnotí.
+
+**Oprava ověřená na ostrém webu (25. 11. 2026, verze 0.23.1).** Zápis mostu autora 8-01: první žádost skončila po 30,2 s chybou 504, hra zápis zopakovala a odpověď přišla za 0,4 s; hráč viděl „zapsáno“ po 36 s. Cesta přes odpověď 202 `pocita` (druhá žádost ve chvíli, kdy zkouška ještě běží) se na ostrém webu nepotkala; hlídají ji testy.
 
 **Nepotvrzeno: omezení počtu žádostí na Netlify.** Z prostředí vývoje se neprojevilo žádné ze čtyř pravidel u funkcí (ani 46 žádostí za minutu při stropu 10). Příčina není jistá (žádosti z více adres, nebo tarif pravidla neuplatňuje); zkouška z jednoho připojení je v `docs/ZVEREJNENI.md`. Stropy na adresu a den, které hlídá server sám, platí nezávisle na tom.
 
