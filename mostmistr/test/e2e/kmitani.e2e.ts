@@ -555,8 +555,10 @@ describe("čitelnost stavby", () => {
     await vejdeSe();
     // Kliknutí doprostřed prvního dílu mostovky ho vybere.
     await klikni(2, 0);
-    expect(await rada.getAttribute("data-rada")).toBe("vybranePruty");
-    expect(await rada.innerText()).toContain("číslice: jiný prvek pro vybrané pruty");
+    // Výběr nástrojem Výběr a posun: řádek říká, že ho posune tažení i šipky.
+    expect(await rada.getAttribute("data-rada")).toBe("vyberPosun");
+    expect(await rada.innerText()).toContain("tažení vybraného styčníku, šipky: posun o metr");
+    expect(await rada.innerText()).toContain("číslice: jiný prvek");
     await vejdeSe();
     const panel = stranka.locator('[data-nastaveni="vyber"]');
     expect(await panel.isVisible()).toBe(true);
@@ -598,7 +600,7 @@ describe("čitelnost stavby", () => {
       };
       // Nástroje jsou hned pod Zadáním a Nápovědou, nad prvky.
       expect(await dno('[data-akce="vyber"]')).toBeLessThan((await s.locator(".paleta__prvky button").first().boundingBox())!.y);
-      expect(await s.locator('[data-akce="vyber"]').innerText()).toMatch(/Výběr$/);
+      expect(await s.locator('[data-akce="vyber"]').innerText()).toMatch(/Výběr a posun$/);
       // Všechno, čím se staví a zkouší, je vidět bez posouvání palety.
       for (const volic of ['[data-akce="znovu"]', ".paleta__prvky button:last-child", '[data-akce="dopnout"]', '[data-akce="zlom"]']) {
         expect(await dno(volic), volic).toBeLessThanOrEqual(900);

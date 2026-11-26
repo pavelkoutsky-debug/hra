@@ -168,6 +168,8 @@ function vyzvedniHlaseni(): string | null {
 /** Volný okraj kolem výřezu při zobrazení celého výkresu, v pixelech. */
 const OKRAJ_VYKRESU = 28;
 const KROK_ZOOMU_TLACITKEM = 1.25;
+/** Poloměr, ze kterého prst nástrojem výběru chytí vybraný styčník: polovina cíle pro prst (44 px). */
+const DOSAH_PRSTU = 22;
 /** Jak daleko od prutu se při zkoušce ještě počítá kliknutí na něj, v pixelech. */
 const DOSAH_KLIKNUTI = 9;
 /** Jak blízko značce na časové ose musí ukazatel být, aby se ukázal její popis (pixely). */
@@ -1859,6 +1861,14 @@ export function spustUroven(
       // Dlouhý tah rozdělený na díly: kolik prutů z něj vzniklo.
       if (prut.dilu) data.dilu = prut.dilu;
     }
+    // Posun styčníků: kolik se jich pohnulo, o kolik metrů a jestli tažením, nebo šipkou.
+    const posun = editor.posledniPosun;
+    if (posun && editor.posledniAkce === "posun") {
+      data.posunuto = posun.stycniku;
+      data.dx = posun.dx;
+      data.dy = posun.dy;
+      data.jak = posun.jak;
+    }
     zapis("stavba.zmena", data);
   }
 
@@ -2494,10 +2504,16 @@ export function spustUroven(
     else if (nastroj === "zavazi") klic = "rada.zavazi";
     else if (nastroj === "ladeny") klic = "rada.ladeny";
     else if (jePridavek(nastroj)) klic = "rada.pridavek";
+    // Výběr, který jde posunout (hráč ho udělal sám): řádek říká, že šipky ho posunou.
+    else if (editor.posunVyberu !== null) klic = nastroj === "vyber" ? "rada.vyberPosun" : "rada.vybranoPosun";
     else if (editor.vybranePruty.size > 0) klic = "rada.vybranePruty";
     else if (nastroj === "vyber") klic = "rada.vyber";
     pole.textContent = t(klic);
     pole.dataset.rada = klic.slice("rada.".length);
+    // Háček pro testy: kolik styčníků výběru by šipka posunula a kolik jich stojí v podporách.
+    const posun = rezim === "stavba" ? editor.posunVyberu : null;
+    if (posun) document.body.dataset.posunVyberu = `${posun.pohyblivych};${posun.vPodporach}`;
+    else delete document.body.dataset.posunVyberu;
   }
 
   /**
@@ -2965,7 +2981,27 @@ export function spustUroven(
   function prepniVyber(): void {
     if (rezim !== "stavba") return;
     nastroj = nastroj === "vyber" ? "kresleni" : "vyber";
+    // Hráč nástroj našel: zvýraznění z tipu po první prošlé zkoušce už není potřeba.
+    delete prvek('[data-akce="vyber"]', HTMLElement).dataset.tip;
     obnovStavbu();
+  }
+
+  /**
+   * Šipka při stavbě posune vybrané styčníky (i konce vybraných prutů) o metr; styčníky
+   * v kotvách a na základech zůstanou stát. Bez výběru vrací false a šipka posune pohled.
+   */
+  function posunVyberSipkou(dx: number, dy: number): boolean {
+    if (rezim !== "stavba" || otevreneOkno() || editor.tah !== null || brnk !== null) return false;
+    const vyber = editor.posunVyberu;
+    if (vyber === null) return false;
+    if (vyber.pohyblivych === 0) {
+      ukazHlaseni(t("posun.vPodporach"), "info", true);
+      return true;
+    }
+    if (editor.posunVybrane(dx, dy)) skryjHlaseni();
+    else if (editor.posledniDuvod) hlasOdmitnuti(editor.posledniDuvod, null);
+    obnovStavbu();
+    return true;
   }
 
   function prepniBrnknuti(): void {
@@ -3201,6 +3237,18 @@ export function spustUroven(
     skryjHlaseni();
     // Osa frekvencí teď má co říct navíc: co zkouška téhož mostu naměřila.
     obnovOsuFrekvenci();
+    // Po první zkoušce, kterou hráč prošel, hra jednou (za prohlížeč) řekne, že most jde upravit
+    // posunem styčníků: hráči most po průchodu přestavují, aby ho zlevnili, a posun nenacházeli.
+    // Hlášení zmizí s další akcí na výkresu; nástroj v paletě zůstane zvýrazněný, dokud ho nezkusí.
+    const prosla = beh?.vysledek?.pruchod === true && !beh.pokus && !beh.host;
+    // Bez paměti prohlížeče aspoň jednou za návštěvu stránky.
+    if (prosla && !havarie && !uloziste.tipPosunu && document.body.dataset.tipPosunu !== "ukazan") {
+      uloziste.tipPosunu = true;
+      ukazHlaseni(t("posun.tip"), "info", false);
+      prvek('[data-akce="vyber"]', HTMLElement).dataset.tip = "posun";
+      document.body.dataset.tipPosunu = "ukazan";
+      zapis("posun.tip", { zkousek: zkousekVUrovni });
+    }
     // Po třetí zkoušce, která neprošla, hra jednou připomene nápovědu (když ji už nenabídla rada u výsledku).
     if (napoveda && !napovedaNabidnuta && !napovedaPouzita && nezdaru >= 3 && rekord?.medaile.pruchod !== true) {
       napovedaNabidnuta = true;
@@ -5897,6 +5945,7 @@ export function spustUroven(
 
   pripojOvladani(canvas, {
     posun: (dx, dy) => zmenPohled(posunO(kamera, dx, dy)),
+    sipka: (dx, dy) => posunVyberSipkou(dx, dy),
     zoom: zoomuj,
     zoomNaStred: zoomujNaStred,
     celyVykres: ukazCelyVykres,
@@ -5933,6 +5982,8 @@ export function spustUroven(
           pridat: klavesy.shift,
           posouvat: klavesy.alt || nastroj === "vyber",
           bezKresleni: nastroj === "vyber",
+          // Prstem se vybraný styčník nástrojem výběru chytá z dosahu cíle pro prst (44 px), ne jen pod hrotem.
+          ...(klavesy.dotyk && nastroj === "vyber" ? { dosah: DOSAH_PRSTU / kamera.meritko } : {}),
         });
         obnovPohled();
       },

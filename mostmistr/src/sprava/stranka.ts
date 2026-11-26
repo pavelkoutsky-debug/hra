@@ -534,6 +534,7 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
         bunka(ceny),
         bunka(vypis(u.prvky)),
         bunka(vypis(u.selhani)),
+        bunka(`${u.hracuSPosunem ?? 0} / ${u.posunu ?? 0} (${u.posunuVic ?? 0} / ${u.posunuKlavesou ?? 0})`, "cislo"),
       );
       return radek;
     }),

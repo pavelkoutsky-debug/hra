@@ -25,6 +25,7 @@ import {
   type DavkaDeniku,
   type EvidovanaVazba,
   type HlavickaDeniku,
+  type HodnotaDeniku,
   type UdalostDeniku,
 } from "../src/denik/udalosti";
 import { skladNadBlobs } from "../src/server/blobs";
@@ -982,9 +983,31 @@ describe("souhrn deníku", () => {
       hracuSRadouPrusli: 0,
       zkousekPoRade: null,
       hracuNapovedaZRady: 0,
+      hracuSPosunem: 0,
+      posunu: 0,
+      posunuVic: 0,
+      posunuKlavesou: 0,
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
     expect(souhrnDeniku([])).toMatchObject({ hracu: 0, sezeni: 0, urovne: [], chyby: [] });
+  });
+
+  it("počítá posuny styčníků: kdo posun použil, víc styčníků naráz a šipkou; nesmysly nepočítá navíc", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const posun = (t: number, data: Record<string, HodnotaDeniku>): UdalostDeniku => u(t, "stavba.zmena", "1-04", { co: "posun", prutu: 9, stycniku: 8, cena: 50000, ...data });
+    const davky = [
+      // Anna: jeden styčník tažením (starší hra posílala jen „co“), skupina tažením a skupina šipkou.
+      davka([u(0, "uroven.otevrena", "1-04"), posun(5, {}), posun(6, { posunuto: 4, dx: 0, dy: -1, jak: "tah" }), posun(7, { posunuto: 4, dx: 0, dy: -1, jak: "klavesa" })], 0, anna),
+      // Bob: jen kreslil; vymyšlený počet styčníků se za skupinu nepočítá.
+      davka([u(0, "uroven.otevrena", "1-04"), u(5, "stavba.zmena", "1-04", { co: "prut", prvek: "drevo-lehke" }), posun(9, { posunuto: 1e9, jak: "x" })], 0, bob),
+    ];
+    const uroven = souhrnDeniku(davky).urovne[0]!;
+    expect(uroven).toMatchObject({ hracuSPosunem: 2, posunu: 4, posunuVic: 2, posunuKlavesou: 1 });
+    // Výtahy jdou sloučit a starší výtah bez posunů nic nerozbije.
+    const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[1]!]))) as ReturnType<typeof vytahDeniku>;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.posunu, delete z.posunuVic, delete z.posunuKlavesou;
+    expect(souhrnZVytahu(slucVytahy([vytahDeniku([davky[0]!]), stary])).urovne[0]).toMatchObject({ hracuSPosunem: 1, posunu: 3, posunuVic: 2, posunuKlavesou: 1 });
   });
 
   it("zkouška cizího mostu z odkazu se do čísel o úrovni nepočítá", () => {
