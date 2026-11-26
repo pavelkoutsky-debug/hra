@@ -7,6 +7,7 @@ import { VERZE_DENIKU, type DavkaDeniku, type HlavickaDeniku, type UdalostDeniku
 import { VERZE_FYZIKY } from "../src/jadro/verze";
 import { prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../src/server/obsluha";
 import { overovacKampane } from "../src/server/overeni";
+import { CO_HRA_UMI } from "../src/server/coHraUmi";
 import { DNI_ZPET_PRO_ANALYTIKA, jePlatnyDen, NEJDELSI_SHRNUTI, NEJVIC_NAVRHU, NEJVIC_VAZEB_V_PODKLADECH, nactiRozbor, type PodkladyRozboru, type RozborDne } from "../src/server/rozbor";
 import { SkladVPameti } from "../src/server/sklad";
 import { spravujVse } from "../src/server/sprava";
@@ -92,6 +93,15 @@ describe("podklady denního rozboru", () => {
     expect(odpoved.status).toBe(200);
     const podklady = (await odpoved.json()) as PodkladyRozboru;
     expect(podklady.den).toBe("2026-11-22");
+    // Co hra už umí: text autorů, krátký (rozbor ho čte každý den) a bez prázdných řádků.
+    expect(podklady.hraUmi).toEqual([...CO_HRA_UMI]);
+    expect(CO_HRA_UMI.length).toBeGreaterThanOrEqual(10);
+    expect(CO_HRA_UMI.length).toBeLessThanOrEqual(24);
+    for (const veta of CO_HRA_UMI) {
+      expect(veta.trim()).toBe(veta);
+      expect(veta.length, veta).toBeGreaterThan(40);
+      expect(veta.length, veta).toBeLessThanOrEqual(400);
+    }
     expect(podklady.neuplne).toBe(false);
     expect(podklady.souhrnDne.hracu).toBe(1);
     expect(podklady.souhrnDne.urovne.find((u) => u.uroven === "1-01")).toMatchObject({ hracu: 1, hracuSPruchodem: 1, pruchodu: 1 });
