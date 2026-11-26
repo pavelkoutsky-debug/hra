@@ -1432,7 +1432,8 @@ export function spustUroven(
       const vety = [t("duvod.nad-rozpocet.oKolik", { castka: koruny(cenaNavrhu(editor.navrh) - uroven.rozpocet) })];
       const mostovka = editor.navrh.pruty.find((p) => KATALOG[p.prvek].druh === "mostovka")?.prvek;
       const levnejsi = mostovka ? levnejsiPrut(uroven, mostovka) : null;
-      if (levnejsi && mostovkaMimoTrasy(editor.navrh, uroven) > 0) vety.push(t("duvod.nad-rozpocet.mostovka", { prvek: nazevPrvku(levnejsi) }));
+      // U mostu, který se zvedá, může být mostovka za opěrou záměr (rameno): tam se neradí.
+      if (levnejsi && !uroven.pohyb && mostovkaMimoTrasy(editor.navrh, uroven) > 0) vety.push(t("duvod.nad-rozpocet.mostovka", { prvek: nazevPrvku(levnejsi) }));
       return vety.join(" ");
     }
     if (duvod === "prut-dlouhy") {
@@ -1884,13 +1885,17 @@ export function spustUroven(
    * úrovně. Mostovka je v paletě první a nováček z ní jinak postaví i podpěry: most pak stojí
    * víc než rozpočet a zkouška se nepustí (první den po zveřejnění 71krát, u 24 hráčů ze 41).
    * Jen jednou za návštěvu, jen dokud úroveň neprošel a jen když má mostovku pořád v ruce.
+   * Přepíná se ve chvíli, kdy mostovku dokončil nakreslený prut, nebo při otevření úrovně
+   * s mostovkou už hotovou (`priOtevreni`); nikdy po kliknutí v paletě, výběru, Importu nebo
+   * kroku Zpět (kdo si mostovku vybere sám, tomu ji hra z ruky nebere).
    */
   let mostovkaBylaHotova = false;
   let prvekPrepnut: IdPrvku | null = null;
   let radaOPodepreni = false;
-  function prepniNaPrutPoMostovce(): void {
+  function prepniNaPrutPoMostovce(priOtevreni = false): void {
     const hotova = jePrvniUrovenKampane() && host === null && !rekord?.medaile.pruchod && editor.navrh.pruty.length > 0 && dalsiDilMostovky(editor.navrh, uroven) === null;
-    const prave = hotova && !mostovkaBylaHotova;
+    const nakreslena = !mostovkaBylaHotova && editor.navrh !== naposledUlozeny && editor.posledniAkce === "prut";
+    const prave = hotova && (priOtevreni || nakreslena);
     mostovkaBylaHotova = hotova;
     if (!prave || prvekPrepnut !== null || rezim !== "stavba" || nastroj !== "kresleni" || KATALOG[editor.prvek].druh !== "mostovka") return;
     // Volba prvku přepisuje vybrané pruty: s výběrem (po kroku Zpět nebo Znovu) se nepřepíná.
@@ -1900,6 +1905,7 @@ export function spustUroven(
     prvekPrepnut = prut;
     editor.zvolPrvek(prut);
     document.body.dataset.prvekPrepnut = prut;
+    zapis("vedeni.prvek", { prvek: prut, kdy: priOtevreni ? "otevreni" : "mostovka" });
   }
 
   /** Zapíše do deníku, čím se most právě změnil a jak teď vypadá. */
@@ -3322,7 +3328,7 @@ export function spustUroven(
     // První úroveň po zkoušce, která neprošla: mostovka chce podepřít a v ruce je levnější prut.
     // Řekne se jednou, dokud hráč žádný prut mimo mostovku nenakreslil.
     const jenMostovka = editor.navrh.pruty.length > 0 && editor.navrh.pruty.every((p) => KATALOG[p.prvek].druh === "mostovka");
-    if (prvekPrepnut !== null && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && editor.prvek === prvekPrepnut && jenMostovka) {
+    if (prvekPrepnut !== null && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && nastroj === "kresleni" && editor.prvek === prvekPrepnut && jenMostovka) {
       radaOPodepreni = true;
       ukazHlaseni(t("vedeni.podepri", { prvek: nazevPrvku(prvekPrepnut) }), "info", false);
     }
@@ -6845,6 +6851,8 @@ export function spustUroven(
   document.body.dataset.rezim = rezim;
   document.body.dataset.zkouska = "";
   obnovMedaile();
+  // První úroveň otevřená s mostovkou už hotovou (hráč se vrací): v ruce je rovnou levnější prut.
+  prepniNaPrutPoMostovce(true);
   obnovStavbu();
   // Bublina u zvýrazněného tlačítka Zkouška se drží pod ním i po změně okna.
   window.addEventListener("resize", obnovVyzvuZkousky);

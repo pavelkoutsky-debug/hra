@@ -101,7 +101,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vedeni.pevna.kratce": "fixed support",
   "vedeni.posuvna.kratce": "sliding support",
   "vedeni.zkouska": "The deck is complete. Now test the bridge: even if it falls, you’ll see why.",
-  "vedeni.podepri": "The deck cannot carry even itself: something has to hold its middle joint, for example a triangle of members above it. You are holding “{prvek}”, which is cheaper than the deck; the deck belongs only on the route.",
+  "vedeni.podepri": "The deck cannot carry even itself: something has to hold its joints between the supports, for example a triangle of members above it. You are holding “{prvek}”, which is cheaper than the deck; the deck belongs only on the route.",
   "souradnice.bod": "x = {x} m · y = {y} m",
   "chyba.nacteni": "The drawing could not be loaded: {duvod}",
   "lista.zkusebna": "Solver test lab",
@@ -1056,7 +1056,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "duvod.mostovka-na-koleji": "A train will run along the track, and it cannot run on a road deck: a track deck belongs here.",
   "duvod.nad-rozpocet": "The bridge costs more than the budget. Make it cheaper before testing.",
   "duvod.nad-rozpocet.oKolik": "The bridge costs {castka} more than the budget. Make it cheaper before testing.",
-  "duvod.nad-rozpocet.mostovka": "The deck is the most expensive element and belongs only on the route: select the deck members that are off the route and pick “{prvek}” in the palette.",
+  "duvod.nad-rozpocet.mostovka": "The deck costs more than “{prvek}” and belongs only on the route: select the deck members that are off the route and pick “{prvek}” in the palette.",
 
   // Popisové pole
   "pole.cena": "Cost",

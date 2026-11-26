@@ -270,7 +270,7 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     expect(await telo(s, "rezim")).toBe("stavba");
     // Hlášení říká, o kolik je most dražší a kde ušetřit (4 díly mostovky po 3,61 m navíc).
     expect((await s.locator('[data-udaj="hlaseni"]').innerText()).replace(/[\u202f\u00a0]/g, " ")).toBe(
-      "Most je o 11 056 Kč dražší než rozpočet. Před zkouškou ho zlevni. Mostovka je nejdražší prvek a patří jen na cestu: pruty z ní mimo cestu vyber a zvol v paletě „Lehký trám“.",
+      "Most je o 11 056 Kč dražší než rozpočet. Před zkouškou ho zlevni. Mostovka je dražší než „Lehký trám“ a patří jen na cestu: pruty z ní mimo cestu vyber a zvol v paletě „Lehký trám“.",
     );
     for (let i = 0; i < 4; i++) await s.locator('[data-akce="zpet"]').click();
     await expect.poll(() => telo(s, "pruty")).toBe("2");
@@ -296,13 +296,24 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
     // Po první zkoušce, která neprošla, hra řekne, co dál a čím: mostovku podepřít lehkým trámem.
     expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toBe(
-      "Mostovka sama neunese ani sebe: její prostřední styčník musí něco držet, třeba trojúhelník z prutů nad ní. V ruce máš prvek „Lehký trám“, je levnější než mostovka; ta patří jen na cestu.",
+      "Mostovka sama neunese ani sebe: její styčníky mezi podporami musí něco držet, třeba trojúhelník z prutů nad ní. V ruce máš prvek „Lehký trám“, je levnější než mostovka; ta patří jen na cestu.",
     );
     await s.screenshot({ path: `${SLOZKA}/zacatek-podepri.png` });
     await otevriUroven(s, "1-01");
     await s.waitForTimeout(200);
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
     expect(await bublina.isVisible()).toBe(false);
+    // Hráč, který se vrací k mostu s hotovou mostovkou, má levnější prut v ruce hned po otevření.
+    // Když si mostovku vybere sám, hra mu ji z ruky nebere (žádné přepnutí při další akci).
+    expect(await telo(s, "prvek-prepnut")).toBe("drevo-lehke");
+    expect(await lehky.getAttribute("aria-pressed")).toBe("true");
+    await mostovka.click();
+    expect(await mostovka.getAttribute("aria-pressed")).toBe("true");
+    await s.locator(PLATNO).focus();
+    await s.keyboard.press("Escape");
+    await tahni(s, [0, 0], [2, 3]);
+    await expect.poll(() => telo(s, "pruty")).toBe("3");
+    expect(await mostovka.getAttribute("aria-pressed")).toBe("true");
     await kontext.close();
   }, 180_000);
 
