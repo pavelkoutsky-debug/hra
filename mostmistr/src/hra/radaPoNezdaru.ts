@@ -30,13 +30,15 @@ export interface Nezdar {
 export interface PametRady {
   /** Klíč posledního započteného nezdaru; null po průchodu nebo na začátku. */
   minuly: string | null;
-  /** Klíče nezdarů, ke kterým už rada v této návštěvě zazněla. */
+  /** Klíče nezdarů, ke kterým už rada v této návštěvě zazněla (kvůli deníku: poprvé, nebo znovu). */
   ukazane: readonly string[];
   /**
    * Hráč během téže řady nezdarů sám otevřel nápovědu nebo rozbalil podrobnosti výsledku
    * (tam je celá věta s radou): nic se mu nevnucuje navíc. Jiný nezdar nebo průchod řadu končí.
    */
   samHledal: boolean;
+  /** Kolikátý stejný nezdar za sebou je ten poslední započtený (1 = první). */
+  vRade?: number;
 }
 
 export const novaPametRady = (): PametRady => ({ minuly: null, ukazane: [], samHledal: false });
@@ -65,21 +67,24 @@ const klicNezdaru = (n: Nezdar): string => `${n.druh}/${n.prvek ?? ""}`;
  * a nezdar, ke kterému se rada ukáže (null: neukáže se nic).
  *
  * Rada se ukáže, když zkouška neprošla stejně jako ta započtená před ní, k nezdaru je co
- * poradit, stejná rada v této návštěvě ještě nezazněla a hráč v téže řadě nezdarů sám
- * nehledal (nápověda, podrobnosti výsledku). Pokusy a cizí mosty se nepočítají a řadu
- * nepřeruší; v úrovni, která neradí, se nic neukáže.
+ * poradit a hráč v téže řadě nezdarů sám nehledal (nápověda, podrobnosti výsledku). Dokud
+ * stejný nezdar trvá, rada zůstává: kdo ji napoprvé nepochopil, nemá potřetí dostat míň než
+ * podruhé (nález recenze hraním). Pokusy a cizí mosty se nepočítají a řadu nepřeruší;
+ * v úrovni, která neradí, se nic neukáže.
  */
-export function rozhodniRadu(pamet: PametRady, zkouska: ZkouskaProRadu, radi: boolean): { pamet: PametRady; ukazat: Nezdar | null } {
-  if (zkouska.pokus || zkouska.host || !radi) return { pamet, ukazat: null };
+export function rozhodniRadu(pamet: PametRady, zkouska: ZkouskaProRadu, radi: boolean): { pamet: PametRady; ukazat: Nezdar | null; vRade: number } {
+  if (zkouska.pokus || zkouska.host || !radi) return { pamet, ukazat: null, vRade: 0 };
   const n = zkouska.nezdar;
-  if (n === null) return { pamet: { ...pamet, minuly: null, samHledal: false }, ukazat: null };
+  if (n === null) return { pamet: { ...pamet, minuly: null, samHledal: false, vRade: 0 }, ukazat: null, vRade: 0 };
   const klic = klicNezdaru(n);
   const stejny = pamet.minuly === klic;
   const samHledal = stejny && pamet.samHledal;
-  const ukazat = stejny && n.maRada && !samHledal && !pamet.ukazane.includes(klic);
+  const ukazat = stejny && n.maRada && !samHledal;
+  const vRade = stejny ? (pamet.vRade ?? 1) + 1 : 1;
   return {
-    pamet: { minuly: klic, ukazane: ukazat ? [...pamet.ukazane, klic] : pamet.ukazane, samHledal },
+    pamet: { minuly: klic, ukazane: ukazat && !pamet.ukazane.includes(klic) ? [...pamet.ukazane, klic] : pamet.ukazane, samHledal, vRade },
     ukazat: ukazat ? n : null,
+    vRade,
   };
 }
 

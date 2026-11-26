@@ -987,6 +987,9 @@ describe("souhrn deníku", () => {
       posunu: 0,
       posunuVic: 0,
       posunuKlavesou: 0,
+      hracuSOdmitnutim: 0,
+      zkousekOdmitnuto: 0,
+      zkousekNadRozpocet: 0,
       znacky: {},
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
@@ -1009,6 +1012,23 @@ describe("souhrn deníku", () => {
     const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[1]!]))) as ReturnType<typeof vytahDeniku>;
     for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.posunu, delete z.posunuVic, delete z.posunuKlavesou;
     expect(souhrnZVytahu(slucVytahy([vytahDeniku([davky[0]!]), stary])).urovne[0]).toMatchObject({ hracuSPosunem: 1, posunu: 3, posunuVic: 2, posunuKlavesou: 1 });
+  });
+
+  it("počítá zkoušky, které hra nepustila, a z nich ty kvůli rozpočtu; pokusy ne", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const odmitnuta = (t: number, duvod: string, pokus: string | null = null): UdalostDeniku => u(t, "zkouska.odmitnuta", "1-01", { duvod, pokus, cena: 47361 });
+    const davky = [
+      davka([u(0, "uroven.otevrena", "1-01"), odmitnuta(5, "nad-rozpocet"), odmitnuta(9, "nad-rozpocet"), odmitnuta(12, "prut-v-zakazane-zone"), odmitnuta(14, "nad-rozpocet", "zlom")], 0, anna),
+      davka([u(0, "uroven.otevrena", "1-01")], 0, bob),
+    ];
+    expect(souhrnDeniku(davky).urovne[0]).toMatchObject({ hracuSOdmitnutim: 1, zkousekOdmitnuto: 3, zkousekNadRozpocet: 2, zkousek: 0 });
+    // Výtahy jdou sloučit a starší výtah bez těch údajů nic nerozbije.
+    const pul = [vytahDeniku([davka(davky[0]!.udalosti.slice(0, 2), 0, anna)]), vytahDeniku([davka(davky[0]!.udalosti.slice(2), 1, anna)])];
+    expect(souhrnZVytahu(slucVytahy(pul)).urovne[0]).toMatchObject({ hracuSOdmitnutim: 1, zkousekOdmitnuto: 3, zkousekNadRozpocet: 2 });
+    const stary = JSON.parse(JSON.stringify(pul[1]!)) as ReturnType<typeof vytahDeniku>;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.odmitnuto, delete z.nadRozpocet;
+    expect(souhrnZVytahu(slucVytahy([pul[0]!, stary])).urovne[0]).toMatchObject({ hracuSOdmitnutim: 1, zkousekOdmitnuto: 1, zkousekNadRozpocet: 1 });
   });
 
   it("značky o mostovce mimo trasu se počítají po úrovních a jen ty, které hra posílá", () => {

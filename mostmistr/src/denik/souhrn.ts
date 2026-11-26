@@ -68,6 +68,13 @@ export interface SouhrnUrovne {
   posunuVic: number;
   posunuKlavesou: number;
   /**
+   * Zkoušky, které hra nepustila (`zkouska.odmitnuta`; pokusy se nepočítají): kolik hráčů se to
+   * týkalo, kolikrát celkem a z toho proto, že byl most dražší než rozpočet.
+   */
+  hracuSOdmitnutim: number;
+  zkousekOdmitnuto: number;
+  zkousekNadRozpocet: number;
+  /**
    * Značky o mostovce mimo trasu, které hra při stavbě ukázala (`stavba.znacka`), a kolikrát:
    * mostovka přes kraj břehu bez styčníku, mimo trasu, mezera u břehu a uprostřed, mostovka za
    * koncem trasy. Jedna značka se počítá jednou, dokud se nezmění.
@@ -158,6 +165,9 @@ export interface HracVUrovni {
   posunu?: number;
   posunuVic?: number;
   posunuKlavesou?: number;
+  /** Zkoušky, které hra nepustila, a z nich kvůli rozpočtu. Starší výtahy je nemají. */
+  odmitnuto?: number;
+  nadRozpocet?: number;
 }
 
 export interface HracVeVytahu {
@@ -358,6 +368,8 @@ function novyHracVUrovni(): HracVUrovni {
     posunu: 0,
     posunuVic: 0,
     posunuKlavesou: 0,
+    odmitnuto: 0,
+    nadRozpocet: 0,
   };
 }
 
@@ -459,6 +471,10 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
         pricti(((v.rady ??= slovnik())[u.uroven] ??= slovnik()), prvek !== null ? `${prvek}/${druh}` : druh, 1);
         if (zaznam.radaZkousek === null || zaznam.radaZkousek === undefined) zaznam.radaZkousek = zaznam.zkousek;
       }
+    } else if (u.druh === "zkouska.odmitnuta" && (data.pokus === null || data.pokus === undefined)) {
+      // Zkouška, kterou hra nepustila (most proti pravidlům, dražší než rozpočet, moc změn v komisi).
+      zaznam.odmitnuto = (zaznam.odmitnuto ?? 0) + 1;
+      if (data.duvod === "nad-rozpocet") zaznam.nadRozpocet = (zaznam.nadRozpocet ?? 0) + 1;
     } else if (u.druh === "stavba.znacka") {
       const klic = data.co === "za-brehem" ? "za-brehem" : data.co === "mezera" ? textZ(data.druh) : null;
       const popis = klic === null || !Object.hasOwn(POPISY_ZNACEK, klic) ? null : POPISY_ZNACEK[klic]!;
@@ -581,6 +597,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
         cil.posunu = (cil.posunu ?? 0) + (z.posunu ?? 0);
         cil.posunuVic = (cil.posunuVic ?? 0) + (z.posunuVic ?? 0);
         cil.posunuKlavesou = (cil.posunuKlavesou ?? 0) + (z.posunuKlavesou ?? 0);
+        cil.odmitnuto = (cil.odmitnuto ?? 0) + (z.odmitnuto ?? 0);
+        cil.nadRozpocet = (cil.nadRozpocet ?? 0) + (z.nadRozpocet ?? 0);
       }
     }
     for (const [uroven, pocty] of Object.entries(v.selhani)) {
@@ -655,6 +673,9 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         posunu: soucet((z) => z.posunu ?? 0),
         posunuVic: soucet((z) => z.posunuVic ?? 0),
         posunuKlavesou: soucet((z) => z.posunuKlavesou ?? 0),
+        hracuSOdmitnutim: zaznamy.filter((z) => (z.odmitnuto ?? 0) > 0).length,
+        zkousekOdmitnuto: soucet((z) => z.odmitnuto ?? 0),
+        zkousekNadRozpocet: soucet((z) => z.nadRozpocet ?? 0),
         znacky: odNejcastejsiho(v.znacky?.[uroven]),
       };
     });

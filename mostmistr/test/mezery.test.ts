@@ -2,8 +2,10 @@
 // položenou mostovku na zemi“).
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
-import { mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery } from "../src/data/mezery";
+import { KATALOG } from "../src/data/katalog";
+import { konecTahuMostovky, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery } from "../src/data/mezery";
 import { mezeryTras } from "../src/data/navrh";
+import type { Uroven } from "../src/data/uroven";
 import { nactiKampan } from "../urovne/index";
 import { RESENI } from "../urovne/reseni";
 
@@ -19,6 +21,39 @@ function most(pruty: Prut[], id = "1-02") {
 }
 const D = "mostovka-drevo";
 const L = "drevo-lehke";
+
+describe("kde končí tah mostovky, který vyjede za konec trasy", () => {
+  it("lávka 1-02 (trasa 0 až 12 m): tah z trasy za její konec končí na kraji břehu", () => {
+    const lavka: Uroven = cyklostezka;
+    expect(konecTahuMostovky("mostovka-drevo", { x: 0, y: 0 }, { x: 13, y: 0 }, lavka)).toEqual({ x: 12, y: 0 });
+    expect(konecTahuMostovky("mostovka-drevo", { x: 8, y: 0 }, { x: 17, y: 0 }, lavka)).toEqual({ x: 12, y: 0 });
+    expect(konecTahuMostovky("mostovka-drevo", { x: 12, y: 0 }, { x: -2, y: 0 }, lavka)).toEqual({ x: 0, y: 0 });
+    // Tah, který na trase zůstane, který na jejím konci začíná, který vede šikmo, a jiný prvek.
+    expect(konecTahuMostovky("mostovka-drevo", { x: 0, y: 0 }, { x: 12, y: 0 }, lavka)).toBeNull();
+    expect(konecTahuMostovky("mostovka-drevo", { x: 12, y: 0 }, { x: 13, y: 0 }, lavka)).toBeNull();
+    expect(konecTahuMostovky("mostovka-drevo", { x: 0, y: 0 }, { x: -1, y: 0 }, lavka)).toBeNull();
+    expect(konecTahuMostovky("mostovka-drevo", { x: 8, y: 0 }, { x: 13, y: -3 }, lavka)).toBeNull();
+    expect(konecTahuMostovky("drevo-lehke", { x: 8, y: 0 }, { x: 13, y: 0 }, lavka)).toBeNull();
+  });
+
+  it("u mostu, který se zvedá, se nekrátí (rameno za opěrou), a kolejiště se řídí kolejí", () => {
+    const zvedaci = kampan.find((x) => x.pohyb)!;
+    const trasa = zvedaci.trasy[0]!;
+    const zleva = Math.min(trasa.zacatek.x, trasa.konec.x);
+    const zprava = Math.max(trasa.zacatek.x, trasa.konec.x);
+    const mostovka = zvedaci.povolenePrvky.find((id) => KATALOG[id].druh === "mostovka")!;
+    expect(konecTahuMostovky(mostovka, { x: zleva + 1, y: trasa.zacatek.y }, { x: zprava + 3, y: trasa.zacatek.y }, zvedaci)).toBeNull();
+    const trat = kampan.find((x) => !x.pohyb && x.trasy.some((t) => t.druh === "kolej"))!;
+    const kolej = trat.trasy.find((t) => t.druh === "kolej")!;
+    const kz = Math.min(kolej.zacatek.x, kolej.konec.x);
+    const kk = Math.max(kolej.zacatek.x, kolej.konec.x);
+    expect(konecTahuMostovky("kolejiste", { x: kz + 1, y: kolej.zacatek.y }, { x: kk + 2, y: kolej.zacatek.y }, trat)).toEqual({ x: kk, y: kolej.konec.y });
+  });
+
+  it("konce tras všech úrovní kampaně leží na rastru (jinak by tah neměl kde skončit)", () => {
+    for (const u of kampan) for (const t of u.trasy) for (const b of [t.zacatek, t.konec]) expect(Number.isInteger(b.x) && Number.isInteger(b.y), u.id).toBe(true);
+  });
+});
 
 describe("rozbor mezery v mostovce", () => {
   it("mostovka přes kraj břehu bez styčníku: značka na kraji břehu, i když most vypadá hotově", () => {

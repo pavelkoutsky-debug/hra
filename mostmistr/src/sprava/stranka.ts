@@ -519,7 +519,8 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
       radek.append(
         bunka(`${u.uroven} ${urovne.get(u.uroven)?.nazev ?? ""}`),
         bunka(cislo(u.hracu), "cislo"),
-        bunka(cislo(u.zkousek), "cislo"),
+        // Zkoušky a v závorce ty, které hra nepustila (z toho kvůli rozpočtu); starší souhrn je nemá.
+        bunka(`${cislo(u.zkousek)}${u.zkousekOdmitnuto ? ` (+${u.zkousekOdmitnuto} nepuštěných, ${u.zkousekNadRozpocet ?? 0} rozpočet)` : ""}`, "cislo"),
         bunka(cislo(u.pruchodu), "cislo"),
         bunka(cislo(u.hracuSPruchodem), "cislo"),
         bunka(cislo(u.hracuBezZkousky), "cislo"),

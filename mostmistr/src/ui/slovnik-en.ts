@@ -265,7 +265,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "mezera.nadpis.uprostred": "A piece of the deck is missing here",
   "mezera.kratce": "from {od} to {do} m there is nothing on the route: whoever gets here will fall",
   "zaBrehem.nadpis": "This deck lies on the bank only",
-  "zaBrehem.kratce": "the ground does not carry it and nobody walks on it: the route ends at the support",
+  "zaBrehem.kratce": "the route ends at the support and the ground does not carry a deck: in the test it drops onto the ground or starts to shake, and the bridge may fail because of it. Delete it",
   "zaber.pad": "First fall from the bridge",
   "zaber.preskocit.dotyk": "slow motion · a tap skips · turn it off on the timeline below",
   "zaber.veta.prut": "Member {prut} ({prvek}) gave way first: {zpusob}.",
@@ -297,6 +297,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vysledek.kratce.pruhyb": "The deck moved {mm} mm away from the drawing; the limit is {mez} mm.",
   "vysledek.kratce.prvni": "Member {prut} (marked on the drawing) gave way first: {zpusob}.",
   "vysledek.rada.nadpis": "Same failure twice in a row:",
+  "vysledek.rada.nadpis.znovu": "The same failure again:",
   "vysledek.rada.kmitani": "the bridge swayed beyond the level's limit.",
   "vysledek.rada.nedopnuto": "the cables are not tensioned.",
   "vysledek.rada.napoveda": "Open the hint",
@@ -381,7 +382,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "Until you turn it off, the game sends its authors a play log under this browser's random number, starting the first time you open the game: which levels and screens you open, what you control the game with (mouse, touch, keyboard), how you build (including the shape of the bridge), how the tests turn out, which tips the game showed you, the window size, the language and browser errors. No name, email or location. It is used only to tune the game.",
   "soukromi.vazba.nadpis": "Messages to the authors",
   "soukromi.vazba":
-    "A message from the Write to us window carries the text, its kind, your rating and the player number, optionally the attached bridge and your latest steps in the game, and an email only if you fill it in. The texts of messages, without the email field, are also read daily by an automated review (a language model) that suggests changes to the game; emails and phone numbers typed into the text are blacked out for it.",
+    "A message from the Write to us window carries the text, its kind, your rating and the player number, optionally the attached bridge and your latest steps in the game, and an email only if you fill it in. The text of a message (without the email from the reply field) is also read daily by an automated review (a language model) that suggests changes to the game; emails and phone numbers typed into the text are blacked out for it.",
   "soukromi.zebricek.nadpis": "Leaderboards",
   "soukromi.zebricek":
     "A leaderboard entry holds a nickname, the bridge and its result; everyone can see the nickname and the result. So that leaderboards, messages and the log cannot be flooded, the server remembers for at most two days a fingerprint of the network address from which the address cannot be recovered.",
@@ -979,8 +980,10 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "railway bascule bridges use a counterweight instead of cylinders: it almost balances the leaf, so the machinery only has to turn it. When it opened in 1919, the St. Charles Air Line Bridge in Chicago, with a 260-foot (79 m) leaf, was the longest bascule bridge in the world: a truss above the track with a concrete counterweight. In 1930 the bridge was moved and shortened to about 220 feet.",
   "paleta.vyber": "Select & move",
   "paleta.vyber.popis": "Select and move: click a member or joint, drag from empty space to box-select; drag a selected joint or use the arrow keys to move the whole selection, joints at supports stay put (V)",
-  "posun.tip": "You can adjust the bridge without rebuilding it: Select & move (V), box-select joints and move them by dragging or with an arrow key, a metre at a time.",
+  "posun.tip": "You can adjust the bridge without rebuilding it: Select & move (V), box-select a part of the bridge and move it by dragging a joint or with an arrow key, a metre at a time.",
   "posun.vPodporach": "The selected joints sit on supports (anchors, foundations): moving does not shift them.",
+  "posun.podporyStoji": "Joints on supports stay put during a move and the members to them stretch: select only a part of the bridge.",
+  "posun.zPodpory": "The joint no longer sits on the support: the bridge does not rest on it there. If you did not mean to, undo the step.",
   "paleta.zrcadlit.popis": "Mirror the bridge (or just the selection) about the span axis (M)",
   "paleta.zadani.cele": "full brief…",
   "paleta.smazat": "Delete",
@@ -1013,6 +1016,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "prvek.pist": "Hydraulic cylinder",
 
   // Proč něco nejde nakreslit nebo zkoušet
+  "stavba.mostovkaZkracena": "The deck ends at the edge of the bank: beyond it the route runs on solid ground and nothing would carry a deck there.",
   "stavba.zPrazdna": "A bridge grows only from anchors and from joints it already has: start a member by dragging from one of them. Dragging from empty space selects.",
   "duvod.jina-uroven": "This bridge belongs to a different level.",
   "duvod.stycnik-mimo-vyrez": "You cannot build outside the drawing.",
@@ -1153,6 +1157,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
     "During the test the deck moved {mm} mm away from the drawing; this level allows {mez} mm at most. Everyone crossed, but a bridge that sags like this under people does not pass: support the deck more closely so that it keeps its shape.",
   "vysledek.pruhyb.klid":
     "Under its own weight the deck already differs from the drawing by {mm} mm; this level allows {mez} mm at most. A bridge whose deck does not keep its shape does not pass here: support it at every joint.",
+  "vysledek.opreno.zaBrehem":
+    "Nothing carries the deck on the bank beyond the end of the route (member {prut}, marked on the drawing): it dropped onto the ground, and a bridge must not lean on the ground. Delete it; the route does not run over it.",
   "vysledek.opreno": "The bridge has no support of its own: it sagged and came to rest on the ground. A bridge must not lean on the ground; support it from the anchors and bearings so that it keeps its shape by itself.",
   "vysledek.bezRovnovahy":
     "The bridge could not carry even its own weight: it gave way straight away, before anyone drove onto it.",

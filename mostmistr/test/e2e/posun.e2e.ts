@@ -149,6 +149,14 @@ describe("posun víc styčníků naráz", () => {
     await s.keyboard.press("ArrowDown");
     expect(await udaj(s, "hlaseni")).toBe("Zakázanou zónou most vést nesmí.");
     expect(vyskyHornihoPasu(await mostNaVykresu(s))).toEqual([3, 3, 3]);
+    // Celý most do strany: podpory stojí, pruty k nim by se natáhly. Hra řekne i to, ne jen
+    // „prut je delší“ (nález recenze hraním).
+    await s.locator(PLATNO).focus();
+    await s.keyboard.press("ArrowRight");
+    expect(await udaj(s, "hlaseni")).toBe(
+      "Některý prut je delší, než jeho prvek dovoluje. Styčníky v podporách při posunu stojí a pruty k nim se natahují: vyber jen část mostu.",
+    );
+    expect(vyskyHornihoPasu(await mostNaVykresu(s))).toEqual([3, 3, 3]);
     // Bez výběru šipka posouvá pohled jako dřív.
     await s.locator(PLATNO).focus();
     await s.keyboard.press("Escape");
@@ -242,6 +250,12 @@ describe("šipky a styčník vybraný přídavkem", () => {
     const po = await poloha();
     if (po === null || po.y === 0) expect((await udaj(p, "hlaseni")).length).toBeGreaterThan(10);
     else expect(po).toEqual({ x: 8, y: 1, zavazi: true });
+    // Styčník odtažený z podpory: most se o ni přestal opírat a hra to řekne (na výkresu to
+    // vidět není; dřív to prozradila až zkouška).
+    await p.keyboard.press("Escape");
+    await tahniMysi(p, [32, 0], [31, 0]);
+    expect((await mostNaVykresu(p)).stycniky.some((k) => k.x === 31 && k.y === 0)).toBe(true);
+    expect(await udaj(p, "hlaseni")).toBe("Styčník už nestojí v podpoře: most se o ni v tom místě neopírá. Když jsi to nechtěl, vrať krok (Zpět).");
     await p.close();
   }, 60_000);
 });

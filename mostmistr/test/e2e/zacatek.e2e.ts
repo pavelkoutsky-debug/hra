@@ -252,6 +252,19 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await s.screenshot({ path: `${SLOZKA}/zacatek-vyzva-zkousky-telefon.png` });
     await s.setViewportSize({ width: 1280, height: 720 });
 
+    // Most, který zkouška odmítne (nováček postaví trojúhelníky z mostovky a přetáhne rozpočet),
+    // ke zkoušce nevybízí: bublina by zakryla hlášení, proč zkouška nejde, a radila opak.
+    for (const [a, b] of [[[0, 0], [2, 3]], [[2, 3], [4, 0]], [[4, 0], [6, 3]], [[6, 3], [8, 0]]] as [[number, number], [number, number]][]) await tahni(s, a, b);
+    await expect.poll(() => telo(s, "pruty")).toBe("6");
+    expect(await telo(s, "vyzva-zkousky")).toBeNull();
+    expect(await bublina.isVisible()).toBe(false);
+    await tlacitko.click();
+    expect(await telo(s, "rezim")).toBe("stavba");
+    expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toContain("Most je dražší než rozpočet");
+    for (let i = 0; i < 4; i++) await s.locator('[data-akce="zpet"]').click();
+    await expect.poll(() => telo(s, "pruty")).toBe("2");
+    await expect.poll(() => telo(s, "vyzva-zkousky")).toBe("ano");
+
     const hrac = await cisloHrace(s);
     await pustADopocitej(s);
     expect(await telo(s, "vyzva-zkousky")).toBeNull();

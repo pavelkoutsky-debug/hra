@@ -267,7 +267,7 @@ const CS = {
   "mezera.nadpis.uprostred": "Tady chybí kus mostovky",
   "mezera.kratce": "od {od} do {do} m na cestě nic neleží: kdo sem dojde, spadne",
   "zaBrehem.nadpis": "Tahle mostovka leží jen na břehu",
-  "zaBrehem.kratce": "zem ji nenese a nikdo po ní nepůjde: cesta končí u podpory",
+  "zaBrehem.kratce": "cesta končí u podpory a zem mostovku nenese: při zkoušce se sklopí na zem nebo rozkmitá a most kvůli ní nemusí obstát. Smaž ji",
   "zaber.pad": "První pád z mostu",
   "zaber.preskocit.dotyk": "zpomaleno · ťuknutí přeskočí · vypíná se dole na ose",
   "zaber.veta.prut": "Jako první povolil prut {prut} ({prvek}): {zpusob}.",
@@ -299,6 +299,7 @@ const CS = {
   "vysledek.kratce.pruhyb": "Mostovka se od výkresu odchýlila o {mm} mm; smí nejvýš o {mez} mm.",
   "vysledek.kratce.prvni": "Jako první povolil prut {prut} (označený na výkresu): {zpusob}.",
   "vysledek.rada.nadpis": "Podruhé za sebou stejně:",
+  "vysledek.rada.nadpis.znovu": "Zase stejně:",
   "vysledek.rada.kmitani": "most kmital přes mez úrovně.",
   "vysledek.rada.nedopnuto": "lana nejsou dopnutá.",
   "vysledek.rada.napoveda": "Otevřít nápovědu",
@@ -383,7 +384,7 @@ const CS = {
     "Dokud ho nevypneš, hra odesílá autorům záznam hraní pod náhodným číslem tohoto prohlížeče, a to už od prvního otevření: které úrovně a obrazovky otevřeš, čím hru ovládáš (myš, dotyk, klávesnice), jak stavíš (i tvar mostu), jak dopadnou zkoušky, které rady ti hra ukázala, velikost okna, jazyk a chyby prohlížeče. Žádné jméno, e-mail ani poloha. Slouží jen k ladění hry.",
   "soukromi.vazba.nadpis": "Zprávy autorům",
   "soukromi.vazba":
-    "Zpráva z okna Napiš nám nese text, druh, hodnocení a číslo hráče, případně přiložený most a poslední kroky ve hře, a e-mail, jen když ho vyplníš. Texty zpráv bez pole s e-mailem denně čte i automatický rozbor (jazykový model), který autorům navrhuje úpravy hry; e-maily a telefonní čísla napsané přímo do textu se pro něj začerní.",
+    "Zpráva z okna Napiš nám nese text, druh, hodnocení a číslo hráče, případně přiložený most a poslední kroky ve hře, a e-mail, jen když ho vyplníš. Text zprávy (bez e-mailu z pole pro odpověď) denně čte i automatický rozbor (jazykový model), který autorům navrhuje úpravy hry; e-maily a telefonní čísla napsané přímo do textu se pro něj začerní.",
   "soukromi.zebricek.nadpis": "Žebříčky",
   "soukromi.zebricek":
     "Do žebříčku jde přezdívka, most a jeho výsledek; přezdívku a výsledek uvidí všichni. Aby žebříčky, zprávy a záznam nešly zahltit, pamatuje si server nejvýš dva dny otisk síťové adresy, ze kterého adresu zpátky získat nejde.",
@@ -949,8 +950,10 @@ const CS = {
     "železniční zvedací mosty mají místo pístů protizávaží, které křídlo skoro vyváží, takže ho stroj jen pootáčí. Most St. Charles Air Line v Chicagu byl v roce 1919 se svým křídlem dlouhým 260 stop (79 metrů) nejdelším sklopným mostem na světě: příhrada nad kolejí s betonovým protizávažím. V roce 1930 most posunuli a zkrátili asi na 220 stop.",
   "paleta.vyber": "Výběr a posun",
   "paleta.vyber.popis": "Výběr a posun: klikni na prut nebo styčník, tažením z prázdna vyber rámečkem; tažením vybraného styčníku nebo šipkami posuneš celý výběr, styčníky v podporách zůstanou (V)",
-  "posun.tip": "Most jde upravit i bez přestavby: Výběr a posun (V), vyber styčníky rámečkem a posuň je tažením nebo šipkou o metr.",
+  "posun.tip": "Most jde upravit i bez přestavby: Výběr a posun (V), vyber část mostu rámečkem a posuň ji tažením za styčník nebo šipkou o metr.",
   "posun.vPodporach": "Vybrané styčníky stojí v podporách (kotvy, základy): ty posun nehne.",
+  "posun.podporyStoji": "Styčníky v podporách při posunu stojí a pruty k nim se natahují: vyber jen část mostu.",
+  "posun.zPodpory": "Styčník už nestojí v podpoře: most se o ni v tom místě neopírá. Když jsi to nechtěl, vrať krok (Zpět).",
   "paleta.zrcadlit.popis": "Zrcadlit most (nebo jen výběr) podle osy rozpětí (M)",
   "paleta.zadani.cele": "celé zadání…",
   "paleta.smazat": "Smazat",
@@ -983,6 +986,7 @@ const CS = {
   "prvek.pist": "Hydraulický píst",
 
   // Proč něco nejde nakreslit nebo zkoušet
+  "stavba.mostovkaZkracena": "Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.",
   "stavba.zPrazdna": "Most roste jen z kotev a ze styčníků, které už má: prut začni tažením z některého z nich. Tahem z volného místa se vybírá.",
   "duvod.jina-uroven": "Tento most patří k jiné úrovni.",
   "duvod.stycnik-mimo-vyrez": "Mimo výkres se stavět nedá.",
@@ -1122,6 +1126,8 @@ const CS = {
     "Mostovka se při zkoušce odchýlila od výkresu o {mm} mm; tahle úroveň dovoluje nejvýš {mez} mm. Všichni přešli, ale most, který se pod lidmi takhle prohýbá, neobstál: podepři mostovku hustěji, aby držela tvar.",
   "vysledek.pruhyb.klid":
     "Mostovka se už pod vlastní tíhou liší od výkresu o {mm} mm; tahle úroveň dovoluje nejvýš {mez} mm. Most, jehož mostovka nedrží tvar, tu neobstojí: podepři ji v každém styčníku.",
+  "vysledek.opreno.zaBrehem":
+    "Mostovku na břehu za koncem cesty (prut {prut}, označený na výkresu) nic nenese: sklopila se na zem, a o zem se most opírat nesmí. Smaž ji, cesta po ní nevede.",
   "vysledek.opreno": "Most nemá vlastní oporu: propadl se a zůstal ležet na terénu. O zem se most opírat nesmí; podepři ho z kotev a podpor tak, aby držel tvar sám.",
   "vysledek.bezRovnovahy":
     "Most neunesl ani vlastní váhu: povolil hned, dřív než na něj kdokoli vjel.",
@@ -1645,7 +1651,7 @@ const CS = {
   "zadani.1-02.vice":
     "Vzpěra z kotvy je kratší a levnější než příhrada nad mostovkou. Záleží i na tom, kam vede: krátká vzpěra unese víc než dlouhá.",
   "zadani.1-03":
-    "Šestnáct metrů: nejdřív chodec a cyklista, potom první auto, tuna a půl, a nakonec dodávka, tři a půl tuny. Dlouhý tlačený trám se pod ní vzepře; pod mostovkou se stavět nesmí.",
+    "Šestnáct metrů: nejdřív chodec a cyklista, potom první auto, tuna a půl, a nakonec dodávka, tři a půl tuny. Dlouhý tlačený trám pod ní vybočí do strany; pod mostovkou se stavět nesmí.",
   "zadani.1-03.vice":
     "Koryto pod mostem bere při jarní vodě všechno, co mu stojí v cestě, proto se staví jen nad mostovkou. Dlouhý tlačený trám pod dodávkou vybočí do strany; tomu se říká vzpěr. Pomůže ho zkrátit (styčníky blíž u sebe), postavit příhradu vyšší, aby měla v pásech menší síly, nebo vzít těžký trám: unese víc, ale stojí víc než dvojnásobek.",
   "zadani.1-04":

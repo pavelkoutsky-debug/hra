@@ -115,7 +115,7 @@ describe("mostovka, po které nikdo nepůjde", () => {
     expect(await telo("mezera")).toBe("presah;12;0");
   }, 240_000);
 
-  it("tah mostovky přes kraj břehu dostane na kraji styčník a značka nepřijde", async () => {
+  it("tah mostovky přes kraj břehu skončí na kraji; mostovka dokreslená na břeh má značku a výsledek ji jmenuje", async () => {
     await otevri("1-02");
     // Nejdřív vzpěry z kotev ve svazích; mostovku pak hráč táhne myší.
     await nactiMost(
@@ -131,15 +131,49 @@ describe("mostovka, po které nikdo nepůjde", () => {
     await stranka.mouse.down();
     await stranka.mouse.move((a.x + b.x) / 2, a.y, { steps: 3 });
     await stranka.mouse.move(b.x, b.y, { steps: 3 });
+    // Během tahu hra říká, že mostovka skončí na kraji břehu.
+    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
     await stranka.mouse.up();
-    // 4 + 4 + 4 m k posuvné kotvě a metr za ní; po celé trase leží mostovka.
-    expect(await telo("pruty")).toBe("6");
+    // 4 + 4 + 4 m k posuvné kotvě a dál nic; po celé trase leží mostovka.
+    expect(await telo("pruty")).toBe("5");
     expect(await telo("mezera")).toBeNull();
-    // Kus mostovky na břehu za koncem cesty: zem ho nenese a nikdo po něm nepůjde.
+    expect(await telo("za-brehem")).toBeNull();
+    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
+    await stranka.screenshot({ path: `${SLOZKA}/mezera-zkraceno.png` });
+
+    // Kdo metr mostovky na břeh dokreslí zvlášť (od kraje), dostane značku: zem ho nenese.
+    const c = await bodSveta(12, 0);
+    const d = await bodSveta(13, 0);
+    await stranka.mouse.move(c.x, c.y);
+    await stranka.mouse.down();
+    await stranka.mouse.move(d.x, d.y, { steps: 3 });
+    await stranka.mouse.up();
+    expect(await telo("pruty")).toBe("6");
     await expect.poll(() => telo("za-brehem")).toBe("12.5;0");
     expect(await telo("slozeni")).toBeNull();
     await stranka.screenshot({ path: `${SLOZKA}/mezera-za-brehem.png` });
-  });
+    // Zkouška: všichni přejdou, ale metr mostovky se sklopí na zem. Výsledek říká, který kus
+    // za to může, ne že se „most propadl“.
+    await stranka.locator(PLATNO).focus();
+    await stranka.keyboard.press("Space");
+    await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
+    await akce("na-konec").click();
+    await stranka.locator(".vysledek").waitFor({ state: "visible" });
+    expect(await text("vysledek-nadpis")).toBe("Most neobstál");
+    expect(await text("vysledek-shrnuti")).toContain("Mostovku na břehu za koncem cesty (prut 6, označený na výkresu) nic nenese");
+    expect(await text("vysledek-shrnuti")).not.toContain("propadl se");
+    await stranka.screenshot({ path: `${SLOZKA}/mezera-za-brehem-vysledek.png` });
+    // Bez toho metru týž most projde.
+    await akce("upravit").click();
+    await akce("zpet").click();
+    expect(await telo("pruty")).toBe("5");
+    await stranka.locator(PLATNO).focus();
+    await stranka.keyboard.press("Space");
+    await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
+    await akce("na-konec").click();
+    await stranka.locator(".vysledek").waitFor({ state: "visible" });
+    expect(await text("vysledek-nadpis")).toBe("Most obstál");
+  }, 300_000);
 
   it("mostovka po svazích údolí, mimo čárkovanou trasu: značka u ní", async () => {
     await otevri("1-02");

@@ -1,5 +1,5 @@
 // Rada po druhém stejném nezdaru v bezhlavém prohlížeči: most, který na 1-03 dvakrát po sobě
-// spadne na vzpěr lehkého dřeva, dostane u výsledku radu s tlačítkem do nápovědy; potřetí už ne,
+// spadne na vzpěr lehkého dřeva, dostane u výsledku radu s tlačítkem do nápovědy; potřetí rada zůstává,
 // po jiné příčině ne, na zkouškové úrovni ne. Anglicky a na telefonu se rada vejde.
 import { mkdirSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -92,7 +92,7 @@ afterAll(async () => {
 });
 
 describe("rada po druhém stejném nezdaru", () => {
-  it("1-03: podruhé vzpěr lehkého dřeva ukáže radu s tlačítkem nápovědy u výsledku i u prutu, potřetí už ne", async () => {
+  it("1-03: podruhé vzpěr lehkého dřeva ukáže radu s tlačítkem nápovědy u výsledku i u prutu a potřetí zůstává", async () => {
     await otevri(stranka, "uroven=1-03");
     await nactiMost(stranka, pad("1-03", 1));
     expect(await zkus(stranka)).toBe(false);
@@ -126,10 +126,12 @@ describe("rada po druhém stejném nezdaru", () => {
     expect(await telo(stranka, "prvni-porucha")).toMatch(/vzpěr/);
     await stranka.screenshot({ path: `${SLOZKA}/rada-1-03-stavba.png` });
 
-    // Potřetí stejně: rada už nezazní.
-    expect(await zkus(stranka)).toBe(false);
+    // Potřetí stejně: rada zůstává (kdo ji napoprvé nepochopil, nemá dostat míň než podruhé),
+    // jen nadpis už neříká „podruhé“.
+    expect(await zkus(stranka)).toBe(true);
+    expect(await udaj(stranka, "vysledek-rada-text").innerText()).toMatch(/^Zase stejně: lehký trám, vzpěr\. Byl stlačený a vybočil do strany/);
     await akce(stranka, "upravit").click();
-    expect(await telo(stranka, "rada-u-prutu")).toBeNull();
+    expect(await telo(stranka, "rada-u-prutu")).toBe("vzper");
     // Hlášení „Nedaří se?“ po třetím nezdaru nepřijde: nápovědu už nabídla rada.
     expect(await udaj(stranka, "hlaseni").innerText()).not.toContain("Nedaří se?");
   }, 300_000);

@@ -41,8 +41,17 @@ function rada(zkousky: (ZkouskaProRadu | "hledal")[], radi = true, pamet: PametR
 }
 
 describe("rada po druhém stejném nezdaru", () => {
-  it("ukáže se podruhé po sobě stejně, potřetí už ne", () => {
-    expect(rada([zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(vzperLehkeho)])).toEqual([null, "vzper", null, null]);
+  it("ukáže se podruhé po sobě stejně a zůstává, dokud stejný nezdar trvá", () => {
+    expect(rada([zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(vzperLehkeho)])).toEqual([null, "vzper", "vzper", "vzper"]);
+    // Kolikátý stejný nezdar za sebou to je (nadpis rady: podruhé, potom „zase“).
+    let pamet = novaPametRady();
+    const poradi: number[] = [];
+    for (const z of [zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(ohybMostovky), zkouska(null), zkouska(vzperLehkeho)]) {
+      const r = rozhodniRadu(pamet, z, true);
+      pamet = r.pamet;
+      poradi.push(r.vRade);
+    }
+    expect(poradi).toEqual([1, 2, 3, 1, 0, 1]);
   });
 
   it("stejný způsob na jiném prvku nebo jiná příčina není „stejně“", () => {
@@ -51,9 +60,9 @@ describe("rada po druhém stejném nezdaru", () => {
     expect(rada([zkouska(kmitani), zkouska(kmitani)])).toEqual([null, "kmitani"]);
   });
 
-  it("průchod řadu přeruší; stejná rada v jedné návštěvě zazní jen jednou", () => {
+  it("průchod řadu přeruší; po něm chce rada zase dva stejné nezdary za sebou", () => {
     expect(rada([zkouska(vzperLehkeho), zkouska(null), zkouska(vzperLehkeho)])).toEqual([null, null, null]);
-    expect(rada([zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(null), zkouska(vzperLehkeho), zkouska(vzperLehkeho)])).toEqual([null, "vzper", null, null, null]);
+    expect(rada([zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(null), zkouska(vzperLehkeho), zkouska(vzperLehkeho)])).toEqual([null, "vzper", null, null, "vzper"]);
     // Jiná rada v téže návštěvě zazní.
     expect(rada([zkouska(vzperLehkeho), zkouska(vzperLehkeho), zkouska(ohybMostovky), zkouska(ohybMostovky)])).toEqual([null, "vzper", null, "ohyb"]);
   });

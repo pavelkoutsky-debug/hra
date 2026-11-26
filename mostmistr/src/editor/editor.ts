@@ -16,6 +16,7 @@ import {
   type IdPrvku,
 } from "../data/katalog";
 import { otoceniKridla, zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type TlumicStycniku } from "../data/navrh";
+import { konecTahuMostovky } from "../data/mezery";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPosunuSkupiny, duvodProtiPrutu, jeVPodpore, lzeZacit } from "./pravidla";
 import {
@@ -48,9 +49,10 @@ export type Tah =
   /**
    * Kreslení prutu z bodu `od`; `duvod` říká, proč by nešel položit. `dilu` je počet dílů,
    * na které se tah rozdělí, když je delší, než prvek dovoluje, a `deleni` místa nových
-   * styčníků jako podíl délky tahu (u dvou stejných dílů [0,5]).
+   * styčníků jako podíl délky tahu (u dvou stejných dílů [0,5]). `zkraceno`: tah mostovky vyjel
+   * za konec trasy a končí na něm (`konecTahuMostovky`).
    */
-  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number; deleni?: number[] }
+  | { druh: "prut"; od: Bod; k: Bod; duvod: DruhProblemu | null; dilu?: number; deleni?: number[]; zkraceno?: boolean }
   /**
    * Posun styčníku tažením (`od` a `k` jsou body rastru). Se `skupinou` se posouvá celý výběr:
    * všechny styčníky ve `skupina` o stejný kus jako tažený styčník (ten v ní být nemusí, když
@@ -109,9 +111,9 @@ export class Editor {
    * kam vede. Slouží deníku hraní; na chování editoru nemá vliv.
    */
   posledniAkce = "";
-  posledniPrut: { prvek: IdPrvku; od: Bod; k: Bod; dilu?: number } | null = null;
+  posledniPrut: { prvek: IdPrvku; od: Bod; k: Bod; dilu?: number; zkraceno?: boolean } | null = null;
   /** U posunu: kolik styčníků se pohnulo, o kolik metrů a jak (tažením, klávesou). Pro deník. */
-  posledniPosun: { stycniku: number; dx: number; dy: number; jak: "tah" | "klavesa" } | null = null;
+  posledniPosun: { stycniku: number; dx: number; dy: number; jak: "tah" | "klavesa"; zPodpory?: boolean } | null = null;
 
   #navrh: NavrhMostu;
   readonly #zpet: NavrhMostu[] = [];
@@ -378,6 +380,13 @@ export class Editor {
     if (!tah) return;
     if (tah.druh === "prut") {
       tah.k = naRastr(bod);
+      // Mostovka tažená z trasy za její konec končí na kraji břehu: dál by ji nic neneslo.
+      delete tah.zkraceno;
+      const konec = konecTahuMostovky(this.prvek, tah.od, tah.k, this.uroven);
+      if (konec) {
+        tah.k = konec;
+        tah.zkraceno = true;
+      }
       tah.duvod = duvodProtiPrutu(this.#navrh, this.uroven, tah.od, tah.k, this.prvek);
       delete tah.dilu;
       delete tah.deleni;
@@ -426,7 +435,7 @@ export class Editor {
         return false;
       }
       this.zrusVyber();
-      this.posledniPrut = { prvek: this.prvek, od: tah.od, k: tah.k };
+      this.posledniPrut = { prvek: this.prvek, od: tah.od, k: tah.k, ...(tah.zkraceno ? { zkraceno: true } : {}) };
       if (tah.dilu) {
         const dily = this.#rozdelNaDily(tah.od, tah.k);
         if (dily) this.posledniPrut.dilu = dily.dilu;
@@ -469,7 +478,9 @@ export class Editor {
       }
       const posunuty = posunStycnik(this.#navrh, tah.stycnik, tah.k);
       if (!posunuty) return false;
-      this.posledniPosun = { stycniku: 1, dx, dy, jak: "tah" };
+      // Styčník odtažený z kotvy nebo základu: most se o ni tam přestal opírat (hra to řekne).
+      const zPodpory = jeVPodpore(this.uroven, tah.od) && !jeVPodpore(this.uroven, tah.k);
+      this.posledniPosun = { stycniku: 1, dx, dy, jak: "tah", ...(zPodpory ? { zPodpory: true } : {}) };
       return this.#zmen(posunuty, "posun");
     }
 

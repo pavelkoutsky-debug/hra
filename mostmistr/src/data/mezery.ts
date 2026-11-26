@@ -6,7 +6,7 @@
 // řekne, kde a proč tam mostovka nenese, ještě než hráč pustí zkoušku.
 
 import type { Bod } from "./geometrie";
-import { KATALOG } from "./katalog";
+import { KATALOG, type IdPrvku } from "./katalog";
 import { mezeryTras, type MezeraTrasy, type NavrhMostu, type PrutNavrhu } from "./navrh";
 import { bodNaTrase, TOLERANCE_TRASY, type Trasa, type Uroven } from "./uroven";
 
@@ -131,6 +131,30 @@ export function mostovkaZaBrehem(navrh: NavrhMostu, uroven: Uroven): { prut: num
       return Math.max(a.x, b.x) <= od + 1e-9 || Math.min(a.x, b.x) >= po - 1e-9;
     });
     if (venku) return { prut: p.id, misto: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+  }
+  return null;
+}
+
+/**
+ * Kde má skončit tah mostovky z `od` do `k`, který z trasy vyjede za její konec: na konci
+ * trasy. Mostovku za ním nic nenese (zem není podpora), nikdo po ní nejde a při zkoušce se
+ * sklopí na zem (most pak „leží na terénu“ a neprojde) nebo se rozkmitá; nováček ji tam přitom
+ * jedním dlouhým tahem přetáhne snadno. Nekrátí se tah, který na konci trasy nebo za ním
+ * začíná (kdo tam mostovku chce, nakreslí ji zvlášť), tah mimo přímku trasy a nic u mostu,
+ * který se zvedá (rameno za opěrou tam dává smysl). Vrací bod konce, nebo null, když se nekrátí.
+ */
+export function konecTahuMostovky(prvek: IdPrvku, od: Bod, k: Bod, uroven: Uroven): Bod | null {
+  if (uroven.pohyb || KATALOG[prvek].druh !== "mostovka") return null;
+  const trasy = uroven.trasy.filter((t) => (prvek === "kolejiste") === (t.druh === "kolej"));
+  if (trasy.some((t) => bodNaTrase(t, k))) return null;
+  for (const trasa of trasy) {
+    if (!bodNaTrase(trasa, od)) continue;
+    const cil = vuciTrase(trasa, k);
+    if (Math.abs(cil.napric) > TOLERANCE_TRASY) continue;
+    const konec = cil.podel > cil.delka ? trasa.konec : trasa.zacatek;
+    if (!Number.isInteger(konec.x) || !Number.isInteger(konec.y)) continue;
+    if (konec.x === od.x && konec.y === od.y) continue;
+    return { x: konec.x, y: konec.y };
   }
   return null;
 }
