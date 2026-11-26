@@ -495,6 +495,14 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
     `v ${davek === 1 ? "1 dávce" : `${davek.toLocaleString("cs-CZ")} dávkách`} · ` +
     `záznam si ${souhrn.vypnuli === 1 ? "vypnul 1 hráč" : souhrn.vypnuli >= 2 && souhrn.vypnuli <= 4 ? `vypnuli ${souhrn.vypnuli} hráči` : `vypnulo ${souhrn.vypnuli} hráčů`}` +
     (neuplne ? ` · NEÚPLNÉ: ${odpoved.nedokonceno.join(", ")} – dávek je víc, než se stihlo přečíst; zkus souhrn načíst znovu` : "");
+  // Hráči bez úrovně kampaně: kam šli místo ní. Starší uložený souhrn tenhle údaj nemá.
+  const b = souhrn.bezUrovne;
+  prvek("#den-bez-urovne").textContent = b
+    ? `Bez úrovně kampaně: ${pocet(b.hracu, "hráč", "hráči", "hráčů")} (nových ${b.novych}, na dotyku ${b.dotykovych}) · ` +
+      `jen přehled ${b.jenPrehled} · pískoviště ${b.piskoviste} · komise ${b.komise} · list ${b.list} · zkušebna ${b.zkusebna} · ` +
+      `okno Soukromí ${b.soukromi} · zpětná vazba ${b.vazba} · bez obrazovky ${b.bezObrazovky} · ` +
+      `na stránce něco udělali ${b.sAkci}, nic (robot náhledu nebo hned odešli) ${b.bezAkce}, neznámo ${b.hracu - b.sAkci - b.bezAkce}`
+    : "";
   const telo = prvek<HTMLTableSectionElement>("#souhrn tbody");
   telo.replaceChildren(
     ...souhrn.urovne.map((u) => {
@@ -515,6 +523,8 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
         bunka(cislo(u.pruchodu), "cislo"),
         bunka(cislo(u.hracuSPruchodem), "cislo"),
         bunka(cislo(u.hracuBezZkousky), "cislo"),
+        bunka(`${u.hracuNaDotyku ?? 0} / ${u.hracuBezZkouskyNaDotyku ?? 0}`, "cislo"),
+        bunka(cislo(u.hracuBezPrutu ?? 0), "cislo"),
         bunka(cislo(u.zkousekDoPruchodu, 1), "cislo"),
         bunka(cislo(u.minutDoPruchodu, 1), "cislo"),
         bunka(`${u.medaile.pruchod} / ${u.medaile.rozpocet} / ${u.medaile.mistrovska}`, "cislo"),

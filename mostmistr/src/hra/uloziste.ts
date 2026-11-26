@@ -43,6 +43,8 @@ export const KLIC_ZABERU = "mostmistr.zaber";
 export const KLIC_ZVETSENI = "mostmistr.zvetseni";
 /** Zrychlovat při přehrávání zkoušky úseky, kdy se nic neděje? */
 export const KLIC_CEKANI = "mostmistr.cekani";
+/** Pustil už hráč v první úrovni kampaně zkoušku? Do té doby se mu tlačítko Zkouška zvýrazní. */
+export const KLIC_PRVNI_ZKOUSKY = "mostmistr.prvni-zkouska";
 /** Otisky mostů, které úrovní prošly: zkouška do zlomu se do výzvy počítá jen jim. */
 export const KLIC_PROSLYCH = "mostmistr.prosle";
 /** Oznámení, které má hráč po načtení staršího postupu jednou vidět v přehledu kampaně. */
@@ -262,6 +264,18 @@ export class Uloziste {
 
   set zvetseniPohybu(zapnuto: boolean) {
     this.#pis(KLIC_ZVETSENI, zapnuto ? "1" : "0");
+  }
+
+  /**
+   * Pustil už hráč v první úrovni kampaně zkoušku? Vedený první krok mu do té doby po dokončení
+   * mostovky zvýrazní tlačítko Zkouška; po první zkoušce se zvýraznění nevrací.
+   */
+  get zkouselPrvniUroven(): boolean {
+    return this.#cti(KLIC_PRVNI_ZKOUSKY) === "1";
+  }
+
+  zapisZkouskuPrvniUrovne(): void {
+    this.#pis(KLIC_PRVNI_ZKOUSKY, "1");
   }
 
   /**

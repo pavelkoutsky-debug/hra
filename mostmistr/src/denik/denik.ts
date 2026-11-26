@@ -134,7 +134,9 @@ export class Denik {
       this.#pis(p.sezeni, KLIC_SEZENI, this.#sezeni);
       this.#pis(p.sezeni, KLIC_ZACATKU, String(this.#zacatek));
       this.#pis(p.sezeni, KLIC_PORADI, "0");
-      this.zapis("sezeni.start", { navrat: this.navrat });
+      // `akce`: tahle hra zapisuje první akci hráče na každé stránce (`stranka.akce`); souhrn
+      // podle toho pozná, u koho chybějící akce znamená, že na stránce nic neudělal.
+      this.zapis("sezeni.start", { navrat: this.navrat, akce: true });
     }
   }
 

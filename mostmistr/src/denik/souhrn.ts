@@ -11,6 +11,7 @@
 // verze hry může mít jiná data.
 
 import { ID_PRVKU } from "../data/katalog";
+import { KODY_PRICINY, type KodPriciny } from "../zkouska/pricinaVysledku";
 import type { DavkaDeniku, HodnotaDeniku, UdalostDeniku } from "./udalosti";
 
 export interface SouhrnUrovne {
@@ -42,6 +43,41 @@ export interface SouhrnUrovne {
   /** Kolik hráčů zkusilo zkoušku do zlomu a kolik těch zkoušek bylo. */
   hracuDoZlomu: number;
   zkousekDoZlomu: number;
+  /** Hráči úrovně na dotykovém zařízení a kolik z hráčů bez zkoušky bylo na dotyku. */
+  hracuNaDotyku: number;
+  hracuBezZkouskyNaDotyku: number;
+  /** Hráči, kteří úroveň otevřeli, ale nenakreslili v ní ani jeden prut. */
+  hracuBezPrutu: number;
+}
+
+/**
+ * Hráči, kteří neotevřeli žádnou úroveň kampaně, a kam místo toho šli. Počty míst se můžou
+ * překrývat (kdo byl v pískovišti i na listu, je v obou).
+ */
+export interface SouhrnBezUrovne {
+  hracu: number;
+  /** Z nich noví a na dotykovém zařízení. */
+  novych: number;
+  dotykovych: number;
+  /** Viděli přehled kampaně a nic dalšího neotevřeli (pískoviště, komisi, list, zkušebnu ani jinou úroveň). */
+  jenPrehled: number;
+  /** Otevřeli pískoviště, případ Havarijní komise, list „Moje mosty“, zkušebnu (odkazem z přehledu). */
+  piskoviste: number;
+  komise: number;
+  list: number;
+  zkusebna: number;
+  /** Otevřeli okno Soukromí a kontakt, okno zpětné vazby. */
+  soukromi: number;
+  vazba: number;
+  /** Nemají zapsanou žádnou obrazovku (stránka se nedonačetla, nebo jen začátek sezení). */
+  bezObrazovky: number;
+  /**
+   * Kolik z nich na stránce aspoň jednou něco udělalo (dotyk, myš, klávesa, kolečko), a kolik
+   * nic: to bývá robot, který jen stahuje náhled odkazu, nebo člověk, který hned odešel. Počítají
+   * se jen hráči, jejichž hra první akci zapisuje (od verze s `stranka.akce`); zbytek je neznámý.
+   */
+  sAkci: number;
+  bezAkce: number;
 }
 
 export interface SouhrnDeniku {
@@ -58,6 +94,8 @@ export interface SouhrnDeniku {
   vypnuli: number;
   /** Nejčastější chyby: text a počet, nejvýš deset. */
   chyby: { zprava: string; pocet: number }[];
+  /** Hráči, kteří neotevřeli žádnou úroveň kampaně, a kam šli místo toho. */
+  bezUrovne: SouhrnBezUrovne;
   urovne: SouhrnUrovne[];
 }
 
@@ -80,6 +118,9 @@ export interface HracVUrovni {
    */
   napoveda?: number;
   zlomu?: number;
+  /** Hráč byl v úrovni na dotykovém zařízení; kolik prutů v ní nakreslil. */
+  dotyk?: boolean;
+  prutu?: number;
 }
 
 export interface HracVeVytahu {
@@ -88,9 +129,18 @@ export interface HracVeVytahu {
   dotyk: boolean;
   /** Poslední, co hráč se záznamem udělal: true vypnul, false znovu zapnul, null nic z toho. */
   vypnul: boolean | null;
+  /** Kde hráč byl: kódy z `OBRAZOVKY` (přehled, úroveň kampaně, pískoviště, komise…). */
+  obrazovky: string[];
+  /** Hra hráče zapisuje první akci na stránce (`sezeni.start` s `akce`), a jestli nějakou zapsala. */
+  meriAkce: boolean;
+  akce: boolean;
 }
 
-export const VERZE_VYTAHU = 2;
+/**
+ * Verze výtahu. Výtah uložený starší verzí server nepoužije a den spočítá z dávek znovu
+ * (3: obrazovky a akce hráčů, dotyk a pruty po úrovních, příčina neúspěchu zkoušky).
+ */
+export const VERZE_VYTAHU = 3;
 /**
  * Nejvíc různých textů chyb, které si výtah pamatuje; další se sčítají pod „ostatní“. Strop
  * chrání výtah před zahlcením vymyšlenými daty; běžný den k němu nedojde. Nad ním už sloučení
@@ -108,6 +158,39 @@ const NEJVIC_DILU = 40;
 // posílá (známé prvky a způsoby porušení, časy a ceny v rozumných mezích).
 const ZNAME_PRVKY: ReadonlySet<string> = new Set<string>(ID_PRVKU);
 const ZNAME_ZPUSOBY: ReadonlySet<string> = new Set(["tah", "tlak", "ohyb", "smyk", "vzper"]);
+const ZNAME_AKCE: ReadonlySet<string> = new Set(["mys", "dotyk", "klavesa", "posun"]);
+
+/** Obrazovky, které si výtah u hráče pamatuje. */
+export const OBRAZOVKY = ["prehled", "kampan", "piskoviste", "komise", "list", "zkusebna", "soukromi", "vazba", "jine"] as const;
+
+/**
+ * Jak souhrn v „Na čem mosty padaly“ jmenuje příčinu neúspěchu zkoušky, ve které nic nepovolilo
+ * (kód `pricina` v `zkouska.konec`, `src/zkouska/pricinaVysledku.ts`). Kód mimo seznam se
+ * nepočítá; zkouška bez kódu (starší hra) dál padá do „bez porušení“.
+ */
+export const POPISY_PRICIN: Readonly<Record<KodPriciny, string>> = {
+  slozeni: "složil se vlastní vahou",
+  mezera: "mostovka nedosáhla na předmostí",
+  pohyb: "pohyblivý most",
+  pruhyb: "průhyb nad mezí",
+  kmitani: "kmitání nad mezí",
+  poruseni: "povolil prut",
+  sjeti: "sjel z podpory",
+  opreno: "opřel se o terén",
+  spadl: "někdo spadl",
+  neprejel: "někdo nepřejel",
+  lod: "loď narazila",
+  rozpad: "výpočet se rozpadl",
+};
+const ZNAME_PRICINY: ReadonlySet<string> = new Set<string>(KODY_PRICINY);
+
+/** Kam patří úroveň s tímhle id: kampaň, pískoviště (0-01), komise (9-0N), nebo jiná mimo kampaň (0-00). */
+function obrazovkaUrovne(id: string): (typeof OBRAZOVKY)[number] {
+  if (id === "0-01") return "piskoviste";
+  if (id.startsWith("9-")) return "komise";
+  if (id.startsWith("0-")) return "jine";
+  return "kampan";
+}
 
 /**
  * Výtah z deníku: mezivýsledek, který jde slučovat. Vše je po hráčích, takže sloučením
@@ -207,10 +290,16 @@ function novyHracVUrovni(): HracVUrovni {
     nejlevnejsi: null,
     napoveda: 0,
     zlomu: 0,
+    dotyk: false,
+    prutu: 0,
   };
 }
 
-const novyHrac = (): HracVeVytahu => ({ sezeni: [], novy: false, dotyk: false, vypnul: null });
+const novyHrac = (): HracVeVytahu => ({ sezeni: [], novy: false, dotyk: false, vypnul: null, obrazovky: [], meriAkce: false, akce: false });
+
+function pridejObrazovku(oHraci: HracVeVytahu, obrazovka: string): void {
+  if (!oHraci.obrazovky.includes(obrazovka)) oHraci.obrazovky.push(obrazovka);
+}
 
 /** Porovnání dvou textů po znacích (stejné, jakým se řadí klíče v úložišti). */
 const poradiTextu = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
@@ -250,25 +339,40 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
   /** Otisky dávek, které už se započetly: stejné sezení, číslo, počet událostí a jejich časy. */
   const zapoctene = new Set<string>();
 
-  const zpracuj = (hrac: string, oHraci: HracVeVytahu, u: UdalostDeniku): void => {
+  const zpracuj = (hrac: string, oHraci: HracVeVytahu, u: UdalostDeniku, dotyk: boolean): void => {
     v.udalosti += 1;
     const data = u.data ?? {};
-    if (u.druh === "sezeni.start" && !anoZ(data.navrat)) oHraci.novy = true;
+    if (u.druh === "sezeni.start") {
+      if (!anoZ(data.navrat)) oHraci.novy = true;
+      if (anoZ(data.akce)) oHraci.meriAkce = true;
+    } else if (u.druh === "stranka.akce") {
+      if (typeof data.jak === "string" && ZNAME_AKCE.has(data.jak)) oHraci.akce = oHraci.meriAkce = true;
+    } else if (u.druh === "prehled.otevren") pridejObrazovku(oHraci, "prehled");
+    else if (u.druh === "list.otevren") pridejObrazovku(oHraci, "list");
+    else if (u.druh === "soukromi.otevreno") pridejObrazovku(oHraci, "soukromi");
+    else if (u.druh === "prehled.odkaz" && data.kam === "zkusebna") pridejObrazovku(oHraci, "zkusebna");
     else if (u.druh === "denik.vypnut") oHraci.vypnul = true;
     else if (u.druh === "denik.zapnut") oHraci.vypnul = false;
     else if (u.druh === "chyba") {
       v.chyb += 1;
       prictiChybu(v.chyby, (textZ(data.zprava) ?? "neznámá chyba").slice(0, NEJDELSI_CHYBA), 1);
     } else if (u.druh === "vazba.odeslana") v.vazeb += 1;
+    if (u.druh === "vazba.otevrena") pridejObrazovku(oHraci, "vazba");
     if (u.uroven === undefined) return;
+    pridejObrazovku(oHraci, obrazovkaUrovne(u.uroven));
     const hraciUrovne = (v.urovne[u.uroven] ??= slovnik());
     const zaznam = (hraciUrovne[hrac] ??= novyHracVUrovni());
+    if (dotyk) zaznam.dotyk = true;
     if (u.druh === "uroven.otevrena") zaznam.otevreni += 1;
     else if (u.druh === "uroven.opustena") zaznam.sekundDriv += vMezich(data.sekund, NEJVIC_SEKUND);
     else if (u.druh === "stavba.zmena" && data.co === "prut") {
       const prvek = znamyPrvek(data.prvek);
       // Dlouhý tah rozdělený na díly dal víc prutů najednou.
-      if (prvek !== null) pricti((v.prvky[u.uroven] ??= slovnik()), prvek, Math.max(1, Math.round(vMezich(data.dilu, NEJVIC_DILU))));
+      if (prvek !== null) {
+        const dilu = Math.max(1, Math.round(vMezich(data.dilu, NEJVIC_DILU)));
+        pricti((v.prvky[u.uroven] ??= slovnik()), prvek, dilu);
+        zaznam.prutu = (zaznam.prutu ?? 0) + dilu;
+      }
     } else if (u.druh === "napoveda") {
       // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
       const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
@@ -289,10 +393,14 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
         if (cena >= 1 && (zaznam.nejlevnejsi === null || cena < zaznam.nejlevnejsi)) zaznam.nejlevnejsi = cena;
       } else {
         const prvni = data.prvni;
+        // Příčina z výsledku zkoušky (kód z pruhu výsledku); starší hra ji neposílala.
+        const pricina = typeof data.pricina === "string" && ZNAME_PRICINY.has(data.pricina) ? (data.pricina as KodPriciny) : null;
         let duvod = "bez porušení";
         if (prvni !== null && typeof prvni === "object" && !Array.isArray(prvni)) {
           const zpusob = textZ(prvni.zpusob);
           duvod = `${znamyPrvek(prvni.prvek) ?? "?"}/${zpusob !== null && ZNAME_ZPUSOBY.has(zpusob) ? zpusob : "?"}`;
+        } else if (pricina !== null && pricina !== "pohyb") {
+          duvod = POPISY_PRICIN[pricina];
         } else if (anoZ(data.preklopeno)) {
           // Pohyblivý most bez zlomeného prutu: co se nepovedlo při zvedání a sklápění.
           duvod = "křídlo se překlopilo";
@@ -302,6 +410,8 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
           duvod = "zámek nezapadl";
         } else if (anoZ(data.mezera)) {
           duvod = "mostovka nedosáhla na předmostí";
+        } else if (pricina === "pohyb") {
+          duvod = POPISY_PRICIN.pohyb;
         }
         pricti((v.selhani[u.uroven] ??= slovnik()), duvod, 1);
       }
@@ -323,7 +433,7 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
     const oHraci = (v.hraci[hrac] ??= novyHrac());
     if (!oHraci.sezeni.includes(sezeni)) oHraci.sezeni.push(sezeni);
     if (davka.hlavicka.dotyk) oHraci.dotyk = true;
-    for (const u of davka.udalosti) zpracuj(hrac, oHraci, u);
+    for (const u of davka.udalosti) zpracuj(hrac, oHraci, u, davka.hlavicka.dotyk === true);
   }
   return v;
 }
@@ -345,6 +455,9 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
       for (const sezeni of o.sezeni) if (!cil.sezeni.includes(sezeni)) cil.sezeni.push(sezeni);
       cil.novy ||= o.novy;
       cil.dotyk ||= o.dotyk;
+      for (const obrazovka of o.obrazovky ?? []) pridejObrazovku(cil, obrazovka);
+      cil.meriAkce ||= o.meriAkce === true;
+      cil.akce ||= o.akce === true;
       if (o.vypnul !== null && o.vypnul !== undefined) cil.vypnul = o.vypnul;
     }
     for (const [uroven, hraci] of Object.entries(v.urovne)) {
@@ -365,6 +478,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
         if (z.nejlevnejsi !== null && (cil.nejlevnejsi === null || z.nejlevnejsi < cil.nejlevnejsi)) cil.nejlevnejsi = z.nejlevnejsi;
         cil.napoveda = Math.max(cil.napoveda ?? 0, z.napoveda ?? 0);
         cil.zlomu = (cil.zlomu ?? 0) + (z.zlomu ?? 0);
+        cil.dotyk = cil.dotyk === true || z.dotyk === true;
+        cil.prutu = (cil.prutu ?? 0) + (z.prutu ?? 0);
       }
     }
     for (const [uroven, pocty] of Object.entries(v.selhani)) {
@@ -416,8 +531,30 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         hracuSObrysem: zaznamy.filter((z) => (z.napoveda ?? 0) >= 2).length,
         hracuDoZlomu: zaznamy.filter((z) => (z.zlomu ?? 0) > 0).length,
         zkousekDoZlomu: zaznamy.reduce((soucet, z) => soucet + (z.zlomu ?? 0), 0),
+        hracuNaDotyku: zaznamy.filter((z) => z.dotyk === true).length,
+        hracuBezZkouskyNaDotyku: zaznamy.filter((z) => z.zkousek === 0 && z.dotyk === true).length,
+        hracuBezPrutu: zaznamy.filter((z) => z.otevreni > 0 && (z.prutu ?? 0) === 0).length,
       };
     });
+
+  const bez = hraci.filter((h) => !(h.obrazovky ?? []).includes("kampan"));
+  const byl = (h: HracVeVytahu, kde: string): boolean => (h.obrazovky ?? []).includes(kde);
+  const jinde = ["piskoviste", "komise", "list", "zkusebna", "jine"];
+  const bezUrovne: SouhrnBezUrovne = {
+    hracu: bez.length,
+    novych: bez.filter((h) => h.novy).length,
+    dotykovych: bez.filter((h) => h.dotyk).length,
+    jenPrehled: bez.filter((h) => byl(h, "prehled") && !jinde.some((kde) => byl(h, kde))).length,
+    piskoviste: bez.filter((h) => byl(h, "piskoviste")).length,
+    komise: bez.filter((h) => byl(h, "komise")).length,
+    list: bez.filter((h) => byl(h, "list")).length,
+    zkusebna: bez.filter((h) => byl(h, "zkusebna")).length,
+    soukromi: bez.filter((h) => byl(h, "soukromi")).length,
+    vazba: bez.filter((h) => byl(h, "vazba")).length,
+    bezObrazovky: bez.filter((h) => (h.obrazovky ?? []).length === 0).length,
+    sAkci: bez.filter((h) => h.akce === true).length,
+    bezAkce: bez.filter((h) => h.meriAkce === true && h.akce !== true).length,
+  };
 
   return {
     hracu: hraci.length,
@@ -432,6 +569,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([zprava, pocet]) => ({ zprava, pocet })),
+    bezUrovne,
     urovne,
   };
 }

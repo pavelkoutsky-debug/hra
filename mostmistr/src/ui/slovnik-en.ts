@@ -98,6 +98,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vedeni.posuvna": "sliding support: carries, but gives sideways",
   "vedeni.pevna.kratce": "fixed support",
   "vedeni.posuvna.kratce": "sliding support",
+  "vedeni.zkouska": "The deck is complete. Now test the bridge: even if it falls, you’ll see why.",
   "souradnice.bod": "x = {x} m · y = {y} m",
   "chyba.nacteni": "The drawing could not be loaded: {duvod}",
   "lista.zkusebna": "Solver test lab",
@@ -1346,6 +1347,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "napoveda.obrys.pist": "cylinder {zdvih} m",
   "napoveda.nabidka": "Not going well? There is a Hint at the top of the palette: at first it reveals only the principle of a bridge that passes.",
   "prehled.postup": "{projito} of {urovni} levels completed · medals {medaili} of {medailiCelkem} · challenge tiers {vyzev} of {vyzevCelkem}",
+  "prehled.start.novy": "Build your first bridge ▸",
+  "prehled.start.pokracovat": "Continue: {uroven} {nazev} ▸",
   "prehled.postup.popis": "Each level has three medals and three efficiency challenges (cheapest bridge, lightest bridge, capacity per koruna), each with bronze, silver and gold tiers",
   // Final sheet of the campaign and the bridge gallery (M14)
   "prehled.list": "My bridges ▸",

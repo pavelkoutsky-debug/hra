@@ -46,6 +46,10 @@
       </header>
       <main class="prehled">
         <p class="prehled__hlaseni" data-udaj="prehled-hlaseni" role="alert" hidden></p>
+        <!-- Začátek: nový hráč rovnou do první úrovně, vracející se do úrovně, kde skončil. -->
+        <p class="prehled__start" data-udaj="prehled-start" hidden>
+          <a class="tlacitko tlacitko--hlavni prehled__start-tlacitko" data-akce="prehled-start"></a>
+        </p>
         <p class="prehled__postup" data-udaj="prehled-postup"></p>
         <p class="prehled__dokonceno" data-udaj="prehled-dokonceno" role="status" hidden></p>
         <p class="prehled__list"><a href="?list" data-akce="otevrit-list" data-udaj="prehled-list"></a></p>
@@ -133,6 +137,8 @@
         <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
         <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres" data-kratce-text="lista.celyVykres.kratce"></button>
       </header>
+      <!-- Vedený první krok: v první úrovni s hotovou mostovkou, dokud hráč nepustil zkoušku. -->
+      <p class="vyzva-zkousky" data-udaj="vyzva-zkousky" data-text="vedeni.zkouska" role="status" hidden></p>
 
       <!--
         Most otevřený z odkazu: vlastní most hráče je stranou a nic se neukládá, dokud se

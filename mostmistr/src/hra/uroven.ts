@@ -83,6 +83,7 @@ import { nakresliSlozeni, nakresliZaber } from "../vykres/zaber";
 import { nakresliSplouchnuti, nakresliTrosky } from "../vykres/efekty";
 import { casyPadu, najdiSplouchnuti, najdiZlomy, type Splouchnuti, type Zlom } from "../zkouska/efekty";
 import { pricinyPohybu, type PricinaPohybu } from "../zkouska/pricinaPohybu";
+import { kodPriciny } from "../zkouska/pricinaVysledku";
 import { BEZ_NALEZU, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
 import { dalsiDilMostovky, type KrokVedeni } from "../data/vedeni";
 import { nakresliVedeni } from "../vykres/vedeni";
@@ -863,8 +864,42 @@ export function spustUroven(
    * dalšího chybějícího dílu mostovky. Jakmile mostovka vede od břehu k břehu, vedení končí.
    */
   function krokVedeni(): KrokVedeni | null {
-    if (sandbox !== null || uroven.id !== kampan[0]?.id || rezim !== "stavba" || rekord?.medaile.pruchod) return null;
+    if (!jePrvniUrovenKampane() || rezim !== "stavba" || rekord?.medaile.pruchod) return null;
     return dalsiDilMostovky(editor.navrh, uroven);
+  }
+
+  function jePrvniUrovenKampane(): boolean {
+    return sandbox === null && havarie === null && uroven.id === kampan[0]?.id;
+  }
+
+  /**
+   * Poslední krok vedení: mostovka v první úrovni vede od břehu k břehu a hráč tu ještě nepustil
+   * zkoušku. Tlačítko Zkouška se zvýrazní (bez animace při omezeném pohybu, to řeší styl) a krátká
+   * bublina pod ním řekne, že teď má most vyzkoušet. Po první zkoušce se to už nevrátí.
+   */
+  function obnovVyzvuZkousky(): void {
+    const tlacitko = prvek('[data-akce="zkouska"]', HTMLButtonElement);
+    const bublina = udaj("vyzva-zkousky");
+    const ukazat =
+      jePrvniUrovenKampane() &&
+      rezim === "stavba" &&
+      host === null &&
+      !rekord?.medaile.pruchod &&
+      !uloziste.zkouselPrvniUroven &&
+      editor.navrh.pruty.length > 0 &&
+      mezeryTras(editor.navrh, uroven).length === 0;
+    tlacitko.classList.toggle("tlacitko--vyzva", ukazat);
+    if (ukazat) document.body.dataset.vyzvaZkousky = "ano";
+    else delete document.body.dataset.vyzvaZkousky;
+    bublina.hidden = !ukazat || tlacitko.offsetParent === null;
+    if (bublina.hidden) return;
+    // Bublina visí pod tlačítkem; lišta má skrytý přesah, proto je položená nad stránkou.
+    const misto = tlacitko.getBoundingClientRect();
+    const sirka = bublina.offsetWidth;
+    const vlevo = Math.max(8, Math.min(window.innerWidth - sirka - 8, misto.left + misto.width / 2 - sirka / 2));
+    bublina.style.left = `${Math.round(vlevo)}px`;
+    bublina.style.top = `${Math.round(misto.bottom + 10)}px`;
+    bublina.style.setProperty("--sipka", `${Math.round(misto.left + misto.width / 2 - vlevo)}px`);
   }
 
   /** Obrys mostu z nápovědy: tečkované čáry, kudy vedou jeho pruty, a kroužky ve styčnících. */
@@ -2223,6 +2258,7 @@ export function spustUroven(
     const navrh = editor.navrh;
     const cena = cenaNavrhu(navrh);
     const stavi = rezim === "stavba";
+    obnovVyzvuZkousky();
     // Deník: jaký nástroj a prvek má hráč v ruce (jen když se to změní).
     const vRuce = nastroj === "kresleni" ? `kresleni:${editor.prvek}` : nastroj;
     if (stavi && vRuce !== zapsanyNastroj) {
@@ -3031,7 +3067,11 @@ export function spustUroven(
       ukazHlaseni(t("zkouska.chyba", { duvod: chyba instanceof Error ? chyba.message : String(chyba) }), "varovani", false);
       return;
     }
-    if (!pokus && !zlom) zkousekVUrovni += 1;
+    if (!pokus && !zlom) {
+      zkousekVUrovni += 1;
+      // Vedený první krok: po první zkoušce v první úrovni už se tlačítko Zkouška nezvýrazňuje.
+      if (jePrvniUrovenKampane() && !host) uloziste.zapisZkouskuPrvniUrovne();
+    }
     vypocetOd = Date.now();
     zapis("zkouska.start", {
       navrh: navrhNaText(editor.navrh),
@@ -3070,6 +3110,7 @@ export function spustUroven(
     document.body.dataset.zkouska = "pocita";
     delete document.body.dataset.otisk;
     delete document.body.dataset.pricina;
+    delete document.body.dataset.kodPriciny;
     delete document.body.dataset.pricinaPohybu;
     obnovStavbu();
     obnovOsu();
@@ -3258,8 +3299,20 @@ export function spustUroven(
     const posudekDoDeniku = posudekBehu(b);
     const kmitaniDoDeniku = kmitaniBehu(b);
     const odhadDoDeniku = rozborBehu(b)?.odhad?.zrychleni ?? null;
+    // Proč most neprošel, krátkým kódem (totéž, co pruh výsledku říká větou).
+    const porucha = prvniPoruseni(b);
+    const kod = kodPriciny({
+      vysledek,
+      pokus: b.pokus || b.zlom,
+      slozeni: posudekDoDeniku?.slozeni != null,
+      pricinyPohybu: vysledek.pohyb && !vysledek.pruchod ? pricinyPohybu(b.navrh, uroven, vysledek.pohyb, vysledek.lode.narazilo).map((p) => p.kod) : [],
+      kmitaniNadMezi: vysledek.komfort !== null && vysledek.komfort.trida > uroven.nejhorsiKomfort,
+      prvni: porucha ? { druh: porucha.druh, cas: porucha.cas } : null,
+    });
+    document.body.dataset.kodPriciny = kod ?? "";
     zapis("zkouska.konec", {
       pruchod: vysledek.pruchod,
+      pricina: kod,
       // Most bez klidové polohy: složil se (a proč), nebo na něm jen visel volný prut.
       slozeni: posudekDoDeniku?.slozeni?.duvod ?? (posudekDoDeniku?.volny ? "volny-konec" : null),
       zaber: zaberZapnuty,
@@ -6393,6 +6446,8 @@ export function spustUroven(
   document.body.dataset.zkouska = "";
   obnovMedaile();
   obnovStavbu();
+  // Bublina u zvýrazněného tlačítka Zkouška se drží pod ním i po změně okna.
+  window.addEventListener("resize", obnovVyzvuZkousky);
   obnovOsu();
   ukazCelyVykres();
   // Odkaz na most, který nešel přečíst: úroveň se otevře normálně a hráč se dozví proč.

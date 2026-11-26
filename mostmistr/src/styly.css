@@ -177,6 +177,55 @@ a.tlacitko {
   color: var(--cara-silna);
 }
 
+/* Vedený první krok: tlačítko Zkouška po dokončení mostovky v první úrovni (bílé, ne žluté:
+   žlutá je pro varování). Při omezeném pohybu jen obrys bez pulzování. */
+.tlacitko--vyzva {
+  outline: 2px solid var(--cara-silna);
+  outline-offset: 3px;
+  animation: vyzva-zkousky 1.6s ease-in-out infinite;
+}
+
+@keyframes vyzva-zkousky {
+  50% {
+    outline-offset: 6px;
+    outline-color: rgb(255 255 255 / 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tlacitko--vyzva {
+    animation: none;
+  }
+}
+
+.vyzva-zkousky {
+  position: fixed;
+  z-index: 30;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 16px));
+  margin: 0;
+  padding: 8px 12px;
+  border: 1.5px solid var(--cara-silna);
+  background: var(--lista);
+  color: var(--cara-silna);
+  font-size: 13px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.vyzva-zkousky::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: calc(var(--sipka, 50%) - 6px);
+  width: 10px;
+  height: 10px;
+  border-top: 1.5px solid var(--cara-silna);
+  border-left: 1.5px solid var(--cara-silna);
+  background: var(--lista);
+  transform: rotate(45deg);
+}
+
 /* Tlačítko, které teď nic nepřidá, ale po kliknutí řekne proč. */
 .tlacitko[aria-disabled="true"] {
   opacity: 0.55;
@@ -1102,6 +1151,19 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   margin: 0 0 4px;
   font-size: 12px;
   color: var(--popisek);
+}
+
+/* Začátek: jeden výrazný krok nahoře v přehledu (nový hráč do 1-01, vracející se pokračuje). */
+.prehled__start {
+  margin: 0 0 16px;
+}
+
+.prehled__start-tlacitko {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 20px;
+  font-size: 16px;
+  white-space: normal;
 }
 
 .prehled__postup {

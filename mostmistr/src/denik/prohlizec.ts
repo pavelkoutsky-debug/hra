@@ -184,6 +184,25 @@ export function denikHry(): Denik {
     stav();
     for (const obsluha of poZmeneVolby) obsluha();
   });
+  // První akce hráče na stránce (dotyk, myš, klávesa, kolečko): jednou za stránku a jen druh
+  // a kolik sekund po načtení. Podle toho souhrn odliší člověka, který se aspoň rozhlédl, od
+  // stránky, kterou jen někdo (nebo robot stahující náhled odkazu) otevřel a nic neudělal.
+  const nacteno = Date.now();
+  const druhyAkci: [string, (u: Event) => string | null][] = [
+    ["pointerdown", (u) => ((u as PointerEvent).pointerType === "mouse" ? "mys" : "dotyk")],
+    ["pointermove", (u) => ((u as PointerEvent).pointerType === "mouse" ? "mys" : null)],
+    ["keydown", () => "klavesa"],
+    // Posun kolečkem; posun prstem začíná dotykem. Samotné „scroll“ se nepočítá: posouvá i hra
+    // sama (a prohlížeč při obnovení stránky).
+    ["wheel", () => "posun"],
+  ];
+  const priAkci = (udalost: Event, jak: string | null): void => {
+    if (jak === null || !udalost.isTrusted) return;
+    for (const [druh, obsluha] of posluchaci) window.removeEventListener(druh, obsluha, true);
+    novy.zapis("stranka.akce", { jak, sekund: Math.min(86_400, Math.round((Date.now() - nacteno) / 1000)) });
+  };
+  const posluchaci = druhyAkci.map(([druh, jak]) => [druh, (u: Event) => priAkci(u, jak(u))] as const);
+  for (const [druh, obsluha] of posluchaci) window.addEventListener(druh, obsluha, { capture: true, passive: true });
   // Chyby prohlížeče: stejná chyba nejvýš třikrát a nejvýš třicet za stránku. Chyba, která
   // se opakuje v každém snímku, by jinak deník zahltila a vytlačila z něj všechno ostatní.
   const pocetChyb = new Map<string, number>();

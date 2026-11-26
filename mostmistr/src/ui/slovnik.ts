@@ -100,6 +100,7 @@ const CS = {
   "vedeni.posuvna": "posuvná podpora: nese, do strany povolí",
   "vedeni.pevna.kratce": "pevná podpora",
   "vedeni.posuvna.kratce": "posuvná podpora",
+  "vedeni.zkouska": "Mostovka je hotová. Teď most vyzkoušej: i když spadne, uvidíš proč.",
   "souradnice.bod": "x = {x} m · y = {y} m",
   "chyba.nacteni": "Výkres se nepodařilo načíst: {duvod}",
   "lista.zkusebna": "Zkušebna výpočtu",
@@ -1314,6 +1315,8 @@ const CS = {
   "napoveda.obrys.pist": "píst {zdvih} m",
   "napoveda.nabidka": "Nedaří se? Nahoře v paletě je Nápověda: nejdřív prozradí jen princip mostu, který projde.",
   "prehled.postup": "Projito {projito} z {urovni} úrovní · medaile {medaili} z {medailiCelkem} · stupně výzev {vyzev} z {vyzevCelkem}",
+  "prehled.start.novy": "Postavit první most ▸",
+  "prehled.start.pokracovat": "Pokračovat: {uroven} {nazev} ▸",
   "prehled.postup.popis": "Každá úroveň má tři medaile a k nim tři výzvy o efektivitu (nejlevnější most, nejlehčí most, únosnost na korunu), každou se stupni bronz, stříbro a zlato",
   // Závěrečný list kampaně a galerie mostů (M14)
   "prehled.list": "Moje mosty ▸",

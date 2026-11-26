@@ -125,7 +125,7 @@ describe("deník ve hře", () => {
       hlavicka: denik.hlavicka,
       poradi: 0,
       udalosti: [
-        { t: 0, druh: "sezeni.start", data: { navrat: false } },
+        { t: 0, druh: "sezeni.start", data: { navrat: false, akce: true } },
         { t: 1500, druh: "uroven.otevrena", uroven: "1-01", data: { navrh: false } },
       ],
     });
@@ -973,6 +973,10 @@ describe("souhrn deníku", () => {
       hracuSObrysem: 0,
       hracuDoZlomu: 0,
       zkousekDoZlomu: 0,
+      // Bob hrál na dotyku; nikdo v úrovni nenakreslil prut (mosty měli rozestavěné).
+      hracuNaDotyku: 1,
+      hracuBezZkouskyNaDotyku: 0,
+      hracuBezPrutu: 3,
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
     expect(souhrnDeniku([])).toMatchObject({ hracu: 0, sezeni: 0, urovne: [], chyby: [] });
