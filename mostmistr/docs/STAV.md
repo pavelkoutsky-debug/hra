@@ -30,7 +30,7 @@ Poslední aktualizace: 26. 11. 2026
 | M16 Žebříčky a denní rozbor | Kód hotový a po třech recenzích opravený (24. 11. 2026): žebříčky ověřované serverem a denní rozbor na stránce správce; viz „M16 — výsledek“. **Naplánovaná úloha se zakládá až po zveřejnění hry** (rozhodnutí zadavatele 24. 11. 2026; postup je v `docs/ZVEREJNENI.md`) |
 | M17 Před zveřejněním | Hotovo (24. 11. 2026): závěrečná recenze celku třemi nezávislými recenzenty, známé slabiny (8-02, 4-04), okno Soukromí a kontakt, zpevnění serveru, web připravený na zveřejnění, shoda výpočtu ve třech strojích JavaScriptu; viz „M17 — výsledek“ |
 | Zveřejnění | **Hra je veřejná od 25. 11. 2026** (verze 0.23.1): zadavatel nastavil hesla a vypnul přihlášení, denní rozbor běží, ostrý web prošel zkouškami z `docs/ZVEREJNENI.md`; nalezený časový limit zápisu velkého mostu do žebříčku je opravený; viz „Po zveřejnění“ |
-| M18 První minuty | Hotovo (26. 11. 2026, verze 0.24.0): první milník podle denního rozboru. Začátek hry, mostovka přes kraj břehu (hlášení z 1-02), rada po druhém stejném nezdaru, posun víc styčníků naráz, víc údajů v deníku a v podkladech rozboru; viz „M18 — výsledek“ |
+| M18 První minuty | Hotovo (26. 11. 2026, verze 0.24.0, doplněk 0.24.1): první milník podle denního rozboru. Začátek hry, mostovka přes kraj břehu (hlášení z 1-02), rada po druhém stejném nezdaru, posun víc styčníků naráz, víc údajů v deníku a v podkladech rozboru; viz „M18 — výsledek“ |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -80,6 +80,20 @@ Verze hry 0.24.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovn�
 **Jak poznat, že to zabralo** (čísla ze souhrnu, proti 25. 11.): na 1-01 míň hráčů bez zkoušky (bylo 13 ze 41) a míň hráčů bez úrovně s akcí (`bezUrovne.sAkci`); na 1-02 žádná další zpráva o propadání a málo značek „mostovka přes kraj břehu“ (editor ji už nevyrobí; značku dostanou jen mosty uložené dřív nebo z Importu); na 1-03 až 1-05 `hracuSRadouPrusli` proti `hracuSRadou` a míň zkoušek do průchodu (bylo 75 zkoušek na 14 průchodů v 1-03); `hracuSPosunem` nad nulou.
 
 **Testy.** Jednotkové: `test/zacatek.test.ts`, `test/mezery.test.ts`, `test/radaPoNezdaru.test.ts`, `test/posun.test.ts`, doplněné `test/editor.test.ts`, `test/denik.test.ts` a `test/rozbor.test.ts` (vysvětlivky mluví jen o polích, která existují). V prohlížeči: `test/e2e/zacatek.e2e.ts`, `test/e2e/mezera.e2e.ts` (hlášený most, tah 0 → 13 myší skončí na kraji břehu, metr dokreslený na břeh dostane značku a výsledek ho jmenuje, bez něj most projde, mostovka po svazích), `test/e2e/rada.e2e.ts` (podruhé ano, potřetí zůstává, jiná příčina ne, 1-05 ne, tlačítko nápovědy, anglicky na telefonu) a `test/e2e/posun.e2e.ts` (myš, klávesy, hlášení o podporách, závaží a šipky, tip jednou a až po výsledku, telefon prstem).
+
+### Po nasazení 0.24.0 a verze 0.24.1 (26. 11. 2026)
+
+**Ověřeno na ostrém webu** (bezhlavý prohlížeč z prostředí denního rozboru, záznam vypnutý, konzole bez chyby): verze 0.24.0 v popisovém poli, tlačítko „Postavit první most“ na přehledu, tah mostovky 0 → 14 m na 1-02 skončil na kraji břehu s hlášením, nástroj „Výběr a posun“, okno Soukromí jmenuje nové údaje. Podklady rozboru nesou `hraUmi` (16 vět) a `vysvetlivky` (11); první žádost po nasazení vrátila `neuplne` (výtahy se přepočítaly na verzi 3), druhá už ne. **Uložená úloha denního rozboru má nové zadání** (26. 11. 2026, znění z `docs/ROZBOR.md`).
+
+**Co nový souhrn ukázal o prvním dni hned.** Zkoušky, které hra nepustila (dřív se nepočítaly): **1-01: 71, všechny kvůli rozpočtu, u 24 hráčů ze 41**; 1-03: 17 (7 hráčů), 1-04: 11 (3 hráči), 1-02: žádná. V 1-01 hráči nakreslili 645 dílů mostovky a 269 lehkých trámů, ačkoli mostovka potřebuje dva díly: mostovka je v paletě první a nováčci z ní staví i podpěry, most pak stojí víc než rozpočet a hra jen řekla „zlevni ho“. Je to největší překážka první úrovně a první rozbor ji neviděl, protože souhrn to číslo neměl. Dál: 26 hráčů neotevřelo žádnou úroveň (24 vidělo jen přehled, 9 na dotyku) a z 13 hráčů, kteří na 1-01 nepustili zkoušku, bylo 7 na dotyku.
+
+**Verze 0.24.1** (doplněk bodu „Začátek hry“):
+- V 1-01 se po dokončení mostovky sám vybere Lehký trám: ve chvíli, kdy mostovku dokončil nakreslený prut, nebo při otevření úrovně s mostovkou už hotovou (hráč se vrací). Jednou za návštěvu, jen když má hráč mostovku v ruce a nic nemá vybrané; kdo si mostovku vybere znovu, toho hra nepřepíná.
+- Po první zkoušce, která v 1-01 neprošla, a dokud most nemá nic než mostovku, hra řekne, co dál a čím: „Mostovka sama neunese ani sebe: její styčníky mezi podporami musí něco držet… V ruce máš prvek „Lehký trám“…“.
+- Hlášení o rozpočtu ve všech úrovních říká, o kolik je most dražší, a když má pruty z mostovky mimo cestu a úroveň má levnější prut, že je má vyměnit („Mostovka je dražší než „Lehký trám“ a patří jen na cestu…“; u mostů, které se zvedají, ne: rameno za opěrou tam bývá záměr).
+- **Nezávislá recenze kódu** (čerstvý agent): přepnutí se původně řídilo jen tím, že mostovka je hotová, takže hráči, který se vrátil k rozestavěnému mostu, vzalo mostovku z ruky při první akci, i když si ji sám vybral; věta „mostovka je nejdražší prvek“ neplatila tam, kde je dražší těžký trám, pilíř nebo ocelobeton; „prostřední styčník“ neseděl na mostovku z nestejných dílů; rada o prvku v ruce zazněla i s nástrojem Výběr. Opraveno. Deník přepnutí zapisuje (`vedeni.prvek`), souhrn ho zatím nepočítá.
+- Jak poznat, že to zabralo: `zkousekNadRozpocet` a `hracuSOdmitnutim` na 1-01 (bylo 71 a 24 ze 41) a poměr mostovky k lehkým trámům v `prvky`.
+- Testy: `test/mezery.test.ts` (mostovka mimo cestu, levnější prut; žádný most autora mostovku mimo cestu nemá), `test/e2e/zacatek.e2e.ts` (přepnutí prvku, hlášení s částkou a radou, rada po první zkoušce).
 
 ### Nezávislé recenze M18 (26. 11. 2026)
 

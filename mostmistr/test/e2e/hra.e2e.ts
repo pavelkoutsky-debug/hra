@@ -199,9 +199,16 @@ describe("stavba myší", () => {
     await tahni([4, 0], [8, 0]);
     expect(await pocetPrutu()).toBe(2);
     expect(await udaj("rozpocet")).toBe("20 000 Kč / 45 000 Kč");
+    // Mostovka je hotová: v první úrovni má hráč v ruce rovnou levnější Lehký trám (z mostovky
+    // jinak nováčci stavěli i podpěry a zkouška se kvůli rozpočtu nepustila).
+    expect(await stranka.locator('[data-prvek="drevo-lehke"]').getAttribute("aria-pressed")).toBe("true");
+    expect(await telo("prvek-prepnut")).toBe("drevo-lehke");
   });
 
   it("příliš dlouhý prut nepoloží a řekne proč", async () => {
+    // Zpátky k mostovce (klávesa 1): hra ji z ruky podruhé nebere.
+    await stranka.keyboard.press("1");
+    expect(await stranka.locator('[data-prvek="mostovka-drevo"]').getAttribute("aria-pressed")).toBe("true");
     // Tah, který nejde rozdělit na stejné díly s konci na rastru (jinak by se mostovka rozdělila sama).
     await tahni([0, 0], [7, 2]);
     expect(await pocetPrutu()).toBe(2);
@@ -280,7 +287,8 @@ describe("stavba myší", () => {
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     expect(await telo("rezim")).toBe("stavba");
-    expect(await udaj("hlaseni")).toBe("Most je dražší než rozpočet. Před zkouškou ho zlevni.");
+    // Hlášení říká, o kolik (mostovka leží jen na cestě, takže radu o levnějším prutu nepřidává).
+    expect((await udaj("hlaseni")).replace(/[\u202f\u00a0]/g, " ")).toBe("Most je o 5 654 Kč dražší než rozpočet. Před zkouškou ho zlevni.");
     for (let i = 0; i < 4; i++) await stranka.keyboard.press("Control+z");
     expect(await pocetPrutu()).toBe(5);
     // 33 133 Kč se do rozpočtu vejde, do inženýrského (32 500 Kč) ne.
