@@ -141,7 +141,11 @@ describe("mostovka, po které nikdo nepůjde", () => {
     expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
     await stranka.screenshot({ path: `${SLOZKA}/mezera-zkraceno.png` });
 
-    // Kdo metr mostovky na břeh dokreslí zvlášť (od kraje), dostane značku: zem ho nenese.
+    // Mostovka je hotová: hra má v ruce levnější Lehký trám (od 0.25.0 ve všech úrovních kampaně).
+    // Kdo metr mostovky na břeh dokreslí zvlášť (od kraje, mostovku si vezme zpátky), dostane
+    // značku: zem ho nenese.
+    expect(await telo("prvek-prepnut")).toBe("drevo-lehke");
+    await stranka.locator('.paleta [data-prvek="mostovka-drevo"]').click();
     const c = await bodSveta(12, 0);
     const d = await bodSveta(13, 0);
     await stranka.mouse.move(c.x, c.y);

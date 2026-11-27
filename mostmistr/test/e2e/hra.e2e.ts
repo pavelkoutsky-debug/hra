@@ -281,14 +281,20 @@ describe("stavba myší", () => {
     await stranka.keyboard.press("2");
     await tahni([0, 0], [2, 4]);
     await tahni([2, 4], [4, 2]);
+    expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("ok");
     await tahni([4, 2], [6, 4]);
-    await tahni([6, 4], [8, 0]);
+    // Třetí krokev cenu přetáhla: hlášení to řekne hned při stavbě, s částkou (bez tlačítka:
+    // mostovka leží jen na cestě) a ukazatel v liště zežloutne.
     expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("nad");
+    expect((await udaj("hlaseni")).replace(/[\u202f\u00a0]/g, " ")).toMatch(/^O \d+ Kč nad rozpočtem\.$/);
+    expect(await stranka.locator('[data-udaj="hlaseni"] button').count()).toBe(0);
+    expect(await stranka.locator(".rozpocet").evaluate((e) => getComputedStyle(e).borderTopColor)).toBe("rgb(255, 209, 102)");
+    await tahni([6, 4], [8, 0]);
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("Space");
     expect(await telo("rezim")).toBe("stavba");
-    // Hlášení říká, o kolik (mostovka leží jen na cestě, takže radu o levnějším prutu nepřidává).
-    expect((await udaj("hlaseni")).replace(/[\u202f\u00a0]/g, " ")).toBe("Most je o 5 654 Kč dražší než rozpočet. Před zkouškou ho zlevni.");
+    // Po stisku Zkoušky hlášení řekne, o kolik.
+    expect((await udaj("hlaseni")).replace(/[\u202f\u00a0]/g, " ")).toBe("Zkouška nejde: most je o 5 654 Kč nad rozpočtem.");
     for (let i = 0; i < 4; i++) await stranka.keyboard.press("Control+z");
     expect(await pocetPrutu()).toBe(5);
     // 33 133 Kč se do rozpočtu vejde, do inženýrského (32 500 Kč) ne.

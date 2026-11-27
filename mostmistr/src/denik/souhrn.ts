@@ -75,6 +75,13 @@ export interface SouhrnUrovne {
   zkousekOdmitnuto: number;
   zkousekNadRozpocet: number;
   /**
+   * Rozpočet při stavbě (`rozpocet.prekrocen`, `rozpocet.vymena`): kolik hráčů úpravou mostu
+   * přelezlo rozpočet (hra jim to hned řekla) a kolik použilo výměnu mostovky mimo cestu za
+   * levnější prut jedním klikem.
+   */
+  hracuNadRozpoctem: number;
+  hracuSVymenou: number;
+  /**
    * Značky o mostovce mimo trasu, které hra při stavbě ukázala (`stavba.znacka`), a kolikrát:
    * mostovka přes kraj břehu bez styčníku, mimo trasu, mezera u břehu a uprostřed, mostovka za
    * koncem trasy. Jedna značka se počítá jednou, dokud se nezmění.
@@ -168,6 +175,9 @@ export interface HracVUrovni {
   /** Zkoušky, které hra nepustila, a z nich kvůli rozpočtu. Starší výtahy je nemají. */
   odmitnuto?: number;
   nadRozpocet?: number;
+  /** Kolikrát cena při stavbě přelezla rozpočet a kolikrát hráč vyměnil mostovku mimo cestu. Starší výtahy je nemají. */
+  nadRozpoctem?: number;
+  vymen?: number;
 }
 
 export interface HracVeVytahu {
@@ -202,6 +212,8 @@ const NEJVETSI_CENA = 1e10;
 const NEJVIC_DILU = 40;
 /** Víc styčníků, než má největší most, jeden posun nepohne. */
 const NEJVIC_POSUNUTYCH = 2000;
+/** Víc prutů jedna výměna mostovky nevymění. */
+const NEJVIC_VYMENENYCH = 2000;
 
 // Deník plní kdokoli, kdo umí poslat žádost: souhrn proto bere jen hodnoty, které hra opravdu
 // posílá (známé prvky a způsoby porušení, časy a ceny v rozumných mezích).
@@ -370,6 +382,8 @@ function novyHracVUrovni(): HracVUrovni {
     posunuKlavesou: 0,
     odmitnuto: 0,
     nadRozpocet: 0,
+    nadRozpoctem: 0,
+    vymen: 0,
   };
 }
 
@@ -475,6 +489,12 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       // Zkouška, kterou hra nepustila (most proti pravidlům, dražší než rozpočet, moc změn v komisi).
       zaznam.odmitnuto = (zaznam.odmitnuto ?? 0) + 1;
       if (data.duvod === "nad-rozpocet") zaznam.nadRozpocet = (zaznam.nadRozpocet ?? 0) + 1;
+    } else if (u.druh === "rozpocet.prekrocen") {
+      // Cena při stavbě přelezla rozpočet (o kolik korun); hra posílá jen kladnou částku.
+      if (vMezich(data.o, NEJVETSI_CENA) > 0) zaznam.nadRozpoctem = (zaznam.nadRozpoctem ?? 0) + 1;
+    } else if (u.druh === "rozpocet.vymena") {
+      // Výměna mostovky mimo cestu: počítá se jen ta, která aspoň jeden prut vyměnila.
+      if (vMezich(data.prutu, NEJVIC_VYMENENYCH) >= 1) zaznam.vymen = (zaznam.vymen ?? 0) + 1;
     } else if (u.druh === "stavba.znacka") {
       const klic = data.co === "za-brehem" ? "za-brehem" : data.co === "mezera" ? textZ(data.druh) : null;
       const popis = klic === null || !Object.hasOwn(POPISY_ZNACEK, klic) ? null : POPISY_ZNACEK[klic]!;
@@ -599,6 +619,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
         cil.posunuKlavesou = (cil.posunuKlavesou ?? 0) + (z.posunuKlavesou ?? 0);
         cil.odmitnuto = (cil.odmitnuto ?? 0) + (z.odmitnuto ?? 0);
         cil.nadRozpocet = (cil.nadRozpocet ?? 0) + (z.nadRozpocet ?? 0);
+        cil.nadRozpoctem = (cil.nadRozpoctem ?? 0) + (z.nadRozpoctem ?? 0);
+        cil.vymen = (cil.vymen ?? 0) + (z.vymen ?? 0);
       }
     }
     for (const [uroven, pocty] of Object.entries(v.selhani)) {
@@ -676,6 +698,8 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         hracuSOdmitnutim: zaznamy.filter((z) => (z.odmitnuto ?? 0) > 0).length,
         zkousekOdmitnuto: soucet((z) => z.odmitnuto ?? 0),
         zkousekNadRozpocet: soucet((z) => z.nadRozpocet ?? 0),
+        hracuNadRozpoctem: zaznamy.filter((z) => (z.nadRozpoctem ?? 0) > 0).length,
+        hracuSVymenou: zaznamy.filter((z) => (z.vymen ?? 0) > 0).length,
         znacky: odNejcastejsiho(v.znacky?.[uroven]),
       };
     });

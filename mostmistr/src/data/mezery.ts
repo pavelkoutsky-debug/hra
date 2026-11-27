@@ -5,6 +5,7 @@
 // kraj břehu, kde editor dřív nedal styčník, a lidé pak „propadnou mostovkou“. Tenhle rozbor
 // řekne, kde a proč tam mostovka nenese, ještě než hráč pustí zkoušku.
 
+import { cenaNavrhu } from "./cena";
 import type { Bod } from "./geometrie";
 import { KATALOG, type IdPrvku } from "./katalog";
 import { mezeryTras, type MezeraTrasy, type NavrhMostu, type PrutNavrhu } from "./navrh";
@@ -160,18 +161,32 @@ export function konecTahuMostovky(prvek: IdPrvku, od: Bod, k: Bod, uroven: Urove
 }
 
 /**
- * Kolik prutů z mostovky leží mimo trasy úrovně (podpěry, vzpěry a trojúhelníky postavené
- * z mostovky). Mostovka je nejdražší prvek a patří jen na cestu: nováček z ní staví celý most
- * a přetáhne rozpočet (první den po zveřejnění hra jen na 1-01 kvůli tomu nepustila 71 zkoušek).
+ * Pruty z mostovky, které leží mimo trasy úrovně (podpěry, vzpěry a trojúhelníky postavené
+ * z mostovky), jejich id v pořadí návrhu. Mostovka je nejdražší prvek a patří jen na cestu:
+ * nováček z ní staví celý most a přetáhne rozpočet (první den po zveřejnění hra jen na 1-01
+ * kvůli tomu nepustila 71 zkoušek).
  */
-export function mostovkaMimoTrasy(navrh: NavrhMostu, uroven: Uroven): number {
+export function prutyMostovkyMimoTrasy(navrh: NavrhMostu, uroven: Uroven): number[] {
   const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
-  return navrh.pruty.filter((p) => {
-    if (KATALOG[p.prvek].druh !== "mostovka") return false;
-    const a = podleId.get(p.a);
-    const b = podleId.get(p.b);
-    return !a || !b || !uroven.trasy.some((t) => mostovkaProTrasu(p, t) && bodNaTrase(t, a) && bodNaTrase(t, b));
-  }).length;
+  return navrh.pruty
+    .filter((p) => {
+      if (KATALOG[p.prvek].druh !== "mostovka") return false;
+      const a = podleId.get(p.a);
+      const b = podleId.get(p.b);
+      return !a || !b || !uroven.trasy.some((t) => mostovkaProTrasu(p, t) && bodNaTrase(t, a) && bodNaTrase(t, b));
+    })
+    .map((p) => p.id);
+}
+
+/** Kolik prutů z mostovky leží mimo trasy úrovně (`prutyMostovkyMimoTrasy`). */
+export function mostovkaMimoTrasy(navrh: NavrhMostu, uroven: Uroven): number {
+  return prutyMostovkyMimoTrasy(navrh, uroven).length;
+}
+
+/** Cena prvku za metr; prvek s cenou za kus se mezi pruty na podpěry nepočítá. */
+function cenaZaMetr(id: IdPrvku): number {
+  const c = KATALOG[id].cena;
+  return "zaMetr" in c ? c.zaMetr : Number.POSITIVE_INFINITY;
 }
 
 /**
@@ -179,12 +194,39 @@ export function mostovkaMimoTrasy(navrh: NavrhMostu, uroven: Uroven): number {
  * žádný takový není. Na podpěry mostovky ho hra nabízí místo mostovky.
  */
 export function levnejsiPrut(uroven: Uroven, nez: IdPrvku): IdPrvku | null {
-  const cena = (id: IdPrvku): number => {
-    const c = KATALOG[id].cena;
-    return "zaMetr" in c ? c.zaMetr : Number.POSITIVE_INFINITY;
-  };
-  const pruty = uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut" && KATALOG[id].hotovo && cena(id) < cena(nez));
-  return pruty.length === 0 ? null : pruty.reduce((a, b) => (cena(b) < cena(a) ? b : a));
+  const pruty = uroven.povolenePrvky.filter((id) => KATALOG[id].druh === "prut" && KATALOG[id].hotovo && cenaZaMetr(id) < cenaZaMetr(nez));
+  return pruty.length === 0 ? null : pruty.reduce((a, b) => (cenaZaMetr(b) < cenaZaMetr(a) ? b : a));
+}
+
+/** Co výměna mostovky mimo cestu udělá: které pruty, za jaký prvek a kolik korun ušetří. */
+export interface VymenaMostovky {
+  /** Id prutů z mostovky mimo trasy, které jsou dražší než `prvek`. */
+  pruty: number[];
+  prvek: IdPrvku;
+  /** O kolik korun most zlevní, když se vymění všechny (pravidla úrovně můžou některý nedovolit). */
+  usetri: number;
+}
+
+/**
+ * Výměna jedním klikem: pruty z mostovky mimo trasy za nejlevnější prut úrovně. Null, když
+ * žádný takový prut není, úroveň levnější prut nemá, nebo se most zvedá (mostovka za opěrou
+ * tam bývá záměr: rameno křídla). Jestli výměnu dovolí pravidla úrovně (délka prvku, kotva
+ * vyhrazená jinému prutu…), tady neřeší: to zkouší editor prut po prutu (`Editor.vymenPrvek`).
+ */
+export function vymenaMostovky(navrh: NavrhMostu, uroven: Uroven): VymenaMostovky | null {
+  if (uroven.pohyb) return null;
+  const mimo = new Set(prutyMostovkyMimoTrasy(navrh, uroven));
+  if (mimo.size === 0) return null;
+  // Nejlevnější prut úrovně; vymění se jen mostovka, která je dražší.
+  const prvek = uroven.povolenePrvky
+    .filter((id) => KATALOG[id].druh === "prut" && KATALOG[id].hotovo && Number.isFinite(cenaZaMetr(id)))
+    .reduce<IdPrvku | null>((a, b) => (a === null || cenaZaMetr(b) < cenaZaMetr(a) ? b : a), null);
+  if (prvek === null) return null;
+  const pruty = navrh.pruty.filter((p) => mimo.has(p.id) && cenaZaMetr(p.prvek) > cenaZaMetr(prvek)).map((p) => p.id);
+  if (pruty.length === 0) return null;
+  const menene = new Set(pruty);
+  const po: NavrhMostu = { ...navrh, pruty: navrh.pruty.map((p) => (menene.has(p.id) ? { id: p.id, a: p.a, b: p.b, prvek } : p)) };
+  return { pruty, prvek, usetri: cenaNavrhu(navrh) - cenaNavrhu(po) };
 }
 
 /**

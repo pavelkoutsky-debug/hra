@@ -990,6 +990,8 @@ describe("souhrn deníku", () => {
       hracuSOdmitnutim: 0,
       zkousekOdmitnuto: 0,
       zkousekNadRozpocet: 0,
+      hracuNadRozpoctem: 0,
+      hracuSVymenou: 0,
       znacky: {},
     });
     expect(souhrn.urovne[0]).toMatchObject({ uroven: "1-01", hracu: 1, zkousek: 0, hracuBezZkousky: 1, zkousekDoPruchodu: null, minutDoPruchodu: null });
@@ -1029,6 +1031,28 @@ describe("souhrn deníku", () => {
     const stary = JSON.parse(JSON.stringify(pul[1]!)) as ReturnType<typeof vytahDeniku>;
     for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.odmitnuto, delete z.nadRozpocet;
     expect(souhrnZVytahu(slucVytahy([pul[0]!, stary])).urovne[0]).toMatchObject({ hracuSOdmitnutim: 1, zkousekOdmitnuto: 1, zkousekNadRozpocet: 1 });
+  });
+
+  it("počítá hráče, kteří při stavbě přelezli rozpočet a kteří použili výměnu mostovky; nesmysly ne", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const cyril = hlavicka("c3c3c3c3c3c3c3c3", "3333333333333333");
+    const prekrocen = (t: number, data: Record<string, number | string>): UdalostDeniku => u(t, "rozpocet.prekrocen", "1-03", data);
+    const vymena = (t: number, data: Record<string, number | string>): UdalostDeniku => u(t, "rozpocet.vymena", "1-03", data);
+    const davky = [
+      davka([u(0, "uroven.otevrena", "1-03"), prekrocen(5, { o: 2361, mimoTrasu: 6 }), vymena(7, { prutu: 6, usetreno: 41000, zustalo: 0, kde: "stavba" }), prekrocen(9, { o: 120, mimoTrasu: 0 })], 0, anna),
+      // Bob rozpočet přelezl, ale nevyměnil; výměna, která nic nevyměnila, se nepočítá.
+      davka([u(0, "uroven.otevrena", "1-03"), prekrocen(5, { o: 800, mimoTrasu: 2 }), vymena(6, { prutu: 0, usetreno: 0, zustalo: 2, kde: "zkouska" })], 0, bob),
+      // Vymyšlené hodnoty (záporná částka, nesmyslný počet prutů) souhrn nebere.
+      davka([u(0, "uroven.otevrena", "1-03"), prekrocen(5, { o: -5, mimoTrasu: 1 }), prekrocen(6, { o: "hodně" }), vymena(7, { prutu: 1e9 })], 0, cyril),
+    ];
+    expect(souhrnDeniku(davky).urovne[0]).toMatchObject({ hracu: 3, hracuNadRozpoctem: 2, hracuSVymenou: 1 });
+    // Výtahy jdou sloučit a starší výtah bez těch údajů nic nerozbije.
+    const pul = [vytahDeniku([davka(davky[0]!.udalosti.slice(0, 2), 0, anna)]), vytahDeniku([davka(davky[0]!.udalosti.slice(2), 1, anna), davky[1]!])];
+    expect(souhrnZVytahu(slucVytahy(pul)).urovne[0]).toMatchObject({ hracuNadRozpoctem: 2, hracuSVymenou: 1 });
+    const stary = JSON.parse(JSON.stringify(pul[1]!)) as ReturnType<typeof vytahDeniku>;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.nadRozpoctem, delete z.vymen;
+    expect(souhrnZVytahu(slucVytahy([pul[0]!, stary])).urovne[0]).toMatchObject({ hracuNadRozpoctem: 1, hracuSVymenou: 0 });
   });
 
   it("značky o mostovce mimo trasu se počítají po úrovních a jen ty, které hra posílá", () => {

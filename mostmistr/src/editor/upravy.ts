@@ -94,6 +94,34 @@ export function zmenPrvek(navrh: NavrhMostu, pruty: Iterable<number>, prvek: IdP
   return zmena ? { ...navrh, pruty: nove } : navrh;
 }
 
+/**
+ * Změní prvek daných prutů jeden po druhém, každý jen tehdy, když to `duvodProti` dovolí:
+ * dostane návrh se změnami dosud provedenými, prut a nový prvek a vrátí, proč změna nejde
+ * (nebo null). Vrací nový návrh, kolik prutů se změnilo a proč ty ostatní ne (v pořadí).
+ */
+export function zmenPrvekKdeSmi<D>(
+  navrh: NavrhMostu,
+  pruty: Iterable<number>,
+  prvek: IdPrvku,
+  duvodProti: (navrh: NavrhMostu, prut: PrutNavrhu, prvek: IdPrvku) => D | null,
+): { navrh: NavrhMostu; zmeneno: number; odmitnuto: D[] } {
+  let vysledek = navrh;
+  let zmeneno = 0;
+  const odmitnuto: D[] = [];
+  for (const id of pruty) {
+    const p = vysledek.pruty.find((x) => x.id === id);
+    if (!p || p.prvek === prvek) continue;
+    const duvod = duvodProti(vysledek, p, prvek);
+    if (duvod !== null) {
+      odmitnuto.push(duvod);
+      continue;
+    }
+    vysledek = zmenPrvek(vysledek, [id], prvek);
+    zmeneno += 1;
+  }
+  return { navrh: vysledek, zmeneno, odmitnuto };
+}
+
 /** Nastaví závaží daným styčníkům; `kg` dostane dosavadní hodnotu a vrátí novou (0 závaží odebere). */
 export function nastavZavazi(
   navrh: NavrhMostu,
