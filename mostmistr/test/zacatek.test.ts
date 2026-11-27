@@ -71,6 +71,12 @@ describe("kód příčiny neúspěchu zkoušky", () => {
     expect(kodPriciny(s({ kmitaniNadMezi: true }, { komfort: { ...komfort, prekroceno: null } }))).toBe("kmitani");
     expect(kodPriciny(s({ prvni: { druh: "sjeti", cas: 2 } }, { spadlo: 1, prejelo: 2 }))).toBe("sjeti");
     expect(kodPriciny(s({}, { opreno: true }))).toBe("opreno");
+    // Most opřený o dno údolí potom kmitá na terénu nebo sjede z podpory: příčina je opření
+    // (tak to říká i pruh výsledku), ne jeho následek.
+    expect(kodPriciny(s({ kmitaniNadMezi: true }, { opreno: true, komfort }))).toBe("opreno");
+    expect(kodPriciny(s({ prvni: { druh: "sjeti", cas: 4 } }, { opreno: true, spadlo: 29, prejelo: 7 }))).toBe("opreno");
+    // Mezera v mostovce, kterou lidé propadli, zůstává mezerou, i když se most pak opřel.
+    expect(kodPriciny(s({}, { opreno: true, mezera: true, spadlo: 2, prejelo: 1 }))).toBe("mezera");
     expect(kodPriciny(s({}, { spadlo: 1, prejelo: 2 }))).toBe("spadl");
     expect(kodPriciny(s({}, { lode: { celkem: 1, proplulo: 0, narazilo: 1 } }))).toBe("lod");
     expect(kodPriciny(s({}, { prejelo: 1 }))).toBe("neprejel");

@@ -148,3 +148,19 @@ export function nakresliSlozeni(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, mi
   nakresliPopisek(ctx, rozmer, stred, polomer, popis, rada);
   ctx.restore();
 }
+
+/**
+ * Místo, o kterém mluví pruh výsledku (podpora, ze které most sjel, místo, kde ležel na zemi,
+ * styčník, který nic nedrží): čárkovaný kroužek bez popisku, popisek je věta v pruhu.
+ */
+export function nakresliOznaceneMisto(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, misto: Bod): void {
+  const stred = svetNaObraz(kamera, rozmer, misto);
+  ctx.save();
+  ctx.strokeStyle = BARVY.varovani;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.arc(stred.x, stred.y, 22, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.restore();
+}
