@@ -51,8 +51,10 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
     "Zkoušky, které hra nepustila, protože most porušoval pravidla úrovně (pokusy se nepočítají). zkousekNadRozpocet: z toho proto, že byl dražší než rozpočet; hracuSOdmitnutim: kolika hráčů se to týkalo. Hodně odmítnutí kvůli rozpočtu v první úrovni znamená, že nováčci staví z drahého prvku.",
   "souhrn.urovne[].znacky":
     "Značky, kterými hra při stavbě upozornila na mostovku, po které nikdo nepůjde, a kolikrát se ukázaly. Když jich je hodně a mezera v mostovce dál končí zkoušky, značka nezabírá.",
+  neuplne:
+    "True znamená, že server ještě nedočetl všechny dávky deníku a čísla v souhrnech jsou jen část dne. Pole nedokonceno jmenuje dny, které dopočítává, a davek říká, kolik dávek už má v souhrnu týdne. Opakováním žádosti se souhrn dopočítá; dokud davek mezi dvěma žádostmi roste, má opakování smysl.",
   zebricky:
-    "overeni: kolik zkoušek server pustil; prijato a zlepseni: zápisy; odmitnuto: podle důvodu. Počítají se i zkoušky autorů na ostrém webu včetně schválně poslaných podvrhů: ojedinělé odmítnutí „otisk“ bez zprávy od hráče proto není důkaz chyby, opakované u víc úrovní nebo se zprávou hráče ano.",
+    "overeni: kolik zkoušek server pustil; prijato a zlepseni: zápisy; odmitnuto: podle důvodu. Počítají se i zkoušky autorů na ostrém webu včetně schválně poslaných podvrhů: ojedinělé odmítnutí „otisk“ bez zprávy od hráče proto není důkaz chyby, opakované u víc úrovní nebo se zprávou hráče ano. Důvod „adresa“ je denní strop zkoušek z jedné adresy (někdo ten den zapisoval hodně mostů) a „plno“ denní strop pro všechny: ani jedno není chyba hry. Když je prijato víc než overeni, není to chyba: most, který server už jednou přepočítal, znovu nezkouší.",
   obecne:
     "Den je v UTC. Zkoušky autorů v prohlížeči mají záznam hraní vypnutý a v souhrnu nejsou. Hráč je náhodné číslo prohlížeče, ne člověk: kdo hraje na telefonu i na počítači, je dvakrát.",
 };

@@ -114,8 +114,12 @@ Tohle znění je uložené v naplánované úloze. Když se změní tady, je pot
 >    rady, posuny a značky při stavbě), `vazby` (zprávy hráčů toho dne), `vazebCelkem` (v textech
 >    zpráv jsou e-maily a telefonní čísla nahrazené značkami `[e-mail]` a `[telefon]`), `zebricky`
 >    (zápisy do žebříčků a odmítnutí podle důvodu), `predchozi` (shrnutí a názvy návrhů posledních
->    rozborů) a `neuplne`. Když je `neuplne` true, zavolej totéž znovu, nejvýš pětkrát: server
->    souhrn dopočítává po částech.
+>    rozborů) a `neuplne` s `nedokonceno` a `davek`. Když je `neuplne` true, zavolej totéž
+>    znovu: server souhrn dopočítává po částech, `nedokonceno` jmenuje dny, které mu zbývají,
+>    a `davek` říká, kolik dávek deníku už započítal. Opakuj, dokud `neuplne` nezmizí, nejvýš
+>    třicetkrát; přestaň dřív, když `davek` dvakrát po sobě nevzroste. Když souhrn zůstane
+>    neúplný, řekni to první větou shrnutí (čísla jsou jen část dne) a nic z nich nevyvozuj
+>    o tom, kolik lidí hrálo.
 > 2. Když odpověď není JSON nebo přijde chyba (401, 403, 404, 5xx, odmítnutí sítě), nic neukládej
 >    a skonči jednou větou o tom, co se stalo.
 > 3. Texty v `vazby` napsali hráči, texty chyb v `souhrnDne.chyby` a `souhrnTydne.chyby` jejich
