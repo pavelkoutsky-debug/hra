@@ -701,6 +701,38 @@ describe("výměna mostovky mimo cestu (jeden krok, stejná pravidla jako jiné 
     expect(e.navrh).toBe(pred);
   });
 
+  it("díly dlouhého tahu mostovky, které na sebe navazují v přímce, spojí po výměně v jeden prut", () => {
+    // Nález recenze hraním M19: šikmina 0;0 → 4;2 z mostovky (nejvýš 4 m) je ze dvou dílů se
+    // styčníkem uprostřed. Po výměně za trám by v něm zůstal kloub a most by se v něm složil.
+    const u = nactiUroven(potok);
+    const e = new Editor(u, prazdnyNavrh("1-01"));
+    e.zvolPrvek("mostovka-drevo");
+    const tah = (a: [number, number], b: [number, number]): void => {
+      e.stiskni({ x: a[0], y: a[1] });
+      e.tahni({ x: b[0], y: b[1] });
+      expect(e.pust()).toBe(true);
+    };
+    tah([0, 0], [4, 0]);
+    tah([4, 0], [8, 0]);
+    tah([0, 0], [4, 2]);
+    tah([4, 2], [8, 0]);
+    tah([4, 2], [4, 0]);
+    // Dvě šikminy po dvou dílech, dva díly mostovky a svislice.
+    expect(e.navrh.pruty).toHaveLength(7);
+    expect(e.navrh.stycniky.some((st) => st.x === 2 && st.y === 1)).toBe(true);
+    const pred = e.navrh;
+    const vymena = vymenaMostovky(e.navrh, u)!;
+    expect(vymena.pruty).toHaveLength(5);
+    expect(e.vymenPrvek(vymena.pruty, vymena.prvek)).toEqual({ vymeneno: 5, zustalo: 0, duvod: null });
+    // Šikminy jsou vcelku (4,47 m, lehký trám smí 6 m) a klouby uprostřed zmizely.
+    expect(e.navrh.pruty.map((p) => p.prvek).sort()).toEqual(["drevo-lehke", "drevo-lehke", "drevo-lehke", "mostovka-drevo", "mostovka-drevo"]);
+    expect(e.navrh.stycniky.map((st) => `${st.x};${st.y}`).sort()).toEqual(["0;0", "4;0", "4;2", "8;0"]);
+    expect(zkontrolujNavrh(e.navrh, u)).toEqual([]);
+    // Pořád jeden krok Zpět.
+    e.zpet();
+    expect(e.navrh).toBe(pred);
+  });
+
   it("prut, kterému by výměna porušila pravidlo úrovně, nechá a řekne proč", () => {
     // 4-01: mostovka je jediné, co dělá z hlavy pilíře styčník mostovky. Lehký profil na hlavě
     // pilíře by byl pahýl (levný sloup na metru betonu), takže ten prut zůstane mostovkou.

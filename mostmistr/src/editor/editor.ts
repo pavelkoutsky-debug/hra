@@ -32,6 +32,7 @@ import {
   pridejPrut,
   spojNaOse,
   prutMezi,
+  slucPrimeDily,
   smaz,
   stycnikV,
   zmenPrvekKdeSmi,
@@ -672,12 +673,23 @@ export class Editor {
    * Změní dané pruty na `prvek` jedním krokem (jde vzít zpět najednou), mimo výběr a bez změny
    * prvku v ruce: výměna mostovky mimo cestu za levnější prut. Každý prut projde stejnou
    * kontrolou jako změna prvku výběru; ten, kterému by změna porušila pravidlo úrovně, zůstane,
-   * jak byl. Vrací, kolik prutů se vyměnilo, kolik zůstalo a proč (první důvod).
+   * jak byl. Vyměněné díly, které na sebe navazují v přímce (dlouhý tah mostovky editor dělí),
+   * se spojí zpátky v jeden prut, když to délka nového prvku dovolí a styčník mezi nimi není
+   * kotva ani základ: kloub uprostřed šikminy by most složil. Vrací, kolik prutů se vyměnilo,
+   * kolik zůstalo a proč (první důvod).
    */
   vymenPrvek(pruty: Iterable<number>, prvek: IdPrvku): { vymeneno: number; zustalo: number; duvod: DruhProblemu | null } {
     this.tah = null;
-    const zmena = zmenPrvekKdeSmi(this.#navrh, pruty, prvek, (navrh, p, novy) => this.#duvodProtiZmene(navrh, p, novy));
-    if (zmena.zmeneno > 0) this.#zmen(zmena.navrh, "vymena");
+    const menene = new Set(pruty);
+    const zmena = zmenPrvekKdeSmi(this.#navrh, menene, prvek, (navrh, p, novy) => this.#duvodProtiZmene(navrh, p, novy));
+    if (zmena.zmeneno > 0) {
+      const vymenene = new Set(zmena.navrh.pruty.filter((p) => menene.has(p.id) && p.prvek === prvek).map((p) => p.id));
+      const pevny = (s: Bod): boolean => [...this.uroven.kotvy, ...this.uroven.zaklady].some((k) => k.x === s.x && k.y === s.y);
+      const spojeny = slucPrimeDily(zmena.navrh, vymenene, (s, delka) => delka <= KATALOG[prvek].nejvetsiDelka && !pevny(s));
+      // Spojený prut vede stejnou úsečkou jako jeho díly; kdyby přesto přibyl problém, zůstanou díly.
+      const pribyl = zkontrolujNavrh(spojeny, this.uroven).length > zkontrolujNavrh(zmena.navrh, this.uroven).length;
+      this.#zmen(pribyl ? zmena.navrh : spojeny, "vymena");
+    }
     return { vymeneno: zmena.zmeneno, zustalo: zmena.odmitnuto.length, duvod: zmena.odmitnuto[0] ?? null };
   }
 

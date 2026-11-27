@@ -156,7 +156,8 @@ describe("zpomalený záběr na první porušení", () => {
     expect(await cas()).toBeLessThan(konec - 1);
     expect(await udaj("vysledek-nadpis")).toBe("MOST NEOBSTÁL");
     expect(await stranka.locator('[data-udaj="verdikt"]').isVisible()).toBe(true);
-    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+ \(označený na výkresu\): vzpěr\.$/);
+    // Pruh řekne i co s prutem udělat (krátce; celé znění s čísly je v podrobnostech).
+    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+ \(označený na výkresu\): vzpěr\. Tlak ho vybočil do strany: zkrať ho dalším styčníkem, nebo .+\.$/);
     await stranka.screenshot({ path: `${SLOZKA}/p1a-vysledek-hned.png` });
   }, 120_000);
 

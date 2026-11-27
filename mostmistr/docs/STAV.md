@@ -122,6 +122,23 @@ Verze hry 0.25.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovn�
 - Věta „Vyměněno… Most stojí 100 400 Kč“ nesvítí po kroku Zpět; tlačítko zvuku (nově ikona) má na dotyku 44 px; obrys Nápovědy po průchodu úrovní zmizí; výměna z Importu se v deníku nepíše jako „po zkoušce“; „Celá kampaň“ má `aria-expanded`.
 - Bez nálezu prošlo: paleta první kapitoly (zkratky, samočinné rozbalení, host a pískoviště), upozornění na záznam ve všech čtyřech výskytech a vypínání, okno zadání, podmínky náhledu nápovědy a přepnutí prvku, slovníky.
 
+**Hraní očima nováčka, počítač** (1280 × 720; 1-01 prošel třetí zkouškou asi za pět minut; verdikt: „začátek je zvládnutelný a mnohem přehlednější, než napovídá hodnocení 1/5“). Zapracováno:
+- **Výměna mostovky nechávala v šikminách kloub** (chyba hry): šikmina z mostovky delší než 4 m je ze dvou dílů, po výměně za trám v ní zůstal styčník, most se v něm složil a značka přitom ukazovala na střed mostovky a radila doplnit šikmý prut. Výměna teď díly v přímce spojí v jeden prut. Značka složení u jiných kloubů v přímce (hráč nakreslí šikminu na dvakrát) dál ukazuje na styčník mostovky, který klesá, ne na kloub: **nezapracováno**, chce to rozbor mechanismu.
+- **Rada po pádu neřekla, co chybí:** nováček postavil „střechu“ z břehu na břeh bez svislice a hra dál radila „zavěs ho do trojúhelníku“, který už měl. Kde nad styčníkem něco stojí, rada říká „spoj ho prutem se styčníkem nad mostovkou“.
+- **Dva rozpočty:** most za 33 133 Kč prošel (rozpočet 45 000 Kč) a medaili Rozpočet nedostal; že chce 32 500 Kč, bylo až v podrobnostech. Pruh to u medaile říká („do 32 500 Kč“).
+- **1-03 po zlomení prutu neporadila** („Jako první povolil prut 8: vzpěr.“ a nic dál; rada přišla až podruhé). Pruh přidává krátkou radu hned („Tlak ho vybočil do strany: zkrať ho dalším styčníkem, nebo dej silnější prvek.“), pro všechny způsoby porušení prutu.
+- „Spadli všichni (36)“ ve chvíli, kdy lidé na obrázku stojí na břehu, je teď „Z 36 lidí nepřešel nikdo“; podpěra postavená na dno údolí má při stavbě značku „Tahle podpěra nic nenese… stojí na zemi bez kotvy“ místo „visí jen za jeden konec“; bublina „pusť zkoušku“ už nepřekrývá hlášení o výměně.
+- Nezapracováno: hlášení o rozpočtu bez mostovky mimo cestu neradí, kde ušetřit (1-03: „o 49 357 Kč nad rozpočtem“ a nic); podrobnosti výsledku jsou stěna textu; slovníček má v 1-01 všech 22 hesel; přehled po první úrovni píše „medaile 1 z 114 · stupně výzev 3 z 342“; upozornění na záznam je v úrovni vidět dvakrát (okno a paleta). Kandidáti na příští milník.
+
+**Hraní očima nováčka, telefon** (390 × 844, dotyk; 1-01 prošel druhou zkouškou; verdikt: „projít se dá, přehledná obrazovka to ale není“). Zapracováno:
+- Popisek značky „Tady se most složí“ ležel přesně tam, kam patří vrchol trojúhelníku: kreslí se pod most.
+- Při zkoušce byla tatáž příčina na obrazovce třikrát (sedmiřádková věta s radou nad mostem, popisek záběru, pruh výsledku) a po druhém pádu měl pruh výsledku přes půl obrazovky: věta ve chvíli pádu je bez rady a rada po opakovaném nezdaru se neopakuje s větou pruhu (pruh je asi o třetinu nižší).
+- Podrobnosti u mostu opřeného o zem tvrdily „jako první sjel konec mostu z posuvné podpory“ proti verdiktu o opření: věta tam u takového mostu není.
+- „Více“ se rozbalilo pod okraj palety a ťuknutí vypadalo, že nic neudělalo: tlačítko se posune nahoru. Bublina „pusť zkoušku“ ležela přes Zpět a Smazat v liště: je pod lištou a zmizí, jakmile hráč staví dál. Odkaz Více v upozornění na záznam má cíl pro prst.
+- Nezapracováno (telefon jako samostatný milník): výkres je malý (most 8 m má 134 px ze 390, zbytek je prázdný rastr), při zkoušce je dole 11 tlačítek přehrávání, legenda se láme a razítko leží přes ni, Zpět a Smazat jsou v liště i v paletě, pojmy slovníčku a přepínač čísel mají cíl pod 44 px.
+
+**Po sloučení** spadly v prvním úplném běhu dva testy v prohlížeči, oba kvůli záměrné změně: věta o kmitání v úrovni bez tlumiče nově přidává radu (test doplněn) a okno zadání 4-04 se s ukázkou a upozorněním na záznam nevešlo do 720 px o 39 px. Okno je v nízkém okně těsnější (nižší výkresy ukázky, užší řádky sbalených částí), takže se vejde i na notebooku 1366 × 768.
+
 ## M18 — výsledek
 
 Verze hry 0.24.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovně, návrhu ani uloženého postupu taky ne; uložený výtah deníku má verzi 3 (server dny spočítá znovu).

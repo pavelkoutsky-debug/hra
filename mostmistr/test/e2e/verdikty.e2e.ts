@@ -166,12 +166,46 @@ describe("věty výsledku v 1-01 říkají, co udělat, a označí místo", () =
     await nactiMostImportem(s, JEN_MOSTOVKA);
     expect(await zkus(s)).toBe("MOST NEOBSTÁL");
     expect(await udaj(s, "vysledek-veta").innerText()).toBe(
-      "Spadli všichni (36). Složil se vlastní vahou: styčník mostovky nic nedrží. Zavěs ho do trojúhelníku z prutů nad mostovkou.",
+      "Z 36 lidí nepřešel nikdo. Složil se vlastní vahou: styčník mostovky nic nedrží. Zavěs ho do trojúhelníku z prutů nad mostovkou.",
     );
     expect(await telo(s, "oznaceny-misto")).toBe("4.00;0.00");
     await s.screenshot({ path: `${SLOZKA}/verdikt-jen-mostovka.png` });
     await akce(s, "vysledek-sbalit").click();
     expect(await udaj(s, "vysledek-shrnuti").innerText()).toContain("Zespodu ho tu podepřít nejde");
+    expect(chyby).toEqual([]);
+    await s.close();
+  }, 200_000);
+
+  it("„střecha“ nad mostovkou bez svislice: rada řekne spojit styčník s tím, co nad ním stojí", async () => {
+    // Nález recenze hraním M19: nováček postavil trojúhelník z břehu na břeh, střed mostovky
+    // k němu nepřipojil a hra mu dál radila „zavěs ho do trojúhelníku“, který už měl.
+    const { s, chyby } = await novaStranka();
+    await otevri(s, "uroven=1-01");
+    await nactiMostImportem(s, most([...MOSTOVKA, [L, [0, 0], [4, 2]], [L, [4, 2], [8, 0]]]));
+    expect(await zkus(s)).toBe("MOST NEOBSTÁL");
+    expect(await udaj(s, "vysledek-veta").innerText()).toMatch(/Složil se vlastní vahou: styčník mostovky nic nedrží\. Spoj ho prutem se styčníkem nad mostovkou\.$/);
+    expect(await telo(s, "oznaceny-misto")).toBe("4.00;0.00");
+    await s.screenshot({ path: `${SLOZKA}/verdikt-strecha-bez-svislice.png` });
+    await akce(s, "vysledek-sbalit").click();
+    expect(await udaj(s, "vysledek-shrnuti").innerText()).toContain("Spoj ho prutem se styčníkem nad mostovkou: dokud k němu nic nevede");
+    expect(chyby).toEqual([]);
+    await s.close();
+  }, 200_000);
+
+  it("most prošel, ale je dražší než inženýrský rozpočet: pruh u rozpočtové medaile řekne, pod kolik musí", async () => {
+    // Nález recenze hraním M19: úroveň ukazuje „rozpočet 45 000 Kč“, most za 33 133 Kč projde
+    // a medaili Rozpočet nedostane; že medaile chce 32 500 Kč, bylo až v podrobnostech.
+    const { s, chyby } = await novaStranka();
+    await otevri(s, "uroven=1-01");
+    await nactiMostImportem(s, most([...MOSTOVKA, [L, [0, 0], [4, 2]], [L, [4, 2], [8, 0]], [L, [4, 2], [4, 0]]]));
+    expect(await zkus(s)).toBe("MOST OBSTÁL");
+    const medaile = s.locator('[data-udaj="vysledek-medaile-pruh"] li');
+    expect(await medaile.nth(0).getAttribute("data-ziskana")).toBe("true");
+    expect(await medaile.nth(1).getAttribute("data-ziskana")).toBe("false");
+    expect((await medaile.nth(1).innerText()).replace(/[\u202f\u00a0]/g, " ").replace(/\s+/g, " ")).toBe("◇ Rozpočet do 32 500 Kč");
+    // Ostatní medaile cíl nemají.
+    expect(await s.locator('[data-udaj="vysledek-medaile-pruh"] .medaile__cil').count()).toBe(1);
+    await s.screenshot({ path: `${SLOZKA}/verdikt-cil-rozpoctu.png` });
     expect(chyby).toEqual([]);
     await s.close();
   }, 200_000);
@@ -183,7 +217,8 @@ describe("věty výsledku v 1-01 říkají, co udělat, a označí místo", () =
     expect(await zkus(s)).toBe("MOST NEOBSTÁL");
     expect(await telo(s, "kod-priciny")).toBe("kmitani");
     const pricina = (await telo(s, "pricina")) ?? "";
-    expect(pricina).toBe("Most se houpal přes mez kmitání: označený styčník mostovky nic nedrží. Zavěs ho do trojúhelníku z prutů nad mostovkou.");
+    // Nad mostovkou už něco stojí: rada neříká „zavěs do trojúhelníku“, ale s čím styčník spojit.
+    expect(pricina).toBe("Most se houpal přes mez kmitání: označený styčník mostovky nic nedrží. Spoj ho prutem se styčníkem nad mostovkou.");
     expect(slov(pricina)).toBeLessThanOrEqual(20);
     const [x, y] = (await telo(s, "oznaceny-misto"))!.split(";").map(Number) as [number, number];
     expect([2, 6]).toContain(x);
@@ -216,7 +251,7 @@ describe("náhled nápovědy po třetím nezdaru", () => {
     expect(await udaj(s, "vysledek-nahled").isVisible()).toBe(false);
     // Rada je hned pod větou pruhu: věta proto řekne jen, co se stalo, a rada jen, co s tím
     // (stejná slova dvakrát pod sebou zabrala na telefonu půl obrazovky).
-    expect(await udaj(s, "vysledek-veta").innerText()).toBe("Spadli všichni (36). Složil se vlastní vahou: styčník mostovky nic nedrží.");
+    expect(await udaj(s, "vysledek-veta").innerText()).toBe("Z 36 lidí nepřešel nikdo. Složil se vlastní vahou: styčník mostovky nic nedrží.");
     expect(await udaj(s, "vysledek-rada-text").innerText()).toMatch(/^Podruhé za sebou stejně: Zavěs ho shora do trojúhelníku z prutů nad mostovkou\./);
     await akce(s, "upravit").click();
     expect(await akce(s, "napoveda").getAttribute("data-tip")).toBe("napoveda");

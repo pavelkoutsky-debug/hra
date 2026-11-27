@@ -1553,6 +1553,13 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   line-height: 1;
 }
 
+/* Pod kolik se most musí dostat kvůli rozpočtové medaili (jen když ji nezískal kvůli ceně). */
+.medaile-pruh .medaile__cil {
+  font-size: 10px;
+  color: var(--varovani);
+  white-space: nowrap;
+}
+
 .medaile-pruh [data-ziskana="true"] {
   color: var(--varovani);
 }
