@@ -68,6 +68,12 @@ describe("výměna mostovky mimo cestu za levnější prut jedním klikem", () =
     const k = patra.trasy.find((t) => t.druh === "kolej")!.zacatek;
     const navrh = most([["kolejiste", [k.x, k.y], [k.x + 4, k.y]], ["kolejiste", [k.x + 4, k.y], [k.x + 4, k.y - 3]]], "6-04");
     expect(vymenaMostovky(navrh, patra)).toMatchObject({ pruty: [1], prvek: "ocel-lehka" });
+    // Silniční mostovka položená na kolej leží na cestě, jen jiného druhu: nepatří tam obyčejný
+    // prut, ale kolejiště, a výměna se proto nenabízí (nález recenze M19).
+    const silnicni = patra.povolenePrvky.find((id) => KATALOG[id].druh === "mostovka" && id !== "kolejiste")!;
+    const naKoleji = most([[silnicni, [k.x, k.y], [k.x + 4, k.y]]], "6-04");
+    expect(mostovkaMimoTrasy(naKoleji, patra)).toBe(1);
+    expect(vymenaMostovky(naKoleji, patra)).toBeNull();
   });
 });
 

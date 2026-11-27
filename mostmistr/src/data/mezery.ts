@@ -212,10 +212,19 @@ export interface VymenaMostovky {
  * žádný takový prut není, úroveň levnější prut nemá, nebo se most zvedá (mostovka za opěrou
  * tam bývá záměr: rameno křídla). Jestli výměnu dovolí pravidla úrovně (délka prvku, kotva
  * vyhrazená jinému prutu…), tady neřeší: to zkouší editor prut po prutu (`Editor.vymenPrvek`).
+ * Mostovka, která leží na cestě jiného druhu (silniční na koleji, kolejiště na silnici), se
+ * nevyměňuje: nepatří tam obyčejný prut, ale mostovka té cesty, a to říká kontrola návrhu.
  */
 export function vymenaMostovky(navrh: NavrhMostu, uroven: Uroven): VymenaMostovky | null {
   if (uroven.pohyb) return null;
-  const mimo = new Set(prutyMostovkyMimoTrasy(navrh, uroven));
+  const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+  const naCeste = (p: PrutNavrhu): boolean => {
+    const a = podleId.get(p.a);
+    const b = podleId.get(p.b);
+    return a !== undefined && b !== undefined && uroven.trasy.some((t) => bodNaTrase(t, a) && bodNaTrase(t, b));
+  };
+  const mimoTrasy = new Set(prutyMostovkyMimoTrasy(navrh, uroven));
+  const mimo = new Set(navrh.pruty.filter((p) => mimoTrasy.has(p.id) && !naCeste(p)).map((p) => p.id));
   if (mimo.size === 0) return null;
   // Nejlevnější prut úrovně; vymění se jen mostovka, která je dražší.
   const prvek = uroven.povolenePrvky

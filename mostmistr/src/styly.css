@@ -3829,6 +3829,7 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   }
 
   .tlacitko--znak,
+  .tlacitko--ikona,
   .paleta__krokovac .paleta__tlacitko {
     min-width: 44px;
   }

@@ -30,9 +30,9 @@
 //
 // Souhrn se počítá z „výtahů“ dnů (viz `denik/souhrn.ts`). Výtah dne je uložený pod klíčem
 // `vytah/<den>.json` i s klíčem poslední započtené dávky; další žádost přečte jen dávky za
-// ním. Platí to i pro dnešek. Po půlnoci server ověří, že před poslední započtenou dávkou
-// žádná nepřibyla (dávka, která se při ukládání opozdila, mohla zapadnout před už započtené):
-// když počty sedí, jen dočte zbytek dne, jinak den spočítá znovu od začátku. Pak se už jen čte.
+// ním. Platí to i pro dnešek; po půlnoci se den jednou spočítá znovu od začátku (dávka, která
+// se při ukládání opozdila, mohla zapadnout před už započtené, a průběžný souhrn dneška pozná
+// zdvojenou nebo předběhnutou dávku jen uvnitř toho, co četl najednou) a pak se už jen čte.
 // Dávky se čtou po částech a po každé se postup uloží; žádost jich přečte tolik, kolik stihne
 // za `CAS_NA_SOUHRN`, a co nestihne, dočte další žádost.
 
@@ -205,10 +205,7 @@ interface UlozenyVytah {
   posledni: string | null;
   /** Jsou započtené všechny dávky, které den měl, když se výtah naposledy počítal? */
   hotovo: boolean;
-  /**
-   * Výtah vznikal, dokud do dne ještě přibývaly dávky. Po uzávěrce dne se na něj naváže, jen
-   * když před jeho poslední dávkou žádná nepřibyla ani neubyla; jinak se den spočítá znovu.
-   */
+  /** Výtah vznikal, dokud do dne ještě přibývaly dávky; po uzávěrce dne se spočítá znovu. */
   otevreny: boolean;
 }
 
@@ -491,9 +488,11 @@ export const klicVytahu = (den: string): string => `vytah/${den}.json`;
  * jen dávky za ním, po částech, dokud má žádost čas (`rozpocet`); po každé části postup uloží,
  * takže žádost, kterou brána nebo úložiště přeruší, o hotovou práci nepřijde. Do dneška dávky
  * ještě přibývají: do uloženého výtahu se počítají jen dávky starší než `USAZENI` a ty novější
- * se k odpovědi dopočítají pokaždé znovu. Po uzávěrce dne se na výtah z doby, kdy den běžel,
- * naváže, jen když před jeho poslední dávkou stojí přesně tolik dávek, kolik jich započetl
- * (opožděná dávka mohla zapadnout před už započtené; pak se den spočítá od začátku).
+ * se k odpovědi dopočítají pokaždé znovu. Po uzávěrce dne se výtah jednou spočítá od začátku:
+ * opožděná dávka mohla zapadnout před už započtené a výtah skládaný za běhu po kouscích nepozná
+ * dávku přijatou dvakrát ani dávky sezení, které se předběhly, když mezi ně padla hranice dvou
+ * žádostí (`vytahDeniku` to umí jen mezi dávkami, které dostane najednou). Navázat na výtah
+ * z doby, kdy den běžel, by tu chybu nechalo v číslech dne natrvalo (nález recenze M19).
  * `ulozeny` je to, co o dni server ví.
  */
 async function vytahDne(
@@ -504,26 +503,23 @@ async function vytahDne(
 ): Promise<{ vytah: VytahDeniku; zpracovano: number; hotovo: boolean }> {
   const ted = p.ted().getTime();
   const uzavreny = den < denZ(new Date(ted - ODKLAD_UZAVERKY));
-  if (uzavreny && ulozeny !== null && !ulozeny.otevreny && ulozeny.hotovo) return ulozeny;
-  // Výtah uzavřeného dne u dne, který podle hodin ještě běží, není k ničemu (stává se jen v testech).
-  const znamy = ulozeny !== null && (uzavreny || ulozeny.otevreny) ? ulozeny : null;
+  // Na rozpracovaný výtah jde navázat jen ve stejném stavu dne, v jakém vznikl.
+  const zaklad = ulozeny !== null && ulozeny.otevreny === !uzavreny ? ulozeny : null;
+  if (uzavreny && zaklad?.hotovo) return zaklad;
   // Čas žádosti vypršel: den se ani nevypisuje (i výpis klíčů stojí čas) a vrátí se to, co
   // o něm server už ví.
-  if (dalsiCast(rozpocet) <= 0) return { vytah: znamy?.vytah ?? prazdnyVytah(), zpracovano: znamy?.zpracovano ?? 0, hotovo: false };
+  if (dalsiCast(rozpocet) <= 0) return { vytah: zaklad?.vytah ?? prazdnyVytah(), zpracovano: zaklad?.zpracovano ?? 0, hotovo: false };
 
   const klice = await kliceDne(p.sklad, den);
-  const za = (klic: string | null): number => {
-    if (klic === null) return 0;
-    const i = klice.findIndex((k) => k > klic);
-    return i < 0 ? klice.length : i;
-  };
-  // Na výtah z doby, kdy den běžel, jde po uzávěrce navázat, jen když se před jeho poslední
-  // dávkou nic nezměnilo: klíčů až po ni je přesně tolik, kolik jich započetl.
-  const zaklad = znamy !== null && (znamy.otevreny === !uzavreny || za(znamy.posledni) === znamy.zpracovano) ? znamy : null;
   let vytah = zaklad?.vytah ?? prazdnyVytah();
   let zpracovano = zaklad?.zpracovano ?? 0;
   let posledni = zaklad?.posledni ?? null;
-  let od = za(posledni);
+  let od = 0;
+  if (posledni !== null) {
+    const za = posledni;
+    const i = klice.findIndex((k) => k > za);
+    od = i < 0 ? klice.length : i;
+  }
   // Dnešní dávky mladší než `USAZENI` se do uloženého výtahu nepočítají: jiná, která přišla
   // ve stejnou chvíli, se mohla uložit o okamžik později a zařadit se před ně.
   const mez = uzavreny ? null : `denik/${den}/${String(ted - USAZENI).padStart(13, "0")}`;
@@ -554,8 +550,8 @@ async function vytahDne(
     }
   }
   const hotovo = od >= klice.length;
-  // Uzavřený den, ze kterého už nebylo co číst (výtah z doby, kdy běžel, ho měl celý), se
-  // jednou zapíše jako konečný; příště se nevypisuje.
+  // Uzavřený den, ze kterého už nebylo co číst (dávky za poslední započtenou mezitím zmizely),
+  // se zapíše jako konečný; příště se nevypisuje.
   if (uzavreny && hotovo && klice.length > 0 && !ulozenoHotove) await uloz(true);
   return { vytah: cerstve.length > 0 ? slucVytahy([vytah, ...cerstve]) : vytah, zpracovano: zpracovano + cerstvych, hotovo };
 }

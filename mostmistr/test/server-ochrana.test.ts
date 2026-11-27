@@ -383,7 +383,23 @@ describe("smazání dat hráče", () => {
     const p = await naplnene(450);
     const borisovych = (await p.sklad.klice("denik/")).filter((k) => k.includes(BORIS)).length;
     expect(borisovych).toBe(45);
+    // Souhrn spočítaný před smazáním: uložené výtahy dnů nesou i Annino číslo.
+    const souhrn = async (): Promise<number> => {
+      for (let kolo = 0; kolo < 20; kolo++) {
+        const odpoved = (await (await spravujVse(zadost("/api/sprava?co=souhrn&od=2026-11-01&do=2026-11-30", undefined, SPRAVCE), p)).json()) as { neuplne: boolean; souhrn: { hracu: number } };
+        if (!odpoved.neuplne) return odpoved.souhrn.hracu;
+      }
+      throw new Error("souhrn se nedopočítal");
+    };
+    const vytahy = async (): Promise<string> => JSON.stringify(await Promise.all((await p.sklad.klice("vytah/")).map((k) => p.sklad.cti(k))));
+    expect(await souhrn()).toBe(2);
+    expect(await p.sklad.klice("vytah/")).toHaveLength(3);
+    expect(await vytahy()).toContain(ANNA);
     const { smazano, kol } = await smazVse(p, ANNA);
+    // Výtahy dnů, ze kterých se mazalo, jsou pryč; souhrn se spočítá znovu už bez Anny.
+    expect(await p.sklad.klice("vytah/")).toEqual([]);
+    expect(await souhrn()).toBe(1);
+    expect(await vytahy()).not.toContain(ANNA);
     // 450 dávek a 2 zprávy; na jednu žádost nejvýš asi 400 smazání a čtení, takže víc kol.
     expect(smazano).toBe(452);
     expect(kol).toBeGreaterThan(1);

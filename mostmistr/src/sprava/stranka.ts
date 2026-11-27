@@ -523,7 +523,7 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
         // při stavbě přelezli rozpočet, a kolik z nich použilo výměnu mostovky. Starší souhrn to nemá.
         bunka(
           `${cislo(u.zkousek)}${u.zkousekOdmitnuto ? ` (+${u.zkousekOdmitnuto} nepuštěných, ${u.zkousekNadRozpocet ?? 0} rozpočet)` : ""}` +
-            (u.hracuNadRozpoctem ? ` · nad rozpočtem ${u.hracuNadRozpoctem} hráčů, výměna ${u.hracuSVymenou ?? 0}` : ""),
+            (u.hracuNadRozpoctem || u.hracuSVymenou ? ` · nad rozpočtem ${u.hracuNadRozpoctem ?? 0} hráčů, výměna ${u.hracuSVymenou ?? 0}` : ""),
           "cislo",
         ),
         bunka(cislo(u.pruchodu), "cislo"),

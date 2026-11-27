@@ -71,8 +71,9 @@ export function kodPriciny(p: PodkladyPriciny): KodPriciny | null {
   const prekrocenoPruhybem = v.pruhyb?.prekroceno ?? null;
   if (prekrocenoPruhybem !== null && (p.prvni === null || p.prvni.cas >= prekrocenoPruhybem)) return "pruhyb";
   // Most, který si lehl na zem, se o ni opřel dřív, než cokoli povolilo (opření se počítá jen
-  // do prvního porušení). Kmitání a sjetí z podpory, které přijdou potom, jsou jeho následek:
-  // podpěra bez kotvy na dně údolí most nese pérováním o terén a nechá ho propadnout.
+  // do prvního porušení). Kmitání a sjetí z podpory se u takového mostu berou jako následek,
+  // ať přišly kdykoli (pořadí v čase se tu nezkoumá; stejně rozhoduje pruh výsledku): podpěra
+  // bez kotvy na dně údolí most nese pérováním o terén a nechá ho propadnout.
   if (v.opreno && !v.mezera) return "opreno";
   const kmitani = p.kmitaniNadMezi && v.spadlo === 0;
   if (kmitani && v.prejelo === v.ucastniku && (v.komfort?.prekroceno ?? null) !== null) return "kmitani";

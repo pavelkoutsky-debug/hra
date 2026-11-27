@@ -130,6 +130,30 @@ describe("levnější prut v ruce po dokončení mostovky", () => {
     });
   }
 
+  it("1-02: díl, který mostovku dokončí a zároveň přetáhne rozpočet, nechá svítit upozornění s výměnou", async () => {
+    // Nález recenze M19: hlášení o přepnutí prvku upozornění na rozpočet přepsalo a po šesti
+    // sekundách nezbylo nic, ani částka, ani tlačítko.
+    const { kontext, s } = await novyKontext();
+    await otevri(s, "1-02");
+    await tahni(s, [0, 0], [8, 0]);
+    await expect.poll(() => telo(s, "pruty")).toBe("2");
+    // Podpěry a horní pás z mostovky (hráč ji má pořád v ruce): most je těsně pod rozpočtem.
+    const tahy: [[number, number], [number, number]][] = [[[2, -3], [4, 0]], [[4, 0], [4, 3]], [[8, 0], [8, 3]], [[4, 3], [8, 3]]];
+    for (const [od, po] of tahy) await tahni(s, od, po);
+    await expect.poll(() => telo(s, "pruty")).toBe("6");
+    expect(await stavRozpoctu(s)).not.toBe("nad");
+    await tahni(s, [8, 0], [12, 0]);
+    await expect.poll(() => stavRozpoctu(s)).toBe("nad");
+    // Prvek se přepnul (tlačítko v paletě to ukazuje), ale slovo má rozpočet.
+    expect(await telo(s, "prvek-prepnut")).toBe("drevo-lehke");
+    expect(bezMezer(await hlaseni(s).innerText())).toMatch(/^O [\d ]+ Kč nad rozpočtem\. Vyměnit za „Lehký trám“$/);
+    // Hlášení s tlačítkem samo nemizí.
+    await s.waitForTimeout(7000);
+    expect(await vymenit(s).isVisible()).toBe(true);
+    expect(bezMezer(await hlaseni(s).innerText())).toMatch(/nad rozpočtem/);
+    await kontext.close();
+  });
+
   it("most, který se zvedá (7-01): po dokončení mostovky se nic nepřepíná", async () => {
     const { kontext, s } = await novyKontext();
     await otevri(s, "7-01");
@@ -186,12 +210,24 @@ describe("rozpočet při stavbě a výměna mostovky jedním klikem", () => {
     await expect.poll(() => stavRozpoctu(s)).toBe("nad");
     expect(bezMezer(await s.locator('[data-udaj="cena"]').innerText())).toBe("112 100 Kč");
     expect(await vymenit(s).count()).toBe(0);
+    // Věta „Vyměněno… Most stojí 100 400 Kč“ po kroku Zpět už neplatí a nesvítí.
+    expect(await hlaseni(s).innerText()).toBe("");
 
     // Zkouška se nepustí a hlášení nabídne totéž tlačítko.
     await s.locator(PLATNO).focus();
     await s.keyboard.press("Space");
     expect(await telo(s, "rezim")).toBe("stavba");
     expect(bezMezer(await hlaseni(s).innerText())).toBe("Zkouška nejde: most je o 2 100 Kč nad rozpočtem. Mostovka mimo cestu je zbytečně drahá. Vyměnit za „Lehký trám“");
+    // Hlášení s tlačítkem samo nemizí; zmizet musí, když se most do rozpočtu vrátí jinak
+    // (krok Zpět ubere svislici z mostovky), jinak by svítilo nad mostem, který zkoušku pustí.
+    await s.locator('[data-akce="zpet"]').first().click();
+    await expect.poll(() => stavRozpoctu(s)).not.toBe("nad");
+    expect(await hlaseni(s).innerText()).toBe("");
+    await s.locator('[data-akce="znovu"]').first().click();
+    await expect.poll(() => stavRozpoctu(s)).toBe("nad");
+    await s.locator(PLATNO).focus();
+    await s.keyboard.press("Space");
+    await vymenit(s).waitFor();
     await vymenit(s).click();
     await expect.poll(() => stavRozpoctu(s)).not.toBe("nad");
     // Po výměně se zkouška pustí a most autora projde.
