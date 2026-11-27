@@ -370,6 +370,8 @@ describe("most, který se složí vlastní vahou", () => {
     // Záběr patří místu, kde se most skládá.
     await stranka.locator('body[data-zaber="bezi"]').waitFor({ timeout: 60_000 });
     expect(await udaj("hlaseni")).toContain("styčník mostovky nic nedrží");
+    // Věta ve chvíli pádu říká jen, co se děje; rada patří do výsledku.
+    expect(await udaj("hlaseni")).not.toContain("Zavěs");
     await dopocitej();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
     // Pruh řekne i co s tím; podpírat zespodu tu není z čeho (pod mostem kotva není a o zem se

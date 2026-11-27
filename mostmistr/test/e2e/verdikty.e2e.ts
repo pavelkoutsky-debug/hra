@@ -214,6 +214,10 @@ describe("náhled nápovědy po třetím nezdaru", () => {
     expect(await udaj(s, "vysledek-rada").isVisible()).toBe(true);
     expect(await akce(s, "rada-napoveda").innerText()).toBe("Ukázat skicu");
     expect(await udaj(s, "vysledek-nahled").isVisible()).toBe(false);
+    // Rada je hned pod větou pruhu: věta proto řekne jen, co se stalo, a rada jen, co s tím
+    // (stejná slova dvakrát pod sebou zabrala na telefonu půl obrazovky).
+    expect(await udaj(s, "vysledek-veta").innerText()).toBe("Spadli všichni (36). Složil se vlastní vahou: styčník mostovky nic nedrží.");
+    expect(await udaj(s, "vysledek-rada-text").innerText()).toMatch(/^Podruhé za sebou stejně: Zavěs ho shora do trojúhelníku z prutů nad mostovkou\./);
     await akce(s, "upravit").click();
     expect(await akce(s, "napoveda").getAttribute("data-tip")).toBe("napoveda");
     await s.screenshot({ path: `${SLOZKA}/nahled-paleta.png` });

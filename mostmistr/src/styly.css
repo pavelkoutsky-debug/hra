@@ -3421,6 +3421,22 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 }
 
 /*
+ * Nízké okno (notebook 1366 × 768, okno 1280 × 720): výkresy ukázky nižší a řádky sbalených částí
+ * těsnější, ať se okno zadání vejde bez posouvání i s ukázkou a upozorněním na záznam hraní.
+ */
+@media (max-height: 800px) {
+  .ukazka__strana canvas {
+    aspect-ratio: 5 / 2;
+  }
+}
+
+@media (max-height: 800px) and (pointer: fine) {
+  .okno__casti > .okno__vice > summary {
+    padding-block: 5px;
+  }
+}
+
+/*
  * Nastavení toho, co je vybrané (napínák lana, svar, závaží, tlumič), drží u spodního okraje
  * palety: v nízkém okně je paleta delší než obrazovka a nastavení by jinak zůstalo pod ní.
  */
@@ -3832,6 +3848,14 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   .tlacitko--ikona,
   .paleta__krokovac .paleta__tlacitko {
     min-width: 44px;
+  }
+
+  /* Odkaz „Více“ v upozornění na záznam hraní: cíl pro prst, ne dvě slova drobného textu. */
+  .zaznam [data-akce="soukromi"] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 8px;
   }
 
   .legenda__prepinac {

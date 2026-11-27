@@ -208,9 +208,12 @@ describe("kmitání při zkoušce", () => {
     expect(await telo("kmitani-rytmus")).toBe("utvar;2;3");
     expect(Number(await telo("kmitani-frekvence"))).toBeGreaterThan(5.8);
     expect(Number(await telo("kmitani-frekvence"))).toBeLessThan(6.2);
-    expect(bezMezer((await telo("pricina")) ?? "")).toMatch(/^Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\.$/);
+    // Úroveň nemá tlumič ani závaží: pruh k příčině přidá, co pomůže s tím, co hráč má (verze 0.25.0).
+    expect(bezMezer((await telo("pricina")) ?? "")).toMatch(
+      /^Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\. Pomohl by tužší most \(vyšší příhrada, silnější pruty\)\.$/,
+    );
     expect(bezMezer(await stranka.locator('[data-udaj="vysledek-veta"]').evaluate((uzel) => uzel.textContent ?? ""))).toMatch(
-      /^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\.$/,
+      /^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\. Pomohl by tužší most \(vyšší příhrada, silnější pruty\)\.$/,
     );
     await rozbalVysledek();
     const shrnuti = bezMezer(await udaj("vysledek-shrnuti"));

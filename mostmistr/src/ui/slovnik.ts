@@ -1113,7 +1113,7 @@ const CS = {
   "vyzva.stupen.3": "zlato",
   "vyzva.nezmereno": "zatím nezměřeno: projdi zkouškou",
   "vyzva.zlom.nezkouseno": "zatím nezměřeno: pusť Do zlomu na mostě, který prošel",
-  "vyzva.zlom.nezkouseno.vice": "zatím nezměřeno: pusť Do zlomu (v paletě pod Více, nebo klávesa D) na mostě, který prošel",
+  "vyzva.zlom.nezkouseno.vice": "zatím nezměřeno: pusť Do zlomu (v paletě pod Více) na mostě, který prošel",
   "vyzva.zlom.zastaralo": "starý rekord se měřil starší verzí výpočtu: pusť Do zlomu znovu",
   "vyzva.zlom.hodnota": "{tun} t na 100 000 Kč",
   "vyzva.rekord": "rekord {rekord} (tenhle most {tento})",

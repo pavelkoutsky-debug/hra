@@ -404,6 +404,9 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await expect.poll(async () => ((await bublina.boundingBox())?.x ?? -1) >= 0).toBe(true);
     const bt = (await bublina.boundingBox())!;
     expect(bt.x + bt.width).toBeLessThanOrEqual(390);
+    // Na telefonu leží až pod celou lištou: nezakrývá Zpět a Smazat v jejím druhém řádku.
+    const listaTelefonu = (await s.locator("#obrazovka-uroven .lista").boundingBox())!;
+    expect(bt.y).toBeGreaterThanOrEqual(listaTelefonu.y + listaTelefonu.height);
     await nepretika(s);
     await s.screenshot({ path: `${SLOZKA}/zacatek-vyzva-zkousky-telefon.png` });
     await s.setViewportSize({ width: 1280, height: 720 });
@@ -437,6 +440,10 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await expect.poll(() => s.locator(".rozpocet").getAttribute("data-stav")).not.toBe("nad");
     expect(await telo(s, "pruty")).toBe("6");
     expect((await hlaseni.innerText()).replace(/[\u202f\u00a0]/g, " ")).toMatch(/^Vyměněno prutů: 4\. Most stojí 3\d \d{3} Kč\.$/);
+    // Most se do rozpočtu vešel: Zkouška je zase zvýrazněná, ale bublina se nevrací. Most už není
+    // jen mostovka, hráč staví dál a text by mu překážel (na telefonu přes tlačítka lišty).
+    await expect.poll(() => telo(s, "vyzva-zkousky")).toBe("ano");
+    expect(await bublina.isVisible()).toBe(false);
     expect((await pockejNa(await cisloHrace(s), "rozpocet.vymena")).data).toMatchObject({ prutu: 4, zustalo: 0, kde: "zkouska" });
     expect((await pockejNa(await cisloHrace(s), "rozpocet.prekrocen")).data!.mimoTrasu).toBeGreaterThan(0);
     // Krok Zpět výměnu vrátí celou; hlášení o překročení se po kroku Zpět neopakuje.
@@ -626,6 +633,15 @@ describe("paleta první kapitoly", () => {
     await s.screenshot({ path: `${SLOZKA}/paleta-1-01-telefon.png` });
     await vice(s).tap();
     expect(await vice(s).getAttribute("aria-expanded")).toBe("true");
+    // Paleta je na telefonu nízká: rozbalené nástroje se posunou do zorného pole samy (jinak se
+    // po ťuknutí změnila jen šipka u tlačítka a obsah zůstal pod okrajem).
+    const paleta = (await s.locator("#obrazovka-uroven .paleta").boundingBox())!;
+    await expect
+      .poll(async () => {
+        const zrcadlit = await vPalete(s, '[data-akce="zrcadlit"]').boundingBox();
+        return zrcadlit !== null && zrcadlit.y >= paleta.y && zrcadlit.y + zrcadlit.height <= Math.min(844, paleta.y + paleta.height);
+      })
+      .toBe(true);
     await vPalete(s, '[data-akce="import"]').scrollIntoViewIfNeeded();
     expect(await vPalete(s, '[data-akce="import"]').isVisible()).toBe(true);
     await nepretika(s);

@@ -925,7 +925,8 @@ export function spustUroven(
       else if (nalez.slozeni) {
         // Po radě u výsledku (podruhé stejné složení) ji značka opakuje, dokud se most nezmění.
         const rada = radaNaVykresu && radaNaVykresu.navrh === editor.navrh && radaNaVykresu.druh.startsWith("slozeni-") ? ` ${radaNaVykresu.rada}` : "";
-        nakresliSlozeni(ctx, kamera, rozmer, nalez.slozeni.misto, t("slozeni.nadpis"), `${kratceOSlozeni(nalez.slozeni)}${rada ? "." : ""}${rada}`);
+        // Kde se mostovka nedá podepřít zespodu, opravuje se stavbou nad ní: popisek patří pod most.
+        nakresliSlozeni(ctx, kamera, rozmer, nalez.slozeni.misto, t("slozeni.nadpis"), `${kratceOSlozeni(nalez.slozeni)}${rada ? "." : ""}${rada}`, !lzePodepritZespodu());
       }
       else if (nalez.volny) {
         nakresliSlozeni(ctx, kamera, rozmer, nalez.volny.misto, t("volny.nadpis"), t("volny.kratce", { prut: nalez.volny.prut + 1 }));
@@ -1019,6 +1020,12 @@ export function spustUroven(
     uloziste.paletaVice = viceOtevreno;
     zapis("paleta.vice", { otevreno: viceOtevreno });
     obnovPaletuVice();
+    // Nízká paleta (telefon): rozbalené nástroje by zůstaly pod jejím okrajem a ťuknutí by
+    // vypadalo, že nic neudělalo. Tlačítko se posune nahoru a rozbalené je vidět pod ním.
+    if (viceOtevreno && vedlejsiNastroje.getBoundingClientRect().bottom > paleta.getBoundingClientRect().bottom) {
+      const omezeno = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      tlacitkoVice.scrollIntoView({ block: "start", behavior: omezeno ? "auto" : "smooth" });
+    }
   }
 
   /**
@@ -1054,14 +1061,20 @@ export function spustUroven(
     tlacitko.classList.toggle("tlacitko--vyzva", ukazat);
     if (ukazat) document.body.dataset.vyzvaZkousky = "ano";
     else delete document.body.dataset.vyzvaZkousky;
-    bublina.hidden = !ukazat || tlacitko.offsetParent === null;
+    // Text patří chvíli, kdy je hotová jen mostovka. Kdo staví dál, výzvu už četl: tlačítko
+    // zůstává zvýrazněné, ale bublina mu nepřekáží.
+    const jenMostovka = editor.navrh.pruty.every((p) => KATALOG[p.prvek].druh === "mostovka");
+    bublina.hidden = !ukazat || !jenMostovka || tlacitko.offsetParent === null;
     if (bublina.hidden) return;
     // Bublina visí pod tlačítkem; lišta má skrytý přesah, proto je položená nad stránkou.
+    // Na telefonu má lišta pod Zkouškou druhý řádek (Zpět, Smazat): bublina leží až pod ním.
     const misto = tlacitko.getBoundingClientRect();
+    const lista = tlacitko.closest(".lista")?.getBoundingClientRect() ?? misto;
     const sirka = bublina.offsetWidth;
     const vlevo = Math.max(8, Math.min(window.innerWidth - sirka - 8, misto.left + misto.width / 2 - sirka / 2));
     bublina.style.left = `${Math.round(vlevo)}px`;
-    bublina.style.top = `${Math.round(misto.bottom + 10)}px`;
+    const dvaRadky = lista.height > 1.8 * misto.height;
+    bublina.style.top = `${Math.round((dvaRadky ? lista.bottom : misto.bottom) + 10)}px`;
     bublina.style.setProperty("--sipka", `${Math.round(misto.left + misto.width / 2 - vlevo)}px`);
   }
 
@@ -4624,8 +4637,8 @@ export function spustUroven(
   function coSeStalo(b: Beh, n: Nezdar): string {
     if (n.druh === "kmitani") return t("vysledek.rada.kmitani");
     if (n.druh === "nedopnuto") return t("vysledek.rada.nedopnuto");
-    const s = n.druh.startsWith("slozeni-") ? slozeniBehu(b) : null;
-    if (s) return `${kratceOSlozeni(s)}.`;
+    // Složení: pruh nad radou říká důvod stejnými slovy, rada jde rovnou k věci.
+    if (n.druh.startsWith("slozeni-")) return "";
     const prvni = prvniPoruseni(b);
     if (prvni?.druh !== "poruseni" || n.prvek === null) return "";
     return `${nazevPrvku(n.prvek).toLocaleLowerCase(aktualniJazyk())}, ${t(nazevZpusobu(prvni.zpusob))}.`;
@@ -4762,7 +4775,9 @@ export function spustUroven(
         if (prehravani.cas > ZABER.okamzikSlozeni + ZABER.drzeni) return hotovo();
         const popis = `${t("slozeni.nadpis.pad")}: ${kratceOSlozeni(slozeni)}`;
         const zaber: Zaber = { okamzik: ZABER.okamzikSlozeni, misto: slozeni.misto, rozsah: 5, cil: { druh: "stycnik", stycnik: slozeni.stycnik } };
-        return priprav(zaber, popis, vetaOSlozeni(slozeni), null, `slozeni:${slozeni.stycnik}`);
+        // Věta ve chvíli pádu říká jen, co se děje; co s tím, řekne pruh výsledku (a celé znění
+        // podrobnosti). S radou měla na telefonu sedm řádků přes most, který se právě skládal.
+        return priprav(zaber, popis, t(`slozeni.veta.${slozeni.duvod}`), null, `slozeni:${slozeni.stycnik}`);
       }
     }
     const u = prvniPorucha(b.udalosti);
@@ -4965,8 +4980,8 @@ export function spustUroven(
     return vety.join(" ");
   }
 
-  /** Totéž jednou krátkou větou do pruhu výsledku. */
-  function kratceOKmitani(k: KmitaniBehu, zrychleni: number, b: Beh): string {
+  /** Totéž jednou krátkou větou do pruhu výsledku; `poradit` k ní přidá, co pomůže (viz níž). */
+  function kratceOKmitani(k: KmitaniBehu, zrychleni: number, b: Beh, poradit = true): string {
     const hodnoty = { a: cislo(zrychleni, 2), mez: cislo(MEZ_KMITANI, 1) };
     const slovy = kdoASlozka(k.rozhodla);
     // Číslo je největší kmitání celé zkoušky; když ho způsobil někdo jiný než ten, kdo mez
@@ -4977,7 +4992,7 @@ export function spustUroven(
     // co pomůže s tím, co má. Jen to, co spočítal rozbor (`radaKeKmitani`); kde tužší ani těžší
     // most nepomůže, nabídne se vyzkoušet jiný tvar (to rozbor nespočítal a věta to tak říká).
     const bezNastroju = uroven.nejvetsiTlumic === 0 && uroven.nejvetsiZavazi === 0 && !uroven.povolenePrvky.some((id) => KATALOG[id].druh === "tlumic");
-    const r = bezNastroju ? rozborBehu(b) : null;
+    const r = bezNastroju && poradit ? rozborBehu(b) : null;
     let rada = r ? radaKeKmitani(r, true) : "";
     if (rada === t("kmitani.rada.nic")) rada = `${rada} ${t("kmitani.rada.jinak")}`;
     return rada ? `${veta} ${rada}` : veta;
@@ -5399,6 +5414,11 @@ export function spustUroven(
     const komfort = vysledek.komfort;
     // Co most rozhoupalo: frekvence ze záznamu, rytmus lidí a nejbližší vlastní frekvence mostu.
     const kmitani = kmitaniBehu(b);
+    /**
+     * Pod pruhem bude rada po opakovaném nezdaru: věta pruhu pak řekne jen, co se stalo, a radu
+     * nechá jí (stejná rada dvakrát pod sebou zabrala na telefonu půl obrazovky).
+     */
+    const radaPodPruhem = !jePokus && (b.rada ?? null) !== null && radaKNezdaru(b, b.rada!) !== "";
     /** Krátká věta o kmitání do pruhu výsledku; jen když na něm most neprošel. */
     let pricinaKmitanim: string | null = null;
     /**
@@ -5418,8 +5438,8 @@ export function spustUroven(
         if (houpani) vety.push([t("vysledek.houpe"), radaKSlozeni(houpani)].filter((v) => v !== "").join(" "));
         vety.push(vetaOKmitani(kmitani, b));
         pricinaKmitanim = houpani
-          ? [t(`vysledek.kratce.houpe.${houpani.duvod}`), kratkaRadaKSlozeni(houpani)].filter((v) => v !== "").join(" ")
-          : kratceOKmitani(kmitani, komfort.zrychleni, b);
+          ? [t(`vysledek.kratce.houpe.${houpani.duvod}`), radaPodPruhem ? "" : kratkaRadaKSlozeni(houpani)].filter((v) => v !== "").join(" ")
+          : kratceOKmitani(kmitani, komfort.zrychleni, b, !radaPodPruhem);
       }
     }
     // Háčky pro automat: frekvence největšího kmitání a kdo most rozhoupal (druh;násobek;rytmus).
@@ -5638,7 +5658,10 @@ export function spustUroven(
     const prvni = prvniPoruseni(b);
     // U mostu, který se složil vlastní vahou, je první porušení až následek: věta by vedla jinam.
     const slozilSe = vysledek.bezRovnovahy && !vysledek.pruchod && slozeniBehu(b) !== null;
-    const ukazatPrvni = prvni !== null && !slozilSe;
+    // Totéž u mostu, který si lehl na zem: že potom sjel z podpory, je následek, a věta „jako
+    // první sjel konec mostu“ by pod verdiktem o opření tvrdila jinou příčinu (nález recenze M19).
+    const sjelPoOpreni = vysledek.opreno && !vysledek.pruchod && prvni?.druh === "sjeti";
+    const ukazatPrvni = prvni !== null && !slozilSe && !sjelPoOpreni;
     const polePrvniho = udaj("vysledek-prvni");
     polePrvniho.hidden = !ukazatPrvni;
     // K větě s čísly patří rada, co s tím (ne u mostu, který přesto obstál, a u lana přetrženého napínákem).
@@ -5694,7 +5717,7 @@ export function spustUroven(
     b.oznacenyStycnik = null;
     if (slozeniPruhu && !vysledek.pruchod) {
       // Co se stalo a co s tím; styčník, o kterém je řeč, má na výkresu kroužek.
-      pricina = [t("vysledek.kratce.slozeni", { duvod: kratceOSlozeni(slozeniPruhu) }), kratkaRadaKSlozeni(slozeniPruhu)].filter((v) => v !== "").join(" ");
+      pricina = [t("vysledek.kratce.slozeni", { duvod: kratceOSlozeni(slozeniPruhu) }), radaPodPruhem ? "" : kratkaRadaKSlozeni(slozeniPruhu)].filter((v) => v !== "").join(" ");
       b.oznacenyStycnik = slozeniPruhu.stycnik;
     } else if (!vysledek.pruchod && !jePokus && !vysledek.rozpad) {
       const narazLodi = b.udalosti.find((u) => u.druh === "lod" && u.stav === "narazila");

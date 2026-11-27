@@ -1145,7 +1145,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vyzva.stupen.3": "gold",
   "vyzva.nezmereno": "not measured yet: pass the test",
   "vyzva.zlom.nezkouseno": "not measured yet: run To failure on a bridge that has passed",
-  "vyzva.zlom.nezkouseno.vice": "not measured yet: run To failure (in the palette under More, or key D) on a bridge that has passed",
+  "vyzva.zlom.nezkouseno.vice": "not measured yet: run To failure (in the palette under More) on a bridge that has passed",
   "vyzva.zlom.zastaralo": "your old record was measured with an older version of the calculation: run To failure again",
   "vyzva.zlom.hodnota": "{tun} t per 100,000 Kč",
   "vyzva.rekord": "record {rekord} (this bridge {tento})",
