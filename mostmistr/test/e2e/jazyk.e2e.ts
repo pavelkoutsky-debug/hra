@@ -128,10 +128,11 @@ describe("jazyk hry", () => {
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await ceskeTexty(stranka)).toEqual([]);
-    // Vysvětlení, seznam prvků a výzvy jsou v zadání sbalené: rozbalené se kontrolují taky.
+    // Medaile, provoz, seznam prvků, výzvy, vysvětlení a ovládání jsou v zadání sbalené:
+    // rozbalené se kontrolují taky.
     const souhrny = stranka.locator("#okno-zadani details > summary");
     const sbalenych = await souhrny.count();
-    expect(sbalenych).toBe(3);
+    expect(sbalenych).toBe(6);
     for (let i = 0; i < sbalenych; i++) {
       const souhrn = souhrny.nth(i);
       expect(await souhrn.evaluate((prvek) => (prvek.parentElement as HTMLDetailsElement).open)).toBe(false);

@@ -55,11 +55,15 @@
         <p class="prehled__list"><a href="?list" data-akce="otevrit-list" data-udaj="prehled-list"></a></p>
         <div class="zaznam" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
-          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+          <a href="?soukromi" data-akce="soukromi" data-text="denik.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
         <div class="prehled__kapitoly"></div>
+        <!-- Nový hráč vidí jen první kapitolu (body[data-prehled-rozsah="uvod"]); tohle odkryje všechno. -->
+        <p class="prehled__cela">
+          <button type="button" class="odkaz-tlacitko" data-akce="prehled-cela" data-text="prehled.celaKampan"></button>
+        </p>
         <!-- Havarijní komise: případy mimo kampaň (cizí most, který spadl, a oprava pár změnami). -->
         <section class="komise" data-udaj="prehled-komise" hidden></section>
         <!-- Odemknutí všech úrovní je pomůcka pro zkoušení hry: ukáže se jen s ?vyvoj=1 v adrese. -->
@@ -166,7 +170,7 @@
         <!-- Kdo přijde odkazem, zadání neotevírá: upozornění na záznam hraní má vidět tady. -->
         <div class="zaznam zaznam--host" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
-          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+          <a href="?soukromi" data-akce="soukromi" data-text="denik.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
@@ -354,7 +358,7 @@
           <!-- Upozornění o záznamu hraní je až pod nástroji: hráč ho uvidí, ale nezabírá mu místo na stavbu. -->
           <div class="zaznam zaznam--vPalete" data-udaj="zaznam-upozorneni" role="note" hidden>
             <span data-text="denik.upozorneni"></span>
-          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+          <a href="?soukromi" data-akce="soukromi" data-text="denik.vice"></a>
             <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
             <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
           </div>
@@ -785,56 +789,60 @@
       <form method="dialog">
         <p class="okno__nadtitul" data-udaj="zadani-list"></p>
         <h2 data-udaj="zadani-nazev"></h2>
-        <div class="okno__telo">
-          <div class="okno__hlavni">
-            <p class="okno__zadani" data-udaj="zadani-text"></p>
-            <p class="okno__zkouska" data-udaj="zadani-zkouska" data-text="zadani.zkouska.bez" hidden></p>
-            <section class="ukazka" data-udaj="ukazka" hidden>
-              <h3 data-text="ukazka.nadpis"></h3>
-              <div class="ukazka__strany">
-                <figure class="ukazka__strana" data-strana="a">
-                  <canvas></canvas>
-                  <figcaption><span data-udaj="ukazka-a"></span><output data-stav></output></figcaption>
-                </figure>
-                <figure class="ukazka__strana" data-strana="b">
-                  <canvas></canvas>
-                  <figcaption><span data-udaj="ukazka-b"></span><output data-stav></output></figcaption>
-                </figure>
-              </div>
-              <p class="ukazka__popis"><span data-udaj="ukazka-popis"></span> <span class="ukazka__poznamka" data-poznamka></span></p>
-            </section>
-            <!-- Zadání jsou dvě věty a ukázka; vysvětlení a souvislosti si hráč rozbalí. -->
-            <details class="okno__vice" data-udaj="zadani-vice-obal">
-              <summary data-text="zadani.vice"></summary>
-              <p class="okno__zadani okno__zadani--vice" data-udaj="zadani-vice" hidden></p>
-              <p class="okno__skutecnost" data-udaj="zadani-skutecnost" hidden></p>
-            </details>
+        <p class="okno__zadani" data-udaj="zadani-text"></p>
+        <p class="okno__zkouska" data-udaj="zadani-zkouska" data-text="zadani.zkouska.bez" hidden></p>
+        <section class="ukazka" data-udaj="ukazka" hidden>
+          <h3 data-text="ukazka.nadpis"></h3>
+          <div class="ukazka__strany">
+            <figure class="ukazka__strana" data-strana="a">
+              <canvas></canvas>
+              <figcaption><span data-udaj="ukazka-a"></span><output data-stav></output></figcaption>
+            </figure>
+            <figure class="ukazka__strana" data-strana="b">
+              <canvas></canvas>
+              <figcaption><span data-udaj="ukazka-b"></span><output data-stav></output></figcaption>
+            </figure>
           </div>
-          <div class="okno__vedlejsi">
-            <!-- Medaile jsou cíl úrovně: stojí nahoře, ať nejsou v dlouhém zadání pod okrajem okna. -->
-            <h3 data-text="zadani.medaile" data-jen-kampan></h3>
-            <ul class="medaile" data-udaj="zadani-medaile" data-jen-kampan></ul>
-            <h3 data-text="zadani.provoz"></h3>
+          <p class="ukazka__popis"><span data-udaj="ukazka-popis"></span> <span class="ukazka__poznamka" data-poznamka></span></p>
+        </section>
+        <!--
+          Po otevření je vidět jen úkol a ukázka. Všechno ostatní je sbalené (výchozí stav
+          zavřeno ve všech úrovních); rozbalení zapíše deník s kódem části (data-cast).
+        -->
+        <div class="okno__casti">
+          <details class="okno__vice" data-cast="zadani-medaile" data-jen-kampan>
+            <summary><span data-text="zadani.medaile"></span> <span class="okno__souhrn" data-udaj="zadani-medaile-souhrn"></span></summary>
+            <ul class="medaile" data-udaj="zadani-medaile"></ul>
+          </details>
+          <details class="okno__vice" data-cast="zadani-provoz">
+            <summary data-text="zadani.provoz"></summary>
             <ul class="okno__seznam" data-udaj="zadani-provoz"></ul>
-            <!-- Prvky a ceny ukazuje i paleta, výzvy jsou až pro projitou úroveň: obojí sbalené. -->
-            <details class="okno__vice" data-cast="zadani-stavba">
-              <summary><span data-text="zadani.stavba"></span> <span class="okno__souhrn" data-udaj="zadani-stavba-souhrn"></span></summary>
-              <ul class="okno__seznam" data-udaj="zadani-stavba"></ul>
-            </details>
-            <details class="okno__vice" data-cast="zadani-vyzvy">
-              <summary data-text="vyzvy.nadpis"></summary>
-              <p class="okno__poznamka" data-text="vyzvy.uvod"></p>
-              <ul class="okno__seznam" data-udaj="zadani-vyzvy"></ul>
-            </details>
-          </div>
+          </details>
+          <details class="okno__vice" data-cast="zadani-stavba">
+            <summary><span data-text="zadani.stavba"></span> <span class="okno__souhrn" data-udaj="zadani-stavba-souhrn"></span></summary>
+            <ul class="okno__seznam" data-udaj="zadani-stavba"></ul>
+          </details>
+          <details class="okno__vice" data-cast="zadani-vyzvy">
+            <summary data-text="vyzvy.nadpis"></summary>
+            <p class="okno__poznamka" data-text="vyzvy.uvod"></p>
+            <ul class="okno__seznam" data-udaj="zadani-vyzvy"></ul>
+          </details>
+          <details class="okno__vice" data-cast="zadani-vice" data-udaj="zadani-vice-obal">
+            <summary data-text="zadani.vice"></summary>
+            <p class="okno__zadani okno__zadani--vice" data-udaj="zadani-vice" hidden></p>
+            <p class="okno__skutecnost" data-udaj="zadani-skutecnost" hidden></p>
+          </details>
+          <details class="okno__vice" data-cast="zadani-ovladani" data-udaj="zadani-ovladani-obal">
+            <summary data-text="zadani.ovladani.nadpis"></summary>
+            <p class="okno__napoveda" data-udaj="zadani-ovladani" data-text="zadani.ovladani"></p>
+          </details>
         </div>
         <div class="zaznam zaznam--vOkne" data-udaj="zaznam-upozorneni" role="note" hidden>
           <span data-text="denik.upozorneni"></span>
-          <a href="?soukromi" data-akce="soukromi" data-text="soukromi.vice"></a>
+          <a href="?soukromi" data-akce="soukromi" data-text="denik.vice"></a>
           <button type="button" class="tlacitko" data-akce="zaznam-rozumim" data-text="denik.rozumim"></button>
           <button type="button" class="tlacitko" data-akce="zaznam-vypnout" data-text="denik.vypnout"></button>
         </div>
-        <p class="okno__napoveda" data-udaj="zadani-ovladani" data-text="zadani.ovladani"></p>
         <div class="okno__tlacitka">
           <button class="tlacitko tlacitko--hlavni" value="zavrit" data-text="zadani.zacit"></button>
         </div>

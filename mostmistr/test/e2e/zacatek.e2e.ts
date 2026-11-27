@@ -134,6 +134,148 @@ afterAll(async () => {
   expect(chyby).toEqual([]);
 });
 
+/** Slova viditelná v prvku (jako je čte hráč). */
+async function slov(s: Page, volic: string): Promise<number> {
+  return (await s.locator(volic).innerText()).split(/\s+/).filter((slovo) => /[\p{L}\p{N}]/u.test(slovo)).length;
+}
+
+describe("přehled nového hráče", () => {
+  it("vidí jen tlačítko, upozornění na záznam a první kapitolu; „Celá kampaň“ odkryje všechno a deník to ví", async () => {
+    const { kontext, s } = await novyKontext();
+    await s.goto(adresa);
+    await s.locator(".karta").first().waitFor();
+    expect(await telo(s, "prehled-rozsah")).toBe("uvod");
+    expect(await start(s).isVisible()).toBe(true);
+    const upozorneni = s.locator('#obrazovka-prehled [data-udaj="zaznam-upozorneni"]');
+    expect(await upozorneni.isVisible()).toBe(true);
+    expect(await upozorneni.locator("span").innerText()).toBe("Hra posílá autorům záznam hraní, bez jména a e-mailu.");
+    expect(await upozorneni.locator('[data-akce="soukromi"]').innerText()).toBe("Více");
+    expect(await upozorneni.locator('[data-akce="zaznam-vypnout"]').innerText()).toBe("Vypnout");
+    // Jeden řádek: na počítači nevyšší než tlačítko s okrajem.
+    expect((await upozorneni.boundingBox())!.height).toBeLessThan(50);
+    // Z kapitol je vidět jen první; postup, ostatní kapitoly, komise a volby jsou schované.
+    const viditelneKapitoly = await s.locator("#obrazovka-prehled .kapitola").evaluateAll((k) => k.filter((e) => (e as HTMLElement).offsetParent !== null).length);
+    expect(viditelneKapitoly).toBe(1);
+    expect(await s.locator('.karta[data-uroven="1-01"]').isVisible()).toBe(true);
+    expect(await s.locator('.karta[data-uroven="1-05"]').isVisible()).toBe(true);
+    expect(await s.locator('.karta[data-uroven="2-01"]').isVisible()).toBe(false);
+    expect(await s.locator('[data-udaj="prehled-postup"]').isVisible()).toBe(false);
+    expect(await s.locator('[data-udaj="prehled-komise"]').isVisible()).toBe(false);
+    expect(await s.locator("label.prehled__volba:has(#zaznam-hrani)").isVisible()).toBe(false);
+    // Patička zůstává: Soukromí i zkušebna.
+    expect(await s.locator('.prehled__verze [data-akce="soukromi"]').isVisible()).toBe(true);
+    expect(await s.locator('.prehled__verze a[href="/zkusebna.html"]').isVisible()).toBe(true);
+    // Odkaz „Celá kampaň“ je pod první kapitolou.
+    const cela = s.locator('[data-akce="prehled-cela"]');
+    expect(await cela.isVisible()).toBe(true);
+    expect((await cela.boundingBox())!.y).toBeGreaterThan((await s.locator('.karta[data-uroven="1-05"]').boundingBox())!.y);
+    // Slov je na přehledu nového hráče málo (před verzí 0.25.0 jich bylo přes 600).
+    expect(await slov(s, "#obrazovka-prehled")).toBeLessThan(120);
+    await s.screenshot({ path: `${SLOZKA}/zacatek-prehled-novy.png`, fullPage: true });
+
+    const hrac = await cisloHrace(s);
+    await cela.click();
+    expect(await telo(s, "prehled-rozsah")).toBe("cely");
+    expect(await cela.isVisible()).toBe(false);
+    expect(await s.locator('.karta[data-uroven="2-01"]').isVisible()).toBe(true);
+    expect(await s.locator('.karta[data-uroven="8-03"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-udaj="prehled-postup"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-udaj="prehled-komise"]').isVisible()).toBe(true);
+    expect(await s.locator("label.prehled__volba:has(#zaznam-hrani)").isVisible()).toBe(true);
+    expect((await pockejNa(hrac, "prehled.odkaz", (u) => u.data?.kam === "cela-kampan")).data).toEqual({ kam: "cela-kampan" });
+    await s.screenshot({ path: `${SLOZKA}/zacatek-prehled-cely.png` });
+    // V téže záložce zůstává přehled rozbalený i po návratu.
+    await s.reload();
+    await s.locator(".karta").first().waitFor();
+    expect(await telo(s, "prehled-rozsah")).toBe("cely");
+    await kontext.close();
+  });
+
+  for (const jazyk of ["cs", "en"] as const) {
+    it(`nový hráč na telefonu (${jazyk}): nic nepřetéká, odkaz „Celá kampaň“ jde trefit prstem`, async () => {
+      const { kontext, s } = await novyKontext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+      await s.goto(`${adresa}?jazyk=${jazyk}`);
+      await s.locator(".karta").first().waitFor();
+      expect(await telo(s, "prehled-rozsah")).toBe("uvod");
+      await nepretika(s);
+      const cela = s.locator('[data-akce="prehled-cela"]');
+      expect(await cela.innerText()).toBe(jazyk === "cs" ? "Celá kampaň ▾" : "Whole campaign ▾");
+      const misto = (await cela.boundingBox())!;
+      expect(misto.height).toBeGreaterThanOrEqual(44);
+      expect(misto.x + misto.width).toBeLessThanOrEqual(390);
+      const upozorneni = (await s.locator('#obrazovka-prehled [data-udaj="zaznam-upozorneni"]').boundingBox())!;
+      expect(upozorneni.x + upozorneni.width).toBeLessThanOrEqual(390);
+      await s.screenshot({ path: `${SLOZKA}/zacatek-prehled-novy-telefon-${jazyk}.png`, fullPage: true });
+      await cela.tap();
+      expect(await telo(s, "prehled-rozsah")).toBe("cely");
+      await nepretika(s);
+      await kontext.close();
+    });
+  }
+});
+
+describe("úvodní okno úrovně", () => {
+  it("1-01: vidět je jen úkol a ukázka, rozbalení části zapíše deník kódem části", async () => {
+    const { kontext, s } = await novyKontext();
+    await s.goto(`${adresa}?uroven=1-01`);
+    const okno = s.locator("#okno-zadani");
+    await okno.waitFor({ state: "visible" });
+    expect(await okno.getAttribute("data-ukazka")).toBe("ano");
+    // Souvislého textu nad tlačítkem je málo: úkol (bez popisku ukázky) nejvýš asi 30 slov.
+    expect(await slov(s, '[data-udaj="zadani-text"]')).toBeLessThanOrEqual(30);
+    // Celé okno (i s ukázkou, souhrny sbalených částí a upozorněním na záznam) pod sto slov;
+    // před verzí 0.25.0 jich bylo přes 200.
+    expect(await slov(s, "#okno-zadani")).toBeLessThan(100);
+    // Upozornění na záznam je v okně jeden řádek.
+    expect((await okno.locator('[data-udaj="zaznam-upozorneni"]').boundingBox())!.height).toBeLessThan(50);
+    const hrac = await cisloHrace(s);
+    await okno.locator('details[data-cast="zadani-provoz"] > summary').click();
+    expect((await pockejNa(hrac, "ovladani", (u) => u.data?.co === "zadani-vice")).data).toEqual({ co: "zadani-vice", cast: "zadani-provoz" });
+    await okno.locator('details[data-cast="zadani-medaile"] > summary').click();
+    await pockejNa(hrac, "ovladani", (u) => u.data?.cast === "zadani-medaile");
+    await kontext.close();
+  });
+
+  it("úroveň bez ukázky má užší okno a části stejně sbalené", async () => {
+    const { kontext, s } = await novyKontext();
+    await s.goto(`${adresa}?uroven=1-05`);
+    const okno = s.locator("#okno-zadani");
+    await okno.waitFor({ state: "visible" });
+    expect(await okno.getAttribute("data-ukazka")).toBe("ne");
+    expect((await okno.boundingBox())!.width).toBeLessThanOrEqual(600);
+    expect(await okno.locator("details[open]").count()).toBe(0);
+    // Zkouška kapitoly nemá „Více o úloze“ a ovládání patří jen k 1-01.
+    expect(await okno.locator('details[data-cast="zadani-vice"]').isVisible()).toBe(false);
+    expect(await okno.locator('details[data-cast="zadani-ovladani"]').isVisible()).toBe(false);
+    await s.screenshot({ path: `${SLOZKA}/zacatek-zadani-bez-ukazky.png` });
+    await kontext.close();
+  });
+
+  for (const jazyk of ["cs", "en"] as const) {
+    it(`telefon 390 × 844 (${jazyk}): okno 1-01 nepřetéká ani rozbalené`, async () => {
+      const { kontext, s } = await novyKontext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+      await s.goto(`${adresa}?uroven=1-01&jazyk=${jazyk}`);
+      const okno = s.locator("#okno-zadani");
+      await okno.waitFor({ state: "visible" });
+      const nepretikaOkno = async (): Promise<void> => {
+        expect(await okno.evaluate((o) => o.scrollWidth <= o.clientWidth)).toBe(true);
+        const misto = (await okno.boundingBox())!;
+        expect(misto.x).toBeGreaterThanOrEqual(0);
+        expect(misto.x + misto.width).toBeLessThanOrEqual(390);
+      };
+      await nepretikaOkno();
+      // Tlačítko „Jdu stavět“ je vidět bez posouvání.
+      const tlacitko = (await okno.locator('button[value="zavrit"]').boundingBox())!;
+      expect(tlacitko.y + tlacitko.height).toBeLessThanOrEqual(844);
+      await s.screenshot({ path: `${SLOZKA}/zacatek-zadani-telefon-${jazyk}.png` });
+      for (const souhrn of await okno.locator("details > summary").all()) if (await souhrn.isVisible()) await souhrn.tap();
+      expect(await okno.locator("details[open]").count()).toBe(6);
+      await nepretikaOkno();
+      await kontext.close();
+    });
+  }
+});
+
 describe("krok nahoře v přehledu", () => {
   it("nový hráč na počítači: jeden výrazný krok rovnou do 1-01; deník ví, že na něj klikl", async () => {
     const { kontext, s } = await novyKontext();
@@ -195,6 +337,11 @@ describe("krok nahoře v přehledu", () => {
     await s.locator(".karta").first().waitFor();
     expect(await start(s).getAttribute("data-stav")).toBe("pokracovat");
     expect((await start(s).innerText()).replace(/[  ]/g, " ")).toBe("Pokračovat: 1-01 Lávka přes potok ▸");
+    // Kdo má rozestavěno, vidí přehled celý, jako dřív.
+    expect(await telo(s, "prehled-rozsah")).toBe("cely");
+    expect(await s.locator('[data-udaj="prehled-postup"]').isVisible()).toBe(true);
+    expect(await s.locator('.karta[data-uroven="2-01"]').isVisible()).toBe(true);
+    expect(await s.locator('[data-akce="prehled-cela"]').isVisible()).toBe(false);
     // Projitá 1-01: pokračuje se v 1-02.
     await otevriUroven(s, "1-01");
     await s.locator('[data-akce="import"]').click();
@@ -229,7 +376,7 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await expect.poll(() => telo(s, "vyzva-zkousky")).toBe("ano");
     expect(await tlacitko.getAttribute("class")).toContain("tlacitko--vyzva");
     expect(await bublina.isVisible()).toBe(true);
-    expect(await bublina.innerText()).toContain("Teď most vyzkoušej");
+    expect(await bublina.innerText()).toContain("Pusť zkoušku");
     // Bublina je pod tlačítkem a míří na něj.
     const t = (await tlacitko.boundingBox())!;
     const b = (await bublina.boundingBox())!;

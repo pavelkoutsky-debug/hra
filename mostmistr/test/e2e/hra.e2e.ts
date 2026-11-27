@@ -19,8 +19,6 @@ let adresa: string;
 const chyby: string[] = [];
 
 const udaj = (jmeno: string): Promise<string> => stranka.locator(`[data-udaj="${jmeno}"]`).innerText();
-/** Text prvku, i když je zrovna sbalený (seznam prvků a „Více o úloze“ v okně se zadáním). */
-const obsah = async (jmeno: string): Promise<string> => (await stranka.locator(`[data-udaj="${jmeno}"]`).textContent()) ?? "";
 const akce = (jmeno: string) => stranka.locator(`[data-akce="${jmeno}"]`);
 const telo = (atribut: string): Promise<string | null> => stranka.locator("body").getAttribute(`data-${atribut}`);
 
@@ -150,23 +148,47 @@ describe("přehled kampaně", () => {
     await okno.waitFor({ state: "visible" });
     expect(await udaj("zadani-list")).toBe("ÚROVEŇ 1-01");
     expect(await udaj("zadani-nazev")).toBe("Lávka přes potok");
-    expect(await udaj("zadani-text")).toContain("Přes potok jdou proti sobě dvě výpravy, šestatřicet lidí");
+    expect(await udaj("zadani-text")).toBe("Převeď přes potok 36 lidí. Mostovka má uprostřed kloub a sama se v něm zalomí: podepři ho trojúhelníkem z trámů.");
+    // Po otevření je vidět jen úkol a ukázka; medaile, provoz, prvky, výzvy, „Více o úloze“
+    // a ovládání jsou sbalené. Po rozbalení ukážou totéž co dřív.
+    const casti = ["zadani-medaile", "zadani-provoz", "zadani-stavba", "zadani-vyzvy", "zadani-vice", "zadani-ovladani"];
+    for (const cast of casti) {
+      const oddil = okno.locator(`details[data-cast="${cast}"]`);
+      expect(await oddil.isVisible(), cast).toBe(true);
+      expect(await oddil.getAttribute("open"), cast).toBeNull();
+    }
+    for (const jmeno of ["zadani-medaile", "zadani-provoz", "zadani-stavba", "zadani-vice", "zadani-ovladani"]) {
+      expect(await stranka.locator(`[data-udaj="${jmeno}"]`).isVisible(), jmeno).toBe(false);
+    }
+    // Sbalené medaile ukazují aspoň znaky a stavba rozpočet.
+    expect(await udaj("zadani-medaile-souhrn")).toBe("◇ ◇ ◇");
+    expect(await udaj("zadani-stavba-souhrn")).toContain("rozpočet 45\u202f000\u00a0Kč");
+    await okno.locator('details[data-cast="zadani-provoz"] > summary').click();
+    expect(await stranka.locator('[data-udaj="zadani-provoz"]').isVisible()).toBe(true);
     expect(await udaj("zadani-provoz")).toContain("dav, 12 lidí zleva");
     expect(await udaj("zadani-provoz")).toContain("6× chodec zprava");
-    // Seznam prvků s cenami je sbalený (ukazuje ho i paleta); obsah v něm je.
-    expect(await stranka.locator('[data-udaj="zadani-stavba"]').isVisible()).toBe(false);
-    expect(await obsah("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
+    await okno.locator('details[data-cast="zadani-stavba"] > summary').click();
+    expect(await udaj("zadani-stavba")).toContain("rozpočet 45\u202f000\u00a0Kč");
+    await okno.locator('details[data-cast="zadani-medaile"] > summary').click();
     expect(await stranka.locator('[data-udaj="zadani-medaile"] li').count()).toBe(3);
     expect(await udaj("zadani-medaile")).toContain("průchod s mostem do 32\u202f500\u00a0Kč, na kterém nic nepovolilo ani se trvale neohnulo");
+    await okno.locator('details[data-cast="zadani-vice"] > summary').click();
+    expect(await udaj("zadani-vice")).toContain("Přes potok jdou proti sobě dvě výpravy, dohromady 36 lidí");
+    expect(await udaj("zadani-skutecnost")).toContain("jeřáby i stožáry");
+    await okno.locator('details[data-cast="zadani-ovladani"] > summary').click();
+    expect(await udaj("zadani-ovladani")).toContain("Prut nakreslíš tažením myší z kotvy nebo ze styčníku");
+    await stranka.screenshot({ path: `${SLOZKA}/21b-zadani-rozbalene.png` });
+    // Zavřít a otevřít znovu: části jsou zase sbalené.
+    await okno.locator('button[value="zavrit"]').click();
+    await akce("zadani").click();
+    await okno.waitFor({ state: "visible" });
+    for (const cast of casti) expect(await okno.locator(`details[data-cast="${cast}"]`).getAttribute("open"), cast).toBeNull();
     // Ukázka: mostovka sama spadne, s trojúhelníkem obstojí. Obě strany se doopravdy spočítají.
     const ukazka = stranka.locator('[data-udaj="ukazka"]');
     await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 30_000 });
     expect(await udaj("ukazka-a")).toBe("Jen mostovka");
     expect(await ukazka.locator('[data-strana="a"]').getAttribute("data-pruchod")).toBe("false");
     expect(await ukazka.locator('[data-strana="b"]').getAttribute("data-pruchod")).toBe("true");
-    // Souvislost se skutečností je pod „Více o úloze“, sbalená.
-    expect(await stranka.locator('[data-udaj="zadani-skutecnost"]').isVisible()).toBe(false);
-    expect(await obsah("zadani-skutecnost")).toContain("jeřáby i stožáry");
     // Okno se vejde na obrazovku a začíná odshora.
     expect(await stranka.locator("#okno-zadani").evaluate((okno) => okno.scrollTop)).toBe(0);
     expect(await stranka.locator('[data-udaj="zadani-nazev"]').isVisible()).toBe(true);
@@ -178,7 +200,7 @@ describe("přehled kampaně", () => {
     expect(await okno.isVisible()).toBe(false); // mezerník zmáčkl tlačítko „Jdu stavět“
 
     // Zadání zůstává vlevo a okno jde otevřít znovu.
-    expect(await udaj("zadani")).toContain("Přes potok jdou proti sobě dvě výpravy");
+    expect(await udaj("zadani")).toContain("Převeď přes potok 36 lidí");
     await akce("zadani").click();
     await okno.waitFor({ state: "visible" });
     await stranka.keyboard.press("Escape");
@@ -219,7 +241,7 @@ describe("stavba myší", () => {
     await tahni([2, 3], [5, 3]);
     expect(await pocetPrutu()).toBe(2);
     // Tah z volného místa je výběr rámečkem; kdo má v ruce prvek a nic nevybral, dozví se, odkud se kreslí.
-    expect(await udaj("hlaseni")).toContain("Most roste jen z kotev a ze styčníků");
+    expect(await udaj("hlaseni")).toBe("Prut táhni z kotvy nebo ze styčníku mostu. Tah z prázdného místa jen vybírá.");
   });
 
   it("samotná mostovka s kloubem uprostřed zkouškou neprojde", async () => {

@@ -138,7 +138,7 @@ describe("zvedací most", () => {
   it("zadání říká, kdy se most zvedá a jaká loď připluje; paleta má ocelovou mostovku, píst a zámek", async () => {
     await otevri("7-01", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    const provoz = await udaj("zadani-provoz");
+    const provoz = await celyText("zadani-provoz");
     expect(provoz).toContain("V čase 5 s se zámky odemknou a písty most zvednou; v čase 16 s ho začnou sklápět.");
     expect(provoz).toContain("Loď vysoká 8 m a široká 7 m pluje pod mostem od času 12 s po dobu 3 s.");
     // Seznam prvků je v zadání sbalený (ukazuje je i paleta).

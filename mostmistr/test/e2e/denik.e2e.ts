@@ -143,15 +143,19 @@ afterAll(async () => {
 });
 
 describe("upozornění na deník hraní", () => {
-  it("přehled poprvé upozorní, že hra vede anonymní záznam; po potvrzení už ne", async () => {
+  it("přehled poprvé upozorní, že hra vede záznam hraní; po potvrzení už ne", async () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
     expect(await telo("denik")).toBe("zapnuto");
     const upozorneni = stranka.locator('#obrazovka-prehled [data-udaj="zaznam-upozorneni"]');
     expect(await upozorneni.isVisible()).toBe(true);
-    // Upozornění říká, že záznam odchází autorům hry, co v něm je a že jde vypnout.
-    expect(await upozorneni.innerText()).toContain("odesílá autorům záznam hraní");
-    expect(await upozorneni.innerText()).toContain("Záznam jde kdykoli vypnout");
+    // Upozornění je jeden řádek: záznam odchází autorům hry bez jména a e-mailu, „Více“ vede
+    // do okna Soukromí (co v záznamu je) a záznam jde vypnout hned tady.
+    expect(await upozorneni.locator("span").innerText()).toBe("Hra posílá autorům záznam hraní, bez jména a e-mailu.");
+    expect(await upozorneni.locator('a[data-akce="soukromi"]').getAttribute("href")).toBe("?soukromi");
+    expect(await upozorneni.locator('[data-akce="zaznam-vypnout"]').isVisible()).toBe(true);
+    // Vypínač v přehledu je u nového hráče až pod odkazem „Celá kampaň“.
+    await stranka.locator('[data-akce="prehled-cela"]').click();
     expect(await stranka.locator("#zaznam-hrani").isChecked()).toBe(true);
     await stranka.screenshot({ path: `${SLOZKA}/a0-upozorneni-na-denik.png` });
     await upozorneni.locator('[data-akce="zaznam-rozumim"]').click();

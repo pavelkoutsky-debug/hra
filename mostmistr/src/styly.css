@@ -1180,6 +1180,48 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   white-space: normal;
 }
 
+/*
+ * Přehled nového hráče (nic neprošel, nic nerozestavěl): jen tlačítko, upozornění na záznam
+ * a první kapitola. Odkaz „Celá kampaň“ odkryje zbytek (postup, kapitoly 2 až 8, komisi, volby).
+ */
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .prehled__postup,
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .prehled__kapitoly > .kapitola ~ .kapitola,
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .komise,
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .prehled__volba {
+  display: none;
+}
+
+.prehled__cela {
+  margin: -8px 0 22px;
+}
+
+body:not([data-prehled-rozsah="uvod"]) .prehled__cela {
+  display: none;
+}
+
+/* Odkaz, který nic nenačítá: vypadá jako odkaz, chová se jako tlačítko. */
+.odkaz-tlacitko {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--cara-silna);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.odkaz-tlacitko:hover,
+.odkaz-tlacitko:focus-visible {
+  color: var(--cara);
+}
+
+@media (pointer: coarse) {
+  .odkaz-tlacitko {
+    min-height: 44px;
+  }
+}
+
 .prehled__postup {
   margin: 0 0 14px;
   color: var(--popisek);
@@ -2206,8 +2248,13 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   font-size: 12px;
 }
 
+/* Jeden řádek: věta, hned za ní odkaz „Více“, tlačítka vpravo (v úzkém okně pod větou). */
 .zaznam span {
-  flex: 1 1 420px;
+  flex: 0 1 auto;
+}
+
+.zaznam [data-akce="soukromi"] {
+  margin-right: auto;
 }
 
 .zaznam--vOkne {
@@ -2543,7 +2590,7 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 /* Okno se zadáním úrovně */
 
 .okno--zadani {
-  width: min(680px, 92vw);
+  width: min(560px, 94vw);
   padding: 22px 26px;
 }
 
@@ -3082,12 +3129,16 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   flex: none;
 }
 
-/* Ukázka v okně se zadáním: dva mosty vedle sebe */
+/* Okno se zadáním: úkol, ukázka (dva mosty vedle sebe) a pod nimi sbalené části */
 
 .okno--zadani {
-  width: min(1040px, 96vw);
   max-height: 96vh;
   overflow-y: auto;
+}
+
+/* S ukázkou je okno širší, ať jsou oba mosty čitelné; bez ní zůstane úzké a klidné. */
+.okno--zadani[data-ukazka="ano"] {
+  width: min(760px, 96vw);
 }
 
 /* Tlačítko „Jdu stavět“ zůstává vidět i v nízkém okně, kde se zadání musí posouvat. */
@@ -3100,36 +3151,41 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   border-top: 1px solid rgb(207 227 255 / 0.3);
 }
 
-/* Vlevo zadání s ukázkou, vpravo fakta o úrovni. */
-.okno__telo {
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
-  gap: 0 28px;
-  margin-bottom: 14px;
+/* Sbalené části: jeden řádek na část, oddělené tenkou linkou; rozbalená část se otevře pod nadpisem. */
+.okno__casti {
+  margin: 4px 0 14px;
+  border-top: 1px solid rgb(207 227 255 / 0.22);
 }
 
-.okno__vedlejsi {
-  padding-left: 22px;
-  border-left: 1px solid rgb(207 227 255 / 0.3);
+.okno__casti > .okno__vice {
+  margin: 0;
+  border-bottom: 1px solid rgb(207 227 255 / 0.22);
 }
 
-.okno__vedlejsi .medaile {
-  margin-top: 0;
+.okno__casti > .okno__vice > summary {
+  margin: 0;
+  padding: 7px 0;
 }
 
-/* Medaile stojí v zadání nahoře; nadpis pod nimi potřebuje odstup jako mezi ostatními oddíly. */
-.okno__vedlejsi .medaile + h3 {
-  margin-top: 14px;
+.okno__casti > .okno__vice[open] {
+  padding-bottom: 10px;
 }
 
-@media (max-width: 860px) {
-  .okno__telo {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.okno__casti .medaile,
+.okno__casti .okno__seznam {
+  margin: 0;
+}
 
-  .okno__vedlejsi {
-    padding-left: 0;
-    border-left: 0;
+.okno__casti .okno__napoveda {
+  margin: 0 !important;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Na prst: řádek části vysoký aspoň 44 px. */
+@media (pointer: coarse) {
+  .okno__casti > .okno__vice > summary {
+    padding-block: 15px;
   }
 }
 
@@ -3200,6 +3256,11 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 @media (max-width: 640px) {
   .ukazka__strany {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Pod sebou jsou výkresy ukázky nižší, ať pod nimi zůstanou vidět sbalené části. */
+  .ukazka__strana canvas {
+    aspect-ratio: 5 / 2;
   }
 }
 
