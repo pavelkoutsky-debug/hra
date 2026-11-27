@@ -8,6 +8,7 @@ import { navrhNaText } from "../../src/data/navrh";
 import { Kreslic } from "../../src/zkouska/regrese";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -44,6 +45,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -154,7 +156,8 @@ describe("zpomalený záběr na první porušení", () => {
     expect(await cas()).toBeLessThan(konec - 1);
     expect(await udaj("vysledek-nadpis")).toBe("MOST NEOBSTÁL");
     expect(await stranka.locator('[data-udaj="verdikt"]').isVisible()).toBe(true);
-    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+ \(označený na výkresu\): vzpěr\.$/);
+    // Pruh řekne i co s prutem udělat (krátce; celé znění s čísly je v podrobnostech).
+    expect(await udaj("vysledek-veta")).toMatch(/Jako první povolil prut \d+ \(označený na výkresu\): vzpěr\. Tlak ho vybočil do strany: zkrať ho dalším styčníkem, nebo .+\.$/);
     await stranka.screenshot({ path: `${SLOZKA}/p1a-vysledek-hned.png` });
   }, 120_000);
 
@@ -368,11 +371,17 @@ describe("most, který se složí vlastní vahou", () => {
     // Záběr patří místu, kde se most skládá.
     await stranka.locator('body[data-zaber="bezi"]').waitFor({ timeout: 60_000 });
     expect(await udaj("hlaseni")).toContain("styčník mostovky nic nedrží");
+    // Věta ve chvíli pádu říká jen, co se děje; rada patří do výsledku.
+    expect(await udaj("hlaseni")).not.toContain("Zavěs");
     await dopocitej();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
-    expect(await udaj("vysledek-veta")).toContain("Složil se vlastní vahou: styčník mostovky nic nedrží.");
+    // Pruh řekne i co s tím; podpírat zespodu tu není z čeho (pod mostem kotva není a o zem se
+    // most opírat nesmí), takže rada vede nad mostovku. Tenhle most nad ní už „střechu“ má, jen
+    // k ní střed mostovky nic nepojí: rada proto říká spojit ho s ní, ne postavit trojúhelník.
+    expect(await udaj("vysledek-veta")).toContain("Složil se vlastní vahou: styčník mostovky nic nedrží. Spoj ho prutem se styčníkem nad mostovkou.");
     const shrnuti = await stranka.locator('[data-udaj="vysledek-shrnuti"]').textContent();
-    expect(shrnuti).toContain("Podepři ho zespodu, nebo ho zavěs shora do trojúhelníku z prutů.");
+    expect(shrnuti).toContain("Spoj ho prutem se styčníkem nad mostovkou: dokud k němu nic nevede, pruty nad ním ho nenesou. Zespodu ho tu podepřít nejde");
+    expect(shrnuti).not.toContain("Podepři ho zespodu");
     expect(shrnuti).not.toContain("klidovou polohu");
     // V úrovni bez svarů, lan a pilířů se nic takového neradí.
     expect(shrnuti).not.toContain("svar");
@@ -480,6 +489,7 @@ describe("pruh výsledku a razítko", () => {
   it("zkouška do zlomu razítko ani medaile nedostane", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["1-01"]!.pruchod));
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await dopocitej();
     await naKonec();
@@ -525,6 +535,7 @@ describe("drobné chyby z recenze", () => {
 
   it("zkouška do zlomu se počítá i po návratu do úrovně, když most dřív prošel", async () => {
     await nactiZnovu();
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await dopocitej();
     await naKonec();
@@ -535,6 +546,7 @@ describe("drobné chyby z recenze", () => {
 
   it("chyba importu neukazuje vnitřní názvy", async () => {
     await akce("upravit").click();
+    await rozbalPaletu(stranka);
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill("tohle není most");
     await akce("okno-nacist").click();
@@ -546,6 +558,7 @@ describe("drobné chyby z recenze", () => {
 
   it("tah mostovky, který nejde rozdělit na stejné díly, se rozdělí na co nejmíň dílů", async () => {
     await otevri("1-01");
+    await rozbalPaletu(stranka);
     await akce("smazat-vse").click();
     expect(await udaj("prutu")).toBe("0");
     const p = await pohled();
@@ -592,6 +605,7 @@ describe("úklid vývojářských položek", () => {
       await okno.goto(`${adresa}?uroven=1-01`);
       await okno.locator(PLATNO).waitFor();
       await okno.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      await rozbalPaletu(okno);
       const upozorneni = (await okno.locator('.paleta [data-udaj="zaznam-upozorneni"]').boundingBox())!;
       const nastroje = (await okno.locator('.paleta [data-akce="import"]').boundingBox())!;
       expect(upozorneni.y).toBeGreaterThan(nastroje.y);
@@ -614,6 +628,7 @@ describe("pád mostu na telefonu", () => {
       await s.goto(`${adresa}?uroven=1-01`);
       await s.locator(PLATNO).waitFor();
       await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+      await rozbalPaletu(s);
       await s.evaluate((text) => {
         (document.querySelector('[data-akce="import"]') as HTMLElement).click();
         (document.querySelector("#okno-obsah") as HTMLTextAreaElement).value = text;

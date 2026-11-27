@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Kreslic } from "../../src/data/kreslic";
 import { navrhNaText, navrhZTextu, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -68,6 +69,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -75,6 +77,7 @@ async function nactiMost(text: string): Promise<void> {
 
 /** Návrh, který má hra právě na výkresu. */
 async function mostNaVykresu(): Promise<ReturnType<typeof navrhZTextu>> {
+  await rozbalPaletu(stranka);
   await akce("export").click();
   const text = await stranka.locator("#okno-obsah").inputValue();
   await stranka.keyboard.press("Escape");
@@ -132,7 +135,7 @@ describe("tři pole: pilíře", () => {
     // Zadání jsou dvě věty; pravidla pilíře jsou pod „Více o úloze“ (sbalené, stejně jako seznam prvků).
     expect(await udaj("zadani-text")).toContain("v řece jsou dva základy: postav na ně pilíře");
     expect(await celyText("zadani-vice")).toContain("Pilíř smí stát jen na základu");
-    expect(await udaj("zadani-provoz")).toContain("2× tahač s návěsem zleva");
+    expect(await celyText("zadani-provoz")).toContain("2× tahač s návěsem zleva");
     expect(await celyText("zadani-stavba")).toContain("Pilíř: 15 000 Kč/m · do 12 m");
     expect(await celyText("zadani-skutecnost")).toContain("Millau");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
@@ -342,7 +345,7 @@ describe("náklad století: visutý most", () => {
   it("paleta má nosné lano; nedopnutý most se pod podvalníkem prověsí, dopnutý ho unese", async () => {
     await otevri("4-04", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-provoz")).toContain("nadměrný náklad zleva");
+    expect(await celyText("zadani-provoz")).toContain("nadměrný náklad zleva");
     expect(await celyText("zadani-stavba")).toContain("Nosné lano: 6 000 Kč/m · do 60 m");
     expect(await celyText("zadani-skutecnost")).toContain("Çanakkale");
     // Dlouhé zadání se v okně vysokém 720 px posouvá, tlačítko ale zůstává na dohled.

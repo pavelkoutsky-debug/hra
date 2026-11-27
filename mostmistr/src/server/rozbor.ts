@@ -17,7 +17,7 @@
 
 import type { SouhrnDeniku } from "../denik/souhrn";
 import { CO_HRA_UMI, VYSVETLIVKY_PODKLADU } from "./coHraUmi";
-import { chyba, DEN, denZ, jeVazba, odpoved, prectiVse, souhrnObdobi, teloJson, type ProstrediServeru } from "./obsluha";
+import { chyba, DEN, denZ, jeVazba, odpoved, prectiVse, rozpocetSouhrnu, souhrnObdobi, teloJson, type ProstrediServeru } from "./obsluha";
 import { uklid } from "./uklid";
 import { poctyZebricku, type PoctyZebricku } from "./zebricek";
 
@@ -98,6 +98,12 @@ export interface PodkladyRozboru {
   souhrnTydne: SouhrnDeniku;
   /** Souhrn není celý: server nestihl přečíst všechny dávky na jednu žádost; opakováním se dopočítá. */
   neuplne: boolean;
+  /**
+   * Jak daleko server se souhrnem je: dny, které ještě dopočítává, a kolik dávek deníku už má
+   * v souhrnu týdne. Kdo žádost opakuje, pozná podle toho, jestli se něco děje.
+   */
+  nedokonceno: string[];
+  davek: number;
   vazby: VazbaVPodkladech[];
   /** Kolik zpráv ten den přišlo (i těch, které se do podkladů nevešly). */
   vazebCelkem: number;
@@ -201,8 +207,11 @@ export function nactiRozbor(data: unknown): Omit<RozborDne, "vytvoreno"> | strin
 
 /** Podklady jednoho dne. */
 export async function podkladyDne(p: ProstrediServeru, den: string): Promise<PodkladyRozboru> {
-  const dne = await souhrnObdobi(p, den, den);
-  const tydne = await souhrnObdobi(p, denPred(den, 6), den);
+  // Den a týden se o čas žádosti dělí. Den jde první: je to hlavní věc rozboru a týden z něj
+  // (z uloženého výtahu dne) už jen bere.
+  const rozpocet = rozpocetSouhrnu(p);
+  const dne = await souhrnObdobi(p, den, den, rozpocet);
+  const tydne = await souhrnObdobi(p, denPred(den, 6), den, rozpocet);
   // Čísla zpětných vazeb začínají dnem příjmu (RRRRMMDDT…), takže den jde vybrat předponou.
   // Když jich je víc, než se do podkladů vejde, berou se rovnoměrně z celého dne: kdo by den
   // hned po půlnoci zaplavil zprávami, ty pozdější tím z podkladů nevytlačí.
@@ -231,6 +240,8 @@ export async function podkladyDne(p: ProstrediServeru, den: string): Promise<Pod
     souhrnDne: souhrnProPodklady(dne.souhrn),
     souhrnTydne: souhrnProPodklady(tydne.souhrn),
     neuplne: dne.neuplne || tydne.neuplne,
+    nedokonceno: [...new Set([...tydne.nedokonceno, ...dne.nedokonceno])].sort(),
+    davek: tydne.davek,
     vazby,
     vazebCelkem: kliceVazeb.length,
     zebricky: await poctyZebricku(p.sklad, den),

@@ -80,9 +80,9 @@ export async function uklid(sklad: SkladZaznamu, ted: Date): Promise<{ smazano: 
  * žebříčcích. Na jednu žádost nejvýš `NEJVIC_NA_SMAZANI_HRACE` čtení a smazání; `dalsi` je
  * kurzor pro další žádost, null, když je hotovo.
  *
- * Souhrny dnů, které už jsou spočítané (`vytah/<den>.json`), se nepřepočítávají: nesou jen počty
- * po úrovních, žádné číslo hráče, a smazané dávky v nich zůstanou započtené. Deník dne, ve kterém
- * se něco smazalo, jde přepočítat smazáním jeho výtahu.
+ * Uložený výtah dne (`vytah/<den>.json`) nese i čísla hráčů a co který z nich v úrovních dělal.
+ * Den, ze kterého se hráči něco maže, proto přijde i o výtah (ještě před první smazanou dávkou,
+ * aby po přerušené žádosti nezůstal) a souhrn si ho příště spočítá znovu z dávek, které zůstaly.
  */
 export async function smazHrace(sklad: SkladZaznamu, hrac: string, od: string | null): Promise<{ smazano: number; dalsi: string | null }> {
   let zbyva = NEJVIC_NA_SMAZANI_HRACE;
@@ -97,9 +97,14 @@ export async function smazHrace(sklad: SkladZaznamu, hrac: string, od: string | 
     if (od !== null && `${zacatekDne}￿` <= od) continue;
     if (dnu >= NEJVIC_DNU_NA_SMAZANI_HRACE) return { smazano, dalsi: posledni !== null && posledni > zacatekDne ? posledni : zacatekDne };
     dnu += 1;
+    let vytahSmazan = false;
     for (const klic of (await kliceDne(sklad, den, true)).filter(za)) {
       if (zKliceDavky(klic)?.hrac === hrac) {
         if (zbyva <= 0) return { smazano, dalsi: posledni };
+        if (!vytahSmazan) {
+          await sklad.smaz(klicVytahu(den));
+          vytahSmazan = true;
+        }
         await sklad.smaz(klic);
         zbyva -= 1;
         smazano += 1;

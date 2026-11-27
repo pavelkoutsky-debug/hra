@@ -26,6 +26,16 @@ klávesa) a po kolika sekundách, proč zkouška neprošla, které značky a rad
 posouval styčníky. Pořád jsou to čísla a krátké kódy pod náhodným číslem prohlížeče; rozhodnutí
 výše se nemění a text okna Soukromí (`soukromi.denik`, oba jazyky) nové údaje jmenuje.
 
+**Verze 0.25.0 (27. 11. 2026): kratší upozornění, záznam nese pár kódů navíc.** Upozornění na
+záznam hraní je jedna věta („Hra posílá autorům záznam hraní, bez jména a e-mailu.“) s odkazem
+Více do okna Soukromí a tlačítky Rozumím a Vypnout; podrobnosti (náhodné číslo prohlížeče, co
+záznam nese, jak dlouho se drží) říká až okno Soukromí. Rozhodnutí výše se nemění: záznam je
+zapnutý od prvního otevření a jde vypnout z upozornění i z okna Soukromí (vypínač v přehledu je
+u nového hráče pod „Celá kampaň“). Záznam nově nese i to, které nabídky hráč rozbalil („Více“
+v paletě, části okna zadání, „Celá kampaň“ v přehledu), že při stavbě přelezl rozpočet a použil
+výměnu mostovky, a že mu hra ukázala náhled nápovědy; text `soukromi.denik` to jmenuje
+(„které úrovně, obrazovky a nabídky otevřeš… které rady a nápovědy ti hra ukázala“).
+
 ## Před zveřejněním (Netlify)
 
 1. **Hesla** (Project configuration → Environment variables, rozsah Functions):

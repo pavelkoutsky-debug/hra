@@ -7,6 +7,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText, navrhZTextu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -57,6 +58,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -64,6 +66,7 @@ async function nactiMost(text: string): Promise<void> {
 
 /** Návrh, který má hra právě na výkresu. */
 async function mostNaVykresu(): Promise<ReturnType<typeof navrhZTextu>> {
+  await rozbalPaletu(stranka);
   await akce("export").click();
   const text = await stranka.locator("#okno-obsah").inputValue();
   await stranka.keyboard.press("Escape");
@@ -138,7 +141,7 @@ describe("zvedací most", () => {
   it("zadání říká, kdy se most zvedá a jaká loď připluje; paleta má ocelovou mostovku, píst a zámek", async () => {
     await otevri("7-01", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    const provoz = await udaj("zadani-provoz");
+    const provoz = await celyText("zadani-provoz");
     expect(provoz).toContain("V čase 5 s se zámky odemknou a písty most zvednou; v čase 16 s ho začnou sklápět.");
     expect(provoz).toContain("Loď vysoká 8 m a široká 7 m pluje pod mostem od času 12 s po dobu 3 s.");
     // Seznam prvků je v zadání sbalený (ukazuje je i paleta).

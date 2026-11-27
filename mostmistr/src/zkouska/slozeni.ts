@@ -176,3 +176,69 @@ export function najdiSlozeni(uroven: Uroven, navrh: NavrhMostu): PosudekStabilit
   }
   return posudek ?? BEZ_NALEZU;
 }
+
+/** O kolik se musí styčník mostovky při zkoušce zhoupnout nahoru a dolů, aby stál za řeč (m). */
+const HOUPANI = 0.05;
+
+/**
+ * Most bez klidové polohy, který se vlastní vahou nesložil (propadl se o méně než metr), ale
+ * pod provozem se houpe: styčník mostovky mimo podpory, který se do první změny stavby pohnul
+ * svisle nejvíc, a proč ho nic nedrží (stejně jako u složení). Mostovka z krátkých dílů pod
+ * nízkým trojúhelníkem tak v 1-01 neprošla na kmitání a hráč neměl jak poznat proč. Jen čte
+ * záznam; hodnocení zkoušky to nemění. Null, když se žádný styčník mostovky znatelně nehoupal.
+ */
+export function kdeSeHoupe(uroven: Uroven, navrh: NavrhMostu, zaznam: Zaznam): Slozeni | null {
+  const { snimky } = zaznam;
+  const stavba = zaznam.topologie[0];
+  if (snimky.length === 0 || !stavba) return null;
+  const stycniku = Math.min(navrh.stycniky.length, stavba.stycniku);
+  const poradi = new Map(navrh.stycniky.map((s, i) => [s.id, i]));
+  const pruty: number[][] = navrh.stycniky.map(() => []);
+  navrh.pruty.forEach((p, i) => {
+    for (const id of [p.a, p.b]) {
+      const s = poradi.get(id);
+      if (s !== undefined) pruty[s]!.push(i);
+    }
+  });
+  const jeMostovka = (prut: number): boolean => KATALOG[navrh.pruty[prut]!.prvek].druh === "mostovka";
+  const naKotve = (s: number): boolean => {
+    const st = navrh.stycniky[s]!;
+    return uroven.kotvy.some((k) => k.x === st.x && k.y === st.y) || uroven.zaklady.some((z) => z.x === st.x && z.y === st.y);
+  };
+  const nejniz = new Array<number>(stycniku).fill(Infinity);
+  const nejvys = new Array<number>(stycniku).fill(-Infinity);
+  const snimek = prazdnySnimek();
+  const prvni = snimky[0]!.topologie;
+  for (const s of snimky) {
+    if (s.topologie !== prvni) break;
+    zaznam.stavV(s.cas, snimek);
+    for (let i = 0; i < stycniku; i++) {
+      const y = snimek.polohy[2 * i + 1]!;
+      if (y < nejniz[i]!) nejniz[i] = y;
+      if (y > nejvys[i]!) nejvys[i] = y;
+    }
+  }
+  // Styčník, ve kterém se stýká jen mostovka, nedrží nic: když se houpe, je to on, i kdyby se
+  // sousední styčník s trojúhelníkem houpal o kus víc (pohne se s ním).
+  const nejvic = (jen: (s: number) => boolean): number => {
+    let ktery = -1;
+    let rozkmit = HOUPANI;
+    for (let s = 0; s < stycniku; s++) {
+      if (naKotve(s) || !pruty[s]!.some(jeMostovka) || !jen(s)) continue;
+      const r = nejvys[s]! - nejniz[s]!;
+      if (r > rozkmit * (1 + SHODA)) {
+        rozkmit = r;
+        ktery = s;
+      }
+    }
+    return ktery;
+  };
+  const volny = nejvic((s) => pruty[s]!.every(jeMostovka));
+  const ktery = volny >= 0 ? volny : nejvic(() => true);
+  if (ktery < 0) return null;
+  let ukotveno = 0;
+  for (let s = 0; s < stycniku; s++) if (naKotve(s)) ukotveno++;
+  const st = navrh.stycniky[ktery]!;
+  const duvod: DuvodSlozeni = ukotveno < 2 ? "podpory" : pruty[ktery]!.every(jeMostovka) ? "mostovka" : "ztuzeni";
+  return { stycnik: ktery, misto: { x: st.x, y: st.y }, duvod };
+}

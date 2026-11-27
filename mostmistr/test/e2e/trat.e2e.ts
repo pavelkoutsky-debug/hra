@@ -7,6 +7,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText, navrhZTextu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -57,6 +58,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -64,6 +66,7 @@ async function nactiMost(text: string): Promise<void> {
 
 /** Návrh, který má hra právě na výkresu. */
 async function mostNaVykresu(): Promise<ReturnType<typeof navrhZTextu>> {
+  await rozbalPaletu(stranka);
   await akce("export").click();
   const text = await stranka.locator("#okno-obsah").inputValue();
   await stranka.keyboard.press("Escape");
@@ -142,8 +145,8 @@ describe("první vlak: kolejiště", () => {
     // Zadání jsou dvě věty; co je kolejiště, vysvětluje „Více o úloze“ (sbalené, stejně jako seznam prvků).
     expect(await udaj("zadani-text")).toContain("poprvé koleje: pojede lokomotiva a tři ložené vozy");
     expect(await celyText("zadani-vice")).toContain("Kolejiště je kolej na dvou ocelových podélnících");
-    expect(await udaj("zadani-provoz")).toContain("vlak (lokomotiva, 3× ložený vůz) zleva, vyráží v čase 0 s");
-    expect(await udaj("zadani-provoz")).toContain("Kolej je svařená, bez styků");
+    expect(await celyText("zadani-provoz")).toContain("vlak (lokomotiva, 3× ložený vůz) zleva, vyráží v čase 0 s");
+    expect(await celyText("zadani-provoz")).toContain("Kolej je svařená, bez styků");
     expect(await celyText("zadani-stavba")).toContain("Kolejiště: 16 000 Kč/m · do 6 m");
     expect(await celyText("zadani-skutecnost")).toContain("Negrelliho viadukt");
     await stranka.screenshot({ path: `${SLOZKA}/t1-zadani-prvni-vlak.png` });
@@ -196,8 +199,8 @@ describe("rychlík: pohodlí cestujících", () => {
   it("třímetrová příhrada vlak unese, ale ve voze to houpe; hlubší srazí houpání na polovinu a pod mez medaile", async () => {
     await otevri("6-02", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-provoz")).toContain("vlak (lokomotiva, 4× osobní vůz), 100 km/h zleva");
-    expect(await udaj("zadani-provoz")).toContain("Kolej má po 25 metrech styky kolejnic");
+    expect(await celyText("zadani-provoz")).toContain("vlak (lokomotiva, 4× osobní vůz), 100 km/h zleva");
+    expect(await celyText("zadani-provoz")).toContain("Kolej má po 25 metrech styky kolejnic");
     expect(await celyText("zadani-skutecnost")).toContain("velmi dobré pohodlí");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await stranka.locator('[data-udaj="podminky"]').innerText()).toContain("rozpočtová medaile a k ní zrychlení v osobním voze nejvýš 0,50 m/s²");
@@ -233,7 +236,7 @@ describe("uhelný vlak: brzdění na viaduktu", () => {
   it("pilíře bez vzpěr a svarů brzdící vlak zlomí; s hlavami pilířů svařenými s kolejištěm viadukt obstojí", async () => {
     await otevri("6-03", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-provoz")).toContain("vlak (lokomotiva, 10× ložený vůz) zleva, vyráží v čase 0 s; na mostě zabrzdí, 3 s stojí a rozjede se");
+    expect(await celyText("zadani-provoz")).toContain("vlak (lokomotiva, 10× ložený vůz) zleva, vyráží v čase 0 s; na mostě zabrzdí, 3 s stojí a rozjede se");
     expect(await celyText("zadani-skutecnost")).toContain("Firth of Forth");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await udaj("jizdni-rad")).toContain("na mostě zabrzdí");
@@ -257,7 +260,7 @@ describe("dvě patra: kolej a silnice nad sebou", () => {
   it("trať vede z tunelu, obě nivelety jsou na výkresu; každá mostovka patří na svou", async () => {
     await otevri("6-04", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    const provoz = await udaj("zadani-provoz");
+    const provoz = await celyText("zadani-provoz");
     expect(provoz).toContain("vlak (lokomotiva, 4× ložený vůz) zleva");
     expect(provoz).toContain("2× nákladní auto zprava");
     expect(provoz).toContain("autobus zleva");

@@ -8,6 +8,7 @@ import { navrhNaText } from "../../src/data/navrh";
 import { EN, NAZVY_UROVNI_EN } from "../../src/ui/slovnik-en";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -128,10 +129,11 @@ describe("jazyk hry", () => {
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await ceskeTexty(stranka)).toEqual([]);
-    // Vysvětlení, seznam prvků a výzvy jsou v zadání sbalené: rozbalené se kontrolují taky.
+    // Medaile, provoz, seznam prvků, výzvy, vysvětlení a ovládání jsou v zadání sbalené:
+    // rozbalené se kontrolují taky.
     const souhrny = stranka.locator("#okno-zadani details > summary");
     const sbalenych = await souhrny.count();
-    expect(sbalenych).toBe(3);
+    expect(sbalenych).toBe(6);
     for (let i = 0; i < sbalenych; i++) {
       const souhrn = souhrny.nth(i);
       expect(await souhrn.evaluate((prvek) => (prvek.parentElement as HTMLDetailsElement).open)).toBe(false);
@@ -144,6 +146,7 @@ describe("jazyk hry", () => {
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
 
     // Stavba s mostem a otevřenou analýzou.
+    await rozbalPaletu(stranka);
     await stranka.locator('[data-akce="import"]').click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await stranka.locator('[data-akce="okno-nacist"]').click();
@@ -168,6 +171,7 @@ describe("jazyk hry", () => {
 
     // Most, který spadne: věty o porušení jsou taky anglicky.
     await stranka.locator('[data-akce="upravit"]').click();
+    await rozbalPaletu(stranka);
     await stranka.locator('[data-akce="import"]').click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pady[0]!.navrh));
     await stranka.locator('[data-akce="okno-nacist"]').click();
@@ -188,6 +192,7 @@ describe("jazyk hry", () => {
     await stranka.goto(`${adresa}?uroven=5-01`);
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    await rozbalPaletu(stranka);
     await stranka.locator('[data-akce="import"]').click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["5-01"]!.pruchod));
     await stranka.locator('[data-akce="okno-nacist"]').click();
@@ -202,9 +207,11 @@ describe("jazyk hry", () => {
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await ceskeTexty(stranka)).toEqual([]);
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
+    await rozbalPaletu(stranka);
     await stranka.locator('[data-akce="import"]').click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["7-01"]!.pruchod));
     await stranka.locator('[data-akce="okno-nacist"]').click();
+    await rozbalPaletu(stranka);
     await stranka.locator('[data-akce="zlom"]').click();
     await stranka.locator('body[data-zkouska="hotovo"], body[data-zkouska="chyba"]').waitFor({ timeout: 150_000 });
     await stranka.locator('[data-akce="na-konec"]').click();

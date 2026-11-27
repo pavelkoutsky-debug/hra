@@ -11,6 +11,7 @@ import { zamkyKampane } from "../../src/data/kampan";
 import { navrhNaText } from "../../src/data/navrh";
 import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -57,6 +58,7 @@ describe("poslední úroveň bez zbytku kampaně", () => {
     await s.locator(PLATNO).waitFor();
     const zavrit = s.locator('#okno-zadani[open] button[value="zavrit"]');
     if ((await zavrit.count()) > 0) await zavrit.click();
+    await rozbalPaletu(s);
     await s.locator('[data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI[posledni.id]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').click();
@@ -133,6 +135,7 @@ describe("kampaň od první úrovně do poslední", () => {
         if ((await zavrit.count()) > 0) await zavrit.click();
         expect(await akce("napoveda").isVisible(), `${uroven.id} nápověda`).toBe(!uroven.zkouskova);
 
+        await rozbalPaletu(stranka);
         await akce("import").click();
         await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI[uroven.id]!.pruchod));
         await akce("okno-nacist").click();

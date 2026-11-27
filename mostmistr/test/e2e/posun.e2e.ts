@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText, navrhZTextu, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -39,6 +40,7 @@ async function otevriSMostem(s: Page, klepnout = false): Promise<void> {
   const zavrit = s.locator('#okno-zadani[open] button[value="zavrit"]');
   if (klepnout) await zavrit.tap();
   else await zavrit.click();
+  await rozbalPaletu(s);
   const importovat = s.locator('#obrazovka-uroven .paleta [data-akce="import"]');
   if (klepnout) await importovat.tap();
   else await importovat.click();
@@ -51,6 +53,7 @@ async function otevriSMostem(s: Page, klepnout = false): Promise<void> {
 
 /** Most na výkresu (přes Export, jak ho vidí hráč). */
 async function mostNaVykresu(s: Page): Promise<NavrhMostu> {
+  await rozbalPaletu(s);
   await s.locator('#obrazovka-uroven .paleta [data-akce="export"]').click();
   const text = await s.locator("#okno-obsah").inputValue();
   await s.locator("#okno button[value=zavrit]").click();
@@ -219,6 +222,7 @@ describe("šipky a styčník vybraný přídavkem", () => {
     await p.goto(`${adresa}?uroven=2-03&zaznam=vypnout`);
     await p.locator(PLATNO).waitFor();
     await p.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    await rozbalPaletu(p);
     await p.locator('#obrazovka-uroven .paleta [data-akce="import"]').click();
     await p.locator("#okno-obsah").fill(navrhNaText(most));
     await p.locator('[data-akce="okno-nacist"]').click();

@@ -10,6 +10,7 @@ import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { odkazNaMost, rozkodujMost, zakodujMost } from "../../src/data/sdileni";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -52,6 +53,7 @@ async function otevriUroven(s: Page, dotaz = `?uroven=${UROVEN}`): Promise<void>
 }
 
 async function nactiMost(s: Page, text: string): Promise<void> {
+  await rozbalPaletu(s);
   await akce(s, "import").click();
   await s.locator("#okno-obsah").fill(text);
   await akce(s, "okno-nacist").click();
@@ -112,6 +114,7 @@ describe("sdílení mostu odkazem", () => {
     const s = await cistaStranka({ permissions: ["clipboard-read", "clipboard-write"], acceptDownloads: true });
     await otevriUroven(s);
     // Prázdný výkres: tlačítko je vidět a po kliknutí řekne, proč nic neotevřelo.
+    await rozbalPaletu(s);
     const tlacitko = s.locator('.paleta [data-akce="sdilet"]');
     expect(await tlacitko.isVisible()).toBe(true);
     expect(await tlacitko.isEnabled()).toBe(true);
@@ -310,6 +313,7 @@ describe("sdílení mostu odkazem", () => {
     await s.locator(PLATNO).waitFor();
     expect(await ramecek.getAttribute("data-stav")).toBe("vyhra");
     // I odvetná zpráva: most, který prošel, si hra pamatuje.
+    await rozbalPaletu(s);
     await s.locator('.paleta [data-akce="sdilet"]').click();
     expect(await udaj(s, "sdileni-popis")).toContain("zkouškou prošel");
     expect(bezMezer(await s.locator("#sdileni-zprava").inputValue())).toContain("je překonaný");
@@ -393,6 +397,7 @@ describe("sdílení mostu odkazem", () => {
     expect(await ulozenyMost(s)).toEqual(SDILENY);
     await nactiMost(s, zakodujMost(LEVNEJSI));
     expect(await ulozenyMost(s)).toEqual(LEVNEJSI);
+    await rozbalPaletu(s);
     await akce(s, "import").click();
     await s.locator("#okno-obsah").fill(`https://mostmistr.netlify.app/?uroven=1-03&most=${kod.slice(0, 60)}`);
     await akce(s, "okno-nacist").click();
@@ -437,6 +442,7 @@ describe("sdílení mostu odkazem", () => {
     const s = await cistaStranka({ viewport: { width: 1366, height: 625 } });
     await otevriUroven(s);
     await nactiMost(s, navrhNaText(SDILENY));
+    await rozbalPaletu(s);
     await s.locator('.paleta [data-akce="sdilet"]').click();
     for (const jmeno of ["sdileni-odkaz", "sdileni-zprava", "sdileni-obrazek"]) {
       const ram = (await akce(s, jmeno).boundingBox())!;
@@ -456,6 +462,7 @@ describe("sdílení mostu odkazem", () => {
     }
     await nactiMost(s, navrhNaText(velky));
     expect(await telo(s, "pruty")).toBe(String(velky.pruty.length));
+    await rozbalPaletu(s);
     await s.locator('.paleta [data-akce="sdilet"]').click();
     expect(await udaj(s, "sdileni-popis")).toContain("na odkaz moc velký");
     expect(await akce(s, "sdileni-odkaz").isVisible()).toBe(false);
@@ -508,6 +515,7 @@ describe("sdílení mostu odkazem", () => {
     await telefon.screenshot({ path: `${SLOZKA}/s5-telefon.png` });
     // Okno sdílení se na telefon vejde a tlačítka jsou dosažitelná.
     await telefon.locator('.paleta [data-akce="sdilet"]').scrollIntoViewIfNeeded();
+    await rozbalPaletu(telefon);
     await telefon.locator('.paleta [data-akce="sdilet"]').click();
     const okno = await telefon.locator("#okno-sdileni").evaluate((o) => {
       const r = o.getBoundingClientRect();
@@ -524,6 +532,7 @@ describe("sdílení mostu odkazem", () => {
     await s.locator(PLATNO).waitFor();
     expect(bezMezer(await udaj(s, "host-text"))).toBe("Bridge from a link · 98,985 Kč. It does not count towards your progress until you keep it.");
     expect(await akce(s, "host-prekonat").innerText()).toBe("Build a cheaper one");
+    await rozbalPaletu(s);
     await s.locator('.paleta [data-akce="sdilet"]').click();
     expect(await s.locator("#okno-sdileni h2").innerText()).toBe("Share bridge");
     // V okně ani v polích nezbyla česká věta (měna a název hry česky zůstávají).

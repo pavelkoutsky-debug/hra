@@ -83,6 +83,54 @@ body {
   touch-action: pan-x pan-y;
 }
 
+/*
+ * Malá tlačítka lišty s ikonou (zvuk, celý výkres). Ikona je vložené SVG v barvě textu; stav
+ * zvuku ukazuje reproduktor: dvě vlny nahlas, jedna potichu, přeškrtnutý vypnutý nebo nedostupný.
+ */
+.tlacitko--ikona {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding-inline: 5px;
+}
+
+.ikona {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ikona__plna {
+  fill: currentColor;
+}
+
+.ikona--zvuk .ikona__vypnuto,
+body[data-zvuk="potichu"] .ikona--zvuk .ikona__vlna--2,
+body[data-zvuk="vypnuto"] .ikona--zvuk .ikona__vlna,
+[data-akce="zvuk"]:disabled .ikona__vlna {
+  display: none;
+}
+
+body[data-zvuk="vypnuto"] .ikona--zvuk .ikona__vypnuto,
+[data-akce="zvuk"]:disabled .ikona__vypnuto {
+  display: inline;
+}
+
+/* Oddálit, přiblížit a celý výkres: jedna skupina tlačítek, která se dotýkají. */
+.lista__zoom {
+  display: flex;
+  flex: none;
+}
+
+.lista__zoom .tlacitko + .tlacitko {
+  margin-left: -1px;
+}
+
 /* Tlačítka, která jsou v liště jen na telefonu. */
 .lista__telefon {
   display: none;
@@ -723,6 +771,28 @@ body[data-havarie] .pole__bunka:nth-child(3) {
 
 .rozpocet[data-stav="nad"] .rozpocet__castka {
   color: var(--varovani);
+  font-weight: 600;
+}
+
+/* Nad rozpočtem je ukazatel vidět i bez pruhu (úzké okno): žlutý rámeček, při překročení bliknutí. */
+.rozpocet[data-stav="nad"] {
+  margin: -3px -6px;
+  padding: 2px 5px;
+  border: 1px solid var(--varovani);
+  background: rgb(255 209 102 / 0.14);
+  animation: rozpocet-nad 0.5s ease-in-out 3;
+}
+
+@keyframes rozpocet-nad {
+  50% {
+    background: rgb(255 209 102 / 0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rozpocet[data-stav="nad"] {
+    animation: none;
+  }
 }
 
 /* Hra: rozvržení úrovně */
@@ -844,7 +914,10 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   color: var(--cara-silna);
 }
 
-/* Nástroj, na který hra právě upozornila (Výběr a posun po první prošlé zkoušce). */
+/*
+ * Nástroj, na který hra právě upozornila: Výběr a posun po první prošlé zkoušce, Nápověda po
+ * druhém nezdaru. Obrys zmizí, když ho hráč zkusí.
+ */
 .paleta__tlacitko[data-tip] {
   border-color: var(--cara-silna);
   color: var(--cara-silna);
@@ -870,6 +943,34 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   grid-template-columns: auto 1fr;
   gap: 2px 8px;
   padding-block: 5px;
+}
+
+/*
+ * První kapitola: paleta ukazuje jen základ, zbytek (`data-vedlejsi`) je pod tlačítkem „Více“
+ * (`.paleta[data-vice]`: zavreno, otevreno). „Napiš nám“ (`data-vedlejsi="siroke"`) se schová
+ * jen v okně, kde je i v liště.
+ */
+.paleta__vice {
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.paleta__vice-znak::before {
+  content: "▸";
+}
+
+.paleta__vice[aria-expanded="true"] .paleta__vice-znak::before {
+  content: "▾";
+}
+
+.paleta[data-vice="zavreno"] [data-vedlejsi]:not([data-vedlejsi="siroke"]) {
+  display: none !important;
+}
+
+@media (min-width: 1181px) {
+  .paleta[data-vice="zavreno"] [data-vedlejsi="siroke"] {
+    display: none !important;
+  }
 }
 
 /* Akce, která patří k prvkům (dopnutí lan): stojí hned pod paletou. */
@@ -1180,6 +1281,48 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   white-space: normal;
 }
 
+/*
+ * Přehled nového hráče (nic neprošel, nic nerozestavěl): jen tlačítko, upozornění na záznam
+ * a první kapitola. Odkaz „Celá kampaň“ odkryje zbytek (postup, kapitoly 2 až 8, komisi, volby).
+ */
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .prehled__postup,
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .prehled__kapitoly > .kapitola ~ .kapitola,
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .komise,
+body[data-prehled-rozsah="uvod"] #obrazovka-prehled .prehled__volba {
+  display: none;
+}
+
+.prehled__cela {
+  margin: -8px 0 22px;
+}
+
+body:not([data-prehled-rozsah="uvod"]) .prehled__cela {
+  display: none;
+}
+
+/* Odkaz, který nic nenačítá: vypadá jako odkaz, chová se jako tlačítko. */
+.odkaz-tlacitko {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--cara-silna);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.odkaz-tlacitko:hover,
+.odkaz-tlacitko:focus-visible {
+  color: var(--cara);
+}
+
+@media (pointer: coarse) {
+  .odkaz-tlacitko {
+    min-height: 44px;
+  }
+}
+
 .prehled__postup {
   margin: 0 0 14px;
   color: var(--popisek);
@@ -1252,6 +1395,49 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 .vykres__hlaseni[data-druh="varovani"] {
   border-color: var(--varovani);
   color: var(--varovani);
+}
+
+/* Tlačítko v hlášení (Vyměnit za …): hlášení kliknutí propouští na výkres, tlačítko ne. */
+.vykres__akce {
+  margin: 4px 0 0 6px;
+  white-space: normal;
+  text-align: left;
+  pointer-events: auto;
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.vykres__akce:hover,
+.vykres__akce:focus-visible {
+  background: var(--zvyrazneni);
+}
+
+/* Na telefonu má tlačítko vlastní řádek: vedle zalomené věty by roztáhlo její poslední řádek. */
+@media (max-width: 700px) {
+  .vykres__akce {
+    display: block;
+    margin: 6px 0 2px;
+  }
+}
+
+/* Prvek, který hra sama vzala do ruky po dokončení mostovky: krátké zvýraznění v paletě. */
+.paleta__tlacitko[data-prepnuto] {
+  outline: 2px solid var(--cara-silna);
+  outline-offset: 2px;
+  animation: prvek-prepnut 0.8s ease-in-out 3;
+}
+
+@keyframes prvek-prepnut {
+  50% {
+    outline-offset: 5px;
+    outline-color: rgb(255 255 255 / 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paleta__tlacitko[data-prepnuto] {
+    animation: none;
+  }
 }
 
 /* Výsledek zkoušky: úzký pruh nahoře (verdikt, věta, medaile, hlavní tlačítka), ať most pod
@@ -1367,6 +1553,13 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   line-height: 1;
 }
 
+/* Pod kolik se most musí dostat kvůli rozpočtové medaili (jen když ji nezískal kvůli ceně). */
+.medaile-pruh .medaile__cil {
+  font-size: 10px;
+  color: var(--varovani);
+  white-space: nowrap;
+}
+
 .medaile-pruh [data-ziskana="true"] {
   color: var(--varovani);
 }
@@ -1439,6 +1632,18 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 
 .vysledek__rada strong {
   color: var(--varovani);
+}
+
+/*
+ * Náhled nápovědy po třetím nezdaru: skica a věta o principu mostu, který projde (první krok
+ * nápovědy), a tlačítko na další krok. Skica je malá, ať pruh nezakryje most.
+ */
+.vysledek__skica {
+  flex: none;
+  width: 132px;
+  height: 56px;
+  border: 1px solid rgb(207 227 255 / 0.3);
+  background: var(--pozadi);
 }
 
 .vysledek__podrobnosti {
@@ -2206,8 +2411,13 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
   font-size: 12px;
 }
 
+/* Jeden řádek: věta, hned za ní odkaz „Více“, tlačítka vpravo (v úzkém okně pod větou). */
 .zaznam span {
-  flex: 1 1 420px;
+  flex: 0 1 auto;
+}
+
+.zaznam [data-akce="soukromi"] {
+  margin-right: auto;
 }
 
 .zaznam--vOkne {
@@ -2543,7 +2753,7 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 /* Okno se zadáním úrovně */
 
 .okno--zadani {
-  width: min(680px, 92vw);
+  width: min(560px, 94vw);
   padding: 22px 26px;
 }
 
@@ -3082,12 +3292,16 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   flex: none;
 }
 
-/* Ukázka v okně se zadáním: dva mosty vedle sebe */
+/* Okno se zadáním: úkol, ukázka (dva mosty vedle sebe) a pod nimi sbalené části */
 
 .okno--zadani {
-  width: min(1040px, 96vw);
   max-height: 96vh;
   overflow-y: auto;
+}
+
+/* S ukázkou je okno širší, ať jsou oba mosty čitelné; bez ní zůstane úzké a klidné. */
+.okno--zadani[data-ukazka="ano"] {
+  width: min(760px, 96vw);
 }
 
 /* Tlačítko „Jdu stavět“ zůstává vidět i v nízkém okně, kde se zadání musí posouvat. */
@@ -3100,36 +3314,41 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   border-top: 1px solid rgb(207 227 255 / 0.3);
 }
 
-/* Vlevo zadání s ukázkou, vpravo fakta o úrovni. */
-.okno__telo {
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
-  gap: 0 28px;
-  margin-bottom: 14px;
+/* Sbalené části: jeden řádek na část, oddělené tenkou linkou; rozbalená část se otevře pod nadpisem. */
+.okno__casti {
+  margin: 4px 0 14px;
+  border-top: 1px solid rgb(207 227 255 / 0.22);
 }
 
-.okno__vedlejsi {
-  padding-left: 22px;
-  border-left: 1px solid rgb(207 227 255 / 0.3);
+.okno__casti > .okno__vice {
+  margin: 0;
+  border-bottom: 1px solid rgb(207 227 255 / 0.22);
 }
 
-.okno__vedlejsi .medaile {
-  margin-top: 0;
+.okno__casti > .okno__vice > summary {
+  margin: 0;
+  padding: 7px 0;
 }
 
-/* Medaile stojí v zadání nahoře; nadpis pod nimi potřebuje odstup jako mezi ostatními oddíly. */
-.okno__vedlejsi .medaile + h3 {
-  margin-top: 14px;
+.okno__casti > .okno__vice[open] {
+  padding-bottom: 10px;
 }
 
-@media (max-width: 860px) {
-  .okno__telo {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.okno__casti .medaile,
+.okno__casti .okno__seznam {
+  margin: 0;
+}
 
-  .okno__vedlejsi {
-    padding-left: 0;
-    border-left: 0;
+.okno__casti .okno__napoveda {
+  margin: 0 !important;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Na prst: řádek části vysoký aspoň 44 px. */
+@media (pointer: coarse) {
+  .okno__casti > .okno__vice > summary {
+    padding-block: 15px;
   }
 }
 
@@ -3200,6 +3419,27 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
 @media (max-width: 640px) {
   .ukazka__strany {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Pod sebou jsou výkresy ukázky nižší, ať pod nimi zůstanou vidět sbalené části. */
+  .ukazka__strana canvas {
+    aspect-ratio: 5 / 2;
+  }
+}
+
+/*
+ * Nízké okno (notebook 1366 × 768, okno 1280 × 720): výkresy ukázky nižší a řádky sbalených částí
+ * těsnější, ať se okno zadání vejde bez posouvání i s ukázkou a upozorněním na záznam hraní.
+ */
+@media (max-height: 800px) {
+  .ukazka__strana canvas {
+    aspect-ratio: 5 / 2;
+  }
+}
+
+@media (max-height: 800px) and (pointer: fine) {
+  .okno__casti > .okno__vice > summary {
+    padding-block: 5px;
   }
 }
 
@@ -3459,18 +3699,24 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
     display: inline-block;
   }
 
-  /* Druhý řádek lišty se musí vejít na šířku telefonu: užší tlačítka a „Celý výkres“ zkráceně. */
+  /* Druhý řádek lišty se musí vejít na šířku telefonu: užší tlačítka. */
   #obrazovka-uroven .lista .tlacitko {
     padding-inline: 9px;
   }
 
-  #obrazovka-uroven [data-akce="cely-vykres"] {
-    font-size: 0;
+  /* Paleta první kapitoly: prvky jsou nahoře, ať je prst má hned pod výkresem. */
+  .paleta[data-vice] > .paleta__nadpis-prvku,
+  .paleta[data-vice] > .paleta__prvky,
+  .paleta[data-vice] > [data-akce="dopnout"] {
+    order: -1;
   }
 
-  #obrazovka-uroven [data-akce="cely-vykres"]::before {
-    content: attr(data-kratce);
-    font-size: 13px;
+  .paleta[data-vice] > .paleta__nadpis-prvku {
+    margin-top: 0;
+  }
+
+  .paleta[data-vice] > .paleta__uvod {
+    margin-top: 6px;
   }
 
   /*
@@ -3508,6 +3754,24 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   .vysledek__rada .tlacitko {
     margin-left: 6px;
     vertical-align: middle;
+  }
+
+  /* S náhledem nápovědy jen náhled: rada je celá v podrobnostech a pod pruhem musí zůstat most. */
+  .vysledek[data-nahled="ano"] .vysledek__rada:not(.vysledek__nahled) {
+    display: none;
+  }
+
+  .vysledek__skica {
+    float: left;
+    width: 96px;
+    height: 44px;
+    margin: 0 8px 2px 0;
+  }
+
+  .vysledek__nahled::after {
+    content: "";
+    display: block;
+    clear: both;
   }
 
   .vysledek__pruh [data-akce="prehrat-poruseni"] {
@@ -3588,8 +3852,17 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
   }
 
   .tlacitko--znak,
+  .tlacitko--ikona,
   .paleta__krokovac .paleta__tlacitko {
     min-width: 44px;
+  }
+
+  /* Odkaz „Více“ v upozornění na záznam hraní: cíl pro prst, ne dvě slova drobného textu. */
+  .zaznam [data-akce="soukromi"] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 8px;
   }
 
   .legenda__prepinac {

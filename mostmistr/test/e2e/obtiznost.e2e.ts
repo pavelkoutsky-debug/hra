@@ -9,6 +9,7 @@ import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { sampionUrovne } from "../../urovne/vyzvy";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -33,6 +34,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce("okno-nacist").click();
@@ -207,6 +209,7 @@ describe("vedený první krok", () => {
     await tahni([4, 0], [8, 0]);
     await expect.poll(() => telo("vedeni"), { timeout: 5_000 }).toBeNull();
     // Smazaný most vedení vrátí; při zkoušce se neukazuje.
+    await rozbalPaletu(stranka);
     await akce("smazat-vse").click();
     await expect.poll(() => telo("vedeni"), { timeout: 5_000 }).toBe("0;0;4;0");
     // Jiná úroveň vedení nemá.
@@ -222,6 +225,7 @@ describe("vedený první krok", () => {
     await dopocitej();
     expect(await naKonec()).toBe("MOST OBSTÁL");
     await akce("upravit").click();
+    await rozbalPaletu(stranka);
     await akce("smazat-vse").click();
     await stranka.waitForTimeout(300);
     expect(await telo("vedeni")).toBeNull();
@@ -245,10 +249,10 @@ describe("krátké zadání a slovníček pojmů", () => {
     expect(rozmery.obsah).toBeLessThanOrEqual(rozmery.okno + 1);
     expect(rozmery.vyska).toBeLessThanOrEqual(720);
     await stranka.screenshot({ path: `${SLOZKA}/o4-kratke-zadani.png` });
-    await stranka.locator("#okno-zadani .okno__hlavni summary").click();
+    await stranka.locator('#okno-zadani [data-cast="zadani-vice"] summary').click();
     expect(bezMezer(await stranka.locator('[data-udaj="zadani-vice"]').innerText())).toContain("Nosné lano je čtyřikrát silnější");
     expect(await stranka.locator('[data-udaj="zadani-skutecnost"]').isVisible()).toBe(true);
-    await stranka.locator("#okno-zadani .okno__vedlejsi summary").first().click();
+    await stranka.locator('#okno-zadani [data-cast="zadani-stavba"] summary').click();
     expect(await stranka.locator('[data-udaj="zadani-stavba"]').innerText()).toContain("Nosné lano");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
   });
@@ -277,6 +281,7 @@ describe("krátké zadání a slovníček pojmů", () => {
     expect(await stranka.locator("#okno-zadani[open]").count()).toBe(1);
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     // Celý slovníček.
+    await rozbalPaletu(stranka);
     await akce("pojmy").click();
     expect(await stranka.locator("#okno-pojmy[open]").count()).toBe(1);
     expect(await stranka.locator("#okno-pojmy dt").count()).toBe(22);
@@ -284,6 +289,7 @@ describe("krátké zadání a slovníček pojmů", () => {
     await stranka.locator('#okno-pojmy button[value="zavrit"]').click();
     expect(await stranka.locator("#okno-pojmy[open]").count()).toBe(0);
     // Kliknutí vedle okna (na ztmavené pozadí) slovníček zavře také.
+    await rozbalPaletu(stranka);
     await akce("pojmy").click();
     expect(await stranka.locator("#okno-pojmy[open]").count()).toBe(1);
     await stranka.mouse.click(8, 8);

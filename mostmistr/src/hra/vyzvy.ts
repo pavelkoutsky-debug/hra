@@ -66,7 +66,8 @@ export function popisVyzev(prahy: PrahyVyzev, rekord: Rekord | undefined): strin
  * referenční most) slouží k poznámce, o kolik je hráč lepší než autor hry. `tento` je to, co
  * ve výzvách změřila právě skončená zkouška (ve výsledku zkoušky; jinde se nedává);
  * `poruseny` říká, že most prošel, ale něco se na něm porušilo, a do ceny ani hmotnosti se
- * proto nepočítá.
+ * proto nepočítá. `doZlomuPodVice`: tlačítko Do zlomu je v paletě schované pod „Více“ (první
+ * kapitola) a věta, která na něj posílá, to musí říct.
  */
 export function vypisVyzvy(
   seznam: HTMLElement,
@@ -75,6 +76,7 @@ export function vypisVyzvy(
   rekord: Rekord | undefined,
   tento: Partial<Record<DruhVyzvy, number | null>> = {},
   poruseny = false,
+  doZlomuPodVice = false,
 ): void {
   seznam.replaceChildren(
     ...DRUHY_VYZEV.map((druh) => {
@@ -95,7 +97,7 @@ export function vypisVyzvy(
       const casti: string[] = [];
       // Rekord změřený starší verzí výpočtu neplatí; hráč má vědět, proč zmizel.
       if (hodnota === null && druh === "zlom" && zastaralyZlom(rekord, VERZE_FYZIKY)) casti.push(t("vyzva.zlom.zastaralo"));
-      else if (hodnota === null) casti.push(t(druh === "zlom" ? "vyzva.zlom.nezkouseno" : poruseny ? "vyzva.poruseny" : "vyzva.nezmereno"));
+      else if (hodnota === null) casti.push(t(druh === "zlom" ? (doZlomuPodVice ? "vyzva.zlom.nezkouseno.vice" : "vyzva.zlom.nezkouseno") : poruseny ? "vyzva.poruseny" : "vyzva.nezmereno"));
       else {
         // Řádek ukazuje rekord. Když právě zkoušený most dopadl jinak, řekne to, jinak by pod
         // sebou stála dvě různá čísla bez vysvětlení.

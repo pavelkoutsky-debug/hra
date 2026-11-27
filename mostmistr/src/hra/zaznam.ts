@@ -1,6 +1,7 @@
-// Upozornění, že hra vede anonymní deník hraní, a vypínač záznamu. Upozornění je v přehledu
-// kampaně, v okně se zadáním úrovně a v paletě úrovně (hráč může přijít rovnou do úrovně,
-// kde má rozestavěný most a zadání se mu neotevře) a ukazuje se, dokud ho hráč nepotvrdí
+// Upozornění, že hra vede deník hraní (pod náhodným číslem prohlížeče), a vypínač záznamu.
+// Upozornění je jeden řádek s odkazem na okno Soukromí. Je v přehledu kampaně, v okně se
+// zadáním úrovně a v paletě úrovně (hráč může přijít rovnou do úrovně, kde má rozestavěný
+// most a zadání se mu neotevře) a ukazuje se, dokud ho hráč nepotvrdí
 // nebo záznam nevypne. Po vypnutí na jeho místě zůstane potvrzení, že se už nic neodesílá.
 
 import type { Denik } from "../denik/denik";

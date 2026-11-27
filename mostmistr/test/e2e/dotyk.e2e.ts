@@ -10,6 +10,7 @@ import { PRIPADY } from "../../urovne/havarie/index";
 import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -199,6 +200,7 @@ describe("dotykové ovládání výkresu", () => {
     await stranka.locator(PLATNO).waitFor();
     await stranka.locator('#okno-zadani[open] button[value="zavrit"]').tap();
     const reseni = RESENI["4-02"]!.pruchod;
+    await rozbalPaletu(stranka);
     await stranka.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
     await stranka.locator("#okno-obsah").fill(navrhNaText(reseni));
     await stranka.locator('[data-akce="okno-nacist"]').tap();
@@ -311,6 +313,7 @@ describe("dotykové ovládání výkresu", () => {
     await s.screenshot({ path: `${SLOZKA}/telefon-stavba.png` });
 
     // Zkouška: paleta ustoupí, táhlo času i výsledek se vejdou do okna.
+    await rozbalPaletu(s);
     await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').tap();
@@ -333,6 +336,10 @@ describe("dotykové ovládání výkresu", () => {
     try {
       await s.goto(adresa);
       await s.locator(".karta").first().waitFor();
+      // Nový hráč vidí zúžený přehled; odkaz „Celá kampaň“ je cíl pro prst jako ostatní.
+      const cela = s.locator('[data-akce="prehled-cela"]');
+      expect((await cela.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await cela.tap();
       // Zaškrtávátko záznamu hraní (cílem je celý řádek s popiskem) a odkazy v patičce: aspoň 44 px.
       const volba = (await s.locator("label.prehled__volba:has(#zaznam-hrani)").boundingBox())!;
       expect(volba.height).toBeGreaterThanOrEqual(44);
@@ -355,19 +362,25 @@ describe("dotykové ovládání výkresu", () => {
         const pretece = await tlacitko.evaluate((u) => u.scrollWidth > u.clientWidth + 1);
         expect(pretece, await tlacitko.innerText()).toBe(false);
       }
-      const smazat = (await s.locator('#obrazovka-uroven .paleta [data-akce="smazat"]').boundingBox())!;
-      const vse = (await s.locator('#obrazovka-uroven .paleta [data-akce="smazat-vse"]').boundingBox())!;
-      expect(smazat.x + smazat.width).toBeLessThanOrEqual(vse.x);
+      const misto = async (akce: string) => (await s.locator(`#obrazovka-uroven .paleta [data-akce="${akce}"]`).boundingBox())!;
+      const zpet = await misto("zpet");
+      expect(zpet.x + zpet.width).toBeLessThanOrEqual((await misto("znovu")).x);
+      // Zrcadlit a Vše pryč jsou v první kapitole pod „Více“ ve vlastní dvojici.
+      await rozbalPaletu(s);
+      const zrcadlit = await misto("zrcadlit");
+      expect(zrcadlit.x + zrcadlit.width).toBeLessThanOrEqual((await misto("smazat-vse")).x);
       // Nevysvětlené bílé pruhy (ukázka tloušťky čáry) v úzké paletě nejsou.
       expect(await s.locator("#obrazovka-uroven .paleta__ukazka").first().isVisible()).toBe(false);
       await s.screenshot({ path: `${SLOZKA}/tablet-stavba.png` });
 
       // Vše pryč: most zmizí a hlášení řekne, jak ho vrátit; Zpět ho vrátí.
+      await rozbalPaletu(s);
       await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
       await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
       await s.locator('[data-akce="okno-nacist"]').tap();
       const pocet = await s.locator("body").getAttribute("data-pruty");
       expect(Number(pocet)).toBeGreaterThan(0);
+      await rozbalPaletu(s);
       await s.locator('#obrazovka-uroven .paleta [data-akce="smazat-vse"]').tap();
       expect(await s.locator("body").getAttribute("data-pruty")).toBe("0");
       expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toContain("Zpět");
@@ -421,7 +434,9 @@ describe("dotykové ovládání výkresu", () => {
     s.on("pageerror", (chyba) => chyby.push(chyba.message));
     await s.goto(`${adresa}?uroven=1-01&zaznam=vypnout`);
     await s.locator(PLATNO).waitFor();
-    // Návod k ovládání mluví o prstech, ne o myši a mezerníku.
+    // Návod k ovládání (sbalený) mluví o prstech, ne o myši a mezerníku.
+    await s.locator('#okno-zadani details[data-cast="zadani-ovladani"] > summary').tap();
+    expect(await s.locator('[data-udaj="zadani-ovladani"]').isVisible()).toBe(true);
     expect(await s.locator('[data-udaj="zadani-ovladani"]').innerText()).toContain("tažením prstu");
     await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
     const zpet = s.locator('#obrazovka-uroven .lista [data-akce="zpet-rychle"]');
@@ -430,6 +445,7 @@ describe("dotykové ovládání výkresu", () => {
     expect(await smazat.isVisible()).toBe(true);
     expect(await zpet.isEnabled()).toBe(false);
     // Referenční most: zkouškou projde a výsledek se ukáže na konci přehrávání.
+    await rozbalPaletu(s);
     await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').tap();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').tap();
@@ -499,6 +515,7 @@ describe("dotykové ovládání výkresu", () => {
     expect(await naObrazovce("#pojem-bublina")).toBe(true);
     await s.keyboard.press("Escape");
     // Celý slovníček je delší než obrazovka: Zavřít drží dole na očích a zavře i ťuknutí vedle okna.
+    await rozbalPaletu(s);
     await s.locator('[data-akce="pojmy"]').tap();
     await s.locator("#okno-pojmy[open]").waitFor();
     expect(await s.locator("#okno-pojmy dt").count()).toBe(22);
@@ -506,6 +523,7 @@ describe("dotykové ovládání výkresu", () => {
     await s.screenshot({ path: `${SLOZKA}/telefon-slovnicek.png` });
     await s.locator('#okno-pojmy button[value="zavrit"]').tap();
     expect(await s.locator("#okno-pojmy[open]").count()).toBe(0);
+    await rozbalPaletu(s);
     await s.locator('[data-akce="pojmy"]').tap();
     await s.locator("#okno-pojmy[open]").waitFor();
     const okno = (await s.locator("#okno-pojmy").boundingBox())!;
@@ -528,6 +546,7 @@ describe("dotykové ovládání výkresu", () => {
     await s.locator(PLATNO).waitFor();
     await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
     expect(await pravyOkraj('#obrazovka-uroven [data-akce="cely-vykres"]')).toBeLessThanOrEqual(1000);
+    await rozbalPaletu(s);
     await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').click();
@@ -550,6 +569,7 @@ describe("dotykové ovládání výkresu", () => {
     await s.locator(PLATNO).waitFor();
     await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
     const reseni = RESENI["7-01"]!.pruchod;
+    await rozbalPaletu(s);
     await s.locator('#obrazovka-uroven .paleta [data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(reseni));
     await s.locator('[data-akce="okno-nacist"]').click();

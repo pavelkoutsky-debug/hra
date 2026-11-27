@@ -7,6 +7,7 @@ import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Kreslic } from "../../src/data/kreslic";
 import { navrhNaText } from "../../src/data/navrh";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -53,6 +54,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(obsah: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(obsah);
   await akce("okno-nacist").click();
@@ -132,16 +134,20 @@ describe("mostovka, po které nikdo nepůjde", () => {
     await stranka.mouse.move((a.x + b.x) / 2, a.y, { steps: 3 });
     await stranka.mouse.move(b.x, b.y, { steps: 3 });
     // Během tahu hra říká, že mostovka skončí na kraji břehu.
-    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
+    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi.");
     await stranka.mouse.up();
     // 4 + 4 + 4 m k posuvné kotvě a dál nic; po celé trase leží mostovka.
     expect(await telo("pruty")).toBe("5");
     expect(await telo("mezera")).toBeNull();
     expect(await telo("za-brehem")).toBeNull();
-    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
+    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi.");
     await stranka.screenshot({ path: `${SLOZKA}/mezera-zkraceno.png` });
 
-    // Kdo metr mostovky na břeh dokreslí zvlášť (od kraje), dostane značku: zem ho nenese.
+    // Mostovka je hotová: hra má v ruce levnější Lehký trám (od 0.25.0 ve všech úrovních kampaně).
+    // Kdo metr mostovky na břeh dokreslí zvlášť (od kraje, mostovku si vezme zpátky), dostane
+    // značku: zem ho nenese.
+    expect(await telo("prvek-prepnut")).toBe("drevo-lehke");
+    await stranka.locator('.paleta [data-prvek="mostovka-drevo"]').click();
     const c = await bodSveta(12, 0);
     const d = await bodSveta(13, 0);
     await stranka.mouse.move(c.x, c.y);

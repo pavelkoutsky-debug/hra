@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { Kreslic } from "../src/data/kreslic";
 import { KATALOG } from "../src/data/katalog";
-import { konecTahuMostovky, levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery } from "../src/data/mezery";
+import { cenaNavrhu } from "../src/data/cena";
+import { konecTahuMostovky, levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, prutyMostovkyMimoTrasy, rozborMezery, vymenaMostovky } from "../src/data/mezery";
 import { mezeryTras } from "../src/data/navrh";
 import type { Uroven } from "../src/data/uroven";
 import { nactiKampan } from "../urovne/index";
@@ -34,6 +35,45 @@ describe("mostovka mimo cestu a levnější prut (hlášení o rozpočtu, první
     expect(levnejsiPrut(uroven("1-01"), "mostovka-drevo")).toBe("drevo-lehke");
     expect(levnejsiPrut(uroven("1-03"), "mostovka-drevo")).toBe("drevo-lehke");
     expect(levnejsiPrut(uroven("1-01"), "drevo-lehke")).toBeNull();
+  });
+});
+
+describe("výměna mostovky mimo cestu za levnější prut jedním klikem", () => {
+  it("vybere pruty z mostovky mimo trasy, nejlevnější prut úrovně a spočítá úsporu", () => {
+    const navrh = most([[D, [0, 0], [4, 0]], [D, [2, -3], [4, 0]], [D, [4, 0], [8, 0]], [L, [10, -3], [8, 0]], [D, [12, 0], [13, 0]]]);
+    expect(prutyMostovkyMimoTrasy(navrh, cyklostezka)).toEqual([1, 4]);
+    const vymena = vymenaMostovky(navrh, cyklostezka)!;
+    expect(vymena.pruty).toEqual([1, 4]);
+    expect(vymena.prvek).toBe("drevo-lehke");
+    // Mostovka 2 500 Kč/m, Lehký trám 1 200 Kč/m: √13 m a 1 m.
+    expect(Math.abs(vymena.usetri - 1300 * (Math.sqrt(13) + 1))).toBeLessThanOrEqual(1);
+    const po = { ...navrh, pruty: navrh.pruty.map((p) => (vymena.pruty.includes(p.id) ? { ...p, prvek: vymena.prvek } : p)) };
+    expect(cenaNavrhu(navrh) - cenaNavrhu(po)).toBe(vymena.usetri);
+  });
+
+  it("nic nenabídne: mostovka jen na cestě, úroveň bez levnějšího prutu, most, který se zvedá", () => {
+    expect(vymenaMostovky(most([[D, [0, 0], [4, 0]], [L, [2, -3], [4, 0]]]), cyklostezka)).toBeNull();
+    // Kapitola 2 má jen dřevěnou mostovku a ocel: levnější prut než mostovka tam není.
+    expect(vymenaMostovky(most([[D, [0, 0], [4, 0]], [D, [0, 0], [2, -2]]], "2-01"), uroven("2-01"))).toBeNull();
+    // Zvedací most: mostovka za opěrou bývá rameno křídla.
+    const zvedaci = uroven("7-01");
+    const z = zvedaci.trasy[0]!.zacatek;
+    expect(vymenaMostovky(most([["mostovka-ocel", [z.x, z.y], [z.x - 3, z.y]]], "7-01"), zvedaci)).toBeNull();
+    // Mosty autora nic k výměně nemají.
+    for (const u of kampan) for (const jmeno of ["pruchod", "rozpocet", "mistrovska"] as const) expect(vymenaMostovky(RESENI[u.id]![jmeno], u), `${u.id} ${jmeno}`).toBeNull();
+  });
+
+  it("kolejiště a silniční mostovka mimo cestu se vymění za nejlevnější ocel", () => {
+    const patra = uroven("6-04");
+    const k = patra.trasy.find((t) => t.druh === "kolej")!.zacatek;
+    const navrh = most([["kolejiste", [k.x, k.y], [k.x + 4, k.y]], ["kolejiste", [k.x + 4, k.y], [k.x + 4, k.y - 3]]], "6-04");
+    expect(vymenaMostovky(navrh, patra)).toMatchObject({ pruty: [1], prvek: "ocel-lehka" });
+    // Silniční mostovka položená na kolej leží na cestě, jen jiného druhu: nepatří tam obyčejný
+    // prut, ale kolejiště, a výměna se proto nenabízí (nález recenze M19).
+    const silnicni = patra.povolenePrvky.find((id) => KATALOG[id].druh === "mostovka" && id !== "kolejiste")!;
+    const naKoleji = most([[silnicni, [k.x, k.y], [k.x + 4, k.y]]], "6-04");
+    expect(mostovkaMimoTrasy(naKoleji, patra)).toBe(1);
+    expect(vymenaMostovky(naKoleji, patra)).toBeNull();
   });
 });
 

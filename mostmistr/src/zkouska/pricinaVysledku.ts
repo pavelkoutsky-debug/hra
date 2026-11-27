@@ -58,8 +58,8 @@ export interface PodkladyPriciny {
 /**
  * Kód příčiny, proč most neprošel; null u mostu, který prošel, a u pokusu. Pořadí je stejné
  * jako u věty v pruhu výsledku (`ukazVysledek` v `src/hra/uroven.ts`): rozpad výpočtu, složení, mezera
- * v mostovce, pohyblivý most, průhyb, kmitání (když všichni přešli), první porušení, kmitání,
- * a nakonec to, co je vidět na provozu.
+ * v mostovce, pohyblivý most, průhyb, opření o terén, kmitání (když všichni přešli), první
+ * porušení, kmitání, sjetí z podpory, a nakonec to, co je vidět na provozu.
  */
 export function kodPriciny(p: PodkladyPriciny): KodPriciny | null {
   const v = p.vysledek;
@@ -70,6 +70,11 @@ export function kodPriciny(p: PodkladyPriciny): KodPriciny | null {
   if (p.pricinyPohybu.length > 0 && p.pricinyPohybu[0] !== "poruseno") return "pohyb";
   const prekrocenoPruhybem = v.pruhyb?.prekroceno ?? null;
   if (prekrocenoPruhybem !== null && (p.prvni === null || p.prvni.cas >= prekrocenoPruhybem)) return "pruhyb";
+  // Most, který si lehl na zem, se o ni opřel dřív, než cokoli povolilo (opření se počítá jen
+  // do prvního porušení). Kmitání a sjetí z podpory se u takového mostu berou jako následek,
+  // ať přišly kdykoli (pořadí v čase se tu nezkoumá; stejně rozhoduje pruh výsledku): podpěra
+  // bez kotvy na dně údolí most nese pérováním o terén a nechá ho propadnout.
+  if (v.opreno && !v.mezera) return "opreno";
   const kmitani = p.kmitaniNadMezi && v.spadlo === 0;
   if (kmitani && v.prejelo === v.ucastniku && (v.komfort?.prekroceno ?? null) !== null) return "kmitani";
   if (p.prvni?.druh === "poruseni") return "poruseni";

@@ -7,6 +7,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -60,6 +61,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -112,7 +114,7 @@ describe("zadání páté kapitoly", () => {
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
     expect(await udaj("zadani-nazev")).toBe("Městský běh");
     expect(await udaj("zadani-text")).toContain("laděný tlumič");
-    expect(await udaj("zadani-provoz")).toContain("40");
+    expect(await sbaleny("zadani-provoz")).toContain("40");
     expect(await sbaleny("zadani-stavba")).toContain("Laděný tlumič: 30 000 Kč za kus a 30 Kč za kilogram závaží, nejvýš 1000 kg");
     expect(await sbaleny("zadani-stavba")).toContain("Budič: zkušební zařízení zdarma");
     expect(await sbaleny("zadani-skutecnost")).toContain("Tchaj-pej 101");
@@ -136,7 +138,7 @@ describe("zadání páté kapitoly", () => {
   it("ukázka dlouhého děje se přehrává zrychleně a říká to", async () => {
     await stranka.goto(`${adresa}?uroven=5-01`);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-medaile")).toContain("nerozkmitá nad 0,5 m/s²");
+    expect(await sbaleny("zadani-medaile")).toContain("nerozkmitá nad 0,5 m/s²");
     expect(await sbaleny("zadani-skutecnost")).toContain("Golden Gate");
     await stranka.locator('[data-udaj="ukazka"][data-stav="hraje"]').waitFor({ timeout: 120_000 });
     expect(await stranka.locator('[data-udaj="ukazka"] [data-poznamka]').innerText()).toMatch(

@@ -193,9 +193,11 @@ export function vypisMedaile(
 
 /**
  * Medaile do pruhu výsledku: tři značky s názvem vedle sebe; podmínka je v bublině a celá
- * v podrobnostech výsledku.
+ * v podrobnostech výsledku. `cilRozpoctu` („do 32 500 Kč“) se připíše k rozpočtové medaili,
+ * kterou most nezískal jen kvůli ceně: úroveň má dva rozpočty (nad jeden se zkouška nepustí,
+ * pod druhý je medaile) a hráč jinak nechápe, proč za most „pod rozpočtem“ medaili nemá.
  */
-export function vypisMedailePruhu(seznam: HTMLElement, uroven: Uroven, medaile: Readonly<Medaile>, drive?: Readonly<Medaile>): void {
+export function vypisMedailePruhu(seznam: HTMLElement, uroven: Uroven, medaile: Readonly<Medaile>, drive?: Readonly<Medaile>, cilRozpoctu: string | null = null): void {
   const zDrivejska = drive ? radky(uroven, drive).map((r) => r.ziskana) : [];
   seznam.replaceChildren(
     ...radky(uroven, medaile).map((radek, i) => {
@@ -212,6 +214,12 @@ export function vypisMedailePruhu(seznam: HTMLElement, uroven: Uroven, medaile: 
       const nazev = document.createElement("span");
       nazev.textContent = t(radek.nazev);
       polozka.append(znak, nazev);
+      if (cilRozpoctu !== null && radek.nazev === "medaile.rozpocet" && !radek.ziskana && !uzMa) {
+        const cil = document.createElement("small");
+        cil.className = "medaile__cil";
+        cil.textContent = cilRozpoctu;
+        polozka.append(cil);
+      }
       return polozka;
     }),
   );
