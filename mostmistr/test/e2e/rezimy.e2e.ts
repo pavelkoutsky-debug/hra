@@ -6,6 +6,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { nactiMostImportem, rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -31,6 +32,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -105,11 +107,15 @@ describe("výzvy o efektivitu", () => {
       "Nejlehčí most: zlato do 914 kg.",
       "Únosnost na korunu (zkouška Do zlomu): zlato od 37,4 t na 100 000 Kč.",
     ]);
-    // Medaile jsou cíl úrovně: stojí nad provozem a výzvami a jsou vidět bez posouvání.
+    // Medaile jsou cíl úrovně: sbalené jsou první částí nad provozem a výzvami a jejich řádek
+    // se znaky je vidět bez posouvání.
+    expect(await stranka.locator("#okno-zadani details.okno__vice").first().getAttribute("data-cast")).toBe("zadani-medaile");
     const okno = (await stranka.locator("#okno-zadani").boundingBox())!;
-    const medaile = (await stranka.locator('[data-udaj="zadani-medaile"]').boundingBox())!;
+    const medaile = (await stranka.locator('#okno-zadani details[data-cast="zadani-medaile"] > summary').boundingBox())!;
     expect(medaile.y + medaile.height).toBeLessThan(okno.y + okno.height);
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
+    // V první kapitole je zkouška do zlomu pod „Více“.
+    await rozbalPaletu(stranka);
     const tlacitko = akce("zlom");
     expect(await tlacitko.isVisible()).toBe(true);
     expect(await tlacitko.innerText()).toContain("Do zlomu");
@@ -122,6 +128,7 @@ describe("výzvy o efektivitu", () => {
 
   it("zkoušku do zlomu hra nepustí, dokud mostovka nevede od břehu k břehu", async () => {
     // Prázdný výkres: tlačítkem i klávesou D.
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("hlaseni")).toBe("Zkouška do zlomu zatěžuje mostovku a na trase mezi 0 a 8 m žádná neleží. Dostav most od břehu k břehu.");
@@ -133,6 +140,7 @@ describe("výzvy o efektivitu", () => {
     most.pruty = most.pruty.filter((p) => p.prvek !== "mostovka-drevo");
     await nactiMost(JSON.stringify(most));
     expect(Number(await telo("pruty"))).toBeGreaterThan(0);
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("hlaseni")).toContain("Dostav most od břehu k břehu");
@@ -164,6 +172,7 @@ describe("výzvy o efektivitu", () => {
 
   it("zkouška do zlomu přikládá zátěž, dokud most nepovolí, a řekne, kolik unesl na korunu", async () => {
     await akce("upravit").click();
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await pockejNaZkousku();
     await nastavCas(6);
@@ -210,6 +219,7 @@ describe("výzvy o efektivitu", () => {
   it("slabší most rekord nezhorší a přehled kampaně ukazuje součet stupňů", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["1-01"]!.rozpocet));
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await pockejNaZkousku();
     expect(await naKonec()).toBe("ZKOUŠKA DO ZLOMU");
@@ -254,9 +264,10 @@ describe("výzvy o efektivitu", () => {
     expect(await telo("pruty")).toBe(String(drahy.pruty.length));
     expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("nad");
     // Odmítnutí je kvůli rozpočtu, ne kvůli jiné chybě návrhu: tlačítkem i klávesou D.
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
-    expect(await udaj("hlaseni")).toBe("Most je o 10 454 Kč dražší než rozpočet. Před zkouškou ho zlevni.");
+    expect(await udaj("hlaseni")).toBe("Zkouška nejde: most je o 10 454 Kč nad rozpočtem.");
     await stranka.locator(PLATNO).focus();
     await stranka.keyboard.press("d");
     expect(await telo("rezim")).toBe("stavba");
@@ -281,6 +292,8 @@ describe("sandbox", () => {
     expect(await udaj("zadani-nazev")).toBe("Pískoviště");
     expect(await udaj("zadani-text")).toContain("žádné medaile, všechny prvky");
     // Výchozí provoz: dvě osobní auta zleva a nákladní auto zprava.
+    // Provoz je v zadání sbalený: hráč si ho rozklikne.
+    await stranka.locator('#okno-zadani details[data-cast="zadani-provoz"] > summary').click();
     const provoz = await udaj("zadani-provoz");
     expect(provoz).toContain("2× osobní auto");
     expect(provoz).toContain("nákladní auto");
@@ -601,25 +614,31 @@ describe("nápověda", () => {
     await stranka.screenshot({ path: `${SLOZKA}/r9c-napoveda-obrys-pist.png` });
   });
 
-  it("po třetí zkoušce, která neprojde, hra nápovědu sama připomene", async () => {
+  it("po druhé zkoušce, která neprojde, zvýrazní Nápovědu v paletě a po třetí ukáže u výsledku její první krok", async () => {
     // Čerstvá návštěva: kdo si nápovědu už otevřel sám, tomu ji hra nepřipomíná.
     await otevri("1-02");
-    await nactiMost(navrhNaText(RESENI["1-02"]!.pady[0]!.navrh));
+    await nactiMostImportem(stranka, navrhNaText(RESENI["1-02"]!.pady[0]!.navrh));
     for (let pokus = 1; pokus <= 3; pokus++) {
       await spust();
       expect(await naKonec()).toBe("MOST NEOBSTÁL");
       // Kdo si podrobnosti s radou přečetl sám, tomu ji pruh při stejném nezdaru nevnucuje
-      // (`test/e2e/rada.e2e.ts`) a nápovědu pak připomene hlášení po třetím nezdaru.
-      if (pokus === 1) await akce("vysledek-sbalit").click();
+      // (`test/e2e/rada.e2e.ts`); náhled nápovědy po třetím nezdaru ano.
       expect(await stranka.locator('[data-udaj="vysledek-rada"]').isVisible()).toBe(false);
+      expect(await stranka.locator('[data-udaj="vysledek-nahled"]').isVisible()).toBe(pokus === 3);
       await akce("upravit").click();
-      const hlaseni = await udaj("hlaseni");
-      if (pokus < 3) expect(hlaseni).not.toContain("Nedaří se?");
-      else expect(hlaseni).toContain("Nedaří se? Nahoře v paletě je Nápověda");
+      // Jedna výzva k téže věci: hlášení „Nedaří se?“ po náhledu nepřijde.
+      expect(await udaj("hlaseni")).not.toContain("Nedaří se?");
+      // Tlačítko Nápověda v paletě má po druhém nezdaru obrys.
+      expect(await akce("napoveda").getAttribute("data-tip")).toBe(pokus >= 2 ? "napoveda" : null);
     }
-    // Připomene ji jen jednou.
+    // Kdo nápovědu otevře, tomu obrys zmizí a náhled u výsledku už nepřijde.
+    await akce("napoveda").click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await akce("napoveda").getAttribute("data-tip")).toBeNull();
+    await stranka.keyboard.press("Escape");
     await spust();
     await naKonec();
+    expect(await stranka.locator('[data-udaj="vysledek-nahled"]').isVisible()).toBe(false);
     await akce("upravit").click();
     expect(await udaj("hlaseni")).not.toContain("Nedaří se?");
   }, 240_000);

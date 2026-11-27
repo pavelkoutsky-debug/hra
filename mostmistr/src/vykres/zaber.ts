@@ -93,7 +93,7 @@ function zalom(ctx: Kontext, text: string, sirka: number): string[] {
 /** Nejširší popisek značky na výkresu (px): delší text se láme. */
 const NEJSIRSI_POPISEK = 430;
 
-function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: number, popis: string, rada: string, vrch = 0): void {
+function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: number, popis: string, rada: string, vrch = 0, radejiDole = false): void {
   // Dlouhá rada se láme do sloupce: řádek přes celou šířku výkresu by zakryl pás mostu pod sebou.
   const nejvic = Math.max(120, Math.min(NEJSIRSI_POPISEK, rozmer.sirka - 36));
   ctx.font = `bold 13px ${PISMO}`;
@@ -105,8 +105,10 @@ function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: numb
   const sirka = Math.max(sirkaPopisu, sirkaRady) + 20;
   const vyska = 10 + 18 * radkyPopisu.length + 15 * radkyRady.length;
   const vpravo = stred.x + polomer + 26 + sirka <= rozmer.sirka - 8;
-  // Nahoře smí být jen tehdy, když se vejde pod hlášení nad výkresem (`vrch`).
-  const nahore = stred.y - polomer - 14 - vyska >= 8 + vrch;
+  // Nahoře smí být jen tehdy, když se vejde pod hlášení nad výkresem (`vrch`). Kdo chce popisek
+  // raději pod značkou (nad ní se staví), dostane ho tam, když se vejde.
+  const vejdeSeDolu = stred.y + polomer + 14 + vyska <= rozmer.vyska - 8;
+  const nahore = !(radejiDole && vejdeSeDolu) && stred.y - polomer - 14 - vyska >= 8 + vrch;
   const kotvaX = stred.x + (vpravo ? 0.707 : -0.707) * polomer;
   const kotvaY = stred.y + (nahore ? -0.707 : 0.707) * polomer;
   const rohX = vpravo ? kotvaX + 22 : kotvaX - 22;
@@ -133,9 +135,11 @@ function nakresliPopisek(ctx: Kontext, rozmer: Rozmer, stred: Bod, polomer: numb
 
 /**
  * Značka při stavbě: tady by se most složil. Čárkovaný kroužek kolem styčníku a popisek
- * s důvodem; nic neztmavuje, hráč pod ní dál staví.
+ * s důvodem; nic neztmavuje, hráč pod ní dál staví. `popisekDole` ho dá pod značku: tam, kde
+ * se opravuje stavbou nad mostovkou, by popisek nahoře zakryl místo, kam hráč potřebuje kreslit
+ * (na telefonu ležel přes vrchol trojúhelníku v 1-01).
  */
-export function nakresliSlozeni(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, misto: Bod, popis: string, rada: string): void {
+export function nakresliSlozeni(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, misto: Bod, popis: string, rada: string, popisekDole = false): void {
   const stred = svetNaObraz(kamera, rozmer, misto);
   const polomer = 22;
   ctx.save();
@@ -145,6 +149,22 @@ export function nakresliSlozeni(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, mi
   ctx.beginPath();
   ctx.arc(stred.x, stred.y, polomer, 0, 2 * Math.PI);
   ctx.stroke();
-  nakresliPopisek(ctx, rozmer, stred, polomer, popis, rada);
+  nakresliPopisek(ctx, rozmer, stred, polomer, popis, rada, 0, popisekDole);
+  ctx.restore();
+}
+
+/**
+ * Místo, o kterém mluví pruh výsledku (podpora, ze které most sjel, místo, kde ležel na zemi,
+ * styčník, který nic nedrží): čárkovaný kroužek bez popisku, popisek je věta v pruhu.
+ */
+export function nakresliOznaceneMisto(ctx: Kontext, kamera: Kamera, rozmer: Rozmer, misto: Bod): void {
+  const stred = svetNaObraz(kamera, rozmer, misto);
+  ctx.save();
+  ctx.strokeStyle = BARVY.varovani;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.arc(stred.x, stred.y, 22, 0, 2 * Math.PI);
+  ctx.stroke();
   ctx.restore();
 }

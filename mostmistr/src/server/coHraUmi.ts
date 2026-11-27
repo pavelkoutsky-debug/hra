@@ -10,13 +10,14 @@
 
 export const CO_HRA_UMI: readonly string[] = [
   "Kampaň: 38 úrovní v osmi kapitolách (lávky, kmitání, silnice, pilíře a lana, město, železnice, zvedací mosty, finále); pátá úroveň kapitol 1 až 7 je zkouška bez nápovědy. Úrovně se odemykají po jedné, další kapitola po dvou projitých úrovních té předchozí.",
-  "Přehled: nový hráč má nahoře jedno tlačítko, které ho pustí do 1-01, vracející se hráč tlačítko Pokračovat do další neprošlé úrovně.",
-  "Zadání úrovně: dvě věty, pod nimi „Více o úloze“, u úrovní s novým prvkem ukázka (dva mosty vedle sebe: bez prvku a s ním) a odstavec o skutečném mostě; slovníček 22 pojmů s vysvětlením na kliknutí.",
-  "První úroveň 1-01 vede hráče po krocích: výkres ukazuje, odkud kam táhnout další díl mostovky; po dokončení mostovky hra sama vybere levnější Lehký trám na zbytek mostu a zvýrazní tlačítko Zkouška, a po první neúspěšné zkoušce řekne, že mostovku musí něco držet. Most dražší než rozpočet zkouška nepustí a hlášení říká, o kolik je dražší a že mostovka patří jen na cestu.",
+  "Přehled: nový hráč má nahoře jedno tlačítko, které ho pustí do 1-01, a vidí jen první kapitolu (zbytek odkryje odkaz Celá kampaň); vracející se hráč má tlačítko Pokračovat do další neprošlé úrovně a celý přehled.",
+  "Zadání úrovně: jedna až dvě věty a u úrovní s novým prvkem ukázka (dva mosty vedle sebe: bez prvku a s ním); medaile, provoz, prvky, výzvy, „Více o úloze“ s odstavcem o skutečném mostě a ovládání jsou sbalené na rozkliknutí; slovníček 22 pojmů s vysvětlením na kliknutí.",
+  "První úroveň 1-01 vede hráče po krocích: výkres ukazuje, odkud kam táhnout další díl mostovky, po dokončení mostovky zvýrazní tlačítko Zkouška a po první neúspěšné zkoušce řekne, že mostovku musí něco držet.",
+  "Rozpočet: v neprošlých úrovních kampaně (kromě zvedacích mostů) hra po dokončení mostovky sama vezme do ruky nejlevnější prut a jeho tlačítko v paletě blikne. Když cena při stavbě přeleze rozpočet, hlášení řekne o kolik a ukazatel v liště zežloutne; pruty z mostovky mimo cestu nabídne vyměnit jedním tlačítkem za nejlevnější prut (i po nepuštěné zkoušce).",
   "Stavba: nástroj Výběr a posun (klik, rámeček; tažení za vybraný styčník posune celý výběr i s připojenými pruty, šipky ho posouvají po metru, styčníky v podporách zůstávají stát), zrcadlení, Zpět a Znovu, mazání, import a export mostu. Po první prošlé zkoušce hra na posun jednou upozorní.",
   "Kontrola při stavbě: značka u místa, kde se most složí vlastní vahou, u volného prutu, u mostovky, po které nikdo nepůjde (přejíždí kraj břehu bez styčníku, leží mimo trasu nebo za jejím koncem), a u prutu, který se při poslední zkoušce porušil jako první; řádek rad pod výkresem podle zvoleného nástroje. Tah mostovky přetažený za kraj břehu editor sám ukončí na kraji a řekne proč.",
   "Zkouška: přehrávání s časovou osou, rychlostmi a krokováním, barvy a čísla využití prutů, zpomalený záběr na první porušení (jde vypnout), klidné úseky se přehrávají rychleji.",
-  "Výsledek: pruh s verdiktem, jednou větou o příčině a medailemi, razítko SCHVÁLENO nebo ZAMÍTNUTO, v podrobnostech čísla, důvod u každé nezískané medaile a rada k prvnímu porušení. Když most neprojde podruhé po sobě stejně, hra radu ukáže sama v pruhu výsledku i s tlačítkem nápovědy, nechá ji tam, dokud se stejná chyba opakuje, a po návratu ke stavbě ji ukazuje u označeného prutu.",
+  "Výsledek: pruh s verdiktem, medailemi a větou o příčině, která říká i co udělat a označí místo na výkresu (prut, podporu, místo na zemi); v podrobnostech čísla a důvody nezískaných medailí. Podruhé stejný nezdar: rada v pruhu s tlačítkem Ukázat skicu a u značky při stavbě, Nápověda v paletě zvýrazněná. Potřetí v návštěvě: první krok nápovědy (skica, princip) přímo v pruhu.",
   "Nápověda úrovně má tři kroky: princip se skicou, soupis materiálu a obrys mostu na výkresu; obrysy mostů pro medaile až po projití úrovně.",
   "Medaile: průchod, rozpočtová (levný most, na kterém se nic neporušilo) a mistrovská (rozpočtová a k ní bonus úrovně). Výzvy o nejlevnější a nejlehčí most a o únosnost na korunu (zkouška do zlomu), žebříčky všech hráčů ke každé úrovni.",
   "Kmitání: osa frekvencí s odhadem kmitání pod lidmi, rada, co ho sníží, pokusy Brnknutí a Budič, laděný tlumič s tlačítkem Naladit na rytmus.",
@@ -24,6 +25,7 @@ export const CO_HRA_UMI: readonly string[] = [
   "Další režimy: pískoviště s vlastním údolím, provozem a dílnou uložených prací, Havarijní komise (opravit cizí spadlý most nejvýš třemi změnami), závěrečný list s mosty hráče.",
   "Sdílení: odkaz na most, obrázek mostu ke stažení, výzva kamarádovi na levnější most, odkaz na scénář z pískoviště.",
   "Ovládání a jazyk: myš a klávesnice, dotyk (jeden prst kreslí, dva posouvají a zvětšují), rozložení pro telefon, čeština a angličtina, zvuk ze syntezátoru se třemi stupni hlasitosti.",
+  "Paleta v první kapitole (1-01 až 1-05) ukazuje jen Zadání, Nápovědu, základní nástroje a prvky; ostatní (Zrcadlit, Vše pryč, Do zlomu, Export, Import, Sdílet, Žebříček, výňatek zadání, slovníček, medaile) je pod tlačítkem Více, jehož stav si hra pamatuje. Horní lišta má zvuk a zoom jako malé ikony.",
   "Zpětná vazba a soukromí: okno Napiš nám (druh, text, hodnocení, volitelně e-mail a přiložený most), okno Soukromí a kontakt s vypínačem záznamu hraní.",
 ];
 
@@ -36,7 +38,7 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
   hraUmi:
     "Co hra už umí. Nic z toho nenavrhuj jako novinku; když čísla ukazují, že to nezabírá, navrhni, jak to udělat viditelnější nebo lepší.",
   "souhrn.bezUrovne":
-    "Hráči, kteří neotevřeli žádnou úroveň kampaně. jenPrehled: viděli jen přehled; piskoviste, komise, list, zkusebna, soukromi, vazba: kam šli místo toho (můžou se překrývat); bezObrazovky: stránka se nedonačetla. sAkci a bezAkce: jestli na stránce vůbec něco udělali (bezAkce bývá robot, který stahuje náhled odkazu, nebo okamžitý odchod); zbytek do hracu je neznámý (starší verze hry, která akci nezapisovala, nebo sezení začaté před půlnocí).",
+    "Hráči, kteří neotevřeli žádnou úroveň kampaně. jenPrehled: viděli jen přehled; piskoviste, komise, list, zkusebna, soukromi, vazba: kam šli místo toho (můžou se překrývat); celaKampan: rozbalili v přehledu celou kampaň (nový hráč jinak vidí jen první kapitolu); bezObrazovky: stránka se nedonačetla. sAkci a bezAkce: jestli na stránce vůbec něco udělali (bezAkce bývá robot, který stahuje náhled odkazu, nebo okamžitý odchod); zbytek do hracu je neznámý (starší verze hry, která akci nezapisovala, nebo sezení začaté před půlnocí).",
   "souhrn.urovne[].hracuBezZkousky":
     "Otevřeli úroveň a nepustili ani jednu zkoušku. hracuNaDotyku: hráči úrovně na dotykovém zařízení; hracuBezZkouskyNaDotyku: kolik z hráčů bez zkoušky bylo na dotyku; hracuBezPrutu: kolik hráčů úrovně v ní za to období nenakreslilo ani jeden prut (patří sem i ten, kdo jen zkoušel most uložený dřív nebo cizí most z odkazu).",
   "souhrn.urovne[].selhani":
@@ -45,14 +47,22 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
     "Hráči, kteří si otevřeli nápovědu úrovně; hracuSObrysem si nechali ukázat i obrys mostu na výkresu.",
   "souhrn.urovne[].rady":
     "Rada po druhém stejném nezdaru za sebou (hra ji ukáže sama v pruhu výsledku) a kolikrát která zazněla. hracuSRadou: kolik hráčů ji vidělo; hracuSRadouPrusli: kolik z nich potom zkouškou prošlo (počítá se první průchod po radě, i u hráče, který úroveň prošel už dřív a radu dostal při zlevňování); zkousekPoRade: medián zkoušek od rady do toho průchodu; hracuNapovedaZRady: kolik z nich z rady otevřelo nápovědu.",
+  "souhrn.urovne[].hracuSNahledem":
+    "Náhled nápovědy: po třetí zkoušce, která v jedné návštěvě úrovně neprošla, ukáže hra první krok nápovědy (skicu a princip mostu, který projde) přímo v pruhu výsledku; ne hráči, který si nápovědu otevřel sám. hracuSNahledem: kolik hráčů ho vidělo; hracuNapovedaZNahledu: kolik z nich z něj tlačítkem otevřelo nápovědu na dalším kroku.",
   "souhrn.urovne[].posunu":
     "Posuny styčníků nástrojem Výběr a posun nebo šipkami. hracuSPosunem: kolik hráčů posun použilo; posunu: kolik posunů bylo; posunuVic: z toho víc styčníků naráz; posunuKlavesou: z toho šipkou.",
+  "souhrn.urovne[].hracuSVice":
+    "Kolik hráčů úrovně si v paletě rozbalilo „Více“. V první kapitole (1-01 až 1-05) paleta ukazuje jen Zadání, Nápovědu, nástroje Výběr a posun, Smazat, Zpět, Znovu a prvky; Zrcadlit, Vše pryč, Do zlomu, Export, Import, Sdílet, Žebříček, výňatek zadání, slovníček a medaile jsou pod tlačítkem Více. Rozbalení si hra pamatuje, takže hráč, který ho otevřel v 1-01, ho v dalších úrovních kapitoly má otevřené a znovu se nepočítá. Od druhé kapitoly je paleta celá a pole je tam 0.",
   "souhrn.urovne[].zkousekOdmitnuto":
     "Zkoušky, které hra nepustila, protože most porušoval pravidla úrovně (pokusy se nepočítají). zkousekNadRozpocet: z toho proto, že byl dražší než rozpočet; hracuSOdmitnutim: kolika hráčů se to týkalo. Hodně odmítnutí kvůli rozpočtu v první úrovni znamená, že nováčci staví z drahého prvku.",
+  "souhrn.urovne[].hracuNadRozpoctem":
+    "Kolik hráčů při stavbě přelezlo rozpočet úrovně (hra jim to hned řekla hlášením s částkou). hracuSVymenou: kolik z hráčů úrovně použilo tlačítko, které pruty z mostovky mimo cestu vymění za levnější prut. Málo výměn při hodně překročeních a dál hodně zkoušek odmítnutých kvůli rozpočtu znamená, že nabídka nezabírá.",
   "souhrn.urovne[].znacky":
     "Značky, kterými hra při stavbě upozornila na mostovku, po které nikdo nepůjde, a kolikrát se ukázaly. Když jich je hodně a mezera v mostovce dál končí zkoušky, značka nezabírá.",
+  neuplne:
+    "True znamená, že server ještě nedočetl všechny dávky deníku a čísla v souhrnech jsou jen část dne. Pole nedokonceno jmenuje dny, které dopočítává, a davek říká, kolik dávek už má v souhrnu týdne. Opakováním žádosti se souhrn dopočítá; dokud davek mezi dvěma žádostmi roste, má opakování smysl.",
   zebricky:
-    "overeni: kolik zkoušek server pustil; prijato a zlepseni: zápisy; odmitnuto: podle důvodu. Počítají se i zkoušky autorů na ostrém webu včetně schválně poslaných podvrhů: ojedinělé odmítnutí „otisk“ bez zprávy od hráče proto není důkaz chyby, opakované u víc úrovní nebo se zprávou hráče ano.",
+    "overeni: kolik zkoušek server pustil; prijato a zlepseni: zápisy; odmitnuto: podle důvodu. Počítají se i zkoušky autorů na ostrém webu včetně schválně poslaných podvrhů: ojedinělé odmítnutí „otisk“ bez zprávy od hráče proto není důkaz chyby, opakované u víc úrovní nebo se zprávou hráče ano. Důvod „adresa“ je denní strop zkoušek z jedné adresy (někdo ten den zapisoval hodně mostů) a „plno“ denní strop pro všechny: ani jedno není chyba hry. Když je prijato víc než overeni, není to chyba: most, který server už jednou přepočítal, znovu nezkouší.",
   obecne:
-    "Den je v UTC. Zkoušky autorů v prohlížeči mají záznam hraní vypnutý a v souhrnu nejsou. Hráč je náhodné číslo prohlížeče, ne člověk: kdo hraje na telefonu i na počítači, je dvakrát.",
+    "Den je v UTC. Zkoušky autorů v prohlížeči mají záznam hraní vypnutý a v souhrnu nejsou. Hráč je náhodné číslo prohlížeče, ne člověk: kdo hraje na telefonu i na počítači, je dvakrát. Od verze 0.25.0 se most, který si lehl na zem, počítá mezi příčinami jako „opřel se o terén“, i když potom kmital nebo sjel z podpory: podíly těchto tří příčin proto nejde srovnávat se dny před 28. 11. 2026.",
 };

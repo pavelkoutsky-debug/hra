@@ -71,6 +71,12 @@ describe("kód příčiny neúspěchu zkoušky", () => {
     expect(kodPriciny(s({ kmitaniNadMezi: true }, { komfort: { ...komfort, prekroceno: null } }))).toBe("kmitani");
     expect(kodPriciny(s({ prvni: { druh: "sjeti", cas: 2 } }, { spadlo: 1, prejelo: 2 }))).toBe("sjeti");
     expect(kodPriciny(s({}, { opreno: true }))).toBe("opreno");
+    // Most opřený o dno údolí potom kmitá na terénu nebo sjede z podpory: příčina je opření
+    // (tak to říká i pruh výsledku), ne jeho následek.
+    expect(kodPriciny(s({ kmitaniNadMezi: true }, { opreno: true, komfort }))).toBe("opreno");
+    expect(kodPriciny(s({ prvni: { druh: "sjeti", cas: 4 } }, { opreno: true, spadlo: 29, prejelo: 7 }))).toBe("opreno");
+    // Mezera v mostovce, kterou lidé propadli, zůstává mezerou, i když se most pak opřel.
+    expect(kodPriciny(s({}, { opreno: true, mezera: true, spadlo: 2, prejelo: 1 }))).toBe("mezera");
     expect(kodPriciny(s({}, { spadlo: 1, prejelo: 2 }))).toBe("spadl");
     expect(kodPriciny(s({}, { lode: { celkem: 1, proplulo: 0, narazilo: 1 } }))).toBe("lod");
     expect(kodPriciny(s({}, { prejelo: 1 }))).toBe("neprejel");
@@ -115,8 +121,8 @@ describe("souhrn: na čem mosty padaly, když se nic nezlomilo", () => {
 
 describe("souhrn: hráči bez úrovně kampaně", () => {
   const davky = [
-    // Jen přehled, rozhlédl se (posouval) a odešel; na telefonu.
-    davka("b000000000000001", [start(), u(5, "prehled.otevren"), u(900, "stranka.akce", undefined, { jak: "dotyk", sekund: 1 })], true),
+    // Jen přehled, rozhlédl se (posouval), rozbalil celou kampaň a odešel; na telefonu.
+    davka("b000000000000001", [start(), u(5, "prehled.otevren"), u(900, "stranka.akce", undefined, { jak: "dotyk", sekund: 1 }), u(950, "prehled.odkaz", undefined, { kam: "cela-kampan" })], true),
     // Jen přehled a nic neudělal: robot náhledu odkazu nebo okamžitý odchod.
     davka("b000000000000002", [start(), u(5, "prehled.otevren")]),
     // Přehled, pak pískoviště a okno Soukromí.
@@ -125,10 +131,10 @@ describe("souhrn: hráči bez úrovně kampaně", () => {
     davka("b000000000000004", [start(), u(5, "prehled.otevren"), u(6, "prehled.odkaz", undefined, { kam: "zkusebna" }), u(8, "list.otevren"), u(9, "uroven.otevrena", "9-01")], true),
     // Starší hra: akce se nezapisovaly, takže o něm nevíme, jestli něco udělal.
     davka("b000000000000005", [start(false), u(5, "prehled.otevren")]),
-    // Jen začátek sezení, nic dalšího; a vymyšlený druh akce se nepočítá.
-    davka("b000000000000006", [start(), u(5, "stranka.akce", undefined, { jak: "telepatie", sekund: 1 })]),
-    // Hráč s úrovní kampaně do „bez úrovně“ nepatří.
-    davka("b000000000000007", [start(), u(5, "prehled.otevren"), u(6, "prehled.odkaz", undefined, { kam: "zacit" }), u(7, "uroven.otevrena", "1-01")]),
+    // Jen začátek sezení, nic dalšího; vymyšlený druh akce ani vymyšlený cíl odkazu se nepočítají.
+    davka("b000000000000006", [start(), u(5, "stranka.akce", undefined, { jak: "telepatie", sekund: 1 }), u(6, "prehled.odkaz", undefined, { kam: "jine" })]),
+    // Hráč s úrovní kampaně do „bez úrovně“ nepatří, ani když si rozbalil celou kampaň.
+    davka("b000000000000007", [start(), u(5, "prehled.otevren"), u(6, "prehled.odkaz", undefined, { kam: "cela-kampan" }), u(7, "prehled.odkaz", undefined, { kam: "zacit" }), u(8, "uroven.otevrena", "1-01")]),
   ];
 
   it("říká, kolik jich vidělo jen přehled, kam jiní šli, kolik bylo na dotyku a kolik nic neudělalo", () => {
@@ -145,6 +151,7 @@ describe("souhrn: hráči bez úrovně kampaně", () => {
       zkusebna: 1,
       soukromi: 1,
       vazba: 0,
+      celaKampan: 1,
       bezObrazovky: 1,
       sAkci: 2,
       bezAkce: 3,

@@ -34,7 +34,17 @@ export interface MoznostiNapovedy {
 }
 
 export interface Napoveda {
-  otevri(): void;
+  /**
+   * Otevře okno nápovědy. `odKroku` ho otevře nejméně na daném kroku mostu pro průchod: náhled
+   * u výsledku už první krok ukázal, tlačítko z něj vede rovnou na další.
+   */
+  otevri(odKroku?: KrokNapovedy): void;
+  /**
+   * První krok nápovědy u výsledku zkoušky (náhled po třetím nezdaru): nakreslí skicu mostu,
+   * který projde, do plátna `platno` a vrátí větu o jeho principu. Okno se neotevírá a hráči
+   * se nic nezapisuje jako použitá nápověda.
+   */
+  nahled(platno: HTMLCanvasElement | null): string;
   /** Most, jehož obrys je právě vidět na výkresu; null, když žádný. */
   readonly obrys: NavrhMostu | null;
 }
@@ -126,17 +136,19 @@ export function pripojNapovedu(reseni: Readonly<Record<MostNapovedy, NavrhMostu>
     return t(cena <= limit ? "napoveda.cena.vejdeSe" : "napoveda.cena.draha", { cena: koruny(cena), limit: koruny(limit) });
   };
 
-  const nakresli = (): void => {
+  /** Skica mostu `most` do plátna podle jeho velikosti na stránce. */
+  const nakresliDo = (platno: HTMLCanvasElement, most: MostNapovedy): void => {
     const hustota = window.devicePixelRatio || 1;
-    const rozmer = skica.getBoundingClientRect();
+    const rozmer = platno.getBoundingClientRect();
     if (rozmer.width < 2 || rozmer.height < 2) return;
-    skica.width = Math.round(rozmer.width * hustota);
-    skica.height = Math.round(rozmer.height * hustota);
-    const ctx = skica.getContext("2d");
+    platno.width = Math.round(rozmer.width * hustota);
+    platno.height = Math.round(rozmer.height * hustota);
+    const ctx = platno.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(hustota, 0, 0, hustota, 0, 0);
-    nakresliSkicu(ctx, rozmer.width, rozmer.height, rysyMostu(reseni[vybrany], uroven));
+    nakresliSkicu(ctx, rozmer.width, rozmer.height, rysyMostu(reseni[most], uroven));
   };
+  const nakresli = (): void => nakresliDo(skica, vybrany);
 
   const obnov = (): void => {
     const projito = moznosti.projito();
@@ -195,12 +207,18 @@ export function pripojNapovedu(reseni: Readonly<Record<MostNapovedy, NavrhMostu>
   });
 
   return {
-    otevri(): void {
+    otevri(odKroku: KrokNapovedy = 1): void {
       // Kdo má obrys na výkresu, otevírá nápovědu u jeho mostu.
       if (obrys !== null) vybrany = obrys;
+      else if (odKroku > 1) vybrany = "pruchod";
+      if (kroky[vybrany] < odKroku) kroky[vybrany] = odKroku;
       moznosti.pouzita(videnyKrok(), vybrany);
       okno.showModal();
       obnov();
+    },
+    nahled(platno: HTMLCanvasElement | null): string {
+      if (platno) nakresliDo(platno, "pruchod");
+      return vetaOPrincipu(rysyMostu(reseni.pruchod, uroven));
     },
     get obrys(): NavrhMostu | null {
       return obrys === null ? null : reseni[obrys];

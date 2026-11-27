@@ -500,7 +500,7 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
   prvek("#den-bez-urovne").textContent = b
     ? `Bez úrovně kampaně: ${pocet(b.hracu, "hráč", "hráči", "hráčů")} (nových ${b.novych}, na dotyku ${b.dotykovych}) · ` +
       `jen přehled ${b.jenPrehled} · pískoviště ${b.piskoviste} · komise ${b.komise} · list ${b.list} · zkušebna ${b.zkusebna} · ` +
-      `okno Soukromí ${b.soukromi} · zpětná vazba ${b.vazba} · bez obrazovky ${b.bezObrazovky} · ` +
+      `okno Soukromí ${b.soukromi} · zpětná vazba ${b.vazba} · celá kampaň ${b.celaKampan ?? 0} · bez obrazovky ${b.bezObrazovky} · ` +
       `na stránce něco udělali ${b.sAkci}, nic (robot náhledu nebo hned odešli) ${b.bezAkce}, neznámo ${b.hracu - b.sAkci - b.bezAkce}`
     : "";
   const telo = prvek<HTMLTableSectionElement>("#souhrn tbody");
@@ -519,8 +519,13 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
       radek.append(
         bunka(`${u.uroven} ${urovne.get(u.uroven)?.nazev ?? ""}`),
         bunka(cislo(u.hracu), "cislo"),
-        // Zkoušky a v závorce ty, které hra nepustila (z toho kvůli rozpočtu); starší souhrn je nemá.
-        bunka(`${cislo(u.zkousek)}${u.zkousekOdmitnuto ? ` (+${u.zkousekOdmitnuto} nepuštěných, ${u.zkousekNadRozpocet ?? 0} rozpočet)` : ""}`, "cislo"),
+        // Zkoušky a v závorce ty, které hra nepustila (z toho kvůli rozpočtu); za nimi hráči, kteří
+        // při stavbě přelezli rozpočet, a kolik z nich použilo výměnu mostovky. Starší souhrn to nemá.
+        bunka(
+          `${cislo(u.zkousek)}${u.zkousekOdmitnuto ? ` (+${u.zkousekOdmitnuto} nepuštěných, ${u.zkousekNadRozpocet ?? 0} rozpočet)` : ""}` +
+            (u.hracuNadRozpoctem || u.hracuSVymenou ? ` · nad rozpočtem ${u.hracuNadRozpoctem ?? 0} hráčů, výměna ${u.hracuSVymenou ?? 0}` : ""),
+          "cislo",
+        ),
         bunka(cislo(u.pruchodu), "cislo"),
         bunka(cislo(u.hracuSPruchodem), "cislo"),
         bunka(cislo(u.hracuBezZkousky), "cislo"),
@@ -529,14 +534,21 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
         bunka(cislo(u.zkousekDoPruchodu, 1), "cislo"),
         bunka(cislo(u.minutDoPruchodu, 1), "cislo"),
         bunka(`${u.medaile.pruchod} / ${u.medaile.rozpocet} / ${u.medaile.mistrovska}`, "cislo"),
-        // Rada po druhém stejném nezdaru: kolik hráčů ji vidělo, kolik potom prošlo a kolik z ní otevřelo nápovědu.
-        bunka(`${u.hracuSNapovedou ?? 0} / ${u.hracuSObrysem ?? 0}${u.hracuSRadou ? ` · rada ${u.hracuSRadou} (prošlo ${u.hracuSRadouPrusli ?? 0}, nápověda ${u.hracuNapovedaZRady ?? 0})` : ""}`, "cislo"),
+        // Rada po druhém stejném nezdaru: kolik hráčů ji vidělo, kolik potom prošlo a kolik z ní otevřelo
+        // nápovědu. Náhled nápovědy po třetím nezdaru: kolik hráčů ho vidělo a kolik z něj šlo dál.
+        bunka(
+          `${u.hracuSNapovedou ?? 0} / ${u.hracuSObrysem ?? 0}` +
+            (u.hracuSRadou ? ` · rada ${u.hracuSRadou} (prošlo ${u.hracuSRadouPrusli ?? 0}, nápověda ${u.hracuNapovedaZRady ?? 0})` : "") +
+            (u.hracuSNahledem ? ` · náhled ${u.hracuSNahledem} (nápověda ${u.hracuNapovedaZNahledu ?? 0})` : ""),
+          "cislo",
+        ),
         bunka(`${u.hracuDoZlomu ?? 0} / ${u.zkousekDoZlomu ?? 0}`, "cislo"),
         bunka(ceny),
         bunka(vypis(u.prvky)),
         // Značky o mostovce mimo trasu, které hra při stavbě ukázala (starší souhrn je nemá).
         bunka(`${vypis(u.selhani)}${u.znacky && Object.keys(u.znacky).length > 0 ? ` · značky při stavbě: ${vypis(u.znacky)}` : ""}`),
-        bunka(`${u.hracuSPosunem ?? 0} / ${u.posunu ?? 0} (${u.posunuVic ?? 0} / ${u.posunuKlavesou ?? 0})`, "cislo"),
+        // Za posuny: kolik hráčů si v první kapitole rozbalilo „Více“ v paletě.
+        bunka(`${u.hracuSPosunem ?? 0} / ${u.posunu ?? 0} (${u.posunuVic ?? 0} / ${u.posunuKlavesou ?? 0})${u.hracuSVice ? ` · Více ${u.hracuSVice}` : ""}`, "cislo"),
       );
       return radek;
     }),

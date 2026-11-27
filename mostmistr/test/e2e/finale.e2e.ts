@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -39,6 +40,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -89,6 +91,8 @@ describe("závěrečná kapitola", () => {
   it("přehled má osmou kapitolu se třemi úrovněmi bez zkoušky; otevře se po dvou úrovních sedmé", async () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
+    // Nový hráč vidí jen první kapitolu; zbytek odkryje „Celá kampaň“.
+    await stranka.locator('[data-akce="prehled-cela"]').click();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
     expect(kapitoly).toHaveLength(8);
     expect(kapitoly.at(-1)).toContain("Mistrovské dílo");

@@ -7,6 +7,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 
@@ -64,6 +65,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("smazat-vse").click({ force: true }).catch(() => {});
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
@@ -143,9 +145,9 @@ describe("osa frekvencí, závaží a tlumič", () => {
     // Zadání jsou dvě věty; čím se most tlumí, vysvětluje až „Více o úloze“.
     expect(await udaj("zadani-text")).toContain("nebo most utlum");
     expect(await sbaleny("zadani-vice")).toContain("viskózní tlumiče");
-    expect(await udaj("zadani-provoz")).toContain("útvar 24 lidí, krok 1,7 Hz");
-    expect(await udaj("zadani-medaile")).toContain("nerozkmitá nad 2,5 m/s²");
-    expect(await udaj("zadani-medaile")).toContain("kmitání mostovky nejvýš 1,2 m/s²");
+    expect(await sbaleny("zadani-provoz")).toContain("útvar 24 lidí, krok 1,7 Hz");
+    expect(await sbaleny("zadani-medaile")).toContain("nerozkmitá nad 2,5 m/s²");
+    expect(await sbaleny("zadani-medaile")).toContain("kmitání mostovky nejvýš 1,2 m/s²");
 
     // Ukázka: stejná lávka bez tlumičů a s nimi. Vlevo se rozkmitá přes mez, vpravo ne.
     const ukazka = stranka.locator('[data-udaj="ukazka"]');

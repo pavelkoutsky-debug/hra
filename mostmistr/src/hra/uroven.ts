@@ -29,7 +29,7 @@ import {
   type NavrhMostu,
 } from "../data/navrh";
 import { BEZ_MEDAILI, type Rekord } from "../data/ulozeni";
-import { kdoCestuje, type Uroven } from "../data/uroven";
+import { kdoCestuje, vyskaTerenu, type Uroven } from "../data/uroven";
 import type { Denik } from "../denik/denik";
 import { predOdchodem, stopkyViditelnosti } from "../denik/prohlizec";
 import type { HodnotaDeniku } from "../denik/udalosti";
@@ -79,14 +79,15 @@ import { DRUHY_VYZEV, prahyVyzev, unosnostNaKorunu } from "../data/vyzvy";
 import { TIHOVE_ZRYCHLENI } from "../jadro/integrator";
 import { zatizeniZlomu, ZKOUSKA_DO_ZLOMU } from "../zkouska/zlom";
 import { BARVY } from "../vykres/barvy";
-import { nakresliSlozeni, nakresliZaber } from "../vykres/zaber";
+import { nakresliOznaceneMisto, nakresliSlozeni, nakresliZaber } from "../vykres/zaber";
 import { nakresliSplouchnuti, nakresliTrosky } from "../vykres/efekty";
 import { casyPadu, najdiSplouchnuti, najdiZlomy, type Splouchnuti, type Zlom } from "../zkouska/efekty";
 import { pricinyPohybu, type PricinaPohybu } from "../zkouska/pricinaPohybu";
+import { najdiOpreni, type Opreni } from "../zkouska/opreni";
 import { kodPriciny } from "../zkouska/pricinaVysledku";
-import { BEZ_NALEZU, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
+import { BEZ_NALEZU, kdeSeHoupe, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
 import { dalsiDilMostovky, type KrokVedeni } from "../data/vedeni";
-import { levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, type NalezMezery } from "../data/mezery";
+import { levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, vymenaMostovky, type NalezMezery, type VymenaMostovky } from "../data/mezery";
 import { nakresliVedeni } from "../vykres/vedeni";
 import { POJMY, textSPojmy, UDALOST_SLOVNICKU, ukazBublinu } from "../ui/pojmy";
 import {
@@ -182,6 +183,8 @@ const DOBA_BUBLINY_PO_DOTYKU = 3000;
 const NEJVIC_VYPSANYCH_PORUSENI = 5;
 /** Po jaké době zmizí hlášení, které na nic nečeká, v milisekundách. */
 const DOBA_HLASENI = 6000;
+/** Jak dlouho svítí tlačítko prvku, který hra sama vybrala po dokončení mostovky, ms. */
+const DOBA_PREPNUTI = 2400;
 /** O kolik sekund děje posune záznam jeden krok krokování. */
 const KROK_ZAZNAMU = 0.02;
 /** Brnknutí: kolik newtonů přidá metr tažení myší a největší síla. */
@@ -238,6 +241,14 @@ function jePridavek(nastroj: string): nastroj is Pridavek {
   return (PRIDAVKY as readonly string[]).includes(nastroj);
 }
 
+/** Tlačítko v hlášení nad výkresem: háček `data-akce`, popisek, bublina a co udělá. */
+interface AkceHlaseni {
+  id: string;
+  text: string;
+  popis?: string;
+  proved: () => void;
+}
+
 /**
  * Zpomalený záběr na první poruchu zkoušky (viz `src/hra/rezie.ts`): nejdřív se hledá (záznam
  * ještě nemusí sahat dost daleko), pak je připravený a přehrávání ho vede, nakonec je hotovo.
@@ -290,6 +301,19 @@ interface KmitaniBehu {
 const MEZERA_ZAVAZI = 0.8;
 /** Kolik sekund po prvním překročení meze se čte, co most rozhoupalo: kmitání ještě roste. */
 const PO_PREKROCENI = 2;
+
+/**
+ * Značka při stavbě po zkoušce, která neprošla: kde to povolilo první (`poruseni`), kde most
+ * ležel na zemi (`opreni`), ze které podpory sjel (`sjeti`), nebo kde se most bez klidové polohy
+ * houpal přes mez kmitání (`houpani`). Zůstává, dokud se most nezmění.
+ */
+interface ZnackaPoruchy {
+  navrh: NavrhMostu;
+  druh: "poruseni" | "opreni" | "sjeti" | "houpani";
+  misto: Bod;
+  nadpis: string;
+  popis: string;
+}
 
 interface Beh {
   /** Návrh, který se zkoušel. Dokud ho hráč nezmění, platí pro něj obálka namáhání. */
@@ -352,6 +376,21 @@ interface Beh {
   radaZapsana?: boolean;
   /** Kolikátý stejný nezdar za sebou to byl (nadpis rady: podruhé, nebo znovu). */
   radaVRade?: number;
+  /**
+   * U výsledku se ukáže první krok nápovědy (třetí nezdar v návštěvě, viz `nahledNapovedy`);
+   * `nahledZapsan`: deník už ho zná.
+   */
+  nahled?: boolean;
+  nahledZapsan?: boolean;
+  /**
+   * Styčník návrhu (pořadí), o kterém mluví pruh výsledku, když to není prut: kde most ležel
+   * na zemi, ze které podpory sjel, který styčník mostovky nic nedrží. Na výkresu má kroužek.
+   */
+  oznacenyStycnik?: number | null;
+  /** Kde si most lehl na zem; undefined, dokud se nehledalo (`opreniBehu`). */
+  opreni?: Opreni | null;
+  /** Most bez klidové polohy, který neprošel na kmitání: kde se houpal nejvíc (z výsledku). */
+  houpani?: Slozeni | null;
   /**
    * Kolikrát se smí svislý pohyb mostu na výkresu zvětšit, aby byl vidět; 1, dokud zkouška
    * není spočítaná, a u mostu, který se při ní porušil (tam se kreslí skutečné polohy).
@@ -499,6 +538,7 @@ export function spustUroven(
   const pridavky: Pridavek[] = [];
   /** Úroveň dovoluje lana: v paletě je napínák a mezi nástroji automatické dopnutí. */
   const smiLana = uroven.povolenePrvky.some((id) => KATALOG[id].druh === "lano");
+  const smiPruty = uroven.povolenePrvky.some((id) => KATALOG[id].druh === "prut");
   if (smiLana) pridavky.push("napinak");
   if (uroven.povoleneSvary) pridavky.push("svar");
   // Zámek patří k mostu, který se zvedá.
@@ -539,6 +579,15 @@ export function spustUroven(
   let napovedaNabidnuta = false;
   /** Hráč už nápovědu otevřel sám: připomínat mu ji nemá smysl. */
   let napovedaPouzita = false;
+  /**
+   * Běžné zkoušky hráče, které v téhle návštěvě neprošly (pokusy a cizí most z odkazu se
+   * nepočítají). Od druhé se v paletě zvýrazní Nápověda, od `NAHLED_PO_NEZDARU` se u výsledku
+   * ukáže její první krok (náhled), dokud ji hráč neotevře.
+   */
+  let nezdaruVNavsteve = 0;
+  const NAHLED_PO_NEZDARU = 3;
+  /** Odkud hráč nápovědu otevřel naposledy; nese ho událost deníku `napoveda`. */
+  let odkudNapovedy: "paleta" | "rada" | "nahled" = "paleta";
   /**
    * Rada po druhém stejném nezdaru (`src/hra/radaPoNezdaru.ts`): co si návštěva pamatuje.
    * Komise a zkouška kapitoly neradí.
@@ -587,7 +636,7 @@ export function spustUroven(
   // také: panel tam zabere celou šířku okna a z výkresu by nezbylo nic.
   let analyzaOtevrena = uroven.rezonancniKrivka && sandbox === null && !jeUzkeOkno();
   /** První porušení poslední zkoušky, která neprošla: značka na výkresu při stavbě, dokud se most nezmění. */
-  let posledniPorucha: { navrh: NavrhMostu; misto: Bod; popis: string } | null = null;
+  let posledniPorucha: ZnackaPoruchy | null = null;
   /**
    * Rada, kterou hra ukázala u výsledku (podruhé stejný nezdar): značka prvního porušení nebo
    * složení ji při stavbě opakuje, dokud hráč most nezmění. Háček `body[data-rada-u-prutu]`.
@@ -765,6 +814,8 @@ export function spustUroven(
         const zaZkousku = obalkaNaKonci(beh);
         const kresleny = zaZkousku ? { ...zvetsenySnimek(beh, stavba), vyuziti: vyuzitiZObalky(stavba, zaZkousku) } : zvetsenySnimek(beh, stavba);
         if (beh.oznaceny !== null) zvyrazniPrut(ctx, stavba, beh.oznaceny);
+        const oznacenyStycnik = beh.navrh.stycniky[beh.oznacenyStycnik ?? -1];
+        if (oznacenyStycnik && !panelVysledku.hidden) nakresliOznaceneMisto(ctx, kamera, rozmer, oznacenyStycnik);
         // Pruty mají při zkoušce stejnou tloušťku jako při stavbě.
         const pruty = beh.navrh.pruty;
         nakresliKonstrukci(
@@ -866,20 +917,28 @@ export function spustUroven(
       // Mostovka, která na trase chybí nebo leží mimo ni: lidé by tam propadli.
       const mezera = mezeraStavby();
       const zaBrehem = mezera ? null : zaBrehemStavby();
+      // Most, který si při zkoušce lehl na zem nebo sjel z podpory: kde a co s tím. Pata podpěry
+      // na zemi je i volný konec prutu, ale věta o něm by hráči neřekla, proč most neprošel.
+      const poruchaMista = posledniPorucha && posledniPorucha.navrh === editor.navrh && posledniPorucha.druh !== "poruseni" ? posledniPorucha : null;
       if (mezera) nakresliSlozeni(ctx, kamera, rozmer, mezera.misto, ...textyMezery(mezera));
+      else if (poruchaMista) nakresliSlozeni(ctx, kamera, rozmer, poruchaMista.misto, poruchaMista.nadpis, poruchaMista.popis);
       else if (nalez.slozeni) {
         // Po radě u výsledku (podruhé stejné složení) ji značka opakuje, dokud se most nezmění.
         const rada = radaNaVykresu && radaNaVykresu.navrh === editor.navrh && radaNaVykresu.druh.startsWith("slozeni-") ? ` ${radaNaVykresu.rada}` : "";
-        nakresliSlozeni(ctx, kamera, rozmer, nalez.slozeni.misto, t("slozeni.nadpis"), `${kratceOSlozeni(nalez.slozeni)}${rada ? "." : ""}${rada}`);
+        // Kde se mostovka nedá podepřít zespodu, opravuje se stavbou nad ní: popisek patří pod most.
+        nakresliSlozeni(ctx, kamera, rozmer, nalez.slozeni.misto, t("slozeni.nadpis"), `${kratceOSlozeni(nalez.slozeni)}${rada ? "." : ""}${rada}`, !lzePodepritZespodu());
       }
       else if (nalez.volny) {
-        nakresliSlozeni(ctx, kamera, rozmer, nalez.volny.misto, t("volny.nadpis"), t("volny.kratce", { prut: nalez.volny.prut + 1 }));
+        // Volný konec, který leží na zemi (podpěra svedená do údolí mimo kotvu), „nevisí“: hráč
+        // vidí prut, který stojí na dně. Řekne se, proč tam nic nenese (recenze hraním M19).
+        const naZemi = nalez.volny.misto.y <= vyskaTerenu(uroven, nalez.volny.misto.x) + 0.5;
+        nakresliSlozeni(ctx, kamera, rozmer, nalez.volny.misto, t(naZemi ? "volny.nadpis.naZemi" : "volny.nadpis"), t(naZemi ? "volny.kratce.naZemi" : "volny.kratce", { prut: nalez.volny.prut + 1 }));
       }
       // Po zkoušce, která neprošla: kde to povolilo první. Zůstává do první úpravy mostu.
       else if (posledniPorucha && posledniPorucha.navrh === editor.navrh) {
         // Po radě u výsledku ji značka u prutu opakuje: hráč ji má před očima, když most mění.
         const rada = radaNaVykresu && radaNaVykresu.navrh === editor.navrh && RADY_U_PRUTU.has(radaNaVykresu.druh) ? ` ${radaNaVykresu.rada}` : "";
-        nakresliSlozeni(ctx, kamera, rozmer, posledniPorucha.misto, t("stavba.porucha.nadpis"), `${posledniPorucha.popis}${rada ? "." : ""}${rada}`);
+        nakresliSlozeni(ctx, kamera, rozmer, posledniPorucha.misto, posledniPorucha.nadpis, `${posledniPorucha.popis}${rada ? "." : ""}${rada}`);
       } else if (zaBrehem) {
         nakresliSlozeni(ctx, kamera, rozmer, zaBrehem.misto, t("zaBrehem.nadpis"), t("zaBrehem.kratce"));
       } else {
@@ -910,6 +969,79 @@ export function spustUroven(
     return sandbox === null && havarie === null && uroven.id === kampan[0]?.id;
   }
 
+  // ---- Paleta první kapitoly: základ a „Více“ ----
+  // Nováček z 24 tlačítek a odkazů první úrovně potřebuje tři. V první kapitole kampaně proto
+  // paleta ukazuje jen Zadání, Nápovědu, základní nástroje a prvky; zbytek (v šabloně označený
+  // `data-vedlejsi`) je pod tlačítkem „Více“, jehož stav si hra pamatuje (`Uloziste.paletaVice`).
+  // Pískoviště, komise, cizí most z odkazu, výzva z odkazu a další kapitoly mají paletu celou.
+  const paleta = prvek("#obrazovka-uroven .paleta", HTMLElement);
+  const tlacitkoVice = prvek('[data-akce="paleta-vice"]', HTMLButtonElement);
+  const vedlejsiNastroje = udaj("vedlejsi-nastroje");
+  const urovenZakladu = sandbox === null && havarie === null && uroven.id.startsWith("1-") && kampan.some((u) => u.id === uroven.id);
+  /** Má hráč „Více“ rozbalené? Hráčova volba se pamatuje; rozbalení, které udělala hra sama, ne. */
+  let viceOtevreno = uloziste.paletaVice;
+  let paletaZkracena: boolean | null = null;
+
+  /**
+   * Je paleta zkrácená na základ? Jen v první kapitole a jen u vlastního mostu: host z odkazu
+   * a hráč s výzvou z odkazu dostávají věty o Sdílení a vidí paletu celou.
+   */
+  function jePaletaZkracena(): boolean {
+    return urovenZakladu && host === null && vyzvaOdkazu === null;
+  }
+
+  /**
+   * Zkrácená paleta má Zrcadlit a Vše pryč pod „Více“ ve vlastní dvojici; celá je má mezi
+   * nástroji jako dřív (za Výběrem a za Smazat).
+   */
+  function obnovPaletuVice(): void {
+    const zkracena = jePaletaZkracena();
+    if (zkracena !== paletaZkracena) {
+      paletaZkracena = zkracena;
+      const zrcadlit = prvek('[data-akce="zrcadlit"]', HTMLElement);
+      const smazatVse = prvek('[data-akce="smazat-vse"]', HTMLElement);
+      if (zkracena) vedlejsiNastroje.append(zrcadlit, smazatVse);
+      else {
+        prvek('[data-akce="vyber"]', HTMLElement).after(zrcadlit);
+        prvek('[data-akce="smazat"]', HTMLElement).after(smazatVse);
+      }
+      vedlejsiNastroje.hidden = !zkracena;
+      tlacitkoVice.hidden = !zkracena;
+    }
+    if (!zkracena) {
+      delete paleta.dataset.vice;
+      return;
+    }
+    paleta.dataset.vice = viceOtevreno ? "otevreno" : "zavreno";
+    tlacitkoVice.setAttribute("aria-expanded", String(viceOtevreno));
+  }
+
+  /** Hráč „Více“ rozbalil nebo sbalil: volba platí i v dalších úrovních první kapitoly. */
+  function prepniVice(): void {
+    if (!jePaletaZkracena()) return;
+    viceOtevreno = !viceOtevreno;
+    uloziste.paletaVice = viceOtevreno;
+    zapis("paleta.vice", { otevreno: viceOtevreno });
+    obnovPaletuVice();
+    // Nízká paleta (telefon): rozbalené nástroje by zůstaly pod jejím okrajem a ťuknutí by
+    // vypadalo, že nic neudělalo. Tlačítko se posune nahoru a rozbalené je vidět pod ním.
+    if (viceOtevreno && vedlejsiNastroje.getBoundingClientRect().bottom > paleta.getBoundingClientRect().bottom) {
+      const omezeno = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      tlacitkoVice.scrollIntoView({ block: "start", behavior: omezeno ? "auto" : "smooth" });
+    }
+  }
+
+  /**
+   * Hra hráče posílá na nástroj, který je pod „Více“ (Do zlomu z okna žebříčku, Export z okna
+   * sdílení): „Více“ se rozbalí samo, aby hráč tlačítko viděl. Volba hráče se tím nemění.
+   */
+  function rozbalViceSamo(): void {
+    if (!jePaletaZkracena() || viceOtevreno) return;
+    viceOtevreno = true;
+    zapis("paleta.vice", { otevreno: true, samo: true });
+    obnovPaletuVice();
+  }
+
   /**
    * Poslední krok vedení: mostovka v první úrovni vede od břehu k břehu a hráč tu ještě nepustil
    * zkoušku. Tlačítko Zkouška se zvýrazní (bez animace při omezeném pohybu, to řeší styl) a krátká
@@ -932,14 +1064,20 @@ export function spustUroven(
     tlacitko.classList.toggle("tlacitko--vyzva", ukazat);
     if (ukazat) document.body.dataset.vyzvaZkousky = "ano";
     else delete document.body.dataset.vyzvaZkousky;
-    bublina.hidden = !ukazat || tlacitko.offsetParent === null;
+    // Text patří chvíli, kdy je hotová jen mostovka. Kdo staví dál, výzvu už četl: tlačítko
+    // zůstává zvýrazněné, ale bublina mu nepřekáží.
+    const jenMostovka = editor.navrh.pruty.every((p) => KATALOG[p.prvek].druh === "mostovka");
+    bublina.hidden = !ukazat || !jenMostovka || tlacitko.offsetParent === null;
     if (bublina.hidden) return;
     // Bublina visí pod tlačítkem; lišta má skrytý přesah, proto je položená nad stránkou.
+    // Na telefonu má lišta pod Zkouškou druhý řádek (Zpět, Smazat): bublina leží až pod ním.
     const misto = tlacitko.getBoundingClientRect();
+    const lista = tlacitko.closest(".lista")?.getBoundingClientRect() ?? misto;
     const sirka = bublina.offsetWidth;
     const vlevo = Math.max(8, Math.min(window.innerWidth - sirka - 8, misto.left + misto.width / 2 - sirka / 2));
     bublina.style.left = `${Math.round(vlevo)}px`;
-    bublina.style.top = `${Math.round(misto.bottom + 10)}px`;
+    const dvaRadky = lista.height > 1.8 * misto.height;
+    bublina.style.top = `${Math.round((dvaRadky ? lista.bottom : misto.bottom) + 10)}px`;
     bublina.style.setProperty("--sipka", `${Math.round(misto.left + misto.width / 2 - vlevo)}px`);
   }
 
@@ -1403,11 +1541,27 @@ export function spustUroven(
 
   // ---- Hlášení ----
 
-  function ukazHlaseni(text: string, druh: "varovani" | "info", docasne: boolean): void {
+  /**
+   * Hlášení nad výkresem; `akce` přidá za text tlačítko (jde stisknout myší, prstem i klávesnicí:
+   * hlášení samo kliknutí propouští na výkres, tlačítko ne). Hlášení s tlačítkem nemá být
+   * dočasné: tlačítko nesmí zmizet hráči pod rukou.
+   */
+  function ukazHlaseni(text: string, druh: "varovani" | "info", docasne: boolean, akce?: AkceHlaseni): void {
     window.clearTimeout(casovacHlaseni);
     poleHlaseni.textContent = text;
     poleHlaseni.dataset.druh = druh;
     delete poleHlaseni.dataset.odmitnuti;
+    delete poleHlaseni.dataset.rozpocet;
+    if (akce) {
+      const tlacitko = document.createElement("button");
+      tlacitko.type = "button";
+      tlacitko.className = "tlacitko vykres__akce";
+      tlacitko.dataset.akce = akce.id;
+      tlacitko.textContent = akce.text;
+      if (akce.popis) tlacitko.title = akce.popis;
+      tlacitko.addEventListener("click", akce.proved, { once: true });
+      poleHlaseni.append(" ", tlacitko);
+    }
     if (docasne) casovacHlaseni = window.setTimeout(skryjHlaseni, DOBA_HLASENI);
   }
 
@@ -1415,6 +1569,113 @@ export function spustUroven(
     window.clearTimeout(casovacHlaseni);
     poleHlaseni.textContent = "";
     delete poleHlaseni.dataset.odmitnuti;
+    delete poleHlaseni.dataset.rozpocet;
+  }
+
+  // ---- Rozpočet: upozornění při stavbě a výměna mostovky mimo cestu ----
+
+  const jeNadRozpoctem = (navrh: NavrhMostu): boolean => uroven.rozpocet !== null && cenaNavrhu(navrh) > uroven.rozpocet;
+  /** Byl most při poslední změně nad rozpočtem? Upozorní se jen na přechod z „vejde se“. */
+  let bylNadRozpoctem = jeNadRozpoctem(editor.navrh);
+
+  /** Odkud hráč výměnu mostovky pustil: z upozornění při stavbě, po nepuštěné zkoušce, po Importu. */
+  type MistoVymeny = "stavba" | "zkouska" | "import";
+
+  /**
+   * Co by šlo vyměnit za levnější prut (pruty z mostovky mimo cestu); null, když nic, když se
+   * most zvedá (rameno za opěrou bývá záměr) a v Havarijní komisi, kde se počítají změny.
+   */
+  function nabidkaVymeny(): VymenaMostovky | null {
+    if (havarie !== null || rezim !== "stavba") return null;
+    return vymenaMostovky(editor.navrh, uroven);
+  }
+
+  function akceVymeny(vymena: VymenaMostovky, kde: MistoVymeny): AkceHlaseni {
+    const prvekVymeny = nazevPrvku(vymena.prvek);
+    return {
+      id: "vymenit-mostovku",
+      text: t("rozpocet.vymenit", { prvek: prvekVymeny }),
+      popis: t("rozpocet.vymenit.popis", { pocet: celeCislo(vymena.pruty.length), prvek: prvekVymeny, castka: koruny(vymena.usetri) }),
+      proved: () => vymenMostovku(kde),
+    };
+  }
+
+  /** Krátké hlášení, o kolik je most nad rozpočtem, s tlačítkem výměny, když jde. */
+  function hlasNadRozpoctem(): void {
+    if (uroven.rozpocet === null) return;
+    const vymena = nabidkaVymeny();
+    ukazHlaseni(t("rozpocet.prekrocen", { castka: koruny(cenaNavrhu(editor.navrh) - uroven.rozpocet) }), "varovani", false, vymena ? akceVymeny(vymena, "stavba") : undefined);
+    poleHlaseni.dataset.rozpocet = "nad";
+  }
+
+  /**
+   * Po každé změně návrhu: když cena právě přelezla rozpočet úpravou při stavbě (ne krokem
+   * Zpět, Znovu ani Importem), řekne o kolik; jednou na každé překročení. Když se most do
+   * rozpočtu vrátí, hlášení o rozpočtu zmizí, ať je odkudkoli (upozornění při stavbě, nepuštěná
+   * zkouška, Import): poznají se podle `data-rozpocet` na poli hlášení.
+   */
+  function hlidejRozpocet(): void {
+    const nad = jeNadRozpoctem(editor.navrh);
+    const byl = bylNadRozpoctem;
+    bylNadRozpoctem = nad;
+    // Věta o výměně nese cenu mostu po ní: s další změnou (i krokem Zpět) už neplatí.
+    if (poleHlaseni.dataset.rozpocet === "vymena") skryjHlaseni();
+    if (!nad) {
+      if (poleHlaseni.dataset.rozpocet) skryjHlaseni();
+      return;
+    }
+    if (byl) {
+      // Hlášení ještě svítí: částka a nabídka platí pro most, jak je teď.
+      if (poleHlaseni.dataset.rozpocet) hlasNadRozpoctem();
+      return;
+    }
+    const akce = editor.posledniAkce;
+    if (rezim !== "stavba" || akce === "zpet" || akce === "znovu" || akce === "import") return;
+    hlasNadRozpoctem();
+    zapis("rozpocet.prekrocen", { o: cenaNavrhu(editor.navrh) - uroven.rozpocet!, mimoTrasu: mostovkaMimoTrasy(editor.navrh, uroven) });
+  }
+
+  /**
+   * Výměna jedním klikem: pruty z mostovky mimo cestu za nejlevnější prut úrovně, jeden krok
+   * Zpět. Prut, kterému by výměna porušila pravidlo úrovně, zůstane; hlášení řekne kolik,
+   * a novou cenu, nebo o kolik je most pořád nad rozpočtem.
+   */
+  function vymenMostovku(kde: MistoVymeny): void {
+    const vymena = nabidkaVymeny();
+    if (!vymena) {
+      skryjHlaseni();
+      return;
+    }
+    editor.zrusTah();
+    const pred = cenaNavrhu(editor.navrh);
+    const { vymeneno, zustalo, duvod } = editor.vymenPrvek(vymena.pruty, vymena.prvek);
+    const po = cenaNavrhu(editor.navrh);
+    zapis("rozpocet.vymena", { prutu: vymeneno, usetreno: pred - po, zustalo, kde });
+    canvas.focus({ preventScroll: true });
+    if (vymeneno === 0) {
+      ukazHlaseni(t("rozpocet.vymena.nejde", { duvod: duvod ? textDuvodu(duvod, vymena.prvek) : "" }).trim(), "varovani", true);
+      return;
+    }
+    const nad = uroven.rozpocet !== null && po > uroven.rozpocet;
+    const vety = [
+      nad
+        ? t("rozpocet.vymeneno.nad", { pocet: celeCislo(vymeneno), castka: koruny(po - uroven.rozpocet!) })
+        : t("rozpocet.vymeneno", { pocet: celeCislo(vymeneno), cena: koruny(po) }),
+    ];
+    if (zustalo > 0) vety.push(t("rozpocet.vymeneno.zustalo", { pocet: celeCislo(zustalo) }));
+    ukazHlaseni(vety.join(" "), nad || zustalo > 0 ? "varovani" : "info", true);
+    poleHlaseni.dataset.rozpocet = "vymena";
+  }
+
+  /**
+   * Proč zkoušku (nebo most z Importu) nejde pustit; u rozpočtu s tlačítkem výměny, když jde.
+   * Hlášení o rozpočtu se označí, aby zmizelo, jakmile se most do rozpočtu vrátí (`hlidejRozpocet`):
+   * s tlačítkem samo nemizí a svítilo by dál i nad mostem, který už zkoušku pustí.
+   */
+  function hlasPrekazku(druh: DruhProblemu, kde: "zkouska" | "import"): void {
+    const vymena = druh === "nad-rozpocet" ? nabidkaVymeny() : null;
+    ukazHlaseni(textDuvodu(druh, null), "varovani", vymena === null, vymena ? akceVymeny(vymena, kde) : undefined);
+    if (druh === "nad-rozpocet") poleHlaseni.dataset.rozpocet = "nad";
   }
 
   /**
@@ -1430,10 +1691,9 @@ export function spustUroven(
     if (duvod === "nad-rozpocet" && uroven.rozpocet !== null) {
       // O kolik a co s tím: nováček staví podpěry z mostovky (nejdražší prvek) a neví, kde ušetřit.
       const vety = [t("duvod.nad-rozpocet.oKolik", { castka: koruny(cenaNavrhu(editor.navrh) - uroven.rozpocet) })];
-      const mostovka = editor.navrh.pruty.find((p) => KATALOG[p.prvek].druh === "mostovka")?.prvek;
-      const levnejsi = mostovka ? levnejsiPrut(uroven, mostovka) : null;
-      // U mostu, který se zvedá, může být mostovka za opěrou záměr (rameno): tam se neradí.
-      if (levnejsi && !uroven.pohyb && mostovkaMimoTrasy(editor.navrh, uroven) > 0) vety.push(t("duvod.nad-rozpocet.mostovka", { prvek: nazevPrvku(levnejsi) }));
+      // Mostovka mimo cestu: věta a tlačítko výměny (`hlasPrekazku`). U mostu, který se zvedá,
+      // může být mostovka za opěrou záměr (rameno) a komise neradí: tam ani jedno.
+      if (nabidkaVymeny()) vety.push(t("duvod.nad-rozpocet.mostovka"));
       return vety.join(" ");
     }
     if (duvod === "prut-dlouhy") {
@@ -1867,6 +2127,7 @@ export function spustUroven(
   function poZmeneNavrhu(): void {
     obnovRazitko();
     oznacPoruchu();
+    if (editor.navrh !== naposledUlozeny) hlidejRozpocet();
     prepniNaPrutPoMostovce();
     if (editor.navrh !== naposledUlozeny) {
       // Krok se povedl: důvod, proč editor odmítl ten předchozí, už neplatí.
@@ -1881,19 +2142,26 @@ export function spustUroven(
   }
 
   /**
-   * První úroveň: jakmile mostovka vede od břehu k břehu, vybere se místo ní nejlevnější prut
+   * Jakmile mostovka vede po všech trasách od břehu k břehu, vybere se místo ní nejlevnější prut
    * úrovně. Mostovka je v paletě první a nováček z ní jinak postaví i podpěry: most pak stojí
-   * víc než rozpočet a zkouška se nepustí (první den po zveřejnění 71krát, u 24 hráčů ze 41).
-   * Jen jednou za návštěvu, jen dokud úroveň neprošel a jen když má mostovku pořád v ruce.
-   * Přepíná se ve chvíli, kdy mostovku dokončil nakreslený prut, nebo při otevření úrovně
-   * s mostovkou už hotovou (`priOtevreni`); nikdy po kliknutí v paletě, výběru, Importu nebo
-   * kroku Zpět (kdo si mostovku vybere sám, tomu ji hra z ruky nebere).
+   * víc než rozpočet a zkouška se nepustí (26. 11. 2026 v 1-01 až 1-05 u třetiny hráčů).
+   * Platí v úrovních kampaně, dokud je hráč neprošel (kdo úroveň prošel, přestavuje most
+   * a mostovku v ruce má schválně), ne v pískovišti, v komisi, u hosta z odkazu a u mostu,
+   * který se zvedá (mostovka za opěrou tam bývá rameno křídla). Jen jednou za návštěvu a jen
+   * když má hráč mostovku pořád v ruce. Přepíná se ve chvíli, kdy mostovku dokončil nakreslený
+   * prut, nebo při otevření úrovně s mostovkou už hotovou (`priOtevreni`); nikdy po kliknutí
+   * v paletě, výběru, Importu nebo kroku Zpět (kdo si mostovku vybere sám, tomu ji hra z ruky
+   * nebere). Tlačítko nově vybraného prvku v paletě se krátce zvýrazní; mimo 1-01 to řekne
+   * i krátké hlášení (v 1-01 ho nováček čte po krocích vedení a další text by tam překážel).
    */
   let mostovkaBylaHotova = false;
   let prvekPrepnut: IdPrvku | null = null;
   let radaOPodepreni = false;
+  let casovacPrepnuti: number | undefined;
+  const urovenKampane = sandbox === null && havarie === null && kampan.some((u) => u.id === uroven.id);
   function prepniNaPrutPoMostovce(priOtevreni = false): void {
-    const hotova = jePrvniUrovenKampane() && host === null && !rekord?.medaile.pruchod && editor.navrh.pruty.length > 0 && dalsiDilMostovky(editor.navrh, uroven) === null;
+    const prepina = urovenKampane && host === null && !uroven.pohyb && !rekord?.medaile.pruchod;
+    const hotova = prepina && editor.navrh.pruty.length > 0 && mezeryTras(editor.navrh, uroven).length === 0;
     const nakreslena = !mostovkaBylaHotova && editor.navrh !== naposledUlozeny && editor.posledniAkce === "prut";
     const prave = hotova && (priOtevreni || nakreslena);
     mostovkaBylaHotova = hotova;
@@ -1905,7 +2173,20 @@ export function spustUroven(
     prvekPrepnut = prut;
     editor.zvolPrvek(prut);
     document.body.dataset.prvekPrepnut = prut;
+    zvyrazniPrepnuti(prut);
+    // Díl, který mostovku dokončil, mohl most dostat nad rozpočet: upozornění s částkou a výměnou
+    // (`hlidejRozpocet` běží těsně předtím) má přednost, přepnutí pak ukáže jen tlačítko v paletě.
+    if (!jePrvniUrovenKampane() && !poleHlaseni.dataset.rozpocet) ukazHlaseni(t("vedeni.prepnuto", { prvek: nazevPrvku(prut) }), "info", true);
     zapis("vedeni.prvek", { prvek: prut, kdy: priOtevreni ? "otevreni" : "mostovka" });
+  }
+
+  /** Krátce zvýrazní tlačítko prvku v paletě (`data-prepnuto`), ať je přepnutí vidět. */
+  function zvyrazniPrepnuti(prut: IdPrvku): void {
+    const tlacitko = paletaPrvku.querySelector<HTMLElement>(`[data-prvek="${prut}"]`);
+    if (!tlacitko) return;
+    window.clearTimeout(casovacPrepnuti);
+    tlacitko.dataset.prepnuto = "ano";
+    casovacPrepnuti = window.setTimeout(() => delete tlacitko.dataset.prepnuto, DOBA_PREPNUTI);
   }
 
   /** Zapíše do deníku, čím se most právě změnil a jak teď vypadá. */
@@ -2538,6 +2819,7 @@ export function spustUroven(
     nastav("export", navrh.pruty.length > 0);
     nastav("import", true);
     obnovSdileni();
+    obnovPaletuVice();
 
     obnovRaduStavby();
     obnovUdajeVyberu();
@@ -2575,6 +2857,10 @@ export function spustUroven(
     else if (nastroj === "vyber") klic = "rada.vyber";
     pole.textContent = t(klic);
     pole.dataset.rada = klic.slice("rada.".length);
+    // V první úrovni, dokud hráče vede duch dalšího dílu mostovky a bublina u tlačítka Zkouška,
+    // se řádek klávesových rad neukazuje: nováček má číst jen to, co mu říká průvodce.
+    const vede = (napoveda?.obrys ?? null) === null && krokVedeni() !== null;
+    pole.hidden = vede || document.body.dataset.vyzvaZkousky === "ano";
     // Háček pro testy: kolik styčníků výběru by šipka posunula a kolik jich stojí v podporách.
     const posun = rezim === "stavba" ? editor.posunVyberu : null;
     if (posun) document.body.dataset.posunVyberu = `${posun.pohyblivych};${posun.vPodporach}`;
@@ -2955,7 +3241,11 @@ export function spustUroven(
   /** Promítne hlasitost do tlačítka v liště a do háčků pro testy. */
   function obnovZvuk(): void {
     const hlasitost = ozvuceni.hlasitost;
-    tlacitkoZvuku.textContent = t(Ozvuceni.dostupne ? `zvuk.${hlasitost}` : "zvuk.nedostupny");
+    // Tlačítko je ikona (stav ukazuje i ona, podle `body[data-zvuk]`); slovy ho říká přístupný
+    // název a bublina, ve které je i to, jak se hlasitost přepíná.
+    const stav = t(Ozvuceni.dostupne ? `zvuk.${hlasitost}` : "zvuk.nedostupny");
+    tlacitkoZvuku.setAttribute("aria-label", stav);
+    tlacitkoZvuku.title = `${stav}. ${t("zvuk.popis")}`;
     tlacitkoZvuku.disabled = !Ozvuceni.dostupne;
     tlacitkoZvuku.setAttribute("aria-pressed", String(hlasitost !== "vypnuto"));
     document.body.dataset.zvuk = hlasitost;
@@ -3137,7 +3427,7 @@ export function spustUroven(
     const druhPokusu = brnknuti ? "brnknuti" : budic ? "budic" : zlom ? "zlom" : null;
     const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(pokus && p.druh === "nad-rozpocet"))[0];
     if (prekazka) {
-      ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
+      hlasPrekazku(prekazka.druh, "zkouska");
       zapis("zkouska.odmitnuta", { duvod: prekazka.druh, pokus: druhPokusu, cena: cenaNavrhu(editor.navrh) });
       return;
     }
@@ -3293,7 +3583,10 @@ export function spustUroven(
     }
     // Nedopočítaná zkouška nemá výsledek ani obálku; zahodí se.
     if (beh && !beh.vysledek) beh = null;
-    if (beh) beh.oznaceny = null;
+    if (beh) {
+      beh.oznaceny = null;
+      beh.oznacenyStycnik = null;
+    }
     poslech = null;
     ozvuceni.ztis();
     rezim = "stavba";
@@ -3328,16 +3621,25 @@ export function spustUroven(
     // První úroveň po zkoušce, která neprošla: mostovka chce podepřít a v ruce je levnější prut.
     // Řekne se jednou, dokud hráč žádný prut mimo mostovku nenakreslil.
     const jenMostovka = editor.navrh.pruty.length > 0 && editor.navrh.pruty.every((p) => KATALOG[p.prvek].druh === "mostovka");
-    if (prvekPrepnut !== null && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && nastroj === "kresleni" && editor.prvek === prvekPrepnut && jenMostovka) {
+    if (prvekPrepnut !== null && jePrvniUrovenKampane() && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && nastroj === "kresleni" && editor.prvek === prvekPrepnut && jenMostovka) {
       radaOPodepreni = true;
       ukazHlaseni(t("vedeni.podepri", { prvek: nazevPrvku(prvekPrepnut) }), "info", false);
     }
     // Po třetí zkoušce, která neprošla, hra jednou připomene nápovědu (když ji už nenabídla rada u výsledku).
+    // (Náhled nápovědy u výsledku po třetím nezdaru ji nabídl už sám; hlášení přijde jen tomu, kdo
+    // výsledek neviděl.)
     if (napoveda && !napovedaNabidnuta && !napovedaPouzita && nezdaru >= 3 && rekord?.medaile.pruchod !== true) {
       napovedaNabidnuta = true;
       ukazHlaseni(t("napoveda.nabidka"), "info", false);
       zapis("napoveda.nabidnuta", { zkousek: zkousekVUrovni, sekund: sekundVUrovni() });
     }
+    // Po druhém nezdaru v návštěvě se tlačítko Nápověda v paletě zvýrazní (obrys jako u tipu na
+    // posun); zmizí, jakmile nápovědu hráč otevře.
+    if (napoveda && !napovedaPouzita && nezdaruVNavsteve >= 2 && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.host && rekord?.medaile.pruchod !== true) {
+      prvek('[data-akce="napoveda"]', HTMLElement).dataset.tip = "napoveda";
+    }
+    // Kdo mezitím prošel, nápovědu k průchodu nepotřebuje: obrys zmizí stejně jako náhled u výsledku.
+    if (rekord?.medaile.pruchod === true) delete prvek('[data-akce="napoveda"]', HTMLElement).dataset.tip;
     obnovMedaile();
     obnovStavbu();
     obnovOsu();
@@ -3430,6 +3732,18 @@ export function spustUroven(
           pametRady = rada.pamet;
           b.rada = rada.ukazat;
           b.radaVRade = rada.vRade;
+          // Potřetí v návštěvě neprošlo: u výsledku se ukáže první krok nápovědy (skica a princip),
+          // jen v úrovni s nápovědou, jen hráči, který ji sám neotevřel, a dokud úroveň neprošel.
+          if (!b.host && !vysledek.pruchod && !vysledek.rozpad) nezdaruVNavsteve += 1;
+          b.nahled =
+            napoveda !== null &&
+            !havarie &&
+            !b.host &&
+            !vysledek.pruchod &&
+            !vysledek.rozpad &&
+            !napovedaPouzita &&
+            nezdaruVNavsteve >= NAHLED_PO_NEZDARU &&
+            rekord?.medaile.pruchod !== true;
         } else if (b.zlom && vysledek.zlom && !vysledek.rozpad && !mimoSoutez && !b.host) {
           // Únosnost na korunu se počítá jen mostu, který úrovní prošel: jinak by výzvu vyhrál
           // most bez toho, co úroveň učí (bez závaží, bez pístu), protože je levnější.
@@ -3743,17 +4057,21 @@ export function spustUroven(
    */
   function odkryjOznacenyPrut(iNaTelefonu = false): void {
     delete document.body.dataset.oznacenyMisto;
-    if (rezim !== "zkouska" || !beh || beh.oznaceny === null || panelVysledku.hidden || (jeUzkeOkno() && !iNaTelefonu)) return;
+    if (rezim !== "zkouska" || !beh || panelVysledku.hidden || (jeUzkeOkno() && !iNaTelefonu)) return;
     const prut = beh.oznaceny;
-    const stavba = beh.zaznam.stavV(prehravani.cas, snimek);
-    let misto = stavba ? (mistoPrutu(stavba, snimek, prut)?.misto ?? null) : null;
-    if (!misto) {
+    // Styčník, o kterém pruh mluví (podpora, místo na zemi), je označený na svém místě ve výkresu.
+    const stycnik = prut === null ? beh.navrh.stycniky[beh.oznacenyStycnik ?? -1] : undefined;
+    if (prut === null && !stycnik) return;
+    const stavba = prut === null ? null : beh.zaznam.stavV(prehravani.cas, snimek);
+    let misto: Bod | null = stycnik ? { x: stycnik.x, y: stycnik.y } : stavba && prut !== null ? (mistoPrutu(stavba, snimek, prut)?.misto ?? null) : null;
+    if (!misto && prut !== null) {
       const p = beh.navrh.pruty[prut];
       const a = beh.navrh.stycniky.find((st) => st.id === p?.a);
       const k = beh.navrh.stycniky.find((st) => st.id === p?.b);
       if (!a || !k) return;
       misto = { x: (a.x + k.x) / 2, y: (a.y + k.y) / 2 };
     }
+    if (!misto) return;
     document.body.dataset.oznacenyMisto = `${misto.x.toFixed(2)};${misto.y.toFixed(2)}`;
     const vrchPlatna = canvas.getBoundingClientRect().top;
     const spodekPanelu = panelVysledku.getBoundingClientRect().bottom - vrchPlatna;
@@ -3981,6 +4299,20 @@ export function spustUroven(
     return t(`rada.vzper${bez}`);
   }
 
+  /**
+   * Rada k prvnímu porušení do pruhu výsledku: jedna krátká věta, co s prutem udělat. Stejná
+   * pravidla jako `radaKPoruseni` (jen to, co úroveň dovoluje; komise neradí); pilíř a pylon
+   * krátkou radu nemají, jejich vysvětlení se do věty nevejde a je v podrobnostech.
+   */
+  function kratkaRadaKPoruseni(zpusob: number, navrh: NavrhMostu, prut: number): string {
+    if (havarie) return "";
+    const prvekPrutu = navrh.pruty[prut]?.prvek;
+    if (!prvekPrutu || KATALOG[prvekPrutu].druh === "pilir") return "";
+    const bez = !maSilnejsiPrvek(prvekPrutu, zpusob, uroven.povolenePrvky) ? ".bezSilnejsiho" : "";
+    const druh = zpusob === ZPUSOB_TAH ? "tah" : zpusob === ZPUSOB_TLAK ? "tlak" : zpusob === ZPUSOB_OHYB ? "ohyb" : zpusob === ZPUSOB_SMYK ? "smyk" : "vzper";
+    return t(`rada.kratce.${druh}${bez}`);
+  }
+
   /** Věta o porušení s čísly: který prut, čím selhal, co nesl a kolik unese. */
   function vetaOPoruseni(b: Beh, u: Extract<Udalost, { druh: "poruseni" | "sjeti" }>): string {
     if (u.druh === "sjeti") return t("vysledek.prvni.sjeti");
@@ -4034,7 +4366,10 @@ export function spustUroven(
   function radaKSlozeni(s: Slozeni, navrh: NavrhMostu = editor.navrh): string {
     const vety: string[] = [];
     if (s.duvod !== "podpory") {
-      vety.push(t(`slozeni.rada.${s.duvod}`));
+      // Kde pod mostem není kotva ani základ, „podepři ho“ vede k podpěře na zem: v 1-01 tak
+      // nováčci stavěli podpěry do údolí a most se pak opřel o terén (deník 26. 11. 2026).
+      const nad = !lzePodepritZespodu() && smiPruty;
+      vety.push(t(nad && s.duvod === "mostovka" && stojiNecoNad(s, navrh) ? "slozeni.rada.mostovka.spoj" : nad ? `slozeni.rada.${s.duvod}.nad` : `slozeni.rada.${s.duvod}`));
       if (uroven.povoleneSvary) vety.push(t("slozeni.rada.svar"));
       if (smiLana) vety.push(t("slozeni.rada.lano"));
       // Pilíř jen tam, kde je ho kam postavit: na základ, na kterém ještě žádný nestojí.
@@ -4044,6 +4379,68 @@ export function spustUroven(
       if (volnyZaklad && uroven.povolenePrvky.some((id) => KATALOG[id].druh === "pilir")) vety.push(t("slozeni.rada.pilir"));
     }
     return vety.join(" ");
+  }
+
+  /**
+   * Rada ke složení do pruhu výsledku: pár slov, jen to, co úroveň dovoluje. Celá věta s radou
+   * je v podrobnostech (`vetaOSlozeni`). Komise neradí.
+   */
+  function kratkaRadaKSlozeni(s: Slozeni, navrh: NavrhMostu = editor.navrh): string {
+    if (havarie) return "";
+    if (s.duvod === "podpory") return t("slozeni.rada.kratce.podpory");
+    if (!smiPruty) return "";
+    if (s.duvod === "ztuzeni") return t("slozeni.rada.kratce.ztuzeni");
+    if (lzePodepritZespodu()) return t("slozeni.rada.kratce.mostovka");
+    return t(stojiNecoNad(s, navrh) ? "slozeni.rada.kratce.spoj" : "slozeni.rada.kratce.nad");
+  }
+
+  /**
+   * Stojí už nad styčníkem, který nic nedrží, nějaký styčník? Hráč pak nad mostovkou stavěl
+   * (typicky „střechu“ z břehu na břeh bez svislice) a rada „zavěs ho do trojúhelníku“ by mu
+   * zněla, jako by ho už měl: řekne se rovnou, že ho má s tím nahoře spojit (recenze hraním M19).
+   */
+  function stojiNecoNad(s: Slozeni, navrh: NavrhMostu): boolean {
+    return navrh.stycniky.some((st) => st.y >= s.misto.y + 1 && Math.abs(st.x - s.misto.x) <= 6);
+  }
+
+  /**
+   * Dá se mostovka podepřít zespodu, aniž by se most opřel o terén? Jen z kotvy pod mostem
+   * (ne z kotvy vyhrazené lanu nebo tlumiči) nebo pilířem ze základu.
+   */
+  function lzePodepritZespodu(): boolean {
+    const yMostovky = Math.min(...uroven.trasy.map((tr) => Math.min(tr.zacatek.y, tr.konec.y)));
+    const kotva = uroven.kotvy.some((k) => k.y < yMostovky - 0.5 && k.jen === undefined);
+    return kotva || pilirNaZaklad();
+  }
+
+  function pilirNaZaklad(): boolean {
+    return uroven.zaklady.length > 0 && uroven.povolenePrvky.some((id) => KATALOG[id].druh === "pilir");
+  }
+
+  /** Kde si most z běhu `b` lehl na zem; null, když se o terén neopřel. */
+  function opreniBehu(b: Beh): Opreni | null {
+    if (!b.vysledek?.opreno) return null;
+    if (b.opreni === undefined) b.opreni = najdiOpreni(uroven, b.navrh, b.zaznam);
+    return b.opreni;
+  }
+
+  /**
+   * Co s mostem, který si lehl na zem: jen to, co úroveň dovoluje postavit (kotva pod mostem,
+   * pilíř na základ, trojúhelník z prutů nad mostovkou). Komise neradí.
+   */
+  function radaKOpreni(): string {
+    if (havarie) return "";
+    const nad = smiPruty && MISTO_NA_PRIHRADU;
+    const yMostovky = Math.min(...uroven.trasy.map((tr) => Math.min(tr.zacatek.y, tr.konec.y)));
+    if (uroven.kotvy.some((k) => k.y < yMostovky - 0.5 && k.jen === undefined)) return t(nad ? "opreni.rada.kotva" : "opreni.rada.kotva.jen");
+    if (pilirNaZaklad()) return t(nad ? "opreni.rada.pilir" : "opreni.rada.pilir.jen");
+    return t(nad ? "opreni.rada.nad" : "opreni.rada");
+  }
+
+  /** Co s mostem, jehož konec sjel z posuvné podpory. Komise neradí. */
+  function radaKSjeti(): string {
+    if (havarie) return "";
+    return t(smiPruty ? "sjeti.rada.prihrada" : "sjeti.rada");
   }
 
   /**
@@ -4130,8 +4527,13 @@ export function spustUroven(
 
   /** Háček pro testy: je při stavbě na výkresu značka, kde to minule povolilo první? */
   function oznacPoruchu(): void {
-    if (rezim === "stavba" && posledniPorucha && posledniPorucha.navrh === editor.navrh) document.body.dataset.prvniPorucha = posledniPorucha.popis;
-    else delete document.body.dataset.prvniPorucha;
+    if (rezim === "stavba" && posledniPorucha && posledniPorucha.navrh === editor.navrh) {
+      document.body.dataset.prvniPorucha = posledniPorucha.popis;
+      document.body.dataset.poruchaMisto = `${posledniPorucha.druh};${posledniPorucha.misto.x};${posledniPorucha.misto.y}`;
+    } else {
+      delete document.body.dataset.prvniPorucha;
+      delete document.body.dataset.poruchaMisto;
+    }
     if (rezim === "stavba" && radaNaVykresu && radaNaVykresu.navrh === editor.navrh) document.body.dataset.radaUPrutu = radaNaVykresu.druh;
     else delete document.body.dataset.radaUPrutu;
   }
@@ -4165,11 +4567,24 @@ export function spustUroven(
 
   /**
    * Kde na výkresu povolil první prut zkoušky, která neprošla: střed prutu v návrhu a krátký
-   * popis. Null, když most prošel, nic se nezlomilo nebo se most složil (to značí kontrola stability).
+   * popis. Most, který si lehl na zem, má značku tam, kde ležel, a most, jehož konec sjel
+   * z posuvné podpory, u té podpory; obojí s radou, co s tím. Null, když most prošel, nic se
+   * nezlomilo nebo se most složil (to značí kontrola stability).
    */
-  function mistoPrvniPoruchy(b: Beh): { navrh: NavrhMostu; misto: Bod; popis: string } | null {
+  function mistoPrvniPoruchy(b: Beh): ZnackaPoruchy | null {
     if (!b.vysledek || b.vysledek.pruchod || (b.pokus && !b.zlom) || slozeniBehu(b)) return null;
+    const opreni = b.vysledek.mezera ? null : opreniBehu(b);
+    if (opreni && mostovkaZaBrehem(b.navrh, uroven) === null) {
+      return { navrh: b.navrh, druh: "opreni", misto: opreni.misto, nadpis: t("opreni.nadpis"), popis: radaKOpreni() };
+    }
     const u = prvniPorucha(b.udalosti);
+    if (b.houpani && u?.druh !== "poruseni") {
+      return { navrh: b.navrh, druh: "houpani", misto: b.houpani.misto, nadpis: t("houpani.nadpis"), popis: kratkaRadaKSlozeni(b.houpani, b.navrh) || kratceOSlozeni(b.houpani) };
+    }
+    if (u?.druh === "sjeti") {
+      const st = b.navrh.stycniky[u.stycnik];
+      return st ? { navrh: b.navrh, druh: "sjeti", misto: { x: st.x, y: st.y }, nadpis: t("sjeti.nadpis"), popis: radaKSjeti() } : null;
+    }
     if (!u || u.druh !== "poruseni") return null;
     const prut = b.navrh.pruty[u.prut];
     const od = b.navrh.stycniky.find((st) => st.id === prut?.a);
@@ -4177,7 +4592,9 @@ export function spustUroven(
     if (!od || !k) return null;
     return {
       navrh: b.navrh,
+      druh: "poruseni",
       misto: { x: (od.x + k.x) / 2, y: (od.y + k.y) / 2 },
+      nadpis: t("stavba.porucha.nadpis"),
       popis: t("stavba.porucha.kratce", { prut: u.prut + 1, zpusob: t(nazevZpusobu(u.zpusob)) }),
     };
   }
@@ -4209,6 +4626,7 @@ export function spustUroven(
     const prvni = prvniPoruseni(b);
     const prekrocenPruhyb = v.pruhyb?.prekroceno ?? null;
     if (prekrocenPruhyb !== null && (prvni === null || prvni.cas >= prekrocenPruhyb)) return nezdar("pruhyb");
+    if (v.opreno && !v.mezera) return nezdar("opreno");
     const komfort = v.komfort;
     const nadMezi = komfort !== null && komfort.trida > uroven.nejhorsiKomfort && v.spadlo === 0 && kmitaniBehu(b) !== null;
     if (nadMezi && v.prejelo === v.ucastniku && komfort.prekroceno !== null) return nezdar("kmitani");
@@ -4247,8 +4665,8 @@ export function spustUroven(
   function coSeStalo(b: Beh, n: Nezdar): string {
     if (n.druh === "kmitani") return t("vysledek.rada.kmitani");
     if (n.druh === "nedopnuto") return t("vysledek.rada.nedopnuto");
-    const s = n.druh.startsWith("slozeni-") ? slozeniBehu(b) : null;
-    if (s) return `${kratceOSlozeni(s)}.`;
+    // Složení: pruh nad radou říká důvod stejnými slovy, rada jde rovnou k věci.
+    if (n.druh.startsWith("slozeni-")) return "";
     const prvni = prvniPoruseni(b);
     if (prvni?.druh !== "poruseni" || n.prvek === null) return "";
     return `${nazevPrvku(n.prvek).toLocaleLowerCase(aktualniJazyk())}, ${t(nazevZpusobu(prvni.zpusob))}.`;
@@ -4274,13 +4692,41 @@ export function spustUroven(
     const zbytek = document.createElement("span");
     textSPojmy(zbytek, ` ${coSeStalo(b, n)} ${rada}`.replace(/\s+/g, " ").trimEnd());
     text.replaceChildren(nadpis, zbytek);
-    prvek('[data-akce="rada-napoveda"]', HTMLElement).hidden = napoveda === null;
+    // Kde je u výsledku i náhled nápovědy, vede do ní jeho tlačítko: dvě tlačítka k téže věci ne.
+    prvek('[data-akce="rada-napoveda"]', HTMLElement).hidden = napoveda === null || nahledViditelny(b);
     if (napoveda !== null) napovedaNabidnuta = true;
     if (!b.radaZapsana) {
       b.radaZapsana = true;
       zapis("rada.ukazana", { druh: n.druh, prvek: n.prvek, zkousek: zkousekVUrovni, napoveda: napoveda !== null });
     }
     return rada;
+  }
+
+  /** Má výsledek zkoušky `b` ukázat náhled nápovědy? Kdo ji mezitím otevřel, ten ho už nevidí. */
+  function nahledViditelny(b: Beh): boolean {
+    return b.nahled === true && napoveda !== null && !napovedaPouzita;
+  }
+
+  /**
+   * Náhled nápovědy v pruhu výsledku (třetí nezdar v návštěvě): věta o principu mostu, který
+   * projde, a skica (kreslí se, až je pruh vidět), s tlačítkem na další krok nápovědy. Hlášení
+   * „Nedaří se?“ po návratu ke stavbě pak už nepřijde. Deník ho zapíše jen poprvé.
+   */
+  function ukazNahled(b: Beh): boolean {
+    const pole = udaj("vysledek-nahled");
+    pole.hidden = !nahledViditelny(b);
+    if (pole.hidden || !napoveda) return false;
+    const nadpis = document.createElement("strong");
+    nadpis.textContent = t("vysledek.nahled.nadpis");
+    const veta = document.createElement("span");
+    textSPojmy(veta, ` ${napoveda.nahled(null)}`);
+    udaj("vysledek-nahled-text").replaceChildren(nadpis, veta);
+    napovedaNabidnuta = true;
+    if (!b.nahledZapsan) {
+      b.nahledZapsan = true;
+      zapis("napoveda.nahled", { zkousek: zkousekVUrovni });
+    }
+    return true;
   }
 
   /** Popisek záběru u značky na výkresu: co se v tom místě stalo. */
@@ -4357,7 +4803,9 @@ export function spustUroven(
         if (prehravani.cas > ZABER.okamzikSlozeni + ZABER.drzeni) return hotovo();
         const popis = `${t("slozeni.nadpis.pad")}: ${kratceOSlozeni(slozeni)}`;
         const zaber: Zaber = { okamzik: ZABER.okamzikSlozeni, misto: slozeni.misto, rozsah: 5, cil: { druh: "stycnik", stycnik: slozeni.stycnik } };
-        return priprav(zaber, popis, vetaOSlozeni(slozeni), null, `slozeni:${slozeni.stycnik}`);
+        // Věta ve chvíli pádu říká jen, co se děje; co s tím, řekne pruh výsledku (a celé znění
+        // podrobnosti). S radou měla na telefonu sedm řádků přes most, který se právě skládal.
+        return priprav(zaber, popis, t(`slozeni.veta.${slozeni.duvod}`), null, `slozeni:${slozeni.stycnik}`);
       }
     }
     const u = prvniPorucha(b.udalosti);
@@ -4560,15 +5008,22 @@ export function spustUroven(
     return vety.join(" ");
   }
 
-  /** Totéž jednou krátkou větou do pruhu výsledku. */
-  function kratceOKmitani(k: KmitaniBehu, zrychleni: number): string {
+  /** Totéž jednou krátkou větou do pruhu výsledku; `poradit` k ní přidá, co pomůže (viz níž). */
+  function kratceOKmitani(k: KmitaniBehu, zrychleni: number, b: Beh, poradit = true): string {
     const hodnoty = { a: cislo(zrychleni, 2), mez: cislo(MEZ_KMITANI, 1) };
     const slovy = kdoASlozka(k.rozhodla);
-    if (!slovy) return t("kmitani.kratce", hodnoty);
     // Číslo je největší kmitání celé zkoušky; když ho způsobil někdo jiný než ten, kdo mez
     // překročil první, pruh číslo neuvádí (je v podrobnostech), ať nepřipisuje jedno druhému.
     const stejny = k.nejvic === k.rozhodla || (k.nejvic.rytmus?.druh === k.rozhodla.rytmus?.druh && k.nejvic.rytmus?.rytmus === k.rozhodla.rytmus?.rytmus);
-    return t(stejny ? "kmitani.kratce.rytmus" : "kmitani.kratce.prvni", { ...hodnoty, ...slovy });
+    const veta = !slovy ? t("kmitani.kratce", hodnoty) : t(stejny ? "kmitani.kratce.rytmus" : "kmitani.kratce.prvni", { ...hodnoty, ...slovy });
+    // Úroveň bez tlumiče a závaží (první kapitola): hráč nemá čím kmitání tlumit, pruh mu řekne,
+    // co pomůže s tím, co má. Jen to, co spočítal rozbor (`radaKeKmitani`); kde tužší ani těžší
+    // most nepomůže, nabídne se vyzkoušet jiný tvar (to rozbor nespočítal a věta to tak říká).
+    const bezNastroju = uroven.nejvetsiTlumic === 0 && uroven.nejvetsiZavazi === 0 && !uroven.povolenePrvky.some((id) => KATALOG[id].druh === "tlumic");
+    const r = bezNastroju && poradit ? rozborBehu(b) : null;
+    let rada = r ? radaKeKmitani(r, true) : "";
+    if (rada === t("kmitani.rada.nic")) rada = `${rada} ${t("kmitani.rada.jinak")}`;
+    return rada ? `${veta} ${rada}` : veta;
   }
 
   /** Ve chvíli, kdy kmitání při přehrávání přesáhne mez úrovně, to hráči řekne (jednou na přehrání). */
@@ -4945,7 +5400,11 @@ export function spustUroven(
         }
         // Mostovka položená po zemi mimo trasu: mezeru na trase už výsledek řekl a věta o mostě,
         // který se „propadl“, by k ní neseděla.
-        else if (!rekloMezeru) vety.push(t("vysledek.opreno"));
+        else if (!rekloMezeru) {
+          const opreni = opreniBehu(b);
+          const veta = t(opreni === null ? "vysledek.opreno" : opreni.noha ? "vysledek.opreno.noha" : "vysledek.opreno.misto");
+          vety.push([veta, radaKOpreni()].filter((v) => v !== "").join(" "));
+        }
       }
       // Volný prut je poznámka i u mostu, který prošel: rozkýval se a zbytečně stojí peníze.
       else if (posudek.volny) vety.push(t("volny.veta", { prut: posudek.volny.prut + 1 }));
@@ -4983,8 +5442,18 @@ export function spustUroven(
     const komfort = vysledek.komfort;
     // Co most rozhoupalo: frekvence ze záznamu, rytmus lidí a nejbližší vlastní frekvence mostu.
     const kmitani = kmitaniBehu(b);
+    /**
+     * Pod pruhem bude rada po opakovaném nezdaru: věta pruhu pak řekne jen, co se stalo, a radu
+     * nechá jí (stejná rada dvakrát pod sebou zabrala na telefonu půl obrazovky).
+     */
+    const radaPodPruhem = !jePokus && (b.rada ?? null) !== null && radaKNezdaru(b, b.rada!) !== "";
     /** Krátká věta o kmitání do pruhu výsledku; jen když na něm most neprošel. */
     let pricinaKmitanim: string | null = null;
+    /**
+     * Most bez klidové polohy, který se nesložil, ale houpal se přes mez kmitání: styčník mostovky,
+     * který se houpal nejvíc, a proč ho nic nedrží. Pruh pak mluví o něm, ne o rytmu kroku.
+     */
+    let houpani: Slozeni | null = null;
     if (komfort && komfort.trida > uroven.nejhorsiKomfort && vysledek.spadlo === 0 && !vysledek.rozpad) {
       vety.push(
         komfort.trida === 4
@@ -4992,8 +5461,13 @@ export function spustUroven(
           : t("vysledek.shrnuti.kmitaniNadMez", { limit: cislo(MEZE_KOMFORTU[uroven.nejhorsiKomfort - 1]!, 1) }),
       );
       if (kmitani) {
+        houpani = b.bezRovnovahy && !vysledek.opreno ? kdeSeHoupe(uroven, b.navrh, b.zaznam) : null;
+        b.houpani = houpani;
+        if (houpani) vety.push([t("vysledek.houpe"), radaKSlozeni(houpani)].filter((v) => v !== "").join(" "));
         vety.push(vetaOKmitani(kmitani, b));
-        pricinaKmitanim = kratceOKmitani(kmitani, komfort.zrychleni);
+        pricinaKmitanim = houpani
+          ? [t(`vysledek.kratce.houpe.${houpani.duvod}`), radaPodPruhem ? "" : kratkaRadaKSlozeni(houpani, b.navrh)].filter((v) => v !== "").join(" ")
+          : kratceOKmitani(kmitani, komfort.zrychleni, b, !radaPodPruhem);
       }
     }
     // Háčky pro automat: frekvence největšího kmitání a kdo most rozhoupal (druh;násobek;rytmus).
@@ -5107,7 +5581,7 @@ export function spustUroven(
         : vysledek.pruchod && !poruseny
           ? { cena: vysledek.cena, hmotnost: hmotnostNavrhu(b.navrh, uroven) }
           : {};
-      vypisVyzvy(udaj("vysledek-vyzvy"), prahy, zakladVyzevUrovne, rekord, tento, poruseny);
+      vypisVyzvy(udaj("vysledek-vyzvy"), prahy, zakladVyzevUrovne, rekord, tento, poruseny, jePaletaZkracena());
     }
     const vetaVyzvyOdkazu = vypisVyzvuOdkazu(b, vysledek);
     udaj("vysledek-cena").replaceChildren(
@@ -5212,7 +5686,10 @@ export function spustUroven(
     const prvni = prvniPoruseni(b);
     // U mostu, který se složil vlastní vahou, je první porušení až následek: věta by vedla jinam.
     const slozilSe = vysledek.bezRovnovahy && !vysledek.pruchod && slozeniBehu(b) !== null;
-    const ukazatPrvni = prvni !== null && !slozilSe;
+    // Totéž u mostu, který si lehl na zem: že potom sjel z podpory, je následek, a věta „jako
+    // první sjel konec mostu“ by pod verdiktem o opření tvrdila jinou příčinu (nález recenze M19).
+    const sjelPoOpreni = vysledek.opreno && !vysledek.pruchod && prvni?.druh === "sjeti";
+    const ukazatPrvni = prvni !== null && !slozilSe && !sjelPoOpreni;
     const polePrvniho = udaj("vysledek-prvni");
     polePrvniho.hidden = !ukazatPrvni;
     // K větě s čísly patří rada, co s tím (ne u mostu, který přesto obstál, a u lana přetrženého napínákem).
@@ -5221,7 +5698,8 @@ export function spustUroven(
     // pylon nebo chybějící kotevní lano. Rada o kotevním laně by hráče poslala stavět zbytečnosti;
     // vrátí se, až dopnutí nepomůže (`dopnutoMarne`). Komise neradí ani tady.
     const radaPrvnimu = !sRadou || !prvni || prvni.druh !== "poruseni" ? "" : chybiDopnuti(b) ? (havarie ? "" : t("rada.prvni.nedopnuto")) : radaKPoruseni(prvni.zpusob, b.navrh, prvni.prut);
-    textSPojmy(polePrvniho, prvni && ukazatPrvni ? `${vetaOPoruseni(b, prvni)} ${radaPrvnimu}`.trim() : "");
+    const radaKPrvnimu = prvni?.druh === "sjeti" && !vysledek.pruchod && !vysledek.opreno ? [t("vysledek.sjeti.proc"), radaKSjeti()].join(" ").trim() : radaPrvnimu;
+    textSPojmy(polePrvniho, prvni && ukazatPrvni ? `${vetaOPoruseni(b, prvni)} ${radaKPrvnimu}`.trim() : "");
     // Zpomaleně jde přehrát všechno, na co záběr umí zamířit (i náraz lodi a pád); pokusy záběr nemají.
     const jeCoPrehrat = slozilSe || prvniPorucha(b.udalosti) !== null;
     prvek('[data-akce="prehrat-poruseni"]', HTMLElement).hidden = !jeCoPrehrat || (b.pokus && !b.zlom);
@@ -5264,8 +5742,12 @@ export function spustUroven(
     // první povolený prut, cokoli dalšího ze shrnutí, náraz lodi. Celé znění je v podrobnostech.
     let pricina: string | null = null;
     const slozeniPruhu = vysledek.bezRovnovahy ? slozeniBehu(b) : null;
-    if (slozeniPruhu && !vysledek.pruchod) pricina = t("vysledek.kratce.slozeni", { duvod: kratceOSlozeni(slozeniPruhu) });
-    else if (!vysledek.pruchod && !jePokus && !vysledek.rozpad) {
+    b.oznacenyStycnik = null;
+    if (slozeniPruhu && !vysledek.pruchod) {
+      // Co se stalo a co s tím; styčník, o kterém je řeč, má na výkresu kroužek.
+      pricina = [t("vysledek.kratce.slozeni", { duvod: kratceOSlozeni(slozeniPruhu) }), radaPodPruhem ? "" : kratkaRadaKSlozeni(slozeniPruhu, b.navrh)].filter((v) => v !== "").join(" ");
+      b.oznacenyStycnik = slozeniPruhu.stycnik;
+    } else if (!vysledek.pruchod && !jePokus && !vysledek.rozpad) {
       const narazLodi = b.udalosti.find((u) => u.druh === "lod" && u.stav === "narazila");
       const vetaLodi = narazLodi && narazLodi.druh === "lod" ? t("zaber.lod", { prut: (narazLodi.prut ?? 0) + 1 }) : null;
       const dalsi = vety.slice(1).find((v) => v !== vetaNarazuLodi);
@@ -5273,24 +5755,47 @@ export function spustUroven(
       const rozhodloKmitani = pricinaKmitanim !== null && vysledek.spadlo === 0 && vysledek.prejelo === vysledek.ucastniku && (vysledek.komfort?.prekroceno ?? null) !== null;
       // Průhyb mostovky nad mezí úrovně, pokud se most neporušil ještě dřív.
       const rozhodlPruhyb = prohnuto !== null && (prvni === null || prvni.cas >= (prohnuto.prekroceno ?? 0));
+      // Most, který si lehl na zem (nejčastěji podpěrou bez kotvy svedenou do údolí): to je
+      // příčina, kmitání na terénu a sjetí z podpory jsou až její následek. Mostovku za koncem
+      // trasy jmenuje věta ze shrnutí (`vysledek.opreno.zaBrehem`).
+      const opreniPruhu = vysledek.opreno && !rekloMezeru && mostovkaZaBrehem(b.navrh, uroven) === null;
       if (vetaMezery) pricina = prvniVeta(vetaMezery);
       else if (pricinaPohybu) pricina = prvniVeta(pricinaPohybu);
       else if (rozhodlPruhyb && prohnuto) {
         pricina = t("vysledek.kratce.pruhyb", { mm: celeCislo(Math.round(1000 * prohnuto.nejvetsi)), mez: celeCislo(Math.round(1000 * prohnuto.mez)) });
         if (maLana && (vysledek.pruvesVKlidu ?? 0) > prohnuto.mez && b.dopnutoMarne === null) pricina = `${pricina} ${t("vysledek.kratce.nedopnuto")}`;
-      } else if (rozhodloKmitani) pricina = pricinaKmitanim;
-      else if (prvni?.druh === "poruseni") {
+      } else if (opreniPruhu) {
+        const opreni = opreniBehu(b);
+        const veta = t(opreni === null ? "vysledek.kratce.opreno" : opreni.noha ? "vysledek.kratce.opreno.noha" : "vysledek.kratce.opreno.misto");
+        pricina = [veta, radaKOpreni()].filter((v) => v !== "").join(" ");
+        if (opreni) b.oznacenyStycnik = opreni.stycnik;
+      } else if (rozhodloKmitani) {
+        pricina = pricinaKmitanim;
+        if (houpani) b.oznacenyStycnik = houpani.stycnik;
+      } else if (prvni?.druh === "poruseni") {
         pricina = t("vysledek.kratce.prvni", { prut: prvni.prut + 1, zpusob: t(nazevZpusobu(prvni.zpusob)) });
         // Nedopnutá lana jsou příčina, o které má hráč vědět hned, ne až v podrobnostech.
         // Po dopnutí, které nepomohlo, by ta rada hráče vodila v kruhu.
         if (maLana && (vysledek.pruvesVKlidu ?? 0) > 0.1 && b.dopnutoMarne === null) pricina = `${pricina} ${t("vysledek.kratce.nedopnuto")}`;
+        // Jinak co s prutem udělat, pokud to hned pod pruhem neříká rada po opakovaném nezdaru
+        // (lano přetržené napínákem má vlastní větu v podrobnostech).
+        else if (!radaPodPruhem && !pretrzenoNapinakem(b, prvni)) {
+          const kratce = kratkaRadaKPoruseni(prvni.zpusob, b.navrh, prvni.prut);
+          if (kratce !== "") pricina = `${pricina} ${kratce}`;
+        }
         // Prut, o kterém pruh mluví, je na výkresu označený.
         if (b.oznaceny === null) {
           b.oznaceny = prvni.prut;
           obnovAnalyzu();
         }
-      } else if (pricinaKmitanim) pricina = pricinaKmitanim;
-      else if (dalsi) pricina = prvniVeta(dalsi);
+      } else if (pricinaKmitanim) {
+        pricina = pricinaKmitanim;
+        if (houpani) b.oznacenyStycnik = houpani.stycnik;
+      } else if (prvni?.druh === "sjeti") {
+        // Konec mostu sjel z posuvné podpory: která to byla (kroužek) a co s tím.
+        pricina = [t("vysledek.kratce.sjeti"), radaKSjeti()].filter((v) => v !== "").join(" ");
+        b.oznacenyStycnik = prvni.stycnik;
+      } else if (dalsi) pricina = prvniVeta(dalsi);
       else if (vetaLodi) pricina = vetaLodi;
     }
     // Za větu o provozu a příčinu patří to, co hráč čeká nejvíc: jak dopadla výzva z odkazu,
@@ -5328,13 +5833,28 @@ export function spustUroven(
     // Kampaň dokončená touhle zkouškou: řekne to i věta, ne jen popisek tlačítka.
     const vetaDokonceni = b.kampanDokoncena && !jePokus ? t("vysledek.kampanDokoncena.veta") : null;
     const dovetekPruhu = b.host && !jePokus ? t("sdileni.vysledek.host") : (vetaKomise ?? vetaCile ?? vetaDokonceni ?? vetaVyzvyOdkazu);
-    const vetaVPruhu = [vety[0] ?? "", pricina, dovetekPruhu].filter((cast) => cast !== null && cast !== "").join(" ");
+    // Úvod pruhu o provozu kratší než ve shrnutí („Z 36 lidí nepřešel nikdo.“): celé znění je
+    // v podrobnostech. Neříká „spadli všichni“: výsledek přichází pár sekund po pádu mostu a lidé,
+    // kteří na most ještě nevešli, stojí na obrázku na břehu.
+    const jenLide = b.ucastnici.length > 0 && b.ucastnici.every((u) => jeClovek(u.druh));
+    const uvodPruhu =
+      !jePokus && !vysledek.rozpad && jenLide && vysledek.spadlo > 0
+        ? vysledek.spadlo === vysledek.ucastniku
+          ? t("vysledek.kratce.spadli", { pocet: vysledek.ucastniku })
+          : t("vysledek.kratce.cast", { prejelo: vysledek.prejelo, pocet: vysledek.ucastniku, spadlo: vysledek.spadlo })
+        : (vety[0] ?? "");
+    const vetaVPruhu = [uvodPruhu, pricina, dovetekPruhu].filter((cast) => cast !== null && cast !== "").join(" ");
     udaj("vysledek-veta").textContent = vetaVPruhu;
     // Pruh má na větu dva řádky; co se nevejde, je celé v bublině i v podrobnostech.
     udaj("vysledek-veta").title = vetaVPruhu;
     const pruhMedaili = udaj("vysledek-medaile-pruh");
     pruhMedaili.hidden = jePokus || mimoSoutez;
-    if (!pruhMedaili.hidden) vypisMedailePruhu(pruhMedaili, uroven, vysledek.medaile, rekord?.medaile);
+    // Most prošel, ale je dražší než inženýrský rozpočet: u rozpočtové medaile je vidět, pod kolik musí.
+    const cilRozpoctu =
+      vysledek.pruchod && !vysledek.medaile.rozpocet && uroven.inzenyrskyRozpocet !== null && vysledek.cena > uroven.inzenyrskyRozpocet
+        ? t("medaile.rozpocet.cil", { castka: koruny(uroven.inzenyrskyRozpocet) })
+        : null;
+    if (!pruhMedaili.hidden) vypisMedailePruhu(pruhMedaili, uroven, vysledek.medaile, rekord?.medaile, cilRozpoctu);
     // Hlavní tlačítko: po výhře Další úroveň, po prohře Upravit most (i v úrovni, která už je projitá).
     const hlavniJeDalsi = !odkaz.hidden && (vysledek.pruchod || jePokus);
     odkaz.classList.toggle("tlacitko--hlavni", hlavniJeDalsi);
@@ -5348,15 +5868,26 @@ export function spustUroven(
     razitko.append(podpis);
     razitko.dataset.ukazat = String(sVerdiktem);
     document.body.dataset.pricina = pricina ?? "";
-    // Podruhé po sobě stejný nezdar: rada přímo v pruhu, ne až v podrobnostech.
+    // Podruhé po sobě stejný nezdar: rada přímo v pruhu, ne až v podrobnostech. Potřetí v návštěvě
+    // k ní (nebo místo ní) první krok nápovědy. Pokus nemá ani jedno.
     const rada = jePokus ? "" : ukazRadu(b);
+    const nahled = !jePokus && ukazNahled(b);
+    // Na telefonu je u náhledu rada navíc (její celé znění je v podrobnostech): pruh nesmí zakrýt most.
+    panelVysledku.dataset.nahled = nahled ? "ano" : "ne";
+    if (jePokus) {
+      udaj("vysledek-rada").hidden = true;
+      udaj("vysledek-nahled").hidden = true;
+    }
     // Věta ze záběru nad výkresem říká totéž co výsledek; pod pruhem by jen překážela.
     skryjHlaseni();
     sbalVysledek(true);
     ukazPanelVysledku(true);
+    // Skica náhledu se kreslí podle velikosti plátna v pruhu: až je pruh vidět.
+    if (nahled) napoveda?.nahled(prvek('[data-udaj="vysledek-nahled-skica"]', HTMLCanvasElement));
     // Pruh s radou je vyšší: prut, o kterém mluví, pod ním nesmí zmizet (ani na telefonu,
-    // kde jinak pohled po výsledku stojí: rada se nezavírá jako podrobnosti).
-    if (rada !== "") odkryjOznacenyPrut(true);
+    // kde jinak pohled po výsledku stojí: rada se nezavírá jako podrobnosti). Totéž místo,
+    // o kterém pruh mluví (podpora, místo na zemi, styčník).
+    if (rada !== "" || nahled || (b.oznacenyStycnik ?? null) !== null) odkryjOznacenyPrut(true);
   }
 
   // ---- Okno se zadáním úrovně ----
@@ -5463,14 +5994,16 @@ export function spustUroven(
     if (jeKlicTextu(skutecnost)) poleSkutecnosti.textContent = t("zadani.skutecnost", { text: t(skutecnost) });
     // „Více o úloze“ má smysl, jen když pod ním něco je (u případu komise nález po uzavření).
     udaj("zadani-vice-obal").hidden = udaj("zadani-vice").hidden && !jeKlicTextu(skutecnost);
-    // Návod k ovládání patří jen k úplně první úrovni.
-    udaj("zadani-ovladani").hidden = uroven.id !== kampan[0]?.id;
+    // Návod k ovládání patří jen k úplně první úrovni (sbalený jako ostatní části).
+    udaj("zadani-ovladani-obal").hidden = uroven.id !== kampan[0]?.id;
     // Na dotykové obrazovce se nekreslí myší a mezerník tam není.
     if (window.matchMedia?.("(pointer: coarse)").matches) udaj("zadani-ovladani").textContent = t("zadani.ovladani.dotyk");
 
     const zadaniUkazky = ukazkaUrovne(uroven);
     const oddil = udaj("ukazka");
     oddil.hidden = zadaniUkazky === null;
+    // Okno bez ukázky je užší: krátký text by se jinak roztáhl přes šířku dvou výkresů.
+    oknoZadani.dataset.ukazka = zadaniUkazky === null ? "ne" : "ano";
     if (zadaniUkazky) {
       for (const cast of ["a", "b", "popis"] as const) {
         const klicUkazky = `ukazka.${uroven.id}.${cast}`;
@@ -5487,6 +6020,10 @@ export function spustUroven(
     if (oknoZadani.open) return;
     zadaniOtevrenoV = Date.now();
     vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
+    // Sbalené medaile ukazují aspoň znaky (◇ chybí, ◆ získaná); podmínky jsou po rozbalení.
+    const znackyZadani = znackyMedaili(uroven, rekord?.medaile ?? BEZ_MEDAILI);
+    udaj("zadani-medaile-souhrn").textContent = znackyZadani.znaky;
+    udaj("zadani-medaile-souhrn").setAttribute("aria-label", znackyZadani.popis);
     // Výzvy o efektivitu, jen kde je úroveň má. Zadání říká, oč se hraje (zlato); stupně
     // bronz a stříbro ukáže až výsledek zkoušky. Devět čísel najednou by tu jen mátlo.
     for (const uzel of oknoZadani.querySelectorAll<HTMLElement>('[data-cast="zadani-vyzvy"]')) uzel.hidden = prahy === null;
@@ -5500,6 +6037,8 @@ export function spustUroven(
         }),
       );
     }
+    // Sbalené části zadání se při každém otevření zavřou: okno má ukázat jen úkol.
+    for (const cast of oknoZadani.querySelectorAll<HTMLDetailsElement>("details.okno__vice")) cast.open = false;
     oknoZadani.showModal();
     // Okno se otevírá odshora, i když je vyšší než obrazovka; mezerník a Enter ho zavřou.
     prvek('#okno-zadani button[value="zavrit"]', HTMLButtonElement).focus({ preventScroll: true });
@@ -5895,6 +6434,8 @@ export function spustUroven(
     const sOdkazem = vejdeSeDoOdkazu(navrh);
     const adresa = sOdkazem ? odkazNaMost(window.location.origin + window.location.pathname, navrh) : "";
     const prosel = overeni(navrh);
+    // Velký most okno posílá na Export, který je v první kapitole pod „Více“.
+    if (!sOdkazem) rozbalViceSamo();
     udaj("sdileni-popis").textContent = t(
       !sOdkazem ? "sdileni.popis.velky" : host ? "sdileni.popis.cizi" : prosel === null ? "sdileni.popis.nezkouseny" : prosel ? "sdileni.popis.prosel" : "sdileni.popis.neprosel",
     );
@@ -6022,7 +6563,7 @@ export function spustUroven(
     // Pozornost patří výkresu: mezerník má spustit zkoušku, ne znovu otevřít Import.
     canvas.focus();
     const prekazka = prekazkyZkousky(editor.navrh, uroven)[0];
-    if (prekazka) ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
+    if (prekazka) hlasPrekazku(prekazka.druh, "import");
   }
 
   function textDiagnostiky(): string {
@@ -6205,6 +6746,7 @@ export function spustUroven(
       zmenaObrysu: () => platno.prekresli(),
       pouzita: (stupen, most) => {
         napovedaPouzita = true;
+        delete tlacitkoNapovedy.dataset.tip;
         // Kdo nápovědu otevřel sám, tomu rada u výsledku v téže řadě nezdarů nic nevnucuje.
         pametRady = samHledal(pametRady);
         // `krok` drží význam, který zná souhrn pro správce (1 nápověda otevřená, 2 obrys);
@@ -6216,12 +6758,16 @@ export function spustUroven(
           zkousek: zkousekVUrovni,
           sekund: sekundVUrovni(),
           projito: rekord?.medaile.pruchod === true,
+          // Odkud hráč přišel: z palety, z rady po druhém stejném nezdaru, nebo z náhledu u výsledku.
+          odkud: odkudNapovedy,
         });
       },
       projito: () => rekord?.medaile.pruchod === true,
     });
     tlacitkoNapovedy.addEventListener("click", () => {
-      if (rezim === "stavba") napoveda?.otevri();
+      if (rezim !== "stavba") return;
+      odkudNapovedy = "paleta";
+      napoveda?.otevri();
     });
   }
   // Tlačítko u rady po druhém stejném nezdaru: zpátky ke stavbě a rovnou do nápovědy.
@@ -6229,8 +6775,16 @@ export function spustUroven(
     const druh = beh?.rada?.druh ?? null;
     if (!napoveda || druh === null) return;
     zapis("rada.napoveda", { druh, zkousek: zkousekVUrovni });
+    odkudNapovedy = "rada";
     zpetKeStavbe();
     napoveda.otevri();
+  });
+  // Tlačítko u náhledu nápovědy (třetí nezdar): první krok už hráč viděl, nápověda se otevře na dalším.
+  priKliknuti("nahled-napoveda", () => {
+    if (!napoveda) return;
+    odkudNapovedy = "nahled";
+    zpetKeStavbe();
+    napoveda.otevri(2);
   });
 
   // Sandbox: okno s nastavením údolí a provozu. Nové nastavení se uloží a stránka se načte
@@ -6359,6 +6913,7 @@ export function spustUroven(
   priKliknuti("tlumeni-plus", () => rezim === "stavba" && editor.zmenTlumeni(1));
   priKliknuti("smazat", smazVybrane);
   priKliknuti("zrcadlit", zrcadli);
+  priKliknuti("paleta-vice", prepniVice);
   priKliknuti("zpet", () => rezim === "stavba" && editor.zpet());
   priKliknuti("zpet-rychle", () => rezim === "stavba" && editor.zpet());
   priKliknuti("smazat-rychle", smazVybrane);
@@ -6402,7 +6957,13 @@ export function spustUroven(
       },
       zapis: (data) => zapis("zebricek", data),
     });
-    for (const tlacitko of tlacitkaZebricku) tlacitko.addEventListener("click", () => oknoZebricku.otevri());
+    for (const tlacitko of tlacitkaZebricku) {
+      tlacitko.addEventListener("click", () => {
+        // Okno žebříčku posílá na zkoušku Do zlomu: ta musí být v paletě vidět.
+        rozbalViceSamo();
+        oknoZebricku.otevri();
+      });
+    }
   } else {
     for (const tlacitko of tlacitkaZebricku) tlacitko.hidden = true;
   }
@@ -6462,7 +7023,9 @@ export function spustUroven(
   });
   for (const cast of oknoZadani.querySelectorAll<HTMLDetailsElement>("details.okno__vice")) {
     cast.addEventListener("toggle", () => {
-      if (cast.open) zapis("ovladani", { co: "zadani-vice", cast: cast.dataset.cast ?? cast.dataset.udaj ?? "" });
+      // Krátký kód části (zadani-medaile, zadani-provoz, zadani-stavba, zadani-vyzvy, zadani-vice, zadani-ovladani);
+      // zavírání při otevření okna (`otevriZadani`) se nezapisuje, protože okno je v tu chvíli zavřené.
+      if (cast.open && oknoZadani.open) zapis("ovladani", { co: "zadani-vice", cast: cast.dataset.cast ?? "" });
     });
   }
   oknoZadani.addEventListener("close", () => {

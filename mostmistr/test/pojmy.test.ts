@@ -28,6 +28,10 @@ describe("slovníček pojmů", () => {
     expect(pojemV("Největší využití 85 %.")).toBe("vyuziti:využití");
     expect(pojemV("Trefuje se do 1. vlastní frekvence mostu.")).toBe("vlastni-frekvence:vlastní frekvence");
     expect(pojemV("Nalaď laděný tlumič na takt kapely.")).toBe("ladeny-tlumic:laděný tlumič");
+    // Věty pruhu výsledku o mostu opřeném o zem a o konci, který sjel z podpory.
+    expect(pojemV("Most se opřel o zem (označeno): podpěra bez kotvy nenese.")).toBe("kotva:kotvy");
+    expect(pojemV("Konec mostu sjel z označené posuvné podpory: most nedržel tvar.")).toBe("podpora:posuvné podpory");
+    expect(pojemV("The bridge leaned on the ground (marked): a prop without an anchor carries nothing.", "en")).toBe("kotva:anchor");
   });
 
   it("nesplete si vzpěr se vzpěrou ani kloub s plastickým kloubem", () => {

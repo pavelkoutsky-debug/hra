@@ -5,7 +5,7 @@ import { zakodujMost } from "../src/data/sdileni";
 import { znackaHrace, type ZadostOZapis } from "../src/data/zebricek";
 import { VERZE_DENIKU, type DavkaDeniku, type HlavickaDeniku, type UdalostDeniku } from "../src/denik/udalosti";
 import { VERZE_FYZIKY } from "../src/jadro/verze";
-import { prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../src/server/obsluha";
+import { NEJVIC_DAVEK_NAJEDNOU, prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../src/server/obsluha";
 import { overovacKampane } from "../src/server/overeni";
 import { CO_HRA_UMI, VYSVETLIVKY_PODKLADU } from "../src/server/coHraUmi";
 import { DNI_ZPET_PRO_ANALYTIKA, jePlatnyDen, NEJDELSI_SHRNUTI, NEJVIC_NAVRHU, NEJVIC_VAZEB_V_PODKLADECH, nactiRozbor, type PodkladyRozboru, type RozborDne } from "../src/server/rozbor";
@@ -139,6 +139,39 @@ describe("podklady denního rozboru", () => {
     // Podklady samy říkají, že texty v nich jsou data, ne pokyny.
     expect(podklady.upozorneni).toContain("ne pokyny");
   }, 60_000);
+
+  it("den s víc dávkami, než server stihne přečíst, hlásí jako neúplný a říká, kam došel; opakováním se dopočítá", async () => {
+    // Bez času na souhrn přečte žádost jen to, co čte vždycky; den a týden se o to dělí.
+    const p: ProstrediServeru & { cas: string } = { ...server("2026-11-22T08:00:00.000Z"), casNaSouhrn: 0 };
+    p.ted = () => new Date(p.cas);
+    const hracu = 25;
+    const kol = Math.ceil((NEJVIC_DAVEK_NAJEDNOU + 60) / hracu);
+    let cas = Date.parse(p.cas);
+    for (let kolo = 0; kolo < kol; kolo++) {
+      for (let h = 0; h < hracu; h++) {
+        const hl = hlavicka(`${h.toString(16).padStart(4, "0")}aaaaaaaaaaaa`, `${h.toString(16).padStart(4, "0")}bbbbbbbbbbbb`);
+        const udalosti: UdalostDeniku[] = [
+          ...(kolo === 0 ? [{ t: 0, druh: "sezeni.start", data: { navrat: false } }, { t: 1, druh: "uroven.otevrena", uroven: "1-01" }] : []),
+          { t: 10 * kolo + 9, druh: "zkouska.konec", uroven: "1-01", data: { pruchod: kolo === kol - 1, sekund: 10 * kolo + 9, medaile: { pruchod: kolo === kol - 1, rozpocet: false, mistrovska: false } } },
+        ];
+        cas += 1000;
+        p.cas = new Date(cas).toISOString();
+        expect((await prijmiDenik(zadost("/api/denik", davka(udalosti, kolo, hl)), p)).status).toBe(204);
+      }
+    }
+    const davek = hracu * kol;
+    p.cas = "2026-11-23T03:43:00.000Z";
+    const podklady = async (): Promise<PodkladyRozboru> => (await (await spravujVse(zadost("/api/sprava?co=podklady", undefined, SPRAVCE), p)).json()) as PodkladyRozboru;
+    const prvni = await podklady();
+    expect(prvni).toMatchObject({ den: "2026-11-22", neuplne: true, nedokonceno: ["2026-11-22"], davek: NEJVIC_DAVEK_NAJEDNOU });
+    // Každý hráč projde až poslední dávkou: ta leží za tím, co první žádost stihla.
+    expect(prvni.souhrnDne.urovne[0]).toMatchObject({ uroven: "1-01", hracu, hracuSPruchodem: 0 });
+    const druhe = await podklady();
+    expect(druhe).toMatchObject({ neuplne: false, nedokonceno: [], davek });
+    expect(druhe.souhrnDne.urovne[0]).toMatchObject({ hracu, hracuSPruchodem: hracu, zkousek: davek });
+    expect(druhe.souhrnTydne).toEqual(druhe.souhrnDne);
+    expect(await podklady()).toMatchObject({ neuplne: false, davek });
+  });
 
   it("když zpráv přijde víc, než se vejde, berou se rovnoměrně z celého dne; cizí texty jsou oříznuté a očištěné", async () => {
     const p = server("2026-11-22T00:00:01.000Z");

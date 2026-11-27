@@ -19,6 +19,7 @@ import { obsluzZebricek, type UlozenyZebricek, type ZebricekProSpravu } from "..
 import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -95,6 +96,7 @@ async function otevriUroven(s: Page, id: string, dotaz = ""): Promise<void> {
 }
 
 async function nactiMost(s: Page, navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(s);
   await akce(s, "import").click();
   await s.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce(s, "okno-nacist").click();
@@ -102,8 +104,10 @@ async function nactiMost(s: Page, navrh: NavrhMostu): Promise<void> {
 
 /** Pustí zkoušku (mezerníkem běžnou, tlačítkem do zlomu), počká na výsledek a vrátí se ke stavbě. */
 async function zkousej(s: Page, zlom = false): Promise<string> {
-  if (zlom) await akce(s, "zlom").click();
-  else {
+  if (zlom) {
+    await rozbalPaletu(s);
+    await akce(s, "zlom").click();
+  } else {
     await s.locator(PLATNO).focus();
     await s.keyboard.press("Space");
   }
@@ -117,6 +121,7 @@ async function zkousej(s: Page, zlom = false): Promise<string> {
 }
 
 async function otevriZebricek(s: Page): Promise<void> {
+  await rozbalPaletu(s);
   await s.locator('.paleta [data-akce="zebricek"]').click();
   await okno(s).waitFor({ state: "visible" });
   await s.locator('#okno-zebricek[data-stav="nacten"], #okno-zebricek[data-stav="nedostupny"]').waitFor();
@@ -138,6 +143,23 @@ afterAll(async () => {
   for (const kontext of kontexty) await kontext.close();
   await prohlizec?.close();
   await new Promise<void>((hotovo) => server?.httpServer.close(() => hotovo()));
+});
+
+describe("žebříček a paleta první kapitoly", () => {
+  it("okno žebříčku posílá na Do zlomu: „Více“ v paletě se rozbalí samo a volba hráče se nemění", async () => {
+    const s = await cistaStranka();
+    await otevriUroven(s, "1-01");
+    const vice = s.locator('#obrazovka-uroven [data-akce="paleta-vice"]');
+    expect(await vice.getAttribute("aria-expanded")).toBe("false");
+    expect(await s.locator('.paleta [data-akce="zlom"]').isVisible()).toBe(false);
+    // Žebříček jde otevřít i z podrobností výsledku, kde paleta „Více“ nemá.
+    await s.evaluate(() => (document.querySelector('.vysledek [data-akce="zebricek"]') as HTMLElement).click());
+    await okno(s).waitFor({ state: "visible" });
+    await s.keyboard.press("Escape");
+    expect(await vice.getAttribute("aria-expanded")).toBe("true");
+    expect(await s.locator('.paleta [data-akce="zlom"]').isVisible()).toBe(true);
+    expect(await s.evaluate(() => localStorage.getItem("mostmistr.paleta-vice"))).not.toBe("1");
+  });
 });
 
 describe("žebříčky", () => {
@@ -291,6 +313,9 @@ describe("žebříčky", () => {
     await otevriUroven(s, "0-00");
     expect(await s.locator('.paleta [data-akce="zebricek"]').isVisible()).toBe(false);
     await otevriUroven(s, "1-02");
+    // V první kapitole je žebříček pod „Více“.
+    expect(await s.locator('.paleta [data-akce="zebricek"]').isVisible()).toBe(false);
+    await rozbalPaletu(s);
     expect(await s.locator('.paleta [data-akce="zebricek"]').isVisible()).toBe(true);
 
     const en = await cistaStranka({ locale: "en-US" });
@@ -302,6 +327,7 @@ describe("žebříčky", () => {
 
     const telefon = await cistaStranka({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     await otevriUroven(telefon, "1-01");
+    await rozbalPaletu(telefon);
     await telefon.evaluate(() => document.querySelector<HTMLElement>('.paleta [data-akce="zebricek"]')!.click());
     await okno(telefon).waitFor({ state: "visible" });
     await telefon.locator('#okno-zebricek[data-stav="nacten"]').waitFor();

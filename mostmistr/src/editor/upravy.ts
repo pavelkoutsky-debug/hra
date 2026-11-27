@@ -94,6 +94,81 @@ export function zmenPrvek(navrh: NavrhMostu, pruty: Iterable<number>, prvek: IdP
   return zmena ? { ...navrh, pruty: nove } : navrh;
 }
 
+/**
+ * Změní prvek daných prutů jeden po druhém, každý jen tehdy, když to `duvodProti` dovolí:
+ * dostane návrh se změnami dosud provedenými, prut a nový prvek a vrátí, proč změna nejde
+ * (nebo null). Vrací nový návrh, kolik prutů se změnilo a proč ty ostatní ne (v pořadí).
+ */
+export function zmenPrvekKdeSmi<D>(
+  navrh: NavrhMostu,
+  pruty: Iterable<number>,
+  prvek: IdPrvku,
+  duvodProti: (navrh: NavrhMostu, prut: PrutNavrhu, prvek: IdPrvku) => D | null,
+): { navrh: NavrhMostu; zmeneno: number; odmitnuto: D[] } {
+  let vysledek = navrh;
+  let zmeneno = 0;
+  const odmitnuto: D[] = [];
+  for (const id of pruty) {
+    const p = vysledek.pruty.find((x) => x.id === id);
+    if (!p || p.prvek === prvek) continue;
+    const duvod = duvodProti(vysledek, p, prvek);
+    if (duvod !== null) {
+      odmitnuto.push(duvod);
+      continue;
+    }
+    vysledek = zmenPrvek(vysledek, [id], prvek);
+    zmeneno += 1;
+  }
+  return { navrh: vysledek, zmeneno, odmitnuto };
+}
+
+/**
+ * Spojí díly, které na sebe navazují v přímce, zpátky v jeden prut: dvojici prutů z `kandidati`
+ * se stejným prvkem, která se potkává ve styčníku, do něhož nevede nic jiného a na kterém nic
+ * není (svar, zámek, závaží, tlumič), nahradí jedním prutem mezi jejich vnějšími konci, když to
+ * `smi` dovolí (dostane styčník a délku spojeného prutu). Opakuje, dokud je co spojovat.
+ *
+ * K čemu: dlouhý tah mostovky editor dělí na díly (mostovka má krátkou největší délku). Když
+ * se takové díly mimo cestu vymění za obyčejný prut, zůstal by uprostřed šikminy kloub, ve
+ * kterém se most složí, a hráč by nevěděl proč (nález recenze hraním M19).
+ */
+export function slucPrimeDily(
+  navrh: NavrhMostu,
+  kandidati: ReadonlySet<number>,
+  smi: (stycnik: StycnikNavrhu, delka: number) => boolean,
+): NavrhMostu {
+  let vysledek = navrh;
+  const bezNastaveni = (p: PrutNavrhu): boolean => Object.keys(p).every((k) => k === "id" || k === "a" || k === "b" || k === "prvek");
+  for (;;) {
+    const podleId = new Map(vysledek.stycniky.map((s) => [s.id, s]));
+    let spojeno = false;
+    for (const s of vysledek.stycniky) {
+      if (s.svar || s.zamek || s.zavazi || s.tlumic) continue;
+      const pripojene = vysledek.pruty.filter((p) => p.a === s.id || p.b === s.id);
+      if (pripojene.length !== 2) continue;
+      const [p, q] = pripojene as [PrutNavrhu, PrutNavrhu];
+      if (!kandidati.has(p.id) || !kandidati.has(q.id) || p.prvek !== q.prvek || !bezNastaveni(p) || !bezNastaveni(q)) continue;
+      const konecP = podleId.get(p.a === s.id ? p.b : p.a);
+      const konecQ = podleId.get(q.a === s.id ? q.b : q.a);
+      if (!konecP || !konecQ || konecP.id === konecQ.id || prutMezi(vysledek, konecP.id, konecQ.id)) continue;
+      // V přímce a na opačné strany: vektorový součin nula, skalární záporný (souřadnice jsou na rastru).
+      const ux = konecP.x - s.x;
+      const uy = konecP.y - s.y;
+      const vx = konecQ.x - s.x;
+      const vy = konecQ.y - s.y;
+      if (ux * vy - uy * vx !== 0 || ux * vx + uy * vy >= 0) continue;
+      const dx = konecQ.x - konecP.x;
+      const dy = konecQ.y - konecP.y;
+      if (!smi(s, Math.sqrt(dx * dx + dy * dy))) continue;
+      const spojeny = novyPrut(p.id, konecP.id, konecQ.id, p.prvek);
+      vysledek = bezOsamelychStycniku({ ...vysledek, pruty: vysledek.pruty.filter((x) => x.id !== q.id).map((x) => (x.id === p.id ? spojeny : x)) });
+      spojeno = true;
+      break;
+    }
+    if (!spojeno) return vysledek;
+  }
+}
+
 /** Nastaví závaží daným styčníkům; `kg` dostane dosavadní hodnotu a vrátí novou (0 závaží odebere). */
 export function nastavZavazi(
   navrh: NavrhMostu,

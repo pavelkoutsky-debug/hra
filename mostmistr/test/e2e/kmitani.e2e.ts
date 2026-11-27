@@ -8,6 +8,7 @@ import { Kreslic } from "../../src/data/kreslic";
 import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -49,6 +50,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce("okno-nacist").click();
@@ -206,9 +208,12 @@ describe("kmitání při zkoušce", () => {
     expect(await telo("kmitani-rytmus")).toBe("utvar;2;3");
     expect(Number(await telo("kmitani-frekvence"))).toBeGreaterThan(5.8);
     expect(Number(await telo("kmitani-frekvence"))).toBeLessThan(6.2);
-    expect(bezMezer((await telo("pricina")) ?? "")).toMatch(/^Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\.$/);
+    // Úroveň nemá tlumič ani závaží: pruh k příčině přidá, co pomůže s tím, co hráč má (verze 0.25.0).
+    expect(bezMezer((await telo("pricina")) ?? "")).toMatch(
+      /^Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\. Pomohl by tužší most \(vyšší příhrada, silnější pruty\)\.$/,
+    );
     expect(bezMezer(await stranka.locator('[data-udaj="vysledek-veta"]').evaluate((uzel) => uzel.textContent ?? ""))).toMatch(
-      /^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\.$/,
+      /^Přešli všichni \(6\)\. Kmitání \d,\d\d m\/s² \(mez 2,5\)\. Příčina: běžci v taktu, dvojnásobek kroku 3,0 Hz\. Pomohl by tužší most \(vyšší příhrada, silnější pruty\)\.$/,
     );
     await rozbalVysledek();
     const shrnuti = bezMezer(await udaj("vysledek-shrnuti"));
@@ -530,6 +535,7 @@ describe("nápověda po krocích", () => {
 
 /** Načte most v úrovni bez osy frekvencí (není na co čekat). */
 async function nactiMostBezOsy(navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce("okno-nacist").click();
@@ -608,6 +614,7 @@ describe("čitelnost stavby", () => {
       // Výňatek ze zadání je krátký a celé zadání je na jedno kliknutí.
       const vynatek = (await s.locator('[data-udaj="zadani"]').boundingBox())!;
       expect(vynatek.height).toBeLessThan(100);
+      await rozbalPaletu(s);
       await s.locator('[data-akce="zadani-cele"]').click();
       await s.locator("#okno-zadani").waitFor({ state: "visible" });
       await s.locator('#okno-zadani[open] button[value="zavrit"]').click();

@@ -60,6 +60,12 @@ export interface SouhrnUrovne {
   zkousekPoRade: number | null;
   hracuNapovedaZRady: number;
   /**
+   * Náhled nápovědy u výsledku po třetím nezdaru v návštěvě (`napoveda.nahled`): kolik hráčů ho
+   * vidělo a kolik z nich z něj nápovědu otevřelo (`napoveda` s `odkud: "nahled"`).
+   */
+  hracuSNahledem: number;
+  hracuNapovedaZNahledu: number;
+  /**
    * Posun styčníků (nástroj Výběr a posun, Alt+tažení, šipky): kolik hráčů ho použilo a kolik
    * posunů bylo, z toho víc styčníků naráz a šipkou.
    */
@@ -67,6 +73,8 @@ export interface SouhrnUrovne {
   posunu: number;
   posunuVic: number;
   posunuKlavesou: number;
+  /** Kolik hráčů si v paletě první kapitoly samo rozbalilo „Více“ (`paleta.vice`). */
+  hracuSVice: number;
   /**
    * Zkoušky, které hra nepustila (`zkouska.odmitnuta`; pokusy se nepočítají): kolik hráčů se to
    * týkalo, kolikrát celkem a z toho proto, že byl most dražší než rozpočet.
@@ -74,6 +82,13 @@ export interface SouhrnUrovne {
   hracuSOdmitnutim: number;
   zkousekOdmitnuto: number;
   zkousekNadRozpocet: number;
+  /**
+   * Rozpočet při stavbě (`rozpocet.prekrocen`, `rozpocet.vymena`): kolik hráčů úpravou mostu
+   * přelezlo rozpočet (hra jim to hned řekla) a kolik použilo výměnu mostovky mimo cestu za
+   * levnější prut jedním klikem.
+   */
+  hracuNadRozpoctem: number;
+  hracuSVymenou: number;
   /**
    * Značky o mostovce mimo trasu, které hra při stavbě ukázala (`stavba.znacka`), a kolikrát:
    * mostovka přes kraj břehu bez styčníku, mimo trasu, mezera u břehu a uprostřed, mostovka za
@@ -101,6 +116,11 @@ export interface SouhrnBezUrovne {
   /** Otevřeli okno Soukromí a kontakt, okno zpětné vazby. */
   soukromi: number;
   vazba: number;
+  /**
+   * Rozbalili v přehledu celou kampaň (odkaz „Celá kampaň“: nový hráč vidí jinak jen první
+   * kapitolu). Je to pořád přehled, takže se nepočítá proti `jenPrehled`.
+   */
+  celaKampan: number;
   /** Nemají zapsanou žádnou obrazovku (stránka se nedonačetla, nebo jen začátek sezení). */
   bezObrazovky: number;
   /**
@@ -161,13 +181,21 @@ export interface HracVUrovni {
   radaNapoveda?: boolean;
   /** Kolik zkoušek po té radě hráč potřeboval k dalšímu průchodu (null: zatím neprošel). */
   radaPruchodPo?: number | null;
+  /** Hráč viděl náhled nápovědy u výsledku a jestli z něj nápovědu otevřel. Starší výtahy je nemají. */
+  nahled?: boolean;
+  napovedaZNahledu?: boolean;
   /** Posuny styčníků, z toho víc styčníků naráz a šipkou. Starší výtahy je nemají. */
   posunu?: number;
   posunuVic?: number;
   posunuKlavesou?: number;
+  /** Hráč si v paletě rozbalil „Více“ (rozbalení, které udělala hra sama, se nepočítá). Starší výtahy ho nemají. */
+  vice?: boolean;
   /** Zkoušky, které hra nepustila, a z nich kvůli rozpočtu. Starší výtahy je nemají. */
   odmitnuto?: number;
   nadRozpocet?: number;
+  /** Kolikrát cena při stavbě přelezla rozpočet a kolikrát hráč vyměnil mostovku mimo cestu. Starší výtahy je nemají. */
+  nadRozpoctem?: number;
+  vymen?: number;
 }
 
 export interface HracVeVytahu {
@@ -185,9 +213,10 @@ export interface HracVeVytahu {
 
 /**
  * Verze výtahu. Výtah uložený starší verzí server nepoužije a den spočítá z dávek znovu
- * (3: obrazovky a akce hráčů, dotyk a pruty po úrovních, příčina neúspěchu zkoušky).
+ * (3: obrazovky a akce hráčů, dotyk a pruty po úrovních, příčina neúspěchu zkoušky;
+ * 4: rozbalení celé kampaně v přehledu).
  */
-export const VERZE_VYTAHU = 3;
+export const VERZE_VYTAHU = 4;
 /**
  * Nejvíc různých textů chyb, které si výtah pamatuje; další se sčítají pod „ostatní“. Strop
  * chrání výtah před zahlcením vymyšlenými daty; běžný den k němu nedojde. Nad ním už sloučení
@@ -202,6 +231,8 @@ const NEJVETSI_CENA = 1e10;
 const NEJVIC_DILU = 40;
 /** Víc styčníků, než má největší most, jeden posun nepohne. */
 const NEJVIC_POSUNUTYCH = 2000;
+/** Víc prutů jedna výměna mostovky nevymění. */
+const NEJVIC_VYMENENYCH = 2000;
 
 // Deník plní kdokoli, kdo umí poslat žádost: souhrn proto bere jen hodnoty, které hra opravdu
 // posílá (známé prvky a způsoby porušení, časy a ceny v rozumných mezích).
@@ -209,8 +240,13 @@ const ZNAME_PRVKY: ReadonlySet<string> = new Set<string>(ID_PRVKU);
 const ZNAME_ZPUSOBY: ReadonlySet<string> = new Set(["tah", "tlak", "ohyb", "smyk", "vzper"]);
 const ZNAME_AKCE: ReadonlySet<string> = new Set(["mys", "dotyk", "klavesa", "posun"]);
 
-/** Obrazovky, které si výtah u hráče pamatuje. */
-export const OBRAZOVKY = ["prehled", "kampan", "piskoviste", "komise", "list", "zkusebna", "soukromi", "vazba", "jine"] as const;
+/**
+ * Obrazovky, které si výtah u hráče pamatuje. „cela-kampan“ není obrazovka, ale rozbalení
+ * celého přehledu (`prehled.odkaz` s `kam: "cela-kampan"`); pamatuje se stejně.
+ */
+export const OBRAZOVKY = ["prehled", "kampan", "piskoviste", "komise", "list", "zkusebna", "soukromi", "vazba", "cela-kampan", "jine"] as const;
+/** Odkazy z přehledu (`prehled.odkaz`, pole `kam`), které si výtah zapisuje k obrazovkám hráče. */
+const SLEDOVANE_ODKAZY: ReadonlySet<string> = new Set(["zkusebna", "cela-kampan"]);
 
 /**
  * Jak souhrn v „Na čem mosty padaly“ jmenuje příčinu neúspěchu zkoušky, ve které nic nepovolilo
@@ -365,11 +401,16 @@ function novyHracVUrovni(): HracVUrovni {
     radaZkousek: null,
     radaNapoveda: false,
     radaPruchodPo: null,
+    nahled: false,
+    napovedaZNahledu: false,
     posunu: 0,
     posunuVic: 0,
     posunuKlavesou: 0,
+    vice: false,
     odmitnuto: 0,
     nadRozpocet: 0,
+    nadRozpoctem: 0,
+    vymen: 0,
   };
 }
 
@@ -428,7 +469,7 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
     } else if (u.druh === "prehled.otevren") pridejObrazovku(oHraci, "prehled");
     else if (u.druh === "list.otevren") pridejObrazovku(oHraci, "list");
     else if (u.druh === "soukromi.otevreno") pridejObrazovku(oHraci, "soukromi");
-    else if (u.druh === "prehled.odkaz" && data.kam === "zkusebna") pridejObrazovku(oHraci, "zkusebna");
+    else if (u.druh === "prehled.odkaz" && typeof data.kam === "string" && SLEDOVANE_ODKAZY.has(data.kam)) pridejObrazovku(oHraci, data.kam);
     else if (u.druh === "denik.vypnut") oHraci.vypnul = true;
     else if (u.druh === "denik.zapnut") oHraci.vypnul = false;
     else if (u.druh === "chyba") {
@@ -457,10 +498,17 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       zaznam.posunu = (zaznam.posunu ?? 0) + 1;
       if (vMezich(data.posunuto, NEJVIC_POSUNUTYCH) > 1) zaznam.posunuVic = (zaznam.posunuVic ?? 0) + 1;
       if (data.jak === "klavesa") zaznam.posunuKlavesou = (zaznam.posunuKlavesou ?? 0) + 1;
+    } else if (u.druh === "paleta.vice") {
+      // „Více“ v paletě první kapitoly: počítá se jen rozbalení hráčem, ne to, které udělala hra.
+      if (data.otevreno === true && data.samo !== true) zaznam.vice = true;
     } else if (u.druh === "napoveda") {
       // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
       const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
       zaznam.napoveda = Math.max(zaznam.napoveda ?? 0, krok);
+      // Odkud hráč přišel: počítá se jen otevření z náhledu u výsledku (jiné hodnoty nic nezmění).
+      if (krok > 0 && data.odkud === "nahled") zaznam.napovedaZNahledu = true;
+    } else if (u.druh === "napoveda.nahled") {
+      zaznam.nahled = true;
     } else if (u.druh === "rada.ukazana" || u.druh === "rada.napoveda") {
       // Rada po druhém stejném nezdaru: jen druhy, které hra posílá; prvek jen známý.
       const druh = textZ(data.druh);
@@ -475,6 +523,12 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       // Zkouška, kterou hra nepustila (most proti pravidlům, dražší než rozpočet, moc změn v komisi).
       zaznam.odmitnuto = (zaznam.odmitnuto ?? 0) + 1;
       if (data.duvod === "nad-rozpocet") zaznam.nadRozpocet = (zaznam.nadRozpocet ?? 0) + 1;
+    } else if (u.druh === "rozpocet.prekrocen") {
+      // Cena při stavbě přelezla rozpočet (o kolik korun); hra posílá jen kladnou částku.
+      if (vMezich(data.o, NEJVETSI_CENA) > 0) zaznam.nadRozpoctem = (zaznam.nadRozpoctem ?? 0) + 1;
+    } else if (u.druh === "rozpocet.vymena") {
+      // Výměna mostovky mimo cestu: počítá se jen ta, která aspoň jeden prut vyměnila.
+      if (vMezich(data.prutu, NEJVIC_VYMENENYCH) >= 1) zaznam.vymen = (zaznam.vymen ?? 0) + 1;
     } else if (u.druh === "stavba.znacka") {
       const klic = data.co === "za-brehem" ? "za-brehem" : data.co === "mezera" ? textZ(data.druh) : null;
       const popis = klic === null || !Object.hasOwn(POPISY_ZNACEK, klic) ? null : POPISY_ZNACEK[klic]!;
@@ -578,6 +632,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
           cil.radaPruchodPo = cil.zkousek - cil.radaZkousek! + z.zkousekDoPruchodu;
         }
         cil.radaNapoveda = (cil.radaNapoveda ?? false) || (z.radaNapoveda ?? false);
+        cil.nahled = (cil.nahled ?? false) || (z.nahled ?? false);
+        cil.napovedaZNahledu = (cil.napovedaZNahledu ?? false) || (z.napovedaZNahledu ?? false);
         if (cil.zkousekDoPruchodu === null && z.zkousekDoPruchodu !== null) {
           cil.zkousekDoPruchodu = cil.zkousek + z.zkousekDoPruchodu;
           cil.sekundDoPruchodu = cil.sekundDriv + (z.sekundDoPruchodu ?? 0);
@@ -597,8 +653,11 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
         cil.posunu = (cil.posunu ?? 0) + (z.posunu ?? 0);
         cil.posunuVic = (cil.posunuVic ?? 0) + (z.posunuVic ?? 0);
         cil.posunuKlavesou = (cil.posunuKlavesou ?? 0) + (z.posunuKlavesou ?? 0);
+        cil.vice = cil.vice === true || z.vice === true;
         cil.odmitnuto = (cil.odmitnuto ?? 0) + (z.odmitnuto ?? 0);
         cil.nadRozpocet = (cil.nadRozpocet ?? 0) + (z.nadRozpocet ?? 0);
+        cil.nadRozpoctem = (cil.nadRozpoctem ?? 0) + (z.nadRozpoctem ?? 0);
+        cil.vymen = (cil.vymen ?? 0) + (z.vymen ?? 0);
       }
     }
     for (const [uroven, pocty] of Object.entries(v.selhani)) {
@@ -669,13 +728,18 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         hracuSRadouPrusli: poRade.length,
         zkousekPoRade: median(poRade),
         hracuNapovedaZRady: zaznamy.filter((z) => z.radaNapoveda === true).length,
+        hracuSNahledem: zaznamy.filter((z) => z.nahled === true).length,
+        hracuNapovedaZNahledu: zaznamy.filter((z) => z.napovedaZNahledu === true).length,
         hracuSPosunem: zaznamy.filter((z) => (z.posunu ?? 0) > 0).length,
         posunu: soucet((z) => z.posunu ?? 0),
         posunuVic: soucet((z) => z.posunuVic ?? 0),
         posunuKlavesou: soucet((z) => z.posunuKlavesou ?? 0),
+        hracuSVice: zaznamy.filter((z) => z.vice === true).length,
         hracuSOdmitnutim: zaznamy.filter((z) => (z.odmitnuto ?? 0) > 0).length,
         zkousekOdmitnuto: soucet((z) => z.odmitnuto ?? 0),
         zkousekNadRozpocet: soucet((z) => z.nadRozpocet ?? 0),
+        hracuNadRozpoctem: zaznamy.filter((z) => (z.nadRozpoctem ?? 0) > 0).length,
+        hracuSVymenou: zaznamy.filter((z) => (z.vymen ?? 0) > 0).length,
         znacky: odNejcastejsiho(v.znacky?.[uroven]),
       };
     });
@@ -694,6 +758,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
     zkusebna: bez.filter((h) => byl(h, "zkusebna")).length,
     soukromi: bez.filter((h) => byl(h, "soukromi")).length,
     vazba: bez.filter((h) => byl(h, "vazba")).length,
+    celaKampan: bez.filter((h) => byl(h, "cela-kampan")).length,
     bezObrazovky: bez.filter((h) => (h.obrazovky ?? []).length === 0).length,
     sAkci: bez.filter((h) => h.akce === true).length,
     bezAkce: bez.filter((h) => h.meriAkce === true && h.akce !== true).length,
