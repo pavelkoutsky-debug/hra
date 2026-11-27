@@ -249,10 +249,10 @@ describe("krátké zadání a slovníček pojmů", () => {
     expect(rozmery.obsah).toBeLessThanOrEqual(rozmery.okno + 1);
     expect(rozmery.vyska).toBeLessThanOrEqual(720);
     await stranka.screenshot({ path: `${SLOZKA}/o4-kratke-zadani.png` });
-    await stranka.locator("#okno-zadani .okno__hlavni summary").click();
+    await stranka.locator('#okno-zadani [data-cast="zadani-vice"] summary').click();
     expect(bezMezer(await stranka.locator('[data-udaj="zadani-vice"]').innerText())).toContain("Nosné lano je čtyřikrát silnější");
     expect(await stranka.locator('[data-udaj="zadani-skutecnost"]').isVisible()).toBe(true);
-    await stranka.locator("#okno-zadani .okno__vedlejsi summary").first().click();
+    await stranka.locator('#okno-zadani [data-cast="zadani-stavba"] summary').click();
     expect(await stranka.locator('[data-udaj="zadani-stavba"]').innerText()).toContain("Nosné lano");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
   });

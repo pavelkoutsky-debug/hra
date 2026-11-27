@@ -105,6 +105,23 @@ Verze hry 0.25.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovn�
 
 **Testy.** Jednotkové: nový `test/opreni.test.ts`, doplněné `test/denik.test.ts` (části čtení, přerušená žádost, uzávěrka bez čtení, nová pole souhrnu), `test/rozbor.test.ts` (neúplné podklady), `test/mezery.test.ts`, `test/editor.test.ts` (výměna prvku), `test/zacatek.test.ts`. V prohlížeči: nové `test/e2e/rozpocet.e2e.ts` a `test/e2e/verdikty.e2e.ts`, v `test/e2e/zacatek.e2e.ts` přehled nového hráče, okno zadání s počty slov, paleta první kapitoly a telefon v obou jazycích; ostatní soubory před klikem na schovaný nástroj volají `rozbalPaletu` (`test/e2e/pomoc.ts`).
 
+### Nezávislé recenze M19 (27. 11. 2026)
+
+Čtyři čerstvé agenty (záložní model): dvě recenze kódu (server a vrstva bez prohlížeče; obrazovka hry) a dvě hraní očima nováčka (počítač, telefon). Dostali kód a cíl, ne závěry.
+
+**Recenze kódu, server a data.** Zapracováno:
+- **Po uzávěrce dne zůstávala v číslech chyba z průběžného souhrnu** (ověřeno pokusem). Původní úprava po půlnoci jen navazovala na výtah z doby, kdy den běžel; ten ale pozná dávku přijatou dvakrát a dávky sezení, které se předběhly, jen uvnitř jednoho čtení, takže hranice dvou žádostí o souhrn dneška nechala zdvojenou zkoušku v číslech dne natrvalo. Zkratka je pryč: den se po uzávěrce počítá jednou od začátku jako dřív (čtení po částech podle času zůstalo) a scénář recenze je test. Tím zmizel i druhý nález (počet dávek mohl mezi dvěma žádostmi klesnout a stránka správce by přestala dopočítávat).
+- **Smazání dat hráče nechávalo jeho číslo v uložených výtazích dnů** (starší věc, na kterou recenze narazila u komentáře, který tvrdil opak). Nově se výtah dne, ze kterého se maže, smaže taky a souhrn se spočítá znovu bez hráče.
+- Výměna mostovky se nenabízí pro mostovku položenou na cestu jiného druhu (silniční na koleji): tam patří kolejiště, ne ocelový prut. Stránka správce ukáže výměny i u úrovně, kde při stavbě nikdo rozpočet nepřelezl (most z Importu). Opravené komentáře (pořadí příčin, výtah dne).
+- Nezapracováno: mezi částmi po 400 dávkách platí stejné omezení jako dřív (zdvojená dávka přesně na hranici části se započte dvakrát; hranic je pár za den a týkalo by se to jednotek zkoušek). Řešením by byly otisky započtených dávek ve výtahu.
+- K nasazení: verze výtahu 4 znamená, že první podklady po nasazení přepočítají celý týden. Udělá se to ručně hned po nasazení, ať to nezbyde na noční rozbor.
+
+**Recenze kódu, obrazovka hry.** Zapracováno:
+- **Hlášení „Zkouška nejde… [Vyměnit]“ zůstávalo svítit, i když se most vrátil do rozpočtu** krokem Zpět (ověřeno v prohlížeči; s tlačítkem samo nemizí a hlídání rozpočtu o něm nevědělo), a bublina „pusť zkoušku“ pak svítila proti němu.
+- **Díl, který mostovku dokončil a zároveň přetáhl rozpočet, o upozornění přišel:** hlášení o přepnutí prvku ho přepsalo a po šesti sekundách nezbylo nic, deník přitom překročení zapsal. Upozornění na rozpočet má teď přednost, přepnutí ukáže jen tlačítko v paletě.
+- Věta „Vyměněno… Most stojí 100 400 Kč“ nesvítí po kroku Zpět; tlačítko zvuku (nově ikona) má na dotyku 44 px; obrys Nápovědy po průchodu úrovní zmizí; výměna z Importu se v deníku nepíše jako „po zkoušce“; „Celá kampaň“ má `aria-expanded`.
+- Bez nálezu prošlo: paleta první kapitoly (zkratky, samočinné rozbalení, host a pískoviště), upozornění na záznam ve všech čtyřech výskytech a vypínání, okno zadání, podmínky náhledu nápovědy a přepnutí prvku, slovníky.
+
 ## M18 — výsledek
 
 Verze hry 0.24.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovně, návrhu ani uloženého postupu taky ne; uložený výtah deníku má verzi 3 (server dny spočítá znovu).
