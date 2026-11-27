@@ -86,7 +86,7 @@ import { pricinyPohybu, type PricinaPohybu } from "../zkouska/pricinaPohybu";
 import { kodPriciny } from "../zkouska/pricinaVysledku";
 import { BEZ_NALEZU, posudStabilitu, type PosudekStability, type Slozeni } from "../zkouska/slozeni";
 import { dalsiDilMostovky, type KrokVedeni } from "../data/vedeni";
-import { levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, type NalezMezery } from "../data/mezery";
+import { levnejsiPrut, mostovkaMimoTrasy, mostovkaVypadaHotove, mostovkaZaBrehem, rozborMezery, vymenaMostovky, type NalezMezery, type VymenaMostovky } from "../data/mezery";
 import { nakresliVedeni } from "../vykres/vedeni";
 import { POJMY, textSPojmy, UDALOST_SLOVNICKU, ukazBublinu } from "../ui/pojmy";
 import {
@@ -182,6 +182,8 @@ const DOBA_BUBLINY_PO_DOTYKU = 3000;
 const NEJVIC_VYPSANYCH_PORUSENI = 5;
 /** Po jaké době zmizí hlášení, které na nic nečeká, v milisekundách. */
 const DOBA_HLASENI = 6000;
+/** Jak dlouho svítí tlačítko prvku, který hra sama vybrala po dokončení mostovky, ms. */
+const DOBA_PREPNUTI = 2400;
 /** O kolik sekund děje posune záznam jeden krok krokování. */
 const KROK_ZAZNAMU = 0.02;
 /** Brnknutí: kolik newtonů přidá metr tažení myší a největší síla. */
@@ -236,6 +238,14 @@ const PRIDAVKY: readonly Pridavek[] = ["napinak", "svar", "zamek", "zavazi", "la
 
 function jePridavek(nastroj: string): nastroj is Pridavek {
   return (PRIDAVKY as readonly string[]).includes(nastroj);
+}
+
+/** Tlačítko v hlášení nad výkresem: háček `data-akce`, popisek, bublina a co udělá. */
+interface AkceHlaseni {
+  id: string;
+  text: string;
+  popis?: string;
+  proved: () => void;
 }
 
 /**
@@ -1403,11 +1413,27 @@ export function spustUroven(
 
   // ---- Hlášení ----
 
-  function ukazHlaseni(text: string, druh: "varovani" | "info", docasne: boolean): void {
+  /**
+   * Hlášení nad výkresem; `akce` přidá za text tlačítko (jde stisknout myší, prstem i klávesnicí:
+   * hlášení samo kliknutí propouští na výkres, tlačítko ne). Hlášení s tlačítkem nemá být
+   * dočasné: tlačítko nesmí zmizet hráči pod rukou.
+   */
+  function ukazHlaseni(text: string, druh: "varovani" | "info", docasne: boolean, akce?: AkceHlaseni): void {
     window.clearTimeout(casovacHlaseni);
     poleHlaseni.textContent = text;
     poleHlaseni.dataset.druh = druh;
     delete poleHlaseni.dataset.odmitnuti;
+    delete poleHlaseni.dataset.rozpocet;
+    if (akce) {
+      const tlacitko = document.createElement("button");
+      tlacitko.type = "button";
+      tlacitko.className = "tlacitko vykres__akce";
+      tlacitko.dataset.akce = akce.id;
+      tlacitko.textContent = akce.text;
+      if (akce.popis) tlacitko.title = akce.popis;
+      tlacitko.addEventListener("click", akce.proved, { once: true });
+      poleHlaseni.append(" ", tlacitko);
+    }
     if (docasne) casovacHlaseni = window.setTimeout(skryjHlaseni, DOBA_HLASENI);
   }
 
@@ -1415,6 +1441,101 @@ export function spustUroven(
     window.clearTimeout(casovacHlaseni);
     poleHlaseni.textContent = "";
     delete poleHlaseni.dataset.odmitnuti;
+    delete poleHlaseni.dataset.rozpocet;
+  }
+
+  // ---- Rozpočet: upozornění při stavbě a výměna mostovky mimo cestu ----
+
+  const jeNadRozpoctem = (navrh: NavrhMostu): boolean => uroven.rozpocet !== null && cenaNavrhu(navrh) > uroven.rozpocet;
+  /** Byl most při poslední změně nad rozpočtem? Upozorní se jen na přechod z „vejde se“. */
+  let bylNadRozpoctem = jeNadRozpoctem(editor.navrh);
+
+  /**
+   * Co by šlo vyměnit za levnější prut (pruty z mostovky mimo cestu); null, když nic, když se
+   * most zvedá (rameno za opěrou bývá záměr) a v Havarijní komisi, kde se počítají změny.
+   */
+  function nabidkaVymeny(): VymenaMostovky | null {
+    if (havarie !== null || rezim !== "stavba") return null;
+    return vymenaMostovky(editor.navrh, uroven);
+  }
+
+  function akceVymeny(vymena: VymenaMostovky, kde: "stavba" | "zkouska"): AkceHlaseni {
+    const prvekVymeny = nazevPrvku(vymena.prvek);
+    return {
+      id: "vymenit-mostovku",
+      text: t("rozpocet.vymenit", { prvek: prvekVymeny }),
+      popis: t("rozpocet.vymenit.popis", { pocet: celeCislo(vymena.pruty.length), prvek: prvekVymeny, castka: koruny(vymena.usetri) }),
+      proved: () => vymenMostovku(kde),
+    };
+  }
+
+  /** Krátké hlášení, o kolik je most nad rozpočtem, s tlačítkem výměny, když jde. */
+  function hlasNadRozpoctem(): void {
+    if (uroven.rozpocet === null) return;
+    const vymena = nabidkaVymeny();
+    ukazHlaseni(t("rozpocet.prekrocen", { castka: koruny(cenaNavrhu(editor.navrh) - uroven.rozpocet) }), "varovani", false, vymena ? akceVymeny(vymena, "stavba") : undefined);
+    poleHlaseni.dataset.rozpocet = "nad";
+  }
+
+  /**
+   * Po každé změně návrhu: když cena právě přelezla rozpočet úpravou při stavbě (ne krokem
+   * Zpět, Znovu ani Importem), řekne o kolik; jednou na každé překročení. Když se most do
+   * rozpočtu vrátí, hlášení zmizí.
+   */
+  function hlidejRozpocet(): void {
+    const nad = jeNadRozpoctem(editor.navrh);
+    const byl = bylNadRozpoctem;
+    bylNadRozpoctem = nad;
+    if (!nad) {
+      if (poleHlaseni.dataset.rozpocet) skryjHlaseni();
+      return;
+    }
+    if (byl) {
+      // Hlášení ještě svítí: částka a nabídka platí pro most, jak je teď.
+      if (poleHlaseni.dataset.rozpocet) hlasNadRozpoctem();
+      return;
+    }
+    const akce = editor.posledniAkce;
+    if (rezim !== "stavba" || akce === "zpet" || akce === "znovu" || akce === "import") return;
+    hlasNadRozpoctem();
+    zapis("rozpocet.prekrocen", { o: cenaNavrhu(editor.navrh) - uroven.rozpocet!, mimoTrasu: mostovkaMimoTrasy(editor.navrh, uroven) });
+  }
+
+  /**
+   * Výměna jedním klikem: pruty z mostovky mimo cestu za nejlevnější prut úrovně, jeden krok
+   * Zpět. Prut, kterému by výměna porušila pravidlo úrovně, zůstane; hlášení řekne kolik,
+   * a novou cenu, nebo o kolik je most pořád nad rozpočtem.
+   */
+  function vymenMostovku(kde: "stavba" | "zkouska"): void {
+    const vymena = nabidkaVymeny();
+    if (!vymena) {
+      skryjHlaseni();
+      return;
+    }
+    editor.zrusTah();
+    const pred = cenaNavrhu(editor.navrh);
+    const { vymeneno, zustalo, duvod } = editor.vymenPrvek(vymena.pruty, vymena.prvek);
+    const po = cenaNavrhu(editor.navrh);
+    zapis("rozpocet.vymena", { prutu: vymeneno, usetreno: pred - po, zustalo, kde });
+    canvas.focus({ preventScroll: true });
+    if (vymeneno === 0) {
+      ukazHlaseni(t("rozpocet.vymena.nejde", { duvod: duvod ? textDuvodu(duvod, vymena.prvek) : "" }).trim(), "varovani", true);
+      return;
+    }
+    const nad = uroven.rozpocet !== null && po > uroven.rozpocet;
+    const vety = [
+      nad
+        ? t("rozpocet.vymeneno.nad", { pocet: celeCislo(vymeneno), castka: koruny(po - uroven.rozpocet!) })
+        : t("rozpocet.vymeneno", { pocet: celeCislo(vymeneno), cena: koruny(po) }),
+    ];
+    if (zustalo > 0) vety.push(t("rozpocet.vymeneno.zustalo", { pocet: celeCislo(zustalo) }));
+    ukazHlaseni(vety.join(" "), nad || zustalo > 0 ? "varovani" : "info", true);
+  }
+
+  /** Proč zkoušku (nebo most z Importu) nejde pustit; u rozpočtu s tlačítkem výměny, když jde. */
+  function hlasPrekazku(druh: DruhProblemu): void {
+    const vymena = druh === "nad-rozpocet" ? nabidkaVymeny() : null;
+    ukazHlaseni(textDuvodu(druh, null), "varovani", vymena === null, vymena ? akceVymeny(vymena, "zkouska") : undefined);
   }
 
   /**
@@ -1430,10 +1551,9 @@ export function spustUroven(
     if (duvod === "nad-rozpocet" && uroven.rozpocet !== null) {
       // O kolik a co s tím: nováček staví podpěry z mostovky (nejdražší prvek) a neví, kde ušetřit.
       const vety = [t("duvod.nad-rozpocet.oKolik", { castka: koruny(cenaNavrhu(editor.navrh) - uroven.rozpocet) })];
-      const mostovka = editor.navrh.pruty.find((p) => KATALOG[p.prvek].druh === "mostovka")?.prvek;
-      const levnejsi = mostovka ? levnejsiPrut(uroven, mostovka) : null;
-      // U mostu, který se zvedá, může být mostovka za opěrou záměr (rameno): tam se neradí.
-      if (levnejsi && !uroven.pohyb && mostovkaMimoTrasy(editor.navrh, uroven) > 0) vety.push(t("duvod.nad-rozpocet.mostovka", { prvek: nazevPrvku(levnejsi) }));
+      // Mostovka mimo cestu: věta a tlačítko výměny (`hlasPrekazku`). U mostu, který se zvedá,
+      // může být mostovka za opěrou záměr (rameno) a komise neradí: tam ani jedno.
+      if (nabidkaVymeny()) vety.push(t("duvod.nad-rozpocet.mostovka"));
       return vety.join(" ");
     }
     if (duvod === "prut-dlouhy") {
@@ -1867,6 +1987,7 @@ export function spustUroven(
   function poZmeneNavrhu(): void {
     obnovRazitko();
     oznacPoruchu();
+    if (editor.navrh !== naposledUlozeny) hlidejRozpocet();
     prepniNaPrutPoMostovce();
     if (editor.navrh !== naposledUlozeny) {
       // Krok se povedl: důvod, proč editor odmítl ten předchozí, už neplatí.
@@ -1881,19 +2002,26 @@ export function spustUroven(
   }
 
   /**
-   * První úroveň: jakmile mostovka vede od břehu k břehu, vybere se místo ní nejlevnější prut
+   * Jakmile mostovka vede po všech trasách od břehu k břehu, vybere se místo ní nejlevnější prut
    * úrovně. Mostovka je v paletě první a nováček z ní jinak postaví i podpěry: most pak stojí
-   * víc než rozpočet a zkouška se nepustí (první den po zveřejnění 71krát, u 24 hráčů ze 41).
-   * Jen jednou za návštěvu, jen dokud úroveň neprošel a jen když má mostovku pořád v ruce.
-   * Přepíná se ve chvíli, kdy mostovku dokončil nakreslený prut, nebo při otevření úrovně
-   * s mostovkou už hotovou (`priOtevreni`); nikdy po kliknutí v paletě, výběru, Importu nebo
-   * kroku Zpět (kdo si mostovku vybere sám, tomu ji hra z ruky nebere).
+   * víc než rozpočet a zkouška se nepustí (26. 11. 2026 v 1-01 až 1-05 u třetiny hráčů).
+   * Platí v úrovních kampaně, dokud je hráč neprošel (kdo úroveň prošel, přestavuje most
+   * a mostovku v ruce má schválně), ne v pískovišti, v komisi, u hosta z odkazu a u mostu,
+   * který se zvedá (mostovka za opěrou tam bývá rameno křídla). Jen jednou za návštěvu a jen
+   * když má hráč mostovku pořád v ruce. Přepíná se ve chvíli, kdy mostovku dokončil nakreslený
+   * prut, nebo při otevření úrovně s mostovkou už hotovou (`priOtevreni`); nikdy po kliknutí
+   * v paletě, výběru, Importu nebo kroku Zpět (kdo si mostovku vybere sám, tomu ji hra z ruky
+   * nebere). Tlačítko nově vybraného prvku v paletě se krátce zvýrazní; mimo 1-01 to řekne
+   * i krátké hlášení (v 1-01 ho nováček čte po krocích vedení a další text by tam překážel).
    */
   let mostovkaBylaHotova = false;
   let prvekPrepnut: IdPrvku | null = null;
   let radaOPodepreni = false;
+  let casovacPrepnuti: number | undefined;
+  const urovenKampane = sandbox === null && havarie === null && kampan.some((u) => u.id === uroven.id);
   function prepniNaPrutPoMostovce(priOtevreni = false): void {
-    const hotova = jePrvniUrovenKampane() && host === null && !rekord?.medaile.pruchod && editor.navrh.pruty.length > 0 && dalsiDilMostovky(editor.navrh, uroven) === null;
+    const prepina = urovenKampane && host === null && !uroven.pohyb && !rekord?.medaile.pruchod;
+    const hotova = prepina && editor.navrh.pruty.length > 0 && mezeryTras(editor.navrh, uroven).length === 0;
     const nakreslena = !mostovkaBylaHotova && editor.navrh !== naposledUlozeny && editor.posledniAkce === "prut";
     const prave = hotova && (priOtevreni || nakreslena);
     mostovkaBylaHotova = hotova;
@@ -1905,7 +2033,18 @@ export function spustUroven(
     prvekPrepnut = prut;
     editor.zvolPrvek(prut);
     document.body.dataset.prvekPrepnut = prut;
+    zvyrazniPrepnuti(prut);
+    if (!jePrvniUrovenKampane()) ukazHlaseni(t("vedeni.prepnuto", { prvek: nazevPrvku(prut) }), "info", true);
     zapis("vedeni.prvek", { prvek: prut, kdy: priOtevreni ? "otevreni" : "mostovka" });
+  }
+
+  /** Krátce zvýrazní tlačítko prvku v paletě (`data-prepnuto`), ať je přepnutí vidět. */
+  function zvyrazniPrepnuti(prut: IdPrvku): void {
+    const tlacitko = paletaPrvku.querySelector<HTMLElement>(`[data-prvek="${prut}"]`);
+    if (!tlacitko) return;
+    window.clearTimeout(casovacPrepnuti);
+    tlacitko.dataset.prepnuto = "ano";
+    casovacPrepnuti = window.setTimeout(() => delete tlacitko.dataset.prepnuto, DOBA_PREPNUTI);
   }
 
   /** Zapíše do deníku, čím se most právě změnil a jak teď vypadá. */
@@ -3137,7 +3276,7 @@ export function spustUroven(
     const druhPokusu = brnknuti ? "brnknuti" : budic ? "budic" : zlom ? "zlom" : null;
     const prekazka = prekazkyZkousky(editor.navrh, uroven).filter((p) => !(pokus && p.druh === "nad-rozpocet"))[0];
     if (prekazka) {
-      ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
+      hlasPrekazku(prekazka.druh);
       zapis("zkouska.odmitnuta", { duvod: prekazka.druh, pokus: druhPokusu, cena: cenaNavrhu(editor.navrh) });
       return;
     }
@@ -3328,7 +3467,7 @@ export function spustUroven(
     // První úroveň po zkoušce, která neprošla: mostovka chce podepřít a v ruce je levnější prut.
     // Řekne se jednou, dokud hráč žádný prut mimo mostovku nenakreslil.
     const jenMostovka = editor.navrh.pruty.length > 0 && editor.navrh.pruty.every((p) => KATALOG[p.prvek].druh === "mostovka");
-    if (prvekPrepnut !== null && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && nastroj === "kresleni" && editor.prvek === prvekPrepnut && jenMostovka) {
+    if (prvekPrepnut !== null && jePrvniUrovenKampane() && !radaOPodepreni && beh?.vysledek?.pruchod === false && beh.vysledekUkazan && !beh.pokus && nastroj === "kresleni" && editor.prvek === prvekPrepnut && jenMostovka) {
       radaOPodepreni = true;
       ukazHlaseni(t("vedeni.podepri", { prvek: nazevPrvku(prvekPrepnut) }), "info", false);
     }
@@ -6022,7 +6161,7 @@ export function spustUroven(
     // Pozornost patří výkresu: mezerník má spustit zkoušku, ne znovu otevřít Import.
     canvas.focus();
     const prekazka = prekazkyZkousky(editor.navrh, uroven)[0];
-    if (prekazka) ukazHlaseni(textDuvodu(prekazka.druh, null), "varovani", true);
+    if (prekazka) hlasPrekazku(prekazka.druh);
   }
 
   function textDiagnostiky(): string {

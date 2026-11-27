@@ -24,6 +24,11 @@ import potok from "../urovne/1-01.json";
 import kanal from "../urovne/7-01.json";
 import dveKridla from "../urovne/7-02.json";
 import auto from "../urovne/1-03.json";
+import triPole from "../urovne/4-01.json";
+import cyklostezka from "../urovne/1-02.json";
+import { Kreslic } from "../src/data/kreslic";
+import { vymenaMostovky } from "../src/data/mezery";
+import { cenaNavrhu } from "../src/data/cena";
 
 const uroven = nactiUroven(potok);
 const B = (x: number, y: number) => ({ x, y });
@@ -661,5 +666,59 @@ describe("pohyblivý most v editoru", () => {
     jedno.zrusVyber();
     jedno.zrcadli();
     expect(jedno.navrh.stycniky.filter((s) => s.zamek).map((s) => s.x)).toEqual([12]);
+  });
+});
+
+describe("výměna mostovky mimo cestu (jeden krok, stejná pravidla jako jiné úpravy)", () => {
+  it("vymění pruty jedním krokem Zpět; prvek v ruce i výběr zůstávají", () => {
+    const u = nactiUroven(cyklostezka);
+    const k = new Kreslic("1-02");
+    k.prut("mostovka-drevo", [0, 0], [4, 0]);
+    k.prut("mostovka-drevo", [4, 0], [8, 0]);
+    k.prut("mostovka-drevo", [8, 0], [12, 0]);
+    k.prut("mostovka-drevo", [2, -3], [4, 0]);
+    k.prut("mostovka-drevo", [10, -3], [8, 0]);
+    let zmen = 0;
+    const e = new Editor(u, k.navrh(), () => zmen++);
+    e.vyberJenPrut(0);
+    const pred = e.navrh;
+    const vymena = vymenaMostovky(e.navrh, u)!;
+    expect(e.vymenPrvek(vymena.pruty, vymena.prvek)).toEqual({ vymeneno: 2, zustalo: 0, duvod: null });
+    expect(e.navrh.pruty.map((p) => p.prvek)).toEqual(["mostovka-drevo", "mostovka-drevo", "mostovka-drevo", "drevo-lehke", "drevo-lehke"]);
+    expect(cenaNavrhu(pred) - cenaNavrhu(e.navrh)).toBe(vymena.usetri);
+    expect(e.posledniAkce).toBe("vymena");
+    expect(e.prvek).toBe("mostovka-drevo");
+    expect([...e.vybranePruty]).toEqual([0]);
+    expect(zmen).toBeGreaterThan(0);
+    e.zpet();
+    expect(e.navrh).toBe(pred);
+    // Nic k výměně: žádný krok navíc v historii.
+    e.znovu();
+    const po = e.navrh;
+    expect(e.vymenPrvek(vymena.pruty, vymena.prvek)).toEqual({ vymeneno: 0, zustalo: 0, duvod: null });
+    expect(e.navrh).toBe(po);
+    e.zpet();
+    expect(e.navrh).toBe(pred);
+  });
+
+  it("prut, kterému by výměna porušila pravidlo úrovně, nechá a řekne proč", () => {
+    // 4-01: mostovka je jediné, co dělá z hlavy pilíře styčník mostovky. Lehký profil na hlavě
+    // pilíře by byl pahýl (levný sloup na metru betonu), takže ten prut zůstane mostovkou.
+    const u = nactiUroven(triPole);
+    const k = new Kreslic("4-01");
+    k.prut("pilir", [18, -12], [18, -4]);
+    k.prut("mostovka-ocelobeton", [18, -4], [18, 0]);
+    k.prut("mostovka-ocelobeton", [12, 0], [18, 0]);
+    k.prut("mostovka-ocelobeton", [18, 0], [24, 0]);
+    k.prut("mostovka-ocelobeton", [12, 0], [15, -3]);
+    const navrh = k.navrh();
+    expect(zkontrolujNavrh(navrh, u).filter((p) => p.druh !== "nad-rozpocet")).toEqual([]);
+    const e = new Editor(u, navrh);
+    const vymena = vymenaMostovky(navrh, u)!;
+    expect(vymena).toMatchObject({ pruty: [1, 4], prvek: "ocel-lehka" });
+    expect(e.vymenPrvek(vymena.pruty, vymena.prvek)).toEqual({ vymeneno: 1, zustalo: 1, duvod: "pilir-pahyl" });
+    expect(e.navrh.pruty.map((p) => p.prvek)).toEqual(["pilir", "mostovka-ocelobeton", "mostovka-ocelobeton", "mostovka-ocelobeton", "ocel-lehka"]);
+    // Výsledný most jde postavit: výměna nepřidala žádný problém.
+    expect(zkontrolujNavrh(e.navrh, u).filter((p) => p.druh !== "nad-rozpocet")).toEqual([]);
   });
 });

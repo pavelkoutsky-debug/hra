@@ -12,7 +12,8 @@ export const CO_HRA_UMI: readonly string[] = [
   "Kampaň: 38 úrovní v osmi kapitolách (lávky, kmitání, silnice, pilíře a lana, město, železnice, zvedací mosty, finále); pátá úroveň kapitol 1 až 7 je zkouška bez nápovědy. Úrovně se odemykají po jedné, další kapitola po dvou projitých úrovních té předchozí.",
   "Přehled: nový hráč má nahoře jedno tlačítko, které ho pustí do 1-01, vracející se hráč tlačítko Pokračovat do další neprošlé úrovně.",
   "Zadání úrovně: dvě věty, pod nimi „Více o úloze“, u úrovní s novým prvkem ukázka (dva mosty vedle sebe: bez prvku a s ním) a odstavec o skutečném mostě; slovníček 22 pojmů s vysvětlením na kliknutí.",
-  "První úroveň 1-01 vede hráče po krocích: výkres ukazuje, odkud kam táhnout další díl mostovky; po dokončení mostovky hra sama vybere levnější Lehký trám na zbytek mostu a zvýrazní tlačítko Zkouška, a po první neúspěšné zkoušce řekne, že mostovku musí něco držet. Most dražší než rozpočet zkouška nepustí a hlášení říká, o kolik je dražší a že mostovka patří jen na cestu.",
+  "První úroveň 1-01 vede hráče po krocích: výkres ukazuje, odkud kam táhnout další díl mostovky, po dokončení mostovky zvýrazní tlačítko Zkouška a po první neúspěšné zkoušce řekne, že mostovku musí něco držet.",
+  "Rozpočet: v neprošlých úrovních kampaně (kromě zvedacích mostů) hra po dokončení mostovky sama vezme do ruky nejlevnější prut a jeho tlačítko v paletě blikne. Když cena při stavbě přeleze rozpočet, hlášení řekne o kolik a ukazatel v liště zežloutne; pruty z mostovky mimo cestu nabídne vyměnit jedním tlačítkem za nejlevnější prut (i po nepuštěné zkoušce).",
   "Stavba: nástroj Výběr a posun (klik, rámeček; tažení za vybraný styčník posune celý výběr i s připojenými pruty, šipky ho posouvají po metru, styčníky v podporách zůstávají stát), zrcadlení, Zpět a Znovu, mazání, import a export mostu. Po první prošlé zkoušce hra na posun jednou upozorní.",
   "Kontrola při stavbě: značka u místa, kde se most složí vlastní vahou, u volného prutu, u mostovky, po které nikdo nepůjde (přejíždí kraj břehu bez styčníku, leží mimo trasu nebo za jejím koncem), a u prutu, který se při poslední zkoušce porušil jako první; řádek rad pod výkresem podle zvoleného nástroje. Tah mostovky přetažený za kraj břehu editor sám ukončí na kraji a řekne proč.",
   "Zkouška: přehrávání s časovou osou, rychlostmi a krokováním, barvy a čísla využití prutů, zpomalený záběr na první porušení (jde vypnout), klidné úseky se přehrávají rychleji.",
@@ -49,6 +50,8 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
     "Posuny styčníků nástrojem Výběr a posun nebo šipkami. hracuSPosunem: kolik hráčů posun použilo; posunu: kolik posunů bylo; posunuVic: z toho víc styčníků naráz; posunuKlavesou: z toho šipkou.",
   "souhrn.urovne[].zkousekOdmitnuto":
     "Zkoušky, které hra nepustila, protože most porušoval pravidla úrovně (pokusy se nepočítají). zkousekNadRozpocet: z toho proto, že byl dražší než rozpočet; hracuSOdmitnutim: kolika hráčů se to týkalo. Hodně odmítnutí kvůli rozpočtu v první úrovni znamená, že nováčci staví z drahého prvku.",
+  "souhrn.urovne[].hracuNadRozpoctem":
+    "Kolik hráčů při stavbě přelezlo rozpočet úrovně (hra jim to hned řekla hlášením s částkou). hracuSVymenou: kolik z hráčů úrovně použilo tlačítko, které pruty z mostovky mimo cestu vymění za levnější prut. Málo výměn při hodně překročeních a dál hodně zkoušek odmítnutých kvůli rozpočtu znamená, že nabídka nezabírá.",
   "souhrn.urovne[].znacky":
     "Značky, kterými hra při stavbě upozornila na mostovku, po které nikdo nepůjde, a kolikrát se ukázaly. Když jich je hodně a mezera v mostovce dál končí zkoušky, značka nezabírá.",
   neuplne:

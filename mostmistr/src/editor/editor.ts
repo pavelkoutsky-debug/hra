@@ -15,7 +15,7 @@ import {
   zkraceniLana,
   type IdPrvku,
 } from "../data/katalog";
-import { otoceniKridla, zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type TlumicStycniku } from "../data/navrh";
+import { otoceniKridla, zkontrolujNavrh, type DruhProblemu, type NavrhMostu, type PrutNavrhu, type TlumicStycniku } from "../data/navrh";
 import { konecTahuMostovky } from "../data/mezery";
 import type { Uroven } from "../data/uroven";
 import { duvodProtiPosunu, duvodProtiPosunuSkupiny, duvodProtiPrutu, jeVPodpore, lzeZacit } from "./pravidla";
@@ -34,7 +34,7 @@ import {
   prutMezi,
   smaz,
   stycnikV,
-  zmenPrvek,
+  zmenPrvekKdeSmi,
   zrcadli,
 } from "./upravy";
 
@@ -650,26 +650,35 @@ export class Editor {
       this.#poZmene();
       return false;
     }
-    let navrh = this.#navrh;
-    const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
-    for (const id of this.vybranePruty) {
-      const p = navrh.pruty.find((x) => x.id === id);
-      if (!p || p.prvek === prvek) continue;
-      const a = podleId.get(p.a)!;
-      const b = podleId.get(p.b)!;
-      const bez = smaz(navrh, new Set([id]), new Set());
-      const duvod = duvodProtiPrutu(bez, this.uroven, a, b, prvek);
-      if (duvod) {
-        this.posledniDuvod = duvod;
-        continue;
-      }
-      navrh = zmenPrvek(navrh, [id], prvek);
-    }
-    if (!this.#zmen(navrh, "prvek")) {
+    const zmena = zmenPrvekKdeSmi(this.#navrh, this.vybranePruty, prvek, (navrh, p, novy) => this.#duvodProtiZmene(navrh, p, novy));
+    this.posledniDuvod = zmena.odmitnuto.at(-1) ?? null;
+    if (!this.#zmen(zmena.navrh, "prvek")) {
       this.#poZmene();
       return false;
     }
     return true;
+  }
+
+  /** Proč prut nejde změnit na jiný prvek (délka prvku, kotva vyhrazená jinému prutu…); null, když jde. */
+  #duvodProtiZmene(navrh: NavrhMostu, p: PrutNavrhu, prvek: IdPrvku): DruhProblemu | null {
+    const podleId = new Map(navrh.stycniky.map((s) => [s.id, s]));
+    const a = podleId.get(p.a);
+    const b = podleId.get(p.b);
+    if (!a || !b) return null;
+    return duvodProtiPrutu(smaz(navrh, new Set([p.id]), new Set()), this.uroven, a, b, prvek);
+  }
+
+  /**
+   * Změní dané pruty na `prvek` jedním krokem (jde vzít zpět najednou), mimo výběr a bez změny
+   * prvku v ruce: výměna mostovky mimo cestu za levnější prut. Každý prut projde stejnou
+   * kontrolou jako změna prvku výběru; ten, kterému by změna porušila pravidlo úrovně, zůstane,
+   * jak byl. Vrací, kolik prutů se vyměnilo, kolik zůstalo a proč (první důvod).
+   */
+  vymenPrvek(pruty: Iterable<number>, prvek: IdPrvku): { vymeneno: number; zustalo: number; duvod: DruhProblemu | null } {
+    this.tah = null;
+    const zmena = zmenPrvekKdeSmi(this.#navrh, pruty, prvek, (navrh, p, novy) => this.#duvodProtiZmene(navrh, p, novy));
+    if (zmena.zmeneno > 0) this.#zmen(zmena.navrh, "vymena");
+    return { vymeneno: zmena.zmeneno, zustalo: zmena.odmitnuto.length, duvod: zmena.odmitnuto[0] ?? null };
   }
 
   /** Závaží vybraných styčníků v kg: největší z nich; null, když není vybraný žádný styčník. */

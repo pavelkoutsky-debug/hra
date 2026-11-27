@@ -723,6 +723,28 @@ body[data-havarie] .pole__bunka:nth-child(3) {
 
 .rozpocet[data-stav="nad"] .rozpocet__castka {
   color: var(--varovani);
+  font-weight: 600;
+}
+
+/* Nad rozpočtem je ukazatel vidět i bez pruhu (úzké okno): žlutý rámeček, při překročení bliknutí. */
+.rozpocet[data-stav="nad"] {
+  margin: -3px -6px;
+  padding: 2px 5px;
+  border: 1px solid var(--varovani);
+  background: rgb(255 209 102 / 0.14);
+  animation: rozpocet-nad 0.5s ease-in-out 3;
+}
+
+@keyframes rozpocet-nad {
+  50% {
+    background: rgb(255 209 102 / 0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rozpocet[data-stav="nad"] {
+    animation: none;
+  }
 }
 
 /* Hra: rozvržení úrovně */
@@ -1252,6 +1274,49 @@ body[data-analyza="otevrena"] .vykres__hlaseni {
 .vykres__hlaseni[data-druh="varovani"] {
   border-color: var(--varovani);
   color: var(--varovani);
+}
+
+/* Tlačítko v hlášení (Vyměnit za …): hlášení kliknutí propouští na výkres, tlačítko ne. */
+.vykres__akce {
+  margin: 4px 0 0 6px;
+  white-space: normal;
+  text-align: left;
+  pointer-events: auto;
+  border-color: var(--cara-silna);
+  color: var(--cara-silna);
+}
+
+.vykres__akce:hover,
+.vykres__akce:focus-visible {
+  background: var(--zvyrazneni);
+}
+
+/* Na telefonu má tlačítko vlastní řádek: vedle zalomené věty by roztáhlo její poslední řádek. */
+@media (max-width: 700px) {
+  .vykres__akce {
+    display: block;
+    margin: 6px 0 2px;
+  }
+}
+
+/* Prvek, který hra sama vzala do ruky po dokončení mostovky: krátké zvýraznění v paletě. */
+.paleta__tlacitko[data-prepnuto] {
+  outline: 2px solid var(--cara-silna);
+  outline-offset: 2px;
+  animation: prvek-prepnut 0.8s ease-in-out 3;
+}
+
+@keyframes prvek-prepnut {
+  50% {
+    outline-offset: 5px;
+    outline-color: rgb(255 255 255 / 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paleta__tlacitko[data-prepnuto] {
+    animation: none;
+  }
 }
 
 /* Výsledek zkoušky: úzký pruh nahoře (verdikt, věta, medaile, hlavní tlačítka), ať most pod

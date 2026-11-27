@@ -256,7 +256,7 @@ describe("výzvy o efektivitu", () => {
     // Odmítnutí je kvůli rozpočtu, ne kvůli jiné chybě návrhu: tlačítkem i klávesou D.
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
-    expect(await udaj("hlaseni")).toBe("Most je o 10 454 Kč dražší než rozpočet. Před zkouškou ho zlevni.");
+    expect(await udaj("hlaseni")).toBe("Zkouška nejde: most je o 10 454 Kč nad rozpočtem.");
     await stranka.locator(PLATNO).focus();
     await stranka.keyboard.press("d");
     expect(await telo("rezim")).toBe("stavba");
