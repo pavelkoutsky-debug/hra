@@ -1,6 +1,7 @@
 // Rada po druhém stejném nezdaru v bezhlavém prohlížeči: most, který na 1-03 dvakrát po sobě
-// spadne na vzpěr lehkého dřeva, dostane u výsledku radu s tlačítkem do nápovědy; potřetí rada zůstává,
-// po jiné příčině ne, na zkouškové úrovni ne. Anglicky a na telefonu se rada vejde.
+// spadne na vzpěr lehkého dřeva, dostane u výsledku radu s tlačítkem Ukázat skicu; potřetí rada
+// zůstává (a k ní náhled nápovědy, viz `verdikty.e2e.ts`), po jiné příčině ne, na zkouškové úrovni
+// ne. Anglicky a na telefonu se rada vejde.
 import { mkdirSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { chromium, type Browser, type Page } from "playwright";
@@ -9,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import type { DavkaDeniku, UdalostDeniku } from "../../src/denik/udalosti";
 import { RESENI } from "../../urovne/reseni";
-import { rozbalPaletu } from "./pomoc";
+import { nactiMostImportem } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -34,12 +35,7 @@ async function otevri(s: Page, dotaz: string): Promise<void> {
   if ((await tlacitko.count()) > 0) await tlacitko.click();
 }
 
-async function nactiMost(s: Page, text: string): Promise<void> {
-  await rozbalPaletu(s);
-  await akce(s, "import").click();
-  await s.locator("#okno-obsah").fill(text);
-  await akce(s, "okno-nacist").click();
-}
+const nactiMost = nactiMostImportem;
 
 /** Pustí zkoušku, počká na výpočet, skočí na konec a vrátí, jestli se u výsledku ukázala rada. */
 async function zkus(s: Page): Promise<boolean> {
@@ -108,7 +104,7 @@ describe("rada po druhém stejném nezdaru", () => {
     // Co se stalo a co s tím: stávající rada k vzpěru (úroveň má i těžké dřevo, smí tedy radit silnější prvek).
     expect(text).toMatch(/^Podruhé za sebou stejně: lehký trám, vzpěr\. Byl stlačený a vybočil do strany.+silnější prvek/);
     expect(await akce(stranka, "rada-napoveda").isVisible()).toBe(true);
-    expect(await akce(stranka, "rada-napoveda").innerText()).toBe("Otevřít nápovědu");
+    expect(await akce(stranka, "rada-napoveda").innerText()).toBe("Ukázat skicu");
     // Rada je v pruhu, ne v okně: podrobnosti zůstávají sbalené a prut, o kterém je řeč, je pod pruhem vidět.
     expect(await stranka.locator(".vysledek").getAttribute("data-sbaleno")).toBe("ano");
     expect(await stranka.locator("dialog[open]").count()).toBe(0);
@@ -129,9 +125,12 @@ describe("rada po druhém stejném nezdaru", () => {
     await stranka.screenshot({ path: `${SLOZKA}/rada-1-03-stavba.png` });
 
     // Potřetí stejně: rada zůstává (kdo ji napoprvé nepochopil, nemá dostat míň než podruhé),
-    // jen nadpis už neříká „podruhé“.
+    // jen nadpis už neříká „podruhé“. Třetí nezdar v návštěvě k ní přidá náhled nápovědy a do
+    // nápovědy vede jeho tlačítko: dvě tlačítka k téže věci pruh nemá.
     expect(await zkus(stranka)).toBe(true);
     expect(await udaj(stranka, "vysledek-rada-text").innerText()).toMatch(/^Zase stejně: lehký trám, vzpěr\. Byl stlačený a vybočil do strany/);
+    expect(await udaj(stranka, "vysledek-nahled").isVisible()).toBe(true);
+    expect(await akce(stranka, "rada-napoveda").isVisible()).toBe(false);
     await akce(stranka, "upravit").click();
     expect(await telo(stranka, "rada-u-prutu")).toBe("vzper");
     // Hlášení „Nedaří se?“ po třetím nezdaru nepřijde: nápovědu už nabídla rada.
@@ -154,6 +153,8 @@ describe("rada po druhém stejném nezdaru", () => {
     const ukazana = await udalostDeniku("rada.ukazana");
     expect(ukazana).toMatchObject({ uroven: "1-03", data: { druh: "vzper", prvek: "drevo-lehke", napoveda: true } });
     expect(await udalostDeniku("rada.napoveda")).toMatchObject({ uroven: "1-03", data: { druh: "vzper" } });
+    // Událost nápovědy řekne, odkud hráč přišel.
+    expect(await udalostDeniku("napoveda")).toMatchObject({ uroven: "1-03", data: { krok: 1, stupen: 1, most: "pruchod", odkud: "rada" } });
   }, 300_000);
 
   it("jiná příčina než minule radu neukáže; kdo si rozbalil podrobnosti, tomu se nevnucuje", async () => {
@@ -197,7 +198,7 @@ describe("rada po druhém stejném nezdaru", () => {
     expect(text).toMatch(/^Same failure twice in a row: light timber, buckling\. It was compressed and buckled sideways/);
     expect(text).not.toMatch(/[ěščřžýáíéůú]/);
     const tlacitko = (await akce(s, "rada-napoveda").boundingBox())!;
-    expect(await akce(s, "rada-napoveda").innerText()).toBe("Open the hint");
+    expect(await akce(s, "rada-napoveda").innerText()).toBe("Show a sketch");
     // Nic nepřetéká: stránka není širší než okno, tlačítko je celé vidět a pruh nechá výkresu většinu výšky.
     expect(await s.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     expect(tlacitko.x).toBeGreaterThanOrEqual(0);

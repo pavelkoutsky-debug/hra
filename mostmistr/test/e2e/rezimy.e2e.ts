@@ -6,7 +6,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
-import { rozbalPaletu } from "./pomoc";
+import { nactiMostImportem, rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -614,25 +614,31 @@ describe("nápověda", () => {
     await stranka.screenshot({ path: `${SLOZKA}/r9c-napoveda-obrys-pist.png` });
   });
 
-  it("po třetí zkoušce, která neprojde, hra nápovědu sama připomene", async () => {
+  it("po druhé zkoušce, která neprojde, zvýrazní Nápovědu v paletě a po třetí ukáže u výsledku její první krok", async () => {
     // Čerstvá návštěva: kdo si nápovědu už otevřel sám, tomu ji hra nepřipomíná.
     await otevri("1-02");
-    await nactiMost(navrhNaText(RESENI["1-02"]!.pady[0]!.navrh));
+    await nactiMostImportem(stranka, navrhNaText(RESENI["1-02"]!.pady[0]!.navrh));
     for (let pokus = 1; pokus <= 3; pokus++) {
       await spust();
       expect(await naKonec()).toBe("MOST NEOBSTÁL");
       // Kdo si podrobnosti s radou přečetl sám, tomu ji pruh při stejném nezdaru nevnucuje
-      // (`test/e2e/rada.e2e.ts`) a nápovědu pak připomene hlášení po třetím nezdaru.
-      if (pokus === 1) await akce("vysledek-sbalit").click();
+      // (`test/e2e/rada.e2e.ts`); náhled nápovědy po třetím nezdaru ano.
       expect(await stranka.locator('[data-udaj="vysledek-rada"]').isVisible()).toBe(false);
+      expect(await stranka.locator('[data-udaj="vysledek-nahled"]').isVisible()).toBe(pokus === 3);
       await akce("upravit").click();
-      const hlaseni = await udaj("hlaseni");
-      if (pokus < 3) expect(hlaseni).not.toContain("Nedaří se?");
-      else expect(hlaseni).toContain("Nedaří se? Nahoře v paletě je Nápověda");
+      // Jedna výzva k téže věci: hlášení „Nedaří se?“ po náhledu nepřijde.
+      expect(await udaj("hlaseni")).not.toContain("Nedaří se?");
+      // Tlačítko Nápověda v paletě má po druhém nezdaru obrys.
+      expect(await akce("napoveda").getAttribute("data-tip")).toBe(pokus >= 2 ? "napoveda" : null);
     }
-    // Připomene ji jen jednou.
+    // Kdo nápovědu otevře, tomu obrys zmizí a náhled u výsledku už nepřijde.
+    await akce("napoveda").click();
+    await stranka.locator("#okno-napoveda").waitFor({ state: "visible" });
+    expect(await akce("napoveda").getAttribute("data-tip")).toBeNull();
+    await stranka.keyboard.press("Escape");
     await spust();
     await naKonec();
+    expect(await stranka.locator('[data-udaj="vysledek-nahled"]').isVisible()).toBe(false);
     await akce("upravit").click();
     expect(await udaj("hlaseni")).not.toContain("Nedaří se?");
   }, 240_000);

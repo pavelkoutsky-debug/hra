@@ -1107,6 +1107,8 @@ describe("souhrn deníku", () => {
       hracuSRadouPrusli: 0,
       zkousekPoRade: null,
       hracuNapovedaZRady: 0,
+      hracuSNahledem: 0,
+      hracuNapovedaZNahledu: 0,
       hracuSPosunem: 0,
       posunu: 0,
       posunuVic: 0,
@@ -1305,6 +1307,33 @@ describe("souhrn deníku", () => {
     for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.radaZkousek, delete z.radaNapoveda;
     expect(jeVytah(stary)).toBe(true);
     expect(souhrnZVytahu(slucVytahy([stary, vytahDeniku([davky[0]!])])).urovne[0]).toMatchObject({ hracuSRadou: 1, hracuSRadouPrusli: 1 });
+  });
+
+  it("počítá náhled nápovědy u výsledku: kdo ho viděl a kdo z něj nápovědu otevřel; jiné hodnoty a starší výtah nic nerozbijí", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const cyril = hlavicka("c3c3c3c3c3c3c3c3", "3333333333333333");
+    const neproslo = (t: number): UdalostDeniku => u(t, "zkouska.konec", "1-01", { pruchod: false, sekund: t, pokus: null, medaile: { pruchod: false, rozpocet: false, mistrovska: false } });
+    const napoveda = (t: number, odkud: string | number): UdalostDeniku => u(t, "napoveda", "1-01", { krok: 1, stupen: 2, most: "pruchod", odkud });
+    const annin = [u(0, "uroven.otevrena", "1-01"), neproslo(10), neproslo(20), neproslo(30), u(31, "napoveda.nahled", "1-01", { zkousek: 3 }), napoveda(40, "nahled")];
+    const davky = [
+      // Anna náhled viděla a z něj nápovědu otevřela.
+      davka(annin, 0, anna),
+      // Bob náhled viděl, nápovědu si pak otevřel z palety; podvržené „odkud“ se nepočítá.
+      davka([u(0, "uroven.otevrena", "1-01"), u(31, "napoveda.nahled", "1-01", { zkousek: 3 }), napoveda(40, "paleta"), napoveda(41, 7)], 0, bob),
+      // Cyril náhled neviděl, nápovědu otevřel z palety.
+      davka([u(0, "uroven.otevrena", "1-01"), napoveda(5, "paleta")], 0, cyril),
+    ];
+    expect(souhrnDeniku(davky).urovne[0]).toMatchObject({ uroven: "1-01", hracuSNahledem: 2, hracuNapovedaZNahledu: 1, hracuSNapovedou: 3 });
+    // Výtahy jdou sloučit (Annin den rozdělený mezi náhledem a otevřením nápovědy).
+    const pred = vytahDeniku([davka(annin.slice(0, 5), 0, anna)]);
+    const po = vytahDeniku([davka(annin.slice(5), 1, anna)]);
+    expect(souhrnZVytahu(slucVytahy([pred, po])).urovne[0]).toMatchObject({ hracuSNahledem: 1, hracuNapovedaZNahledu: 1 });
+    // Starší uložený výtah ta pole nemá: nic se nerozbije a počítá se jen to, co nový výtah ví.
+    const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[2]!]))) as ReturnType<typeof vytahDeniku>;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.nahled, delete z.napovedaZNahledu;
+    expect(jeVytah(stary)).toBe(true);
+    expect(souhrnZVytahu(slucVytahy([stary, vytahDeniku([davky[0]!])])).urovne[0]).toMatchObject({ hracuSNahledem: 1, hracuNapovedaZNahledu: 1, hracuSNapovedou: 2 });
   });
 
   it("výtahy jdou slučovat: deník rozdělený v kterémkoli místě dá stejný souhrn jako celý", () => {

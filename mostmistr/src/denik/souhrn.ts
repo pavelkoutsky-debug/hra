@@ -60,6 +60,12 @@ export interface SouhrnUrovne {
   zkousekPoRade: number | null;
   hracuNapovedaZRady: number;
   /**
+   * Náhled nápovědy u výsledku po třetím nezdaru v návštěvě (`napoveda.nahled`): kolik hráčů ho
+   * vidělo a kolik z nich z něj nápovědu otevřelo (`napoveda` s `odkud: "nahled"`).
+   */
+  hracuSNahledem: number;
+  hracuNapovedaZNahledu: number;
+  /**
    * Posun styčníků (nástroj Výběr a posun, Alt+tažení, šipky): kolik hráčů ho použilo a kolik
    * posunů bylo, z toho víc styčníků naráz a šipkou.
    */
@@ -175,6 +181,9 @@ export interface HracVUrovni {
   radaNapoveda?: boolean;
   /** Kolik zkoušek po té radě hráč potřeboval k dalšímu průchodu (null: zatím neprošel). */
   radaPruchodPo?: number | null;
+  /** Hráč viděl náhled nápovědy u výsledku a jestli z něj nápovědu otevřel. Starší výtahy je nemají. */
+  nahled?: boolean;
+  napovedaZNahledu?: boolean;
   /** Posuny styčníků, z toho víc styčníků naráz a šipkou. Starší výtahy je nemají. */
   posunu?: number;
   posunuVic?: number;
@@ -392,6 +401,8 @@ function novyHracVUrovni(): HracVUrovni {
     radaZkousek: null,
     radaNapoveda: false,
     radaPruchodPo: null,
+    nahled: false,
+    napovedaZNahledu: false,
     posunu: 0,
     posunuVic: 0,
     posunuKlavesou: 0,
@@ -494,6 +505,10 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
       const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
       zaznam.napoveda = Math.max(zaznam.napoveda ?? 0, krok);
+      // Odkud hráč přišel: počítá se jen otevření z náhledu u výsledku (jiné hodnoty nic nezmění).
+      if (krok > 0 && data.odkud === "nahled") zaznam.napovedaZNahledu = true;
+    } else if (u.druh === "napoveda.nahled") {
+      zaznam.nahled = true;
     } else if (u.druh === "rada.ukazana" || u.druh === "rada.napoveda") {
       // Rada po druhém stejném nezdaru: jen druhy, které hra posílá; prvek jen známý.
       const druh = textZ(data.druh);
@@ -617,6 +632,8 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
           cil.radaPruchodPo = cil.zkousek - cil.radaZkousek! + z.zkousekDoPruchodu;
         }
         cil.radaNapoveda = (cil.radaNapoveda ?? false) || (z.radaNapoveda ?? false);
+        cil.nahled = (cil.nahled ?? false) || (z.nahled ?? false);
+        cil.napovedaZNahledu = (cil.napovedaZNahledu ?? false) || (z.napovedaZNahledu ?? false);
         if (cil.zkousekDoPruchodu === null && z.zkousekDoPruchodu !== null) {
           cil.zkousekDoPruchodu = cil.zkousek + z.zkousekDoPruchodu;
           cil.sekundDoPruchodu = cil.sekundDriv + (z.sekundDoPruchodu ?? 0);
@@ -711,6 +728,8 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         hracuSRadouPrusli: poRade.length,
         zkousekPoRade: median(poRade),
         hracuNapovedaZRady: zaznamy.filter((z) => z.radaNapoveda === true).length,
+        hracuSNahledem: zaznamy.filter((z) => z.nahled === true).length,
+        hracuNapovedaZNahledu: zaznamy.filter((z) => z.napovedaZNahledu === true).length,
         hracuSPosunem: zaznamy.filter((z) => (z.posunu ?? 0) > 0).length,
         posunu: soucet((z) => z.posunu ?? 0),
         posunuVic: soucet((z) => z.posunuVic ?? 0),

@@ -17,7 +17,7 @@ export const CO_HRA_UMI: readonly string[] = [
   "Stavba: nástroj Výběr a posun (klik, rámeček; tažení za vybraný styčník posune celý výběr i s připojenými pruty, šipky ho posouvají po metru, styčníky v podporách zůstávají stát), zrcadlení, Zpět a Znovu, mazání, import a export mostu. Po první prošlé zkoušce hra na posun jednou upozorní.",
   "Kontrola při stavbě: značka u místa, kde se most složí vlastní vahou, u volného prutu, u mostovky, po které nikdo nepůjde (přejíždí kraj břehu bez styčníku, leží mimo trasu nebo za jejím koncem), a u prutu, který se při poslední zkoušce porušil jako první; řádek rad pod výkresem podle zvoleného nástroje. Tah mostovky přetažený za kraj břehu editor sám ukončí na kraji a řekne proč.",
   "Zkouška: přehrávání s časovou osou, rychlostmi a krokováním, barvy a čísla využití prutů, zpomalený záběr na první porušení (jde vypnout), klidné úseky se přehrávají rychleji.",
-  "Výsledek: pruh s verdiktem, jednou větou o příčině a medailemi, razítko SCHVÁLENO nebo ZAMÍTNUTO, v podrobnostech čísla, důvod u každé nezískané medaile a rada k prvnímu porušení. Když most neprojde podruhé po sobě stejně, hra radu ukáže sama v pruhu výsledku i s tlačítkem nápovědy, nechá ji tam, dokud se stejná chyba opakuje, a po návratu ke stavbě ji ukazuje u označeného prutu.",
+  "Výsledek: pruh s verdiktem, medailemi a větou o příčině, která říká i co udělat a označí místo na výkresu (prut, podporu, místo na zemi); v podrobnostech čísla a důvody nezískaných medailí. Podruhé stejný nezdar: rada v pruhu s tlačítkem Ukázat skicu a u značky při stavbě, Nápověda v paletě zvýrazněná. Potřetí v návštěvě: první krok nápovědy (skica, princip) přímo v pruhu.",
   "Nápověda úrovně má tři kroky: princip se skicou, soupis materiálu a obrys mostu na výkresu; obrysy mostů pro medaile až po projití úrovně.",
   "Medaile: průchod, rozpočtová (levný most, na kterém se nic neporušilo) a mistrovská (rozpočtová a k ní bonus úrovně). Výzvy o nejlevnější a nejlehčí most a o únosnost na korunu (zkouška do zlomu), žebříčky všech hráčů ke každé úrovni.",
   "Kmitání: osa frekvencí s odhadem kmitání pod lidmi, rada, co ho sníží, pokusy Brnknutí a Budič, laděný tlumič s tlačítkem Naladit na rytmus.",
@@ -47,6 +47,8 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
     "Hráči, kteří si otevřeli nápovědu úrovně; hracuSObrysem si nechali ukázat i obrys mostu na výkresu.",
   "souhrn.urovne[].rady":
     "Rada po druhém stejném nezdaru za sebou (hra ji ukáže sama v pruhu výsledku) a kolikrát která zazněla. hracuSRadou: kolik hráčů ji vidělo; hracuSRadouPrusli: kolik z nich potom zkouškou prošlo (počítá se první průchod po radě, i u hráče, který úroveň prošel už dřív a radu dostal při zlevňování); zkousekPoRade: medián zkoušek od rady do toho průchodu; hracuNapovedaZRady: kolik z nich z rady otevřelo nápovědu.",
+  "souhrn.urovne[].hracuSNahledem":
+    "Náhled nápovědy: po třetí zkoušce, která v jedné návštěvě úrovně neprošla, ukáže hra první krok nápovědy (skicu a princip mostu, který projde) přímo v pruhu výsledku; ne hráči, který si nápovědu otevřel sám. hracuSNahledem: kolik hráčů ho vidělo; hracuNapovedaZNahledu: kolik z nich z něj tlačítkem otevřelo nápovědu na dalším kroku.",
   "souhrn.urovne[].posunu":
     "Posuny styčníků nástrojem Výběr a posun nebo šipkami. hracuSPosunem: kolik hráčů posun použilo; posunu: kolik posunů bylo; posunuVic: z toho víc styčníků naráz; posunuKlavesou: z toho šipkou.",
   "souhrn.urovne[].hracuSVice":
