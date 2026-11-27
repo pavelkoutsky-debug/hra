@@ -64,5 +64,5 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
   zebricky:
     "overeni: kolik zkoušek server pustil; prijato a zlepseni: zápisy; odmitnuto: podle důvodu. Počítají se i zkoušky autorů na ostrém webu včetně schválně poslaných podvrhů: ojedinělé odmítnutí „otisk“ bez zprávy od hráče proto není důkaz chyby, opakované u víc úrovní nebo se zprávou hráče ano. Důvod „adresa“ je denní strop zkoušek z jedné adresy (někdo ten den zapisoval hodně mostů) a „plno“ denní strop pro všechny: ani jedno není chyba hry. Když je prijato víc než overeni, není to chyba: most, který server už jednou přepočítal, znovu nezkouší.",
   obecne:
-    "Den je v UTC. Zkoušky autorů v prohlížeči mají záznam hraní vypnutý a v souhrnu nejsou. Hráč je náhodné číslo prohlížeče, ne člověk: kdo hraje na telefonu i na počítači, je dvakrát.",
+    "Den je v UTC. Zkoušky autorů v prohlížeči mají záznam hraní vypnutý a v souhrnu nejsou. Hráč je náhodné číslo prohlížeče, ne člověk: kdo hraje na telefonu i na počítači, je dvakrát. Od verze 0.25.0 se most, který si lehl na zem, počítá mezi příčinami jako „opřel se o terén“, i když potom kmital nebo sjel z podpory: podíly těchto tří příčin proto nejde srovnávat se dny před 28. 11. 2026.",
 };

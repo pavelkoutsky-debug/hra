@@ -31,6 +31,7 @@ Poslední aktualizace: 26. 11. 2026
 | M17 Před zveřejněním | Hotovo (24. 11. 2026): závěrečná recenze celku třemi nezávislými recenzenty, známé slabiny (8-02, 4-04), okno Soukromí a kontakt, zpevnění serveru, web připravený na zveřejnění, shoda výpočtu ve třech strojích JavaScriptu; viz „M17 — výsledek“ |
 | Zveřejnění | **Hra je veřejná od 25. 11. 2026** (verze 0.23.1): zadavatel nastavil hesla a vypnul přihlášení, denní rozbor běží, ostrý web prošel zkouškami z `docs/ZVEREJNENI.md`; nalezený časový limit zápisu velkého mostu do žebříčku je opravený; viz „Po zveřejnění“ |
 | M18 První minuty | Hotovo (26. 11. 2026, verze 0.24.0, doplněk 0.24.1): první milník podle denního rozboru. Začátek hry, mostovka přes kraj břehu (hlášení z 1-02), rada po druhém stejném nezdaru, posun víc styčníků naráz, víc údajů v deníku a v podkladech rozboru; viz „M18 — výsledek“ |
+| M19 Méně textu | Hotovo (27. 11. 2026, verze 0.25.0): druhý milník podle denního rozboru a zprávy hráče („příliš mnoho textu, nepřehledné“). Kratší začátek (zadání, přehled, upozornění), vedlejší nástroje první kapitoly pod „Více“, rozpočet řešený při stavbě jedním tlačítkem, verdikty, které říkají, co udělat, a náhled nápovědy po třetím nezdaru; souhrn deníku stíhá i dny s tisíci dávek; viz „M19 — výsledek“ |
 
 ## Kde práce stojí (24. 11. 2026)
 
@@ -52,7 +53,57 @@ Poslední aktualizace: 26. 11. 2026
 - **M17 Před zveřejněním** je hotový, viz „M17 — výsledek“.
 - **Denní rozbor běží** (kritérium M16 „rozbor za poslední den vznikne bez zásahu člověka“ je splněné): naplánovaná úloha každý den ve 4:43 našeho času, první rozbor je za 24. 11. 2026. Návrhy dalších verzí teď mají vycházet z něj (stránka správce, záložka Denní rozbor).
 - **M18 První minuty** (verze 0.24.0) je hotový, viz „M18 — výsledek“. Je to první milník, který nevychází z koncepce ani z recenze, ale z čísel o hráčích: zadavatel 26. 11. 2026 vybral všechny čtyři návrhy prvního denního rozboru. **Další verze se plánují stejně:** rozbor (stránka správce, záložka Denní rozbor) navrhne, zadavatel vybere. Jestli M18 zabral, se pozná na číslech v oddíle „Jak poznat, že to zabralo“.
+- **M19 Méně textu** (verze 0.25.0) je hotový, viz „M19 — výsledek“. Vychází z rozboru za 26. 11. 2026 (331 hráčů) a ze zprávy hráče s hodnocením 1; zadavatel 27. 11. vybral všechny čtyři části plánu. Jestli zabral, se pozná na číslech v oddíle „Jak poznat, že to zabralo“ tamtéž. **Další na řadě** (navrženo, nevybráno): rozložení pro telefon jako samostatný milník, konkrétnější rady ke kmitání v 2-03 a 2-05, zkouška ve vestavěném prohlížeči Androidu (8 chyb „Java object is gone“).
 - **Zbývá na zadavateli:** `/otisky.html` ve skutečném Firefoxu, v Safari a na telefonu, náhled odkazu v chatu, zkouška omezení počtu žádostí z jednoho připojení, smazání zkušebních dat ve správě a po týdnu spotřeba v přehledu Netlify.
+
+## M19 — výsledek
+
+Verze hry 0.25.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovně, návrhu ani uloženého postupu taky ne.
+
+**Proč vznikl: druhý den s hráči (26. 11. 2026) a zpráva hráče.** 331 hráčů (310 nových, 76 na dotyku), 371 sezení, 24 si záznam vypnulo; 79 neotevřelo žádnou úroveň (57 vidělo jen přehled). 1-01 otevřelo 244 hráčů, prošlo 159, 47 odešlo bez jediné zkoušky (na dotyku 21 ze 47 hráčů, na počítači 26 ze 197) a 24 nenakreslilo ani prut. Ze 486 zkoušek tam hra 211 nepustila, všechny kvůli rozpočtu (79 hráčů); totéž na 1-02 (78 zkoušek, 41 hráčů; 1 235 dílů mostovky proti 533 trámům), 1-03 (113, 55 hráčů) a 1-05 (36, 20 hráčů). Ten den běžely tři verze hry po sobě, takže účinek 0.24.1 z čísel vyčíst nejde. Zkoušky 1-01, které neprošly: složil se 125, sjel z podpory 37, opřel se o terén 35, kmitání 25, mezera 13. 1-03 prošlo 83 ze 119 (398 zkoušek, vzpěr lehkého trámu 176; radu po druhém stejném nezdaru vidělo 23 hráčů a 18 z nich pak prošlo), 1-04 55 ze 75, 1-05 42 z 51, 2-01 36 ze 43, 2-02 20 z 34, 2-03 14 z 22 (157 zkoušek, 96 skončilo kmitáním, medián šest zkoušek do průchodu), 2-05 5 z 10; do kapitoly 3 došlo pět až šest hráčů. Nápovědu si na 1-01 otevřelo šest hráčů, na 1-03 tři. Přišly dvě zprávy: pochvala (hodnocení 4) a kritika (hodnocení 1): příliš mnoho textu, nepřehledné, špatné ovládání. Zadavatel 27. 11. 2026 nechal zařadit čtyři věci: méně textu na začátku, postupné odkrývání palety, rozpočet řešený jednáním místo hlášení a srozumitelnější verdikty s nápovědou na očích; k tomu rozhodl, že vedlejší nástroje se skryjí jen v první kapitole, že přehled zůstává první obrazovkou (nováček na něm vidí jen velké tlačítko a první kapitolu) a že verze se nasazuje bez čekání na jeho náhled.
+
+**Denní rozbor za 26. 11. pracoval s neúplnými čísly** (viděl 226 hráčů z 331): server četl nejvýš 400 dávek deníku na žádost a po půlnoci den četl celý znovu, úloha směla žádost opakovat pětkrát. Proto část „Souhrn stíhá velké dny“ níž.
+
+**Méně textu na začátku.** Změřeno jako slova, která hráč vidí (`innerText`):
+
+| Místo | Před | Po |
+|---|---|---|
+| Úvodní okno 1-01 (česky) | 232 | 79 |
+| Úkol v 1-01 | 32 | 20 |
+| Přehled nového hráče (česky) | 639 | 81 |
+| Úvodní okno 1-01 (anglicky) | 298 | 98 |
+| Přehled nového hráče (anglicky) | 719 | 91 |
+| Upozornění na záznam hraní | 31 | 9 |
+
+- **Okno zadání** má jeden sloupec a ukazuje jen název, úkol, ukázku a „Jdu stavět“. Medaile, provoz, prvky s rozpočtem, výzvy, „Více o úloze“ a ovládání (jen v 1-01) jsou sbalené řádky na rozkliknutí; při každém otevření okna se zavřou. Texty úkolů 1-01 až 1-05 jsou kratší a příběh (výpravy, provoz) přešel do „Více o úloze“; 1-05 je zkouška kapitoly a „Více o úloze“ nemá, takže její zadání ztratilo zdůvodnění zón (nakládání dřeva, lesní cesta).
+- **Přehled nového hráče** ukazuje velké tlačítko, jednořádkové upozornění na záznam a první kapitolu; postup, kapitoly 2 až 8, Havarijní komisi a volby odkryje tlačítko „Celá kampaň“ (pamatuje si to záložka). Kdo má něco rozestavěno nebo projito, vidí přehled celý. Přehled zůstal první obrazovkou (rozhodnutí zadavatele).
+- **Upozornění na záznam hraní** je jedna věta („Hra posílá autorům záznam hraní, bez jména a e-mailu.“) s odkazem Více do okna Soukromí a tlačítky Rozumím a Vypnout. Vypínač v přehledu je u nového hráče až pod „Celá kampaň“; vypnout jde z upozornění a z okna Soukromí.
+- Kratší jsou i věty prvních minut (`stavba.zPrazdna`, `stavba.mostovkaZkracena`, `vedeni.*`, popisky ukázek 1-01 až 1-04) a řádek rad pod výkresem mlčí, dokud výkres vede duchem mostovky nebo svítí bublina u Zkoušky.
+
+**Paleta první kapitoly a horní lišta.** Na prázdné 1-01 (1280 × 720) bylo 24 tlačítek a odkazů, je jich 15. V úrovních 1-01 až 1-05 zůstaly v paletě Zadání, Nápověda, Výběr a posun, Smazat, Zpět, Znovu a prvky; Zrcadlit, Vše pryč, pokus Do zlomu, Export, Import, Sdílet, Žebříček, výňatek zadání, slovníček a medaile jsou pod tlačítkem „Více“, jehož stav si hra pamatuje. Od druhé kapitoly je paleta celá jako dřív (rozhodnutí zadavatele) a celou ji má i host a výzva z odkazu, pískoviště a komise. Zkratky schovaných nástrojů fungují pořád, a kde hra na schovaný nástroj posílá (okno žebříčku na Do zlomu, okno sdílení na Export), rozbalí „Více“ sama. V liště je zvuk ikona reproduktoru a zoom jedna skupina (−, +, celý výkres jako ikona). Na telefonu jsou v první kapitole prvky v paletě nahoře. „Napiš nám“ zůstalo v liště: zprávy hráčů jsou pro veřejnou hru důležité.
+
+**Rozpočet jednáním.**
+- Nejlevnější prut si hra po dokončení mostovky bere do ruky sama ve všech neprošlých úrovních kampaně, které levnější prut mají (dosud jen v 1-01); tlačítko prvku krátce blikne a mimo 1-01 to řekne hlášení. Ne v pískovišti, v komisi, u hosta, v prošlé úrovni (kdo přestavuje, má mostovku v ruce schválně) a u mostů, které se zvedají. Kapitoly 2 a 5 a úrovně 4-04, 4-05 a 8-02 levnější prut nemají, tam se neděje nic.
+- Ve chvíli, kdy cena při stavbě přeleze rozpočet, hra to řekne s částkou a ukazatel v liště zežloutne (jednou na každé překročení, jen po úpravě; ne po Zpět, Znovu, Importu a při otevření úrovně).
+- Když má most pruty z mostovky mimo cestu, hlášení nese tlačítko „Vyměnit za „Lehký trám““: vymění je jedním krokem (jeden krok Zpět), prut po prutu se stejnou kontrolou jako změna prvku výběru; co vyměnit nejde (mostovka na hlavě pilíře), zůstane a hlášení to řekne. Totéž tlačítko má hlášení po nepuštěné zkoušce. V 1-03 tak most o 2 100 Kč nad rozpočtem po jednom kliknutí stojí 100 400 Kč a zkouška se pustí.
+
+**Verdikty a nápověda.** Agent nejdřív zkoušel, co nováček v 1-01 staví (asi 1 300 tvarů v Node a vybrané v prohlížeči). **Hlavní nález: „sjel z podpory“, „opřel se o terén“ a „kmitání nad mezí“ jsou v 1-01 skoro vždy totéž.** Nováček postaví podpěru dolů do údolí, kde není kotva; její pata leží na zemi, most se o ni opře a potom na terénu kmitá, nebo se propadne a konec sjede z posuvné podpory. Hra to přitom hlásila třemi různými větami („propadl se a zůstal ležet na terénu“, „kmitání přes mez… chodec, krok 2,0 Hz“) a rada ke složení „podepři ho zespodu“ k těm podpěrám přímo vedla. Samostatné sjetí z podpory se v 1-01 nenašlo ani jednou.
+- **Pruh výsledku říká, co se stalo a co udělat**, a jen to, co úroveň dovoluje postavit: „Přešlo 7 z 36, spadlo 29. Most se opřel o zem (označeno): podpěra bez kotvy nenese. Nes mostovku trojúhelníkem z prutů nad ní.“ Místo je na výkresu označené kroužkem a po návratu ke stavbě u něj zůstává značka.
+- **Příčina „opřel se o terén“ má přednost před kmitáním, porušením a sjetím** (pruh i deník); mezera v mostovce má přednost dál. Hodnocení zkoušky ani fyzika se nemění, mění se jen to, kterou příčinu hra jmenuje. **Čísla příčin v souhrnu proto nejsou po jednotlivých kódech srovnatelná se dny před nasazením** (vysvětlivka v podkladech to rozboru říká).
+- Most jen z mostovky: „Složil se vlastní vahou: styčník mostovky nic nedrží. Zavěs ho do trojúhelníku z prutů nad mostovkou.“ Kde pod mostem není kotva ani základ, hra už neradí podepřít zespodu. Most bez klidové polohy, který se houpe přes mez, jmenuje styčník, který nic nedrží, místo rytmu kroku.
+- **Náhled nápovědy:** při třetí neprošlé zkoušce v jedné návštěvě úrovně ukáže pruh výsledku první krok nápovědy (skicu a princip) s tlačítkem „Další krok nápovědy“; ne v komisi, ne na zkouškách kapitol (nápovědu nemají), ne hráči, který si nápovědu už otevřel, a ne v prošlé úrovni. Tlačítko rady po druhém stejném nezdaru se jmenuje „Ukázat skicu“ a Nápověda v paletě má od druhého nezdaru obrys. Hlášení „Nedaří se?“ zůstalo jen jako záloha.
+
+**Souhrn stíhá velké dny** (server; `src/server/obsluha.ts`). Žádost o souhrn čte deník po částech (400 dávek), po každé části uloží, kam došla, a pokračuje, dokud neuplyne 15 sekund (dosud jedna část na žádost). Po uzávěrce dne server den nečte celý znovu: ověří, že před poslední započtenou dávkou stojí přesně tolik dávek, kolik jich výtah započetl, a dočte jen zbytek; když počty nesedí (opožděná dávka), spočítá den od začátku jako dřív. Podklady rozboru se o čas dělí mezi den a týden a říkají, kam server došel (`nedokonceno`, `davek`); zadání úlohy dovoluje opakovat až třicetkrát, dokud dávky přibývají. Skutečnou rychlost čtení na ostrém webu se změřit nepodařilo (27. 11. hrálo 13 lidí); ukáže se po nasazení, kdy se výtahy přepočítají na verzi 4. Vysvětlivky nově říkají, že odmítnutí „adresa“ v žebříčcích je denní strop zápisů z jedné adresy, ne chyba hry.
+
+**Deník, souhrn a podklady rozboru.** Deník nově nese rozbalení „Více“ v paletě, rozbalené části zadání, „Celá kampaň“ v přehledu, překročení rozpočtu při stavbě a výměnu mostovky, náhled nápovědy a u otevření nápovědy odkud (paleta, rada, náhled). Souhrn po úrovních: `hracuSVice`, `hracuNadRozpoctem`, `hracuSVymenou`, `hracuSNahledem`, `hracuNapovedaZNahledu`; u hráčů bez úrovně `celaKampan`. Uložený výtah má verzi 4. Stránka správce nová čísla ukazuje, `hraUmi` a `vysvetlivky` jsou doplněné a okno Soukromí jmenuje i nabídky a nápovědy.
+
+**Jak poznat, že to zabralo** (čísla ze souhrnu, proti 26. 11.):
+- začátek: `bezUrovne.jenPrehled` (bylo 57 z 331) a hráči 1-01 bez zkoušky (47 z 244; na dotyku 21 ze 47);
+- rozpočet: `zkousekNadRozpocet` a `hracuSOdmitnutim` na 1-01 až 1-03 (211, 78 a 113 zkoušek) proti `hracuNadRozpoctem` a `hracuSVymenou`, a poměr mostovky k trámům v `prvky` na 1-02 (1 235 ku 533);
+- paleta: `hracuSVice` a počet zkoušek Do zlomu v první kapitole;
+- verdikty: zkoušky do průchodu na 1-01 a podíl „opřel se o terén“ (po kódech nesrovnatelné, viz výše); nápověda: `hracuSNahledem`, `hracuNapovedaZNahledu` a `hracuSNapovedou` (bylo 6 na 1-01).
+
+**Testy.** Jednotkové: nový `test/opreni.test.ts`, doplněné `test/denik.test.ts` (části čtení, přerušená žádost, uzávěrka bez čtení, nová pole souhrnu), `test/rozbor.test.ts` (neúplné podklady), `test/mezery.test.ts`, `test/editor.test.ts` (výměna prvku), `test/zacatek.test.ts`. V prohlížeči: nové `test/e2e/rozpocet.e2e.ts` a `test/e2e/verdikty.e2e.ts`, v `test/e2e/zacatek.e2e.ts` přehled nového hráče, okno zadání s počty slov, paleta první kapitoly a telefon v obou jazycích; ostatní soubory před klikem na schovaný nástroj volají `rozbalPaletu` (`test/e2e/pomoc.ts`).
 
 ## M18 — výsledek
 

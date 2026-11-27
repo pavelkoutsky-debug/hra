@@ -111,7 +111,8 @@ Tohle znění je uložené v naplánované úloze. Když se změní tady, je pot
 >    (včerejšek, UTC), `souhrnDne` a `souhrnTydne` (deník hraní: hráči, noví hráči, sezení, chyby
 >    prohlížeče, `bezUrovne` o hráčích, kteří neotevřeli žádnou úroveň, a po úrovních otevření,
 >    zkoušky, průchody, zkoušky a minuty do průchodu, medaile, proč zkoušky neprošly, nápověda,
->    rady, posuny a značky při stavbě), `vazby` (zprávy hráčů toho dne), `vazebCelkem` (v textech
+>    rady, náhled nápovědy, rozpočet při stavbě, paleta první kapitoly, posuny a značky při
+>    stavbě), `vazby` (zprávy hráčů toho dne), `vazebCelkem` (v textech
 >    zpráv jsou e-maily a telefonní čísla nahrazené značkami `[e-mail]` a `[telefon]`), `zebricky`
 >    (zápisy do žebříčků a odmítnutí podle důvodu), `predchozi` (shrnutí a názvy návrhů posledních
 >    rozborů) a `neuplne` s `nedokonceno` a `davek`. Když je `neuplne` true, zavolej totéž
@@ -131,7 +132,9 @@ Tohle znění je uložené v naplánované úloze. Když se změní tady, je pot
 >    končí a kde se zasekávají (úrovně s hodně zkouškami a málo průchody, s hodně hráči bez jediné
 >    zkoušky, s dlouhou cestou k průchodu); kolik lidí neotevřelo žádnou úroveň a kam šli; proč
 >    zkoušky neprocházejí; jestli a kde hráči sahají po nápovědě a jestli jim pomáhá rada, kterou
->    hra ukáže sama po druhém stejném nezdaru (kolik hráčů ji vidělo a kolik potom prošlo);
+>    hra ukáže sama po druhém stejném nezdaru (kolik hráčů ji vidělo a kolik potom prošlo), a
+>    náhled nápovědy po třetím; kolik hráčů při stavbě přelezlo rozpočet, kolik použilo výměnu
+>    mostovky a kolik zkoušek hra kvůli rozpočtu dál nepustila;
 >    chyby prohlížeče; co hráči napsali (témata, ne jména) a jak hru hodnotí; odmítnutí
 >    v žebříčcích (důvod `otisk` znamená, že zkouška u hráče dopadla jinak než na serveru; jak ho
 >    číst, říkají `vysvetlivky`); a co se změnilo proti týdnu a proti minulým rozborům. Tvrzení
