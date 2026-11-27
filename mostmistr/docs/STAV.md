@@ -139,6 +139,21 @@ Verze hry 0.25.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovn�
 
 **Po sloučení** spadly v prvním úplném běhu dva testy v prohlížeči, oba kvůli záměrné změně: věta o kmitání v úrovni bez tlumiče nově přidává radu (test doplněn) a okno zadání 4-04 se s ukázkou a upozorněním na záznam nevešlo do 720 px o 39 px. Okno je v nízkém okně těsnější (nižší výkresy ukázky, užší řádky sbalených částí), takže se vejde i na notebooku 1366 × 768.
 
+### Po nasazení 0.25.0 (27. 11. 2026)
+
+**Ověřeno na ostrém webu** (bezhlavý prohlížeč z prostředí denního rozboru, záznam vypnutý, konzole bez chyby; skript nic na webu nenechává):
+- přehled nového hráče: rozsah `uvod`, 69 slov, 5 karet první kapitoly, „Celá kampaň“ odkryje všech 38;
+- 1-01: okno zadání 69 slov, žádná část rozbalená, výška 591 px ze 720; v popisovém poli verze 0.25.0; „Více“ zavřené a Import schovaný, 16 tlačítek a odkazů; po dvou tazích mostovky je v ruce Lehký trám a Zkouška je zvýrazněná;
+- 1-01, „střecha“ bez svislice: „Z 36 lidí nepřešel nikdo. Složil se vlastní vahou: styčník mostovky nic nedrží. Spoj ho prutem se styčníkem nad mostovkou.“; se svislicí MOST OBSTÁL a v pruhu „◆ Průchod ◇ Rozpočet do 32 500 Kč ◇ Mistrovská“;
+- 1-02: díl, který mostovku dokončil a přetáhl rozpočet: „O 4 014 Kč nad rozpočtem. [Vyměnit za „Lehký trám“]“; po výměně „Vyměněno prutů: 4. Most stojí 46 327 Kč.“ a ukazatel v pořádku;
+- 2-01: paleta celá (bez „Více“); telefon 390 × 844: stránka nepřetéká; okno Soukromí jmenuje nabídky a nápovědy.
+
+**Souhrn deníku: změřená rychlost.** První podklady po nasazení přepočítaly celý týden na verzi výtahu 4 třemi žádostmi: 4 400 dávek za 17,0 s, dalších 4 240 za 15,9 s a zbytek za 3,7 s (9 566 dávek týdne; 26. 11. vyšlo 331 hráčů, stejně jako dřív). Server tedy čte asi 280 dávek za sekundu a žádost se do 30 s brány vejde s rezervou; dřív by týž přepočet chtěl 24 žádostí po 400 dávkách. Den jako 26. 11. (přes 4 400 dávek: první žádost ho celý nedočetla) se po půlnoci spočítá dvěma žádostmi místo dvanácti a víc.
+
+**Uložená úloha denního rozboru má nové zadání** (27. 11. 2026, znění z `docs/ROZBOR.md`: opakovat, dokud `davek` roste, nejvýš třicetkrát; nová čísla o rozpočtu při stavbě a náhledu nápovědy). Příští běh je 28. 11. ve 4:43 našeho času a bude první s celým dnem 0.25.0 až za 28. 11.; **27. 11. běžely na webu dvě verze** (0.24.1 do 10:05 našeho času, potom 0.25.0), takže čísla toho dne jsou smíšená.
+
+Verze 0.24.1 byla po nasazení 26. 11. ověřena na ostrém webu stejným způsobem; do dokumentace se to tehdy nedostalo.
+
 ## M18 — výsledek
 
 Verze hry 0.24.0. Fyzika se nemění (verze 9, otisky stejné), formáty úrovně, návrhu ani uloženého postupu taky ne; uložený výtah deníku má verzi 3 (server dny spočítá znovu).
