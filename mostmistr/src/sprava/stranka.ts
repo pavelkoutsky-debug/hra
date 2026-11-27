@@ -500,7 +500,7 @@ function vykresliSouhrn(odpoved: OdpovedSouhrnu): void {
   prvek("#den-bez-urovne").textContent = b
     ? `Bez úrovně kampaně: ${pocet(b.hracu, "hráč", "hráči", "hráčů")} (nových ${b.novych}, na dotyku ${b.dotykovych}) · ` +
       `jen přehled ${b.jenPrehled} · pískoviště ${b.piskoviste} · komise ${b.komise} · list ${b.list} · zkušebna ${b.zkusebna} · ` +
-      `okno Soukromí ${b.soukromi} · zpětná vazba ${b.vazba} · bez obrazovky ${b.bezObrazovky} · ` +
+      `okno Soukromí ${b.soukromi} · zpětná vazba ${b.vazba} · celá kampaň ${b.celaKampan ?? 0} · bez obrazovky ${b.bezObrazovky} · ` +
       `na stránce něco udělali ${b.sAkci}, nic (robot náhledu nebo hned odešli) ${b.bezAkce}, neznámo ${b.hracu - b.sAkci - b.bezAkce}`
     : "";
   const telo = prvek<HTMLTableSectionElement>("#souhrn tbody");

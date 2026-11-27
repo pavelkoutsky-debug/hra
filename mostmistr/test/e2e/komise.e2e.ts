@@ -98,6 +98,9 @@ describe("Havarijní komise", () => {
     await s.goto(adresa);
     await s.locator(".karta").first().waitFor();
     const oddil = s.locator('[data-udaj="prehled-komise"]');
+    // Nový hráč komisi nevidí, dokud si nerozbalí celou kampaň.
+    expect(await oddil.isVisible()).toBe(false);
+    await s.locator('[data-akce="prehled-cela"]').click();
     expect(await oddil.isVisible()).toBe(true);
     expect(await oddil.locator("h1").innerText()).toBe("Havarijní komise");
     expect(await oddil.locator(".pripad").count()).toBe(PRIPADY.length);

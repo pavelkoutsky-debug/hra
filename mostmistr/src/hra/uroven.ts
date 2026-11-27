@@ -5678,14 +5678,16 @@ export function spustUroven(
     if (jeKlicTextu(skutecnost)) poleSkutecnosti.textContent = t("zadani.skutecnost", { text: t(skutecnost) });
     // „Více o úloze“ má smysl, jen když pod ním něco je (u případu komise nález po uzavření).
     udaj("zadani-vice-obal").hidden = udaj("zadani-vice").hidden && !jeKlicTextu(skutecnost);
-    // Návod k ovládání patří jen k úplně první úrovni.
-    udaj("zadani-ovladani").hidden = uroven.id !== kampan[0]?.id;
+    // Návod k ovládání patří jen k úplně první úrovni (sbalený jako ostatní části).
+    udaj("zadani-ovladani-obal").hidden = uroven.id !== kampan[0]?.id;
     // Na dotykové obrazovce se nekreslí myší a mezerník tam není.
     if (window.matchMedia?.("(pointer: coarse)").matches) udaj("zadani-ovladani").textContent = t("zadani.ovladani.dotyk");
 
     const zadaniUkazky = ukazkaUrovne(uroven);
     const oddil = udaj("ukazka");
     oddil.hidden = zadaniUkazky === null;
+    // Okno bez ukázky je užší: krátký text by se jinak roztáhl přes šířku dvou výkresů.
+    oknoZadani.dataset.ukazka = zadaniUkazky === null ? "ne" : "ano";
     if (zadaniUkazky) {
       for (const cast of ["a", "b", "popis"] as const) {
         const klicUkazky = `ukazka.${uroven.id}.${cast}`;
@@ -5702,6 +5704,10 @@ export function spustUroven(
     if (oknoZadani.open) return;
     zadaniOtevrenoV = Date.now();
     vypisMedaile(udaj("zadani-medaile"), uroven, rekord?.medaile ?? BEZ_MEDAILI);
+    // Sbalené medaile ukazují aspoň znaky (◇ chybí, ◆ získaná); podmínky jsou po rozbalení.
+    const znackyZadani = znackyMedaili(uroven, rekord?.medaile ?? BEZ_MEDAILI);
+    udaj("zadani-medaile-souhrn").textContent = znackyZadani.znaky;
+    udaj("zadani-medaile-souhrn").setAttribute("aria-label", znackyZadani.popis);
     // Výzvy o efektivitu, jen kde je úroveň má. Zadání říká, oč se hraje (zlato); stupně
     // bronz a stříbro ukáže až výsledek zkoušky. Devět čísel najednou by tu jen mátlo.
     for (const uzel of oknoZadani.querySelectorAll<HTMLElement>('[data-cast="zadani-vyzvy"]')) uzel.hidden = prahy === null;
@@ -5715,6 +5721,8 @@ export function spustUroven(
         }),
       );
     }
+    // Sbalené části zadání se při každém otevření zavřou: okno má ukázat jen úkol.
+    for (const cast of oknoZadani.querySelectorAll<HTMLDetailsElement>("details.okno__vice")) cast.open = false;
     oknoZadani.showModal();
     // Okno se otevírá odshora, i když je vyšší než obrazovka; mezerník a Enter ho zavřou.
     prvek('#okno-zadani button[value="zavrit"]', HTMLButtonElement).focus({ preventScroll: true });
@@ -6686,7 +6694,9 @@ export function spustUroven(
   });
   for (const cast of oknoZadani.querySelectorAll<HTMLDetailsElement>("details.okno__vice")) {
     cast.addEventListener("toggle", () => {
-      if (cast.open) zapis("ovladani", { co: "zadani-vice", cast: cast.dataset.cast ?? cast.dataset.udaj ?? "" });
+      // Krátký kód části (zadani-medaile, zadani-provoz, zadani-stavba, zadani-vyzvy, zadani-vice, zadani-ovladani);
+      // zavírání při otevření okna (`otevriZadani`) se nezapisuje, protože okno je v tu chvíli zavřené.
+      if (cast.open && oknoZadani.open) zapis("ovladani", { co: "zadani-vice", cast: cast.dataset.cast ?? "" });
     });
   }
   oknoZadani.addEventListener("close", () => {

@@ -94,7 +94,7 @@ describe("okresní silnice: ocelobetonová mostovka a vlastní tíha", () => {
     // Zadání jsou dvě věty; čísla a souvislosti jsou pod „Více o úloze“ (sbalené, stejně jako seznam prvků).
     expect(await udaj("zadani-text")).toContain("Ocelobetonová mostovka sama váží sto tun");
     expect(await celyText("zadani-vice")).toContain("váží přes čtyři tuny na metr");
-    const provoz = await udaj("zadani-provoz");
+    const provoz = await celyText("zadani-provoz");
     expect(provoz).toContain("dodávka zleva");
     expect(provoz).toContain("autobus zleva");
     expect(provoz).toContain("Vozovka je nová a hladká");
@@ -162,7 +162,7 @@ describe("linka přes rokli: příhrada pod mostovkou a pohodlí v autobusu", ()
   it("hluboká příhrada pod mostovkou dá cestujícím klidnou jízdu a mistrovskou medaili", async () => {
     await otevri("3-03", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-medaile")).toContain("rozpočtová medaile a k ní zrychlení v autobusu nejvýš 0,20 m/s²");
+    expect(await celyText("zadani-medaile")).toContain("rozpočtová medaile a k ní zrychlení v autobusu nejvýš 0,20 m/s²");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     await nactiMost(navrhNaText(RESENI["3-03"]!.mistrovska));
     await spust();
@@ -191,8 +191,8 @@ describe("kolona: brzdění a pilíř", () => {
   it("zadání říká, že kolona na mostě zabrzdí; brzdná síla je vidět v reakci pevné podpory", async () => {
     await otevri("3-04", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-provoz")).toContain("4× nákladní auto zleva, vyráží v čase 0 s; na mostě zabrzdí, 3 s stojí a rozjede se");
-    expect(await udaj("zadani-provoz")).toContain("Vozovka je běžná");
+    expect(await celyText("zadani-provoz")).toContain("4× nákladní auto zleva, vyráží v čase 0 s; na mostě zabrzdí, 3 s stojí a rozjede se");
+    expect(await celyText("zadani-provoz")).toContain("Vozovka je běžná");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     expect(await udaj("jizdni-rad")).toContain("na mostě zabrzdí");
     await nactiMost(navrhNaText(RESENI["3-04"]!.pruchod));

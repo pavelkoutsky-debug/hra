@@ -110,6 +110,11 @@ export interface SouhrnBezUrovne {
   /** Otevřeli okno Soukromí a kontakt, okno zpětné vazby. */
   soukromi: number;
   vazba: number;
+  /**
+   * Rozbalili v přehledu celou kampaň (odkaz „Celá kampaň“: nový hráč vidí jinak jen první
+   * kapitolu). Je to pořád přehled, takže se nepočítá proti `jenPrehled`.
+   */
+  celaKampan: number;
   /** Nemají zapsanou žádnou obrazovku (stránka se nedonačetla, nebo jen začátek sezení). */
   bezObrazovky: number;
   /**
@@ -199,9 +204,10 @@ export interface HracVeVytahu {
 
 /**
  * Verze výtahu. Výtah uložený starší verzí server nepoužije a den spočítá z dávek znovu
- * (3: obrazovky a akce hráčů, dotyk a pruty po úrovních, příčina neúspěchu zkoušky).
+ * (3: obrazovky a akce hráčů, dotyk a pruty po úrovních, příčina neúspěchu zkoušky;
+ * 4: rozbalení celé kampaně v přehledu).
  */
-export const VERZE_VYTAHU = 3;
+export const VERZE_VYTAHU = 4;
 /**
  * Nejvíc různých textů chyb, které si výtah pamatuje; další se sčítají pod „ostatní“. Strop
  * chrání výtah před zahlcením vymyšlenými daty; běžný den k němu nedojde. Nad ním už sloučení
@@ -225,8 +231,13 @@ const ZNAME_PRVKY: ReadonlySet<string> = new Set<string>(ID_PRVKU);
 const ZNAME_ZPUSOBY: ReadonlySet<string> = new Set(["tah", "tlak", "ohyb", "smyk", "vzper"]);
 const ZNAME_AKCE: ReadonlySet<string> = new Set(["mys", "dotyk", "klavesa", "posun"]);
 
-/** Obrazovky, které si výtah u hráče pamatuje. */
-export const OBRAZOVKY = ["prehled", "kampan", "piskoviste", "komise", "list", "zkusebna", "soukromi", "vazba", "jine"] as const;
+/**
+ * Obrazovky, které si výtah u hráče pamatuje. „cela-kampan“ není obrazovka, ale rozbalení
+ * celého přehledu (`prehled.odkaz` s `kam: "cela-kampan"`); pamatuje se stejně.
+ */
+export const OBRAZOVKY = ["prehled", "kampan", "piskoviste", "komise", "list", "zkusebna", "soukromi", "vazba", "cela-kampan", "jine"] as const;
+/** Odkazy z přehledu (`prehled.odkaz`, pole `kam`), které si výtah zapisuje k obrazovkám hráče. */
+const SLEDOVANE_ODKAZY: ReadonlySet<string> = new Set(["zkusebna", "cela-kampan"]);
 
 /**
  * Jak souhrn v „Na čem mosty padaly“ jmenuje příčinu neúspěchu zkoušky, ve které nic nepovolilo
@@ -447,7 +458,7 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
     } else if (u.druh === "prehled.otevren") pridejObrazovku(oHraci, "prehled");
     else if (u.druh === "list.otevren") pridejObrazovku(oHraci, "list");
     else if (u.druh === "soukromi.otevreno") pridejObrazovku(oHraci, "soukromi");
-    else if (u.druh === "prehled.odkaz" && data.kam === "zkusebna") pridejObrazovku(oHraci, "zkusebna");
+    else if (u.druh === "prehled.odkaz" && typeof data.kam === "string" && SLEDOVANE_ODKAZY.has(data.kam)) pridejObrazovku(oHraci, data.kam);
     else if (u.druh === "denik.vypnut") oHraci.vypnul = true;
     else if (u.druh === "denik.zapnut") oHraci.vypnul = false;
     else if (u.druh === "chyba") {
@@ -728,6 +739,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
     zkusebna: bez.filter((h) => byl(h, "zkusebna")).length,
     soukromi: bez.filter((h) => byl(h, "soukromi")).length,
     vazba: bez.filter((h) => byl(h, "vazba")).length,
+    celaKampan: bez.filter((h) => byl(h, "cela-kampan")).length,
     bezObrazovky: bez.filter((h) => (h.obrazovky ?? []).length === 0).length,
     sAkci: bez.filter((h) => h.akce === true).length,
     bezAkce: bez.filter((h) => h.meriAkce === true && h.akce !== true).length,

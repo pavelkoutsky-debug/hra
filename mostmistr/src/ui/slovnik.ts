@@ -95,14 +95,14 @@ const CS = {
   "pojem.plavebni-profil.text": "Prostor nad hladinou vyhrazený lodím. Nedá se v něm stavět, a když loď pluje, nesmí do něj zasahovat ani zvednutý most.",
   "pojem.inzenyrsky-rozpocet": "Inženýrský rozpočet",
   "pojem.inzenyrsky-rozpocet.text": "Přísnější částka pro rozpočtovou medaili; na ukazateli ceny je vyznačená ryskou. Na průchod stačí vejít se do rozpočtu úrovně.",
-  "vedeni.prvni": "Začni tady: táhni mostovku odsud sem",
-  "vedeni.dalsi": "Další díl mostovky: odsud sem",
-  "vedeni.vyber": "Vyber v paletě „{prvek}“ a táhni odsud sem",
-  "vedeni.pevna": "pevná podpora: drží most na místě",
+  "vedeni.prvni": "Táhni mostovku odsud sem",
+  "vedeni.dalsi": "Další díl: odsud sem",
+  "vedeni.vyber": "Vyber „{prvek}“ a táhni odsud sem",
+  "vedeni.pevna": "pevná podpora: drží na místě",
   "vedeni.posuvna": "posuvná podpora: nese, do strany povolí",
   "vedeni.pevna.kratce": "pevná podpora",
   "vedeni.posuvna.kratce": "posuvná podpora",
-  "vedeni.zkouska": "Mostovka je hotová. Teď most vyzkoušej: i když spadne, uvidíš proč.",
+  "vedeni.zkouska": "Mostovka je hotová. Pusť zkoušku: i když most spadne, uvidíš proč.",
   "vedeni.podepri": "Mostovka neunese ani sebe: podepři ji, třeba trojúhelníkem z prutů nad ní. „{prvek}“ už máš v ruce, je levnější.",
   "vedeni.prepnuto": "V ruce máš levnější „{prvek}“.",
   "souradnice.bod": "x = {x} m · y = {y} m",
@@ -378,9 +378,9 @@ const CS = {
   "vazba.zaznam.vypnout": "Vypnout záznam",
   "vazba.zaznam.zapnout": "Zapnout záznam",
   "vazba.zVysledku": "Něco nesedí? Napiš nám",
-  "denik.upozorneni":
-    "Hra odesílá autorům záznam hraní: které úrovně otevřeš, jak stavíš a jak dopadnou zkoušky. Bez jména a e-mailu, jen pod náhodným číslem tohoto prohlížeče. Záznam jde kdykoli vypnout.",
-  "denik.vypnuto": "Záznam hraní je vypnutý a nic dalšího se neodesílá. Zapnout ho můžeš kdykoli v přehledu kampaně.",
+  "denik.upozorneni": "Hra posílá autorům záznam hraní, bez jména a e-mailu.",
+  "denik.vice": "Více",
+  "denik.vypnuto": "Záznam hraní je vypnutý a nic dalšího se neodesílá. Zapnout ho jde v okně Soukromí.",
   "soukromi.odkaz": "Soukromí a kontakt",
   "soukromi.vice": "Více o soukromí",
   "soukromi.nadpis": "Soukromí a kontakt",
@@ -409,7 +409,7 @@ const CS = {
   "soukromi.zkopirovano": "Zkopírováno",
   "soukromi.napis": "Napiš nám",
   "denik.rozumim": "Rozumím",
-  "denik.vypnout": "Vypnout záznam",
+  "denik.vypnout": "Vypnout",
   "denik.volba": "Odesílat autorům záznam hraní pod náhodným číslem (pomáhá hru vylepšovat)",
 
   // Paleta
@@ -795,6 +795,7 @@ const CS = {
   "zadani.stavba.svar": "Svar: {zaPrut} za každý prut, který do svařeného styčníku vede",
   "zadani.stavba.zamek": "Dělicí zámek: {zaKus} za kus; patří na opěru s ložiskem nebo mezi dvě části mostu",
   "zadani.medaile": "Medaile",
+  "zadani.ovladani.nadpis": "Ovládání",
   "zadani.ovladani":
     "Prut nakreslíš tažením myší z kotvy nebo ze styčníku; postavené styčníky posuneš nástrojem Výběr a posun (V) tažením nebo šipkami. Výkres posuneš pravým tlačítkem myši a zvětšíš kolečkem. Zkoušku pustíš mezerníkem a na časové ose ji můžeš zpomalit, krokovat i vracet.",
   "zadani.ovladani.dotyk":
@@ -817,16 +818,16 @@ const CS = {
   "ukazka.zvetseni": "Pohyb mostu je {nasobek}× zvětšený, aby byl vidět.",
   "ukazka.1-01.a": "Jen mostovka",
   "ukazka.1-01.b": "Mostovka s trojúhelníkem",
-  "ukazka.1-01.popis": "Dva díly mostovky spojené kloubem se uprostřed zalomí. Trojúhelník z trámů kloub podepře a nedovolí mu klesnout.",
+  "ukazka.1-01.popis": "Samotná mostovka se v kloubu zalomí. Trojúhelník z trámů kloub udrží.",
   "ukazka.1-02.a": "Jedna vzpěra",
   "ukazka.1-02.b": "Vzpěra pod každým kloubem",
-  "ukazka.1-02.popis": "Mostovka ze tří dílů má dva klouby a každý potřebuje podepřít: s jedinou vzpěrou se druhý propadne. Vzpěra z kotvy ve svahu je krátká, a tak stojí míň než příhrada nad mostovkou.",
+  "ukazka.1-02.popis": "Mostovka má dva klouby: s jedinou vzpěrou se druhý propadne. Vzpěra z kotvy je krátká a levná.",
   "ukazka.1-03.a": "Krajní šikminy z lehkého trámu",
   "ukazka.1-03.b": "Krajní šikminy z těžkého trámu",
-  "ukazka.1-03.popis": "Stejná příhrada, jiný trám na krajích. Osobní auto unesou obě. Pod dodávkou se dlouhá tlačená šikmina z lehkého trámu prohne do strany a zlomí; těžký trám vydrží.",
+  "ukazka.1-03.popis": "Pod dodávkou se dlouhá tlačená šikmina z lehkého trámu prohne do strany a zlomí; z těžkého vydrží.",
   "ukazka.1-04.a": "Lehká příhrada přes celé údolí",
   "ukazka.1-04.b": "Vzpěradla z kotev ve svazích",
-  "ukazka.1-04.popis": "Čtyřiadvacet metrů je na příhradu z lehkého trámu moc: pod auty se zlomí. Vzpěradla opřená o kotvy ve svazích podepřou mostovku ve dvou místech a rozdělí most na tři krátká pole.",
+  "ukazka.1-04.popis": "Lehká příhrada na 24 metrů pod auty praskne. Vzpěradla z kotev rozdělí most na tři krátká pole.",
   "ukazka.2-01.a": "Horní pás bez diagonál",
   "ukazka.2-01.b": "Příhrada s diagonálami",
   "ukazka.2-01.popis": "Ocel unese mnohem víc než dřevo, ale tvar musí držet stejně. Čtyřúhelník z prutů spojených klouby se zkosí a most se složí; diagonála z něj udělá dva trojúhelníky.",
@@ -997,8 +998,8 @@ const CS = {
   "prvek.pist": "Hydraulický píst",
 
   // Proč něco nejde nakreslit nebo zkoušet
-  "stavba.mostovkaZkracena": "Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.",
-  "stavba.zPrazdna": "Most roste jen z kotev a ze styčníků, které už má: prut začni tažením z některého z nich. Tahem z volného místa se vybírá.",
+  "stavba.mostovkaZkracena": "Mostovka končí na kraji břehu: dál vede cesta po zemi.",
+  "stavba.zPrazdna": "Prut táhni z kotvy nebo ze styčníku mostu. Tah z prázdného místa jen vybírá.",
   "duvod.jina-uroven": "Tento most patří k jiné úrovni.",
   "duvod.stycnik-mimo-vyrez": "Mimo výkres se stavět nedá.",
   "duvod.stycnik-v-zakazane-zone": "Zakázanou zónou most vést nesmí.",
@@ -1363,6 +1364,7 @@ const CS = {
   "napoveda.nabidka": "Nedaří se? Nahoře v paletě je Nápověda: nejdřív prozradí jen princip mostu, který projde.",
   "prehled.postup": "Projito {projito} z {urovni} úrovní · medaile {medaili} z {medailiCelkem} · stupně výzev {vyzev} z {vyzevCelkem}",
   "prehled.start.novy": "Postavit první most ▸",
+  "prehled.celaKampan": "Celá kampaň ▾",
   "prehled.start.pokracovat": "Pokračovat: {uroven} {nazev} ▸",
   "prehled.postup.popis": "Každá úroveň má tři medaile a k nim tři výzvy o efektivitu (nejlevnější most, nejlehčí most, únosnost na korunu), každou se stupni bronz, stříbro a zlato",
   // Závěrečný list kampaně a galerie mostů (M14)
@@ -1656,23 +1658,19 @@ const CS = {
   // Zadání úrovní
   "zadani.0-00":
     "Zkušební výkres pro ladění hry: údolí s vodou, zakázanou zónou a základem pro pilíř. Do kampaně nepatří a provoz na něm nejezdí.",
-  "zadani.1-01":
-    "Přes potok jdou proti sobě dvě výpravy, šestatřicet lidí, a uprostřed lávky se potkají. Mostovka ze dvou dílů má uprostřed kloub a sama neudrží ani sebe: podepři její střed trojúhelníkem z trámů.",
+  "zadani.1-01": "Převeď přes potok 36 lidí. Mostovka má uprostřed kloub a sama se v něm zalomí: podepři ho trojúhelníkem z trámů.",
   "zadani.1-01.vice":
-    "Trojúhelník je jediný tvar z prutů, který drží bez tuhých spojů. Čím je plošší, tím víc jsou jeho pruty namáhané; tažený prut vydrží víc než stejně dlouhý tlačený.",
-  "zadani.1-02":
-    "Dvanáct metrů cyklostezky v neděli odpoledne: přes šedesát chodců v obou směrech a mezi nimi pět cyklistů. Ve svazích pod mostem jsou dvě kotvy navíc: opři o ně vzpěry.",
+    "Přes potok jdou proti sobě dvě výpravy, dohromady 36 lidí, a uprostřed lávky se potkají. Mostovka je ze dvou dílů spojených kloubem a kloub ohyb nepřenese, takže se sama uprostřed zalomí. Trojúhelník je jediný tvar z prutů, který drží bez tuhých spojů. Čím je plošší, tím víc jsou jeho pruty namáhané; tažený prut vydrží víc než stejně dlouhý tlačený.",
+  "zadani.1-02": "Cyklostezka přes dvanáct metrů pro dav chodců a cyklisty. Ve svazích jsou dvě kotvy navíc: opři o ně vzpěry.",
   "zadani.1-02.vice":
-    "Vzpěra z kotvy je kratší a levnější než příhrada nad mostovkou. Záleží i na tom, kam vede: krátká vzpěra unese víc než dlouhá.",
-  "zadani.1-03":
-    "Šestnáct metrů: nejdřív chodec a cyklista, potom první auto, tuna a půl, a nakonec dodávka, tři a půl tuny. Dlouhý tlačený trám pod ní vybočí do strany; pod mostovkou se stavět nesmí.",
+    "V neděli odpoledne tu jde přes šedesát chodců v obou směrech a mezi nimi pět cyklistů. Mostovka ze tří dílů má dva klouby a každý potřebuje podepřít. Vzpěra z kotvy ve svahu je kratší a levnější než příhrada nad mostovkou. Záleží i na tom, kam vede: krátká vzpěra unese víc než dlouhá.",
+  "zadani.1-03": "Šestnáct metrů pro auta a dodávku; pod mostovkou se stavět nesmí. Pozor na vzpěr: dlouhý tlačený trám pod dodávkou vybočí do strany.",
   "zadani.1-03.vice":
-    "Koryto pod mostem bere při jarní vodě všechno, co mu stojí v cestě, proto se staví jen nad mostovkou. Dlouhý tlačený trám pod dodávkou vybočí do strany; tomu se říká vzpěr. Pomůže ho zkrátit (styčníky blíž u sebe), postavit příhradu vyšší, aby měla v pásech menší síly, nebo vzít těžký trám: unese víc, ale stojí víc než dvojnásobek.",
-  "zadani.1-04":
-    "Dvacet čtyři metrů bez jediné podpory uprostřed: dvě auta za sebou, proti nim dodávka a dva cyklisté. Kotvy ve svazích leží šest metrů pod mostovkou: opři o ně vzpěradla.",
+    "Nejdřív jde chodec a cyklista, potom první auto (tuna a půl) a nakonec dodávka (tři a půl tuny). Koryto pod mostem bere při jarní vodě všechno, co mu stojí v cestě, proto se staví jen nad mostovkou. Dlouhý tlačený trám pod dodávkou vybočí do strany; tomu se říká vzpěr. Pomůže ho zkrátit (styčníky blíž u sebe), postavit příhradu vyšší, aby měla v pásech menší síly, nebo vzít těžký trám: unese víc, ale stojí víc než dvojnásobek.",
+  "zadani.1-04": "Dvacet čtyři metrů bez podpory uprostřed, pro auta a dodávku. Kotvy ve svazích leží šest metrů pod mostovkou: opři o ně vzpěradla.",
   "zadani.1-04.vice":
-    "Jde to i příhradou přes celé údolí, jen vyjde dráž. Šestimetrový sloup nad kotvou je dlouhý a tlačený; pod dodávkou je na hraně. Pomůže mu těžký trám, nebo rozpěra v půli výšky, která ho zkrátí.",
-  "zadani.1-05": "Silnice přes údolí široké dvacet metrů: nejdřív dva chodci a dva cyklisté, pak dvě dodávky těsně za sebou a nakonec dodávka proti dvěma autům. Kotva ve svahu je jen vlevo; nad levou částí mostovky se stavět nesmí (nakládá se tam dřevo) a pod pravou také ne (vede tudy lesní cesta).",
+    "Přes most jedou dvě auta za sebou, proti nim dodávka a dva cyklisté. Jde to i příhradou přes celé údolí, jen vyjde dráž; vzpěradla z kotev ve svazích podepřou mostovku ve dvou místech a rozdělí most na tři krátká pole. Šestimetrový sloup nad kotvou je dlouhý a tlačený; pod dodávkou je na hraně. Pomůže mu těžký trám, nebo rozpěra v půli výšky, která ho zkrátí.",
+  "zadani.1-05": "Silnice přes dvacet metrů pro dodávky a auta. Kotva ve svahu je jen vlevo; nad levou částí mostovky ani pod pravou se stavět nesmí.",
   "zadani.2-01":
     "První ocelová lávka: čtyřiadvacet metrů pro chodce a jednoho běžce. Postav ji z ocelového profilu a všímej si nové osy frekvencí dole.",
   "zadani.2-01.vice":

@@ -93,14 +93,14 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "pojem.plavebni-profil.text": "The space above the water reserved for ships. You cannot build in it, and while a ship is passing not even the raised bridge may reach into it.",
   "pojem.inzenyrsky-rozpocet": "Engineer’s budget",
   "pojem.inzenyrsky-rozpocet.text": "The stricter amount for the Budget medal; a tick marks it on the cost gauge. For a Pass it is enough to stay within the level budget.",
-  "vedeni.prvni": "Start here: drag the deck from here to here",
-  "vedeni.dalsi": "Next deck piece: from here to here",
-  "vedeni.vyber": "Pick {prvek} in the palette and drag from here to here",
-  "vedeni.pevna": "fixed support: holds the bridge in place",
+  "vedeni.prvni": "Drag the deck from here to here",
+  "vedeni.dalsi": "Next piece: from here to here",
+  "vedeni.vyber": "Pick {prvek} and drag from here to here",
+  "vedeni.pevna": "fixed support: holds in place",
   "vedeni.posuvna": "sliding support: carries, but gives sideways",
   "vedeni.pevna.kratce": "fixed support",
   "vedeni.posuvna.kratce": "sliding support",
-  "vedeni.zkouska": "The deck is complete. Now test the bridge: even if it falls, you’ll see why.",
+  "vedeni.zkouska": "The deck is complete. Run the test: even if the bridge falls, you’ll see why.",
   "vedeni.podepri": "The deck cannot carry even itself: support it, for example with a triangle of members above it. You are already holding the cheaper “{prvek}”.",
   "vedeni.prepnuto": "Now holding the cheaper “{prvek}”.",
   "souradnice.bod": "x = {x} m · y = {y} m",
@@ -376,9 +376,9 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "vazba.zaznam.vypnout": "Turn log off",
   "vazba.zaznam.zapnout": "Turn log on",
   "vazba.zVysledku": "Something not right? Write to us",
-  "denik.upozorneni":
-    "The game sends its authors a play log: which levels you open, how you build and how the tests turn out. No name or email, only a random number for this browser. You can turn the log off at any time.",
-  "denik.vypnuto": "The play log is off and nothing more is being sent. You can turn it on at any time in the campaign overview.",
+  "denik.upozorneni": "The game sends its authors a play log, without your name or email.",
+  "denik.vice": "More",
+  "denik.vypnuto": "The play log is off and nothing more is being sent. You can turn it on in the Privacy window.",
   "soukromi.odkaz": "Privacy and contact",
   "soukromi.vice": "More about privacy",
   "soukromi.nadpis": "Privacy and contact",
@@ -407,7 +407,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "soukromi.zkopirovano": "Copied",
   "soukromi.napis": "Write to us",
   "denik.rozumim": "Got it",
-  "denik.vypnout": "Turn log off",
+  "denik.vypnout": "Turn off",
   "denik.volba": "Send the authors a play log under a random number (helps improve the game)",
 
   // Paleta
@@ -804,6 +804,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "zadani.stavba.svar": "Weld: {zaPrut} for each member that meets at the welded joint",
   "zadani.stavba.zamek": "Span lock: {zaKus} each; it belongs on an abutment with a bearing or between two parts of the bridge",
   "zadani.medaile": "Medals",
+  "zadani.ovladani.nadpis": "Controls",
   "zadani.ovladani":
     "Draw a member by dragging with the mouse from an anchor or a joint; move built joints with the Select & move tool (V) by dragging or with the arrow keys. Pan the drawing with the right mouse button and zoom with the wheel. Start the test with Space; on the timeline you can slow it down, step through it and rewind.",
   "zadani.ovladani.dotyk":
@@ -826,16 +827,16 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "ukazka.zvetseni": "The bridge’s motion is magnified {nasobek}× so that it can be seen.",
   "ukazka.1-01.a": "Deck only",
   "ukazka.1-01.b": "Deck with a triangle",
-  "ukazka.1-01.popis": "Two deck panels joined by a hinge fold in the middle. A triangle of timbers props the hinge and stops it dropping.",
+  "ukazka.1-01.popis": "The deck alone folds at the hinge. A triangle of timbers holds the hinge up.",
   "ukazka.1-02.a": "One strut",
   "ukazka.1-02.b": "A strut under every hinge",
-  "ukazka.1-02.popis": "A deck of three panels has two hinges and each needs propping: with a single strut the other one drops. A strut from an anchor in the slope is short, so it costs less than a truss above the deck.",
+  "ukazka.1-02.popis": "The deck has two hinges: with a single strut the other one drops. A strut from an anchor is short and cheap.",
   "ukazka.1-03.a": "End diagonals in light timber",
   "ukazka.1-03.b": "End diagonals in heavy timber",
-  "ukazka.1-03.popis": "The same truss, a different timber at the ends. Both carry the car. Under the van the long light-timber diagonal in compression bows sideways and breaks; the heavy timber holds.",
+  "ukazka.1-03.popis": "Under the van the long light-timber diagonal in compression bows sideways and breaks; a heavy one holds.",
   "ukazka.1-04.a": "Light truss across the whole valley",
   "ukazka.1-04.b": "Strutted frames from the anchors in the slopes",
-  "ukazka.1-04.popis": "Twenty-four metres is too much for a light-timber truss: it breaks under the cars. Strutted frames resting on the anchors in the slopes prop the deck at two points and divide the bridge into three short spans.",
+  "ukazka.1-04.popis": "A light truss over 24 metres breaks under the cars. Strutted frames from the anchors divide the bridge into three short spans.",
   "ukazka.2-01.a": "Top chord with no diagonals",
   "ukazka.2-01.b": "Truss with diagonals",
   "ukazka.2-01.popis": "Steel carries far more than timber, but the shape still has to hold. A quadrilateral of members joined by hinges skews and the bridge folds; a diagonal turns it into two triangles.",
@@ -1027,8 +1028,8 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "prvek.pist": "Hydraulic cylinder",
 
   // Proč něco nejde nakreslit nebo zkoušet
-  "stavba.mostovkaZkracena": "The deck ends at the edge of the bank: beyond it the route runs on solid ground and nothing would carry a deck there.",
-  "stavba.zPrazdna": "A bridge grows only from anchors and from joints it already has: start a member by dragging from one of them. Dragging from empty space selects.",
+  "stavba.mostovkaZkracena": "The deck ends at the edge of the bank: beyond it the route runs on the ground.",
+  "stavba.zPrazdna": "Drag a member from an anchor or a joint of the bridge. Dragging from empty space only selects.",
   "duvod.jina-uroven": "This bridge belongs to a different level.",
   "duvod.stycnik-mimo-vyrez": "You cannot build outside the drawing.",
   "duvod.stycnik-v-zakazane-zone": "The bridge must not pass through the no-build zone.",
@@ -1395,6 +1396,7 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   "napoveda.nabidka": "Not going well? There is a Hint at the top of the palette: at first it reveals only the principle of a bridge that passes.",
   "prehled.postup": "{projito} of {urovni} levels completed · medals {medaili} of {medailiCelkem} · challenge tiers {vyzev} of {vyzevCelkem}",
   "prehled.start.novy": "Build your first bridge ▸",
+  "prehled.celaKampan": "Whole campaign ▾",
   "prehled.start.pokracovat": "Continue: {uroven} {nazev} ▸",
   "prehled.postup.popis": "Each level has three medals and three efficiency challenges (cheapest bridge, lightest bridge, capacity per koruna), each with bronze, silver and gold tiers",
   // Final sheet of the campaign and the bridge gallery (M14)
@@ -1689,23 +1691,19 @@ export const EN: Readonly<Record<KlicTextu, string>> = {
   // Zadání úrovní
   "zadani.0-00":
     "A test drawing for debugging the game: a valley with water, a no-build zone and a footing for a pier. It is not part of the campaign and no traffic runs on it.",
-  "zadani.1-01":
-    "Two parties, thirty-six people, cross the brook from opposite sides and meet in the middle of the footbridge. The deck, made of two panels, has a hinge in the middle and cannot even hold itself up: prop its centre with a triangle of timbers.",
+  "zadani.1-01": "Get 36 people across the brook. The deck has a hinge in the middle and folds there on its own: prop it with a triangle of timbers.",
   "zadani.1-01.vice":
-    "The triangle is the only shape made of members that holds without rigid connections. The flatter it is, the harder its members work; a member in tension withstands more than an equally long one in compression.",
-  "zadani.1-02":
-    "Twelve metres of cycle path on a Sunday afternoon: over sixty pedestrians in both directions and five cyclists among them. There are two extra anchors in the slopes below the bridge: rest struts on them.",
+    "Two parties, thirty-six people in all, cross the brook from opposite sides and meet in the middle of the footbridge. The deck is two panels joined by a hinge, and a hinge cannot carry bending, so on its own it folds in the middle. The triangle is the only shape made of members that holds without rigid connections. The flatter it is, the harder its members work; a member in tension withstands more than an equally long one in compression.",
+  "zadani.1-02": "A cycle path across twelve metres for a crowd of walkers and cyclists. There are two extra anchors in the slopes: rest struts on them.",
   "zadani.1-02.vice":
-    "A strut from an anchor is shorter and cheaper than a truss above the deck. Where it leads matters too: a short strut carries more than a long one.",
-  "zadani.1-03":
-    "Sixteen metres: first a pedestrian and a cyclist, then the first car, a tonne and a half, and finally a van, three and a half tonnes. A long timber in compression will buckle under it; nothing may be built below the deck.",
+    "On a Sunday afternoon over sixty pedestrians cross in both directions with five cyclists among them. A deck of three panels has two hinges and each needs propping. A strut from an anchor in the slope is shorter and cheaper than a truss above the deck. Where it leads matters too: a short strut carries more than a long one.",
+  "zadani.1-03": "Sixteen metres for cars and a van; nothing may be built below the deck. Watch out for buckling: a long timber in compression bows sideways under the van.",
   "zadani.1-03.vice":
-    "In the spring flood the channel below the bridge takes everything that stands in its way, so you build only above the deck. A long timber in compression bows sideways under the van; that is called buckling. It helps to shorten it (joints closer together), to build the truss higher so that the forces in its chords are smaller, or to use a heavy timber: it carries more but costs more than twice as much.",
-  "zadani.1-04":
-    "Twenty-four metres without a single support in the middle: two cars one behind the other, a van coming the other way and two cyclists. The anchors in the slopes lie six metres below the deck: rest strutted frames on them.",
+    "First a pedestrian and a cyclist, then the first car (a tonne and a half) and finally a van (three and a half tonnes). In the spring flood the channel below the bridge takes everything that stands in its way, so you build only above the deck. A long timber in compression bows sideways under the van; that is called buckling. It helps to shorten it (joints closer together), to build the truss higher so that the forces in its chords are smaller, or to use a heavy timber: it carries more but costs more than twice as much.",
+  "zadani.1-04": "Twenty-four metres with no support in the middle, for cars and a van. The anchors in the slopes lie six metres below the deck: rest strutted frames on them.",
   "zadani.1-04.vice":
-    "A truss across the whole valley works too, it just costs more. The six-metre post above an anchor is long and in compression; under the van it is at its limit. A heavy timber helps it, and so does a brace at mid-height that shortens it.",
-  "zadani.1-05": "A road across a twenty-metre valley: first two walkers and two cyclists, then two vans nose to tail, and finally a van meeting two cars. The only slope anchor is on the left; nothing may be built above the left part of the deck (timber is loaded there) or below the right part (a forest road runs underneath).",
+    "Two cars cross one behind the other, with a van and two cyclists coming the other way. A truss across the whole valley works too, it just costs more; strutted frames from the anchors in the slopes prop the deck at two points and divide the bridge into three short spans. The six-metre post above an anchor is long and in compression; under the van it is at its limit. A heavy timber helps it, and so does a brace at mid-height that shortens it.",
+  "zadani.1-05": "A road across twenty metres for vans and cars. The only slope anchor is on the left; nothing may be built above the left part of the deck or below the right part.",
   "zadani.2-01":
     "The first steel footbridge: twenty-four metres for pedestrians and one runner. Build it from steel section and keep an eye on the new frequency axis at the bottom.",
   "zadani.2-01.vice":

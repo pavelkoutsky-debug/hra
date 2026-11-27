@@ -135,7 +135,7 @@ describe("tři pole: pilíře", () => {
     // Zadání jsou dvě věty; pravidla pilíře jsou pod „Více o úloze“ (sbalené, stejně jako seznam prvků).
     expect(await udaj("zadani-text")).toContain("v řece jsou dva základy: postav na ně pilíře");
     expect(await celyText("zadani-vice")).toContain("Pilíř smí stát jen na základu");
-    expect(await udaj("zadani-provoz")).toContain("2× tahač s návěsem zleva");
+    expect(await celyText("zadani-provoz")).toContain("2× tahač s návěsem zleva");
     expect(await celyText("zadani-stavba")).toContain("Pilíř: 15 000 Kč/m · do 12 m");
     expect(await celyText("zadani-skutecnost")).toContain("Millau");
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
@@ -345,7 +345,7 @@ describe("náklad století: visutý most", () => {
   it("paleta má nosné lano; nedopnutý most se pod podvalníkem prověsí, dopnutý ho unese", async () => {
     await otevri("4-04", false);
     await stranka.locator("#okno-zadani").waitFor({ state: "visible" });
-    expect(await udaj("zadani-provoz")).toContain("nadměrný náklad zleva");
+    expect(await celyText("zadani-provoz")).toContain("nadměrný náklad zleva");
     expect(await celyText("zadani-stavba")).toContain("Nosné lano: 6 000 Kč/m · do 60 m");
     expect(await celyText("zadani-skutecnost")).toContain("Çanakkale");
     // Dlouhé zadání se v okně vysokém 720 px posouvá, tlačítko ale zůstává na dohled.

@@ -336,6 +336,10 @@ describe("dotykové ovládání výkresu", () => {
     try {
       await s.goto(adresa);
       await s.locator(".karta").first().waitFor();
+      // Nový hráč vidí zúžený přehled; odkaz „Celá kampaň“ je cíl pro prst jako ostatní.
+      const cela = s.locator('[data-akce="prehled-cela"]');
+      expect((await cela.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await cela.tap();
       // Zaškrtávátko záznamu hraní (cílem je celý řádek s popiskem) a odkazy v patičce: aspoň 44 px.
       const volba = (await s.locator("label.prehled__volba:has(#zaznam-hrani)").boundingBox())!;
       expect(volba.height).toBeGreaterThanOrEqual(44);
@@ -430,7 +434,9 @@ describe("dotykové ovládání výkresu", () => {
     s.on("pageerror", (chyba) => chyby.push(chyba.message));
     await s.goto(`${adresa}?uroven=1-01&zaznam=vypnout`);
     await s.locator(PLATNO).waitFor();
-    // Návod k ovládání mluví o prstech, ne o myši a mezerníku.
+    // Návod k ovládání (sbalený) mluví o prstech, ne o myši a mezerníku.
+    await s.locator('#okno-zadani details[data-cast="zadani-ovladani"] > summary').tap();
+    expect(await s.locator('[data-udaj="zadani-ovladani"]').isVisible()).toBe(true);
     expect(await s.locator('[data-udaj="zadani-ovladani"]').innerText()).toContain("tažením prstu");
     await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
     const zpet = s.locator('#obrazovka-uroven .lista [data-akce="zpet-rychle"]');

@@ -91,6 +91,8 @@ describe("závěrečná kapitola", () => {
   it("přehled má osmou kapitolu se třemi úrovněmi bez zkoušky; otevře se po dvou úrovních sedmé", async () => {
     await stranka.goto(adresa);
     await stranka.locator(".karta").first().waitFor();
+    // Nový hráč vidí jen první kapitolu; zbytek odkryje „Celá kampaň“.
+    await stranka.locator('[data-akce="prehled-cela"]').click();
     const kapitoly = await stranka.locator(".prehled__kapitoly .kapitola").allInnerTexts();
     expect(kapitoly).toHaveLength(8);
     expect(kapitoly.at(-1)).toContain("Mistrovské dílo");

@@ -134,13 +134,13 @@ describe("mostovka, po které nikdo nepůjde", () => {
     await stranka.mouse.move((a.x + b.x) / 2, a.y, { steps: 3 });
     await stranka.mouse.move(b.x, b.y, { steps: 3 });
     // Během tahu hra říká, že mostovka skončí na kraji břehu.
-    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
+    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi.");
     await stranka.mouse.up();
     // 4 + 4 + 4 m k posuvné kotvě a dál nic; po celé trase leží mostovka.
     expect(await telo("pruty")).toBe("5");
     expect(await telo("mezera")).toBeNull();
     expect(await telo("za-brehem")).toBeNull();
-    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi a mostovku by tam nic neneslo.");
+    expect(await text("hlaseni")).toBe("Mostovka končí na kraji břehu: dál vede cesta po zemi.");
     await stranka.screenshot({ path: `${SLOZKA}/mezera-zkraceno.png` });
 
     // Mostovka je hotová: hra má v ruce levnější Lehký trám (od 0.25.0 ve všech úrovních kampaně).

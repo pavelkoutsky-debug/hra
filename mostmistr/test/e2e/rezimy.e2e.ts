@@ -107,9 +107,11 @@ describe("výzvy o efektivitu", () => {
       "Nejlehčí most: zlato do 914 kg.",
       "Únosnost na korunu (zkouška Do zlomu): zlato od 37,4 t na 100 000 Kč.",
     ]);
-    // Medaile jsou cíl úrovně: stojí nad provozem a výzvami a jsou vidět bez posouvání.
+    // Medaile jsou cíl úrovně: sbalené jsou první částí nad provozem a výzvami a jejich řádek
+    // se znaky je vidět bez posouvání.
+    expect(await stranka.locator("#okno-zadani details.okno__vice").first().getAttribute("data-cast")).toBe("zadani-medaile");
     const okno = (await stranka.locator("#okno-zadani").boundingBox())!;
-    const medaile = (await stranka.locator('[data-udaj="zadani-medaile"]').boundingBox())!;
+    const medaile = (await stranka.locator('#okno-zadani details[data-cast="zadani-medaile"] > summary').boundingBox())!;
     expect(medaile.y + medaile.height).toBeLessThan(okno.y + okno.height);
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
     // V první kapitole je zkouška do zlomu pod „Více“.
@@ -290,6 +292,8 @@ describe("sandbox", () => {
     expect(await udaj("zadani-nazev")).toBe("Pískoviště");
     expect(await udaj("zadani-text")).toContain("žádné medaile, všechny prvky");
     // Výchozí provoz: dvě osobní auta zleva a nákladní auto zprava.
+    // Provoz je v zadání sbalený: hráč si ho rozklikne.
+    await stranka.locator('#okno-zadani details[data-cast="zadani-provoz"] > summary').click();
     const provoz = await udaj("zadani-provoz");
     expect(provoz).toContain("2× osobní auto");
     expect(provoz).toContain("nákladní auto");

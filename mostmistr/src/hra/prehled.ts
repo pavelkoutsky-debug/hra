@@ -252,6 +252,25 @@ export function startPrehledu(
   return kam >= 0 ? { uroven: kampan[kam]!, novy: false } : null;
 }
 
+/** Klíč v paměti panelu: nový hráč si v téhle záložce rozbalil celou kampaň. */
+const KLIC_CELE_KAMPANE = "mostmistr.celaKampan";
+
+function celaKampanRozbalena(): boolean {
+  try {
+    return window.sessionStorage.getItem(KLIC_CELE_KAMPANE) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function zapamatujCelouKampan(): void {
+  try {
+    window.sessionStorage.setItem(KLIC_CELE_KAMPANE, "1");
+  } catch {
+    // Bez paměti panelu se přehled po návratu zase zúží; nic se tím neztratí.
+  }
+}
+
 /** Kam vede odkaz v přehledu, krátkým kódem pro deník; null u odkazů, které se nesledují. */
 function kamVedeOdkaz(odkaz: Element): string | null {
   if (odkaz.matches('[data-akce="prehled-start"]')) return (odkaz as HTMLElement).dataset.stav ?? null;
@@ -378,6 +397,23 @@ export function spustPrehled(kampan: readonly Uroven[], uloziste: Uloziste, deni
     odkaz.dataset.cil = start.uroven.id;
     odkaz.textContent = start.novy ? t("prehled.start.novy") : t("prehled.start.pokracovat", { uroven: start.uroven.id, nazev: nazevUrovne(start.uroven) });
   }
+  // Nový hráč vidí jen tlačítko, upozornění na záznam a první kapitolu; zbytek odkryje odkaz
+  // „Celá kampaň“ (`body[data-prehled-rozsah]`: uvod, cely). Kdo už hrál, vidí přehled celý,
+  // stejně jako kdo zkouší hru s ?vyvoj=1 nebo s odemčenými úrovněmi.
+  const novy = start?.novy === true && !proVyvoj;
+  document.body.dataset.prehledRozsah = novy && !celaKampanRozbalena() ? "uvod" : "cely";
+  const tlacitkoCele = prvek('[data-akce="prehled-cela"]', HTMLButtonElement);
+  tlacitkoCele.addEventListener("click", () => {
+    document.body.dataset.prehledRozsah = "cely";
+    zapamatujCelouKampan();
+    denik.zapis("prehled.odkaz", { kam: "cela-kampan" });
+    // Druhá kapitola se objeví tam, kde byl odkaz; fokus na ni, ať se klávesnice neztratí.
+    const druha = kapitoly.querySelector<HTMLElement>(".kapitola + .kapitola h1");
+    if (druha) {
+      druha.tabIndex = -1;
+      druha.focus({ preventScroll: true });
+    }
+  });
   // Kam hráč z přehledu odešel (i do zkušebny, která deník nevede): jen kód cíle.
   prvek("#obrazovka-prehled", HTMLElement).addEventListener("click", (udalost) => {
     const odkaz = udalost.target instanceof Element ? udalost.target.closest("a[href]") : null;
