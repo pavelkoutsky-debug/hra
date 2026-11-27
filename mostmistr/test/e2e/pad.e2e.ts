@@ -376,10 +376,11 @@ describe("most, který se složí vlastní vahou", () => {
     await dopocitej();
     expect(await naKonec()).toBe("MOST NEOBSTÁL");
     // Pruh řekne i co s tím; podpírat zespodu tu není z čeho (pod mostem kotva není a o zem se
-    // most opírat nesmí), takže rada vede nad mostovku.
-    expect(await udaj("vysledek-veta")).toContain("Složil se vlastní vahou: styčník mostovky nic nedrží. Zavěs ho do trojúhelníku z prutů nad mostovkou.");
+    // most opírat nesmí), takže rada vede nad mostovku. Tenhle most nad ní už „střechu“ má, jen
+    // k ní střed mostovky nic nepojí: rada proto říká spojit ho s ní, ne postavit trojúhelník.
+    expect(await udaj("vysledek-veta")).toContain("Složil se vlastní vahou: styčník mostovky nic nedrží. Spoj ho prutem se styčníkem nad mostovkou.");
     const shrnuti = await stranka.locator('[data-udaj="vysledek-shrnuti"]').textContent();
-    expect(shrnuti).toContain("Zavěs ho shora do trojúhelníku z prutů nad mostovkou. Zespodu ho tu podepřít nejde");
+    expect(shrnuti).toContain("Spoj ho prutem se styčníkem nad mostovkou: dokud k němu nic nevede, pruty nad ním ho nenesou. Zespodu ho tu podepřít nejde");
     expect(shrnuti).not.toContain("Podepři ho zespodu");
     expect(shrnuti).not.toContain("klidovou polohu");
     // V úrovni bez svarů, lan a pilířů se nic takového neradí.

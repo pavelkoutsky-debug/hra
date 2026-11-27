@@ -227,7 +227,7 @@ describe("věty výsledku v 1-01 říkají, co udělat, a označí místo", () =
     // Po návratu ke stavbě zůstává u styčníku značka s radou.
     await akce(s, "upravit").click();
     expect(await telo(s, "porucha-misto")).toBe(`houpani;${x};${y}`);
-    expect(await telo(s, "prvni-porucha")).toBe("Zavěs ho do trojúhelníku z prutů nad mostovkou.");
+    expect(await telo(s, "prvni-porucha")).toBe("Spoj ho prutem se styčníkem nad mostovkou.");
     await s.screenshot({ path: `${SLOZKA}/verdikt-houpe-se-stavba.png` });
     expect(chyby).toEqual([]);
     await s.close();
