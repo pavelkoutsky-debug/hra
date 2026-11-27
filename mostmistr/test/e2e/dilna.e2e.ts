@@ -11,6 +11,7 @@ import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { ID_SANDBOXU, PREDLOHY_SANDBOXU, vychoziSandbox } from "../../src/data/sandbox";
 import { zakodujMost } from "../../src/data/sdileni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -74,6 +75,7 @@ async function otevriPiskoviste(s: Page, dotaz = "?sandbox"): Promise<void> {
 }
 
 async function nactiMost(s: Page, navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(s);
   await akce(s, "import").click();
   await s.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce(s, "okno-nacist").click();

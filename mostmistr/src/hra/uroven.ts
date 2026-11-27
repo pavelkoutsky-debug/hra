@@ -920,6 +920,73 @@ export function spustUroven(
     return sandbox === null && havarie === null && uroven.id === kampan[0]?.id;
   }
 
+  // ---- Paleta první kapitoly: základ a „Více“ ----
+  // Nováček z 24 tlačítek a odkazů první úrovně potřebuje tři. V první kapitole kampaně proto
+  // paleta ukazuje jen Zadání, Nápovědu, základní nástroje a prvky; zbytek (v šabloně označený
+  // `data-vedlejsi`) je pod tlačítkem „Více“, jehož stav si hra pamatuje (`Uloziste.paletaVice`).
+  // Pískoviště, komise, cizí most z odkazu, výzva z odkazu a další kapitoly mají paletu celou.
+  const paleta = prvek("#obrazovka-uroven .paleta", HTMLElement);
+  const tlacitkoVice = prvek('[data-akce="paleta-vice"]', HTMLButtonElement);
+  const vedlejsiNastroje = udaj("vedlejsi-nastroje");
+  const urovenZakladu = sandbox === null && havarie === null && uroven.id.startsWith("1-") && kampan.some((u) => u.id === uroven.id);
+  /** Má hráč „Více“ rozbalené? Hráčova volba se pamatuje; rozbalení, které udělala hra sama, ne. */
+  let viceOtevreno = uloziste.paletaVice;
+  let paletaZkracena: boolean | null = null;
+
+  /**
+   * Je paleta zkrácená na základ? Jen v první kapitole a jen u vlastního mostu: host z odkazu
+   * a hráč s výzvou z odkazu dostávají věty o Sdílení a vidí paletu celou.
+   */
+  function jePaletaZkracena(): boolean {
+    return urovenZakladu && host === null && vyzvaOdkazu === null;
+  }
+
+  /**
+   * Zkrácená paleta má Zrcadlit a Vše pryč pod „Více“ ve vlastní dvojici; celá je má mezi
+   * nástroji jako dřív (za Výběrem a za Smazat).
+   */
+  function obnovPaletuVice(): void {
+    const zkracena = jePaletaZkracena();
+    if (zkracena !== paletaZkracena) {
+      paletaZkracena = zkracena;
+      const zrcadlit = prvek('[data-akce="zrcadlit"]', HTMLElement);
+      const smazatVse = prvek('[data-akce="smazat-vse"]', HTMLElement);
+      if (zkracena) vedlejsiNastroje.append(zrcadlit, smazatVse);
+      else {
+        prvek('[data-akce="vyber"]', HTMLElement).after(zrcadlit);
+        prvek('[data-akce="smazat"]', HTMLElement).after(smazatVse);
+      }
+      vedlejsiNastroje.hidden = !zkracena;
+      tlacitkoVice.hidden = !zkracena;
+    }
+    if (!zkracena) {
+      delete paleta.dataset.vice;
+      return;
+    }
+    paleta.dataset.vice = viceOtevreno ? "otevreno" : "zavreno";
+    tlacitkoVice.setAttribute("aria-expanded", String(viceOtevreno));
+  }
+
+  /** Hráč „Více“ rozbalil nebo sbalil: volba platí i v dalších úrovních první kapitoly. */
+  function prepniVice(): void {
+    if (!jePaletaZkracena()) return;
+    viceOtevreno = !viceOtevreno;
+    uloziste.paletaVice = viceOtevreno;
+    zapis("paleta.vice", { otevreno: viceOtevreno });
+    obnovPaletuVice();
+  }
+
+  /**
+   * Hra hráče posílá na nástroj, který je pod „Více“ (Do zlomu z okna žebříčku, Export z okna
+   * sdílení): „Více“ se rozbalí samo, aby hráč tlačítko viděl. Volba hráče se tím nemění.
+   */
+  function rozbalViceSamo(): void {
+    if (!jePaletaZkracena() || viceOtevreno) return;
+    viceOtevreno = true;
+    zapis("paleta.vice", { otevreno: true, samo: true });
+    obnovPaletuVice();
+  }
+
   /**
    * Poslední krok vedení: mostovka v první úrovni vede od břehu k břehu a hráč tu ještě nepustil
    * zkoušku. Tlačítko Zkouška se zvýrazní (bez animace při omezeném pohybu, to řeší styl) a krátká
@@ -2677,6 +2744,7 @@ export function spustUroven(
     nastav("export", navrh.pruty.length > 0);
     nastav("import", true);
     obnovSdileni();
+    obnovPaletuVice();
 
     obnovRaduStavby();
     obnovUdajeVyberu();
@@ -2714,6 +2782,10 @@ export function spustUroven(
     else if (nastroj === "vyber") klic = "rada.vyber";
     pole.textContent = t(klic);
     pole.dataset.rada = klic.slice("rada.".length);
+    // V první úrovni, dokud hráče vede duch dalšího dílu mostovky a bublina u tlačítka Zkouška,
+    // se řádek klávesových rad neukazuje: nováček má číst jen to, co mu říká průvodce.
+    const vede = (napoveda?.obrys ?? null) === null && krokVedeni() !== null;
+    pole.hidden = vede || document.body.dataset.vyzvaZkousky === "ano";
     // Háček pro testy: kolik styčníků výběru by šipka posunula a kolik jich stojí v podporách.
     const posun = rezim === "stavba" ? editor.posunVyberu : null;
     if (posun) document.body.dataset.posunVyberu = `${posun.pohyblivych};${posun.vPodporach}`;
@@ -3094,7 +3166,11 @@ export function spustUroven(
   /** Promítne hlasitost do tlačítka v liště a do háčků pro testy. */
   function obnovZvuk(): void {
     const hlasitost = ozvuceni.hlasitost;
-    tlacitkoZvuku.textContent = t(Ozvuceni.dostupne ? `zvuk.${hlasitost}` : "zvuk.nedostupny");
+    // Tlačítko je ikona (stav ukazuje i ona, podle `body[data-zvuk]`); slovy ho říká přístupný
+    // název a bublina, ve které je i to, jak se hlasitost přepíná.
+    const stav = t(Ozvuceni.dostupne ? `zvuk.${hlasitost}` : "zvuk.nedostupny");
+    tlacitkoZvuku.setAttribute("aria-label", stav);
+    tlacitkoZvuku.title = `${stav}. ${t("zvuk.popis")}`;
     tlacitkoZvuku.disabled = !Ozvuceni.dostupne;
     tlacitkoZvuku.setAttribute("aria-pressed", String(hlasitost !== "vypnuto"));
     document.body.dataset.zvuk = hlasitost;
@@ -5246,7 +5322,7 @@ export function spustUroven(
         : vysledek.pruchod && !poruseny
           ? { cena: vysledek.cena, hmotnost: hmotnostNavrhu(b.navrh, uroven) }
           : {};
-      vypisVyzvy(udaj("vysledek-vyzvy"), prahy, zakladVyzevUrovne, rekord, tento, poruseny);
+      vypisVyzvy(udaj("vysledek-vyzvy"), prahy, zakladVyzevUrovne, rekord, tento, poruseny, jePaletaZkracena());
     }
     const vetaVyzvyOdkazu = vypisVyzvuOdkazu(b, vysledek);
     udaj("vysledek-cena").replaceChildren(
@@ -6034,6 +6110,8 @@ export function spustUroven(
     const sOdkazem = vejdeSeDoOdkazu(navrh);
     const adresa = sOdkazem ? odkazNaMost(window.location.origin + window.location.pathname, navrh) : "";
     const prosel = overeni(navrh);
+    // Velký most okno posílá na Export, který je v první kapitole pod „Více“.
+    if (!sOdkazem) rozbalViceSamo();
     udaj("sdileni-popis").textContent = t(
       !sOdkazem ? "sdileni.popis.velky" : host ? "sdileni.popis.cizi" : prosel === null ? "sdileni.popis.nezkouseny" : prosel ? "sdileni.popis.prosel" : "sdileni.popis.neprosel",
     );
@@ -6498,6 +6576,7 @@ export function spustUroven(
   priKliknuti("tlumeni-plus", () => rezim === "stavba" && editor.zmenTlumeni(1));
   priKliknuti("smazat", smazVybrane);
   priKliknuti("zrcadlit", zrcadli);
+  priKliknuti("paleta-vice", prepniVice);
   priKliknuti("zpet", () => rezim === "stavba" && editor.zpet());
   priKliknuti("zpet-rychle", () => rezim === "stavba" && editor.zpet());
   priKliknuti("smazat-rychle", smazVybrane);
@@ -6541,7 +6620,13 @@ export function spustUroven(
       },
       zapis: (data) => zapis("zebricek", data),
     });
-    for (const tlacitko of tlacitkaZebricku) tlacitko.addEventListener("click", () => oknoZebricku.otevri());
+    for (const tlacitko of tlacitkaZebricku) {
+      tlacitko.addEventListener("click", () => {
+        // Okno žebříčku posílá na zkoušku Do zlomu: ta musí být v paletě vidět.
+        rozbalViceSamo();
+        oknoZebricku.otevri();
+      });
+    }
   } else {
     for (const tlacitko of tlacitkaZebricku) tlacitko.hidden = true;
   }

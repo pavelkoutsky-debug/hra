@@ -7,6 +7,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText, navrhZTextu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -57,6 +58,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -64,6 +66,7 @@ async function nactiMost(text: string): Promise<void> {
 
 /** Návrh, který má hra právě na výkresu. */
 async function mostNaVykresu(): Promise<ReturnType<typeof navrhZTextu>> {
+  await rozbalPaletu(stranka);
   await akce("export").click();
   const text = await stranka.locator("#okno-obsah").inputValue();
   await stranka.keyboard.press("Escape");

@@ -67,6 +67,8 @@ export interface SouhrnUrovne {
   posunu: number;
   posunuVic: number;
   posunuKlavesou: number;
+  /** Kolik hráčů si v paletě první kapitoly samo rozbalilo „Více“ (`paleta.vice`). */
+  hracuSVice: number;
   /**
    * Zkoušky, které hra nepustila (`zkouska.odmitnuta`; pokusy se nepočítají): kolik hráčů se to
    * týkalo, kolikrát celkem a z toho proto, že byl most dražší než rozpočet.
@@ -172,6 +174,8 @@ export interface HracVUrovni {
   posunu?: number;
   posunuVic?: number;
   posunuKlavesou?: number;
+  /** Hráč si v paletě rozbalil „Více“ (rozbalení, které udělala hra sama, se nepočítá). Starší výtahy ho nemají. */
+  vice?: boolean;
   /** Zkoušky, které hra nepustila, a z nich kvůli rozpočtu. Starší výtahy je nemají. */
   odmitnuto?: number;
   nadRozpocet?: number;
@@ -380,6 +384,7 @@ function novyHracVUrovni(): HracVUrovni {
     posunu: 0,
     posunuVic: 0,
     posunuKlavesou: 0,
+    vice: false,
     odmitnuto: 0,
     nadRozpocet: 0,
     nadRozpoctem: 0,
@@ -471,6 +476,9 @@ export function vytahDeniku(davky: readonly (DavkaDeniku & { prijato?: string })
       zaznam.posunu = (zaznam.posunu ?? 0) + 1;
       if (vMezich(data.posunuto, NEJVIC_POSUNUTYCH) > 1) zaznam.posunuVic = (zaznam.posunuVic ?? 0) + 1;
       if (data.jak === "klavesa") zaznam.posunuKlavesou = (zaznam.posunuKlavesou ?? 0) + 1;
+    } else if (u.druh === "paleta.vice") {
+      // „Více“ v paletě první kapitoly: počítá se jen rozbalení hráčem, ne to, které udělala hra.
+      if (data.otevreno === true && data.samo !== true) zaznam.vice = true;
     } else if (u.druh === "napoveda") {
       // Nápověda: krok 1 je soupis mostu, krok 2 jeho obrys. Jiné hodnoty hra neposílá.
       const krok = data.krok === 2 ? 2 : data.krok === 1 ? 1 : 0;
@@ -617,6 +625,7 @@ export function slucVytahy(vytahy: readonly VytahDeniku[]): VytahDeniku {
         cil.posunu = (cil.posunu ?? 0) + (z.posunu ?? 0);
         cil.posunuVic = (cil.posunuVic ?? 0) + (z.posunuVic ?? 0);
         cil.posunuKlavesou = (cil.posunuKlavesou ?? 0) + (z.posunuKlavesou ?? 0);
+        cil.vice = cil.vice === true || z.vice === true;
         cil.odmitnuto = (cil.odmitnuto ?? 0) + (z.odmitnuto ?? 0);
         cil.nadRozpocet = (cil.nadRozpocet ?? 0) + (z.nadRozpocet ?? 0);
         cil.nadRozpoctem = (cil.nadRozpoctem ?? 0) + (z.nadRozpoctem ?? 0);
@@ -695,6 +704,7 @@ export function souhrnZVytahu(v: VytahDeniku): SouhrnDeniku {
         posunu: soucet((z) => z.posunu ?? 0),
         posunuVic: soucet((z) => z.posunuVic ?? 0),
         posunuKlavesou: soucet((z) => z.posunuKlavesou ?? 0),
+        hracuSVice: zaznamy.filter((z) => z.vice === true).length,
         hracuSOdmitnutim: zaznamy.filter((z) => (z.odmitnuto ?? 0) > 0).length,
         zkousekOdmitnuto: soucet((z) => z.odmitnuto ?? 0),
         zkousekNadRozpocet: soucet((z) => z.nadRozpocet ?? 0),

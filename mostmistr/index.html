@@ -127,15 +127,30 @@
         ></button>
 
         <span class="lista__mezera"></span>
-        <button type="button" class="tlacitko" data-akce="zvuk" data-popis="zvuk.popis" aria-pressed="true"></button>
+        <!-- Zvuk je malé tlačítko s ikonou: stav ukazuje reproduktor (dvě vlny, jedna, přeškrtnutý), slovy ho říká přístupný název a bublina. -->
+        <button type="button" class="tlacitko tlacitko--ikona" data-akce="zvuk" data-popis="zvuk.popis" aria-pressed="true">
+          <svg class="ikona ikona--zvuk" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <path class="ikona__plna" d="M3 7.5h3l4.5-3.5v12L6 12.5H3z" />
+            <path class="ikona__vlna ikona__vlna--1" d="M13 7.6a3.4 3.4 0 0 1 0 4.8" />
+            <path class="ikona__vlna ikona__vlna--2" d="M15.3 5.3a6.6 6.6 0 0 1 0 9.4" />
+            <path class="ikona__vypnuto" d="M13 7.5l5 5M18 7.5l-5 5" />
+          </svg>
+        </button>
         <button type="button" class="tlacitko lista__vazba" data-akce="vazba" data-text="vazba.tlacitko" data-popis="vazba.tlacitko.popis"></button>
         <a class="tlacitko" href="/" data-text="lista.kampan"></a>
         <!-- Telefon: Zpět a Smazat jsou v paletě pod okrajem okna, proto jsou i tady. -->
         <button type="button" class="tlacitko tlacitko--znak lista__telefon" data-akce="zpet-rychle" data-popis="paleta.zpet.popis" data-jen="stavba">↩</button>
         <button type="button" class="tlacitko tlacitko--znak lista__telefon" data-akce="smazat-rychle" data-popis="paleta.smazat.popis" data-jen="stavba">Del</button>
-        <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
-        <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
-        <button type="button" class="tlacitko" data-akce="cely-vykres" data-text="lista.celyVykres" data-kratce-text="lista.celyVykres.kratce"></button>
+        <!-- Zvětšení výkresu jako jedna skupina: oddálit, přiblížit a celý výkres (ikona rámu). -->
+        <div class="lista__zoom" role="group" data-popis="lista.zoom">
+          <button type="button" class="tlacitko tlacitko--znak" data-akce="oddalit" data-popis="lista.oddalit">&minus;</button>
+          <button type="button" class="tlacitko tlacitko--znak" data-akce="priblizit" data-popis="lista.priblizit">+</button>
+          <button type="button" class="tlacitko tlacitko--znak tlacitko--ikona" data-akce="cely-vykres" data-popis="lista.celyVykres">
+            <svg class="ikona" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5" />
+            </svg>
+          </button>
+        </div>
       </header>
       <!-- Vedený první krok: v první úrovni s hotovou mostovkou, dokud hráč nepustil zkoušku. -->
       <p class="vyzva-zkousky" data-udaj="vyzva-zkousky" data-text="vedeni.zkouska" role="status" hidden></p>
@@ -195,13 +210,13 @@
             <button type="button" class="paleta__tlacitko" data-akce="vyber" data-popis="paleta.vyber.popis" aria-pressed="false">
               <kbd>V</kbd><span data-text="paleta.vyber"></span>
             </button>
-            <button type="button" class="paleta__tlacitko" data-akce="zrcadlit" data-popis="paleta.zrcadlit.popis">
+            <button type="button" class="paleta__tlacitko" data-akce="zrcadlit" data-popis="paleta.zrcadlit.popis" data-vedlejsi>
               <kbd>M</kbd><span data-text="paleta.zrcadlit"></span>
             </button>
             <button type="button" class="paleta__tlacitko" data-akce="smazat" data-popis="paleta.smazat.popis">
               <kbd>Del</kbd><span data-text="paleta.smazat"></span>
             </button>
-            <button type="button" class="paleta__tlacitko" data-akce="smazat-vse" data-popis="paleta.smazatVse.popis">
+            <button type="button" class="paleta__tlacitko" data-akce="smazat-vse" data-popis="paleta.smazatVse.popis" data-vedlejsi>
               <span data-text="paleta.smazatVse"></span>
             </button>
             <button type="button" class="paleta__tlacitko" data-akce="zpet" data-popis="paleta.zpet.popis">
@@ -211,14 +226,23 @@
               <span data-text="paleta.znovu"></span>
             </button>
           </div>
-          <h2 data-text="paleta.prvky"></h2>
+          <h2 class="paleta__nadpis-prvku" data-text="paleta.prvky"></h2>
           <div class="paleta__prvky"></div>
           <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek paleta__tlacitko--akce" data-akce="dopnout" data-popis="paleta.dopnout.popis" hidden>
             <kbd>N</kbd><span class="paleta__nazev" data-text="paleta.dopnout"></span>
             <span class="paleta__cena" data-text="paleta.dopnout.kratce"></span>
           </button>
+          <!--
+            První kapitola: paleta ukazuje jen základ (zadání, nápověda, nástroje, prvky). Všechno
+            označené data-vedlejsi je pod tímhle tlačítkem; Zrcadlit a Vše pryč se sem pod něj
+            přesunou do vlastní dvojice. Jinde tlačítko není a paleta je celá.
+          -->
+          <button type="button" class="paleta__tlacitko paleta__vice" data-akce="paleta-vice" data-popis="paleta.vice.popis" aria-expanded="false" hidden>
+            <span class="paleta__vice-znak" aria-hidden="true"></span><span data-text="paleta.vice"></span>
+          </button>
+          <div class="paleta__dvojice paleta__nastroje" data-udaj="vedlejsi-nastroje" data-vedlejsi hidden></div>
 
-          <div class="paleta__skupina" data-cast="pokusy" hidden>
+          <div class="paleta__skupina" data-cast="pokusy" data-vedlejsi hidden>
             <h2 data-text="paleta.pokusy"></h2>
             <div class="paleta__pokusy">
               <button type="button" class="paleta__tlacitko paleta__tlacitko--prvek" data-akce="brnknout" data-popis="paleta.brnknout.popis" aria-pressed="false" hidden>
@@ -320,17 +344,17 @@
           </div>
           </div>
 
-          <h2 data-text="paleta.most"></h2>
-          <div class="paleta__dvojice">
+          <h2 data-text="paleta.most" data-vedlejsi></h2>
+          <div class="paleta__dvojice" data-vedlejsi>
             <button type="button" class="paleta__tlacitko" data-akce="export"><span data-text="paleta.export"></span></button>
             <button type="button" class="paleta__tlacitko" data-akce="import"><span data-text="paleta.import"></span></button>
           </div>
           <!-- Sdílení mostu odkazem: jen v kampani (údolí z pískoviště odkaz nenese). -->
-          <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="sdilet" data-popis="sdileni.tlacitko.popis" data-jen-kampan>
+          <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="sdilet" data-popis="sdileni.tlacitko.popis" data-jen-kampan data-vedlejsi>
             <span data-text="sdileni.tlacitko"></span>
           </button>
           <!-- Žebříček úrovně: tři měřítka, mosty všech hráčů ověřené serverem. -->
-          <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="zebricek" data-popis="zebricek.tlacitko.popis" data-jen-kampan>
+          <button type="button" class="paleta__tlacitko paleta__tlacitko--siroke" data-akce="zebricek" data-popis="zebricek.tlacitko.popis" data-jen-kampan data-vedlejsi>
             <span data-text="zebricek.tlacitko"></span>
           </button>
           <div class="paleta__vyzva" data-udaj="vyzva-odkazu" data-jen-kampan hidden>
@@ -341,14 +365,14 @@
             </div>
           </div>
 
-          <h2 data-text="paleta.zadani"></h2>
-          <p class="paleta__zadani" data-udaj="zadani"></p>
-          <div class="paleta__odkazy">
+          <h2 data-text="paleta.zadani" data-vedlejsi></h2>
+          <p class="paleta__zadani" data-udaj="zadani" data-vedlejsi></p>
+          <div class="paleta__odkazy" data-vedlejsi>
             <button type="button" class="paleta__odkaz" data-akce="zadani-cele" data-text="paleta.zadani.cele"></button>
             <button type="button" class="paleta__odkaz" data-akce="pojmy" data-text="pojmy.odkaz"></button>
           </div>
-          <ul class="medaile" data-udaj="podminky" data-jen-kampan></ul>
-          <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis">
+          <ul class="medaile" data-udaj="podminky" data-jen-kampan data-vedlejsi></ul>
+          <button type="button" class="paleta__tlacitko paleta__tlacitko--vazba" data-akce="vazba" data-popis="vazba.tlacitko.popis" data-vedlejsi="siroke">
             <span data-text="vazba.tlacitko"></span>
           </button>
           <!-- Upozornění o záznamu hraní je až pod nástroji: hráč ho uvidí, ale nezabírá mu místo na stavbu. -->

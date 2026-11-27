@@ -9,6 +9,7 @@ import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -68,6 +69,7 @@ async function pripravZkousku(id: string, sirka: number, vyska: number, hustota:
   await s.locator(PLATNO).waitFor();
   const zavrit = s.locator('#okno-zadani[open] button[value="zavrit"]');
   if ((await zavrit.count()) > 0) await zavrit.click();
+  await rozbalPaletu(s);
   await s.locator('[data-akce="import"]').click();
   await s.locator("#okno-obsah").fill(navrhNaText(RESENI[id]!.mistrovska));
   await s.locator('[data-akce="okno-nacist"]').click();

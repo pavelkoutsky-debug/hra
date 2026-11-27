@@ -83,6 +83,54 @@ body {
   touch-action: pan-x pan-y;
 }
 
+/*
+ * Malá tlačítka lišty s ikonou (zvuk, celý výkres). Ikona je vložené SVG v barvě textu; stav
+ * zvuku ukazuje reproduktor: dvě vlny nahlas, jedna potichu, přeškrtnutý vypnutý nebo nedostupný.
+ */
+.tlacitko--ikona {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding-inline: 5px;
+}
+
+.ikona {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ikona__plna {
+  fill: currentColor;
+}
+
+.ikona--zvuk .ikona__vypnuto,
+body[data-zvuk="potichu"] .ikona--zvuk .ikona__vlna--2,
+body[data-zvuk="vypnuto"] .ikona--zvuk .ikona__vlna,
+[data-akce="zvuk"]:disabled .ikona__vlna {
+  display: none;
+}
+
+body[data-zvuk="vypnuto"] .ikona--zvuk .ikona__vypnuto,
+[data-akce="zvuk"]:disabled .ikona__vypnuto {
+  display: inline;
+}
+
+/* Oddálit, přiblížit a celý výkres: jedna skupina tlačítek, která se dotýkají. */
+.lista__zoom {
+  display: flex;
+  flex: none;
+}
+
+.lista__zoom .tlacitko + .tlacitko {
+  margin-left: -1px;
+}
+
 /* Tlačítka, která jsou v liště jen na telefonu. */
 .lista__telefon {
   display: none;
@@ -892,6 +940,34 @@ body[data-rezim="zkouska"] .paleta__uvod [data-akce="dilna"] {
   grid-template-columns: auto 1fr;
   gap: 2px 8px;
   padding-block: 5px;
+}
+
+/*
+ * První kapitola: paleta ukazuje jen základ, zbytek (`data-vedlejsi`) je pod tlačítkem „Více“
+ * (`.paleta[data-vice]`: zavreno, otevreno). „Napiš nám“ (`data-vedlejsi="siroke"`) se schová
+ * jen v okně, kde je i v liště.
+ */
+.paleta__vice {
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.paleta__vice-znak::before {
+  content: "▸";
+}
+
+.paleta__vice[aria-expanded="true"] .paleta__vice-znak::before {
+  content: "▾";
+}
+
+.paleta[data-vice="zavreno"] [data-vedlejsi]:not([data-vedlejsi="siroke"]) {
+  display: none !important;
+}
+
+@media (min-width: 1181px) {
+  .paleta[data-vice="zavreno"] [data-vedlejsi="siroke"] {
+    display: none !important;
+  }
 }
 
 /* Akce, která patří k prvkům (dopnutí lan): stojí hned pod paletou. */
@@ -3524,18 +3600,24 @@ body[data-cekani="8"] .legenda__prepinac[data-akce="hlucho"]::after {
     display: inline-block;
   }
 
-  /* Druhý řádek lišty se musí vejít na šířku telefonu: užší tlačítka a „Celý výkres“ zkráceně. */
+  /* Druhý řádek lišty se musí vejít na šířku telefonu: užší tlačítka. */
   #obrazovka-uroven .lista .tlacitko {
     padding-inline: 9px;
   }
 
-  #obrazovka-uroven [data-akce="cely-vykres"] {
-    font-size: 0;
+  /* Paleta první kapitoly: prvky jsou nahoře, ať je prst má hned pod výkresem. */
+  .paleta[data-vice] > .paleta__nadpis-prvku,
+  .paleta[data-vice] > .paleta__prvky,
+  .paleta[data-vice] > [data-akce="dopnout"] {
+    order: -1;
   }
 
-  #obrazovka-uroven [data-akce="cely-vykres"]::before {
-    content: attr(data-kratce);
-    font-size: 13px;
+  .paleta[data-vice] > .paleta__nadpis-prvku {
+    margin-top: 0;
+  }
+
+  .paleta[data-vice] > .paleta__uvod {
+    margin-top: 6px;
   }
 
   /*

@@ -1111,6 +1111,7 @@ describe("souhrn deníku", () => {
       posunu: 0,
       posunuVic: 0,
       posunuKlavesou: 0,
+      hracuSVice: 0,
       hracuSOdmitnutim: 0,
       zkousekOdmitnuto: 0,
       zkousekNadRozpocet: 0,
@@ -1138,6 +1139,29 @@ describe("souhrn deníku", () => {
     const stary = JSON.parse(JSON.stringify(vytahDeniku([davky[1]!]))) as ReturnType<typeof vytahDeniku>;
     for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.posunu, delete z.posunuVic, delete z.posunuKlavesou;
     expect(souhrnZVytahu(slucVytahy([vytahDeniku([davky[0]!]), stary])).urovne[0]).toMatchObject({ hracuSPosunem: 1, posunu: 3, posunuVic: 2, posunuKlavesou: 1 });
+  });
+
+  it("počítá hráče, kteří si v paletě rozbalili „Více“; rozbalení hrou samou a nesmysly ne", () => {
+    const anna = hlavicka("a1a1a1a1a1a1a1a1", "1111111111111111");
+    const bob = hlavicka("b2b2b2b2b2b2b2b2", "2222222222222222");
+    const cyril = hlavicka("c3c3c3c3c3c3c3c3", "3333333333333333");
+    const vice = (t: number, data: Record<string, HodnotaDeniku>): UdalostDeniku => u(t, "paleta.vice", "1-01", data);
+    const davky = [
+      // Anna si „Více“ otevřela, zavřela a znovu otevřela: jeden hráč.
+      davka([u(0, "uroven.otevrena", "1-01"), vice(5, { otevreno: true }), vice(9, { otevreno: false }), vice(12, { otevreno: true })], 0, anna),
+      // Bobovi ho rozbalila hra sama (okno žebříčku) a pak ho zavřel.
+      davka([u(0, "uroven.otevrena", "1-01"), vice(5, { otevreno: true, samo: true }), vice(7, { otevreno: false })], 0, bob),
+      // Cyril poslal nesmysl.
+      davka([u(0, "uroven.otevrena", "1-01"), vice(5, { otevreno: "ano" }), vice(6, { otevreno: 1 })], 0, cyril),
+    ];
+    expect(souhrnDeniku(davky).urovne[0]).toMatchObject({ hracu: 3, hracuSVice: 1 });
+    // Výtahy jdou sloučit (Anna otevřela „Více“ v druhé půlce) a starší výtah bez pole nic nerozbije.
+    const pul = [vytahDeniku([davka(davky[0]!.udalosti.slice(0, 1), 0, anna), davky[1]!]), vytahDeniku([davka(davky[0]!.udalosti.slice(1), 1, anna)])];
+    expect(souhrnZVytahu(slucVytahy(pul)).urovne[0]).toMatchObject({ hracu: 2, hracuSVice: 1 });
+    const stary = JSON.parse(JSON.stringify(pul[0]!)) as ReturnType<typeof vytahDeniku>;
+    for (const hraci of Object.values(stary.urovne)) for (const z of Object.values(hraci)) delete z.vice;
+    expect(souhrnZVytahu(slucVytahy([stary, pul[1]!])).urovne[0]).toMatchObject({ hracu: 2, hracuSVice: 1 });
+    expect(souhrnZVytahu(stary).urovne[0]).toMatchObject({ hracuSVice: 0 });
   });
 
   it("počítá zkoušky, které hra nepustila, a z nich ty kvůli rozpočtu; pokusy ne", () => {

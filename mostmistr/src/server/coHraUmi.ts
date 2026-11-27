@@ -25,6 +25,7 @@ export const CO_HRA_UMI: readonly string[] = [
   "Další režimy: pískoviště s vlastním údolím, provozem a dílnou uložených prací, Havarijní komise (opravit cizí spadlý most nejvýš třemi změnami), závěrečný list s mosty hráče.",
   "Sdílení: odkaz na most, obrázek mostu ke stažení, výzva kamarádovi na levnější most, odkaz na scénář z pískoviště.",
   "Ovládání a jazyk: myš a klávesnice, dotyk (jeden prst kreslí, dva posouvají a zvětšují), rozložení pro telefon, čeština a angličtina, zvuk ze syntezátoru se třemi stupni hlasitosti.",
+  "Paleta v první kapitole (1-01 až 1-05) ukazuje jen Zadání, Nápovědu, základní nástroje a prvky; ostatní (Zrcadlit, Vše pryč, Do zlomu, Export, Import, Sdílet, Žebříček, výňatek zadání, slovníček, medaile) je pod tlačítkem Více, jehož stav si hra pamatuje. Horní lišta má zvuk a zoom jako malé ikony.",
   "Zpětná vazba a soukromí: okno Napiš nám (druh, text, hodnocení, volitelně e-mail a přiložený most), okno Soukromí a kontakt s vypínačem záznamu hraní.",
 ];
 
@@ -48,6 +49,8 @@ export const VYSVETLIVKY_PODKLADU: Readonly<Record<string, string>> = {
     "Rada po druhém stejném nezdaru za sebou (hra ji ukáže sama v pruhu výsledku) a kolikrát která zazněla. hracuSRadou: kolik hráčů ji vidělo; hracuSRadouPrusli: kolik z nich potom zkouškou prošlo (počítá se první průchod po radě, i u hráče, který úroveň prošel už dřív a radu dostal při zlevňování); zkousekPoRade: medián zkoušek od rady do toho průchodu; hracuNapovedaZRady: kolik z nich z rady otevřelo nápovědu.",
   "souhrn.urovne[].posunu":
     "Posuny styčníků nástrojem Výběr a posun nebo šipkami. hracuSPosunem: kolik hráčů posun použilo; posunu: kolik posunů bylo; posunuVic: z toho víc styčníků naráz; posunuKlavesou: z toho šipkou.",
+  "souhrn.urovne[].hracuSVice":
+    "Kolik hráčů úrovně si v paletě rozbalilo „Více“. V první kapitole (1-01 až 1-05) paleta ukazuje jen Zadání, Nápovědu, nástroje Výběr a posun, Smazat, Zpět, Znovu a prvky; Zrcadlit, Vše pryč, Do zlomu, Export, Import, Sdílet, Žebříček, výňatek zadání, slovníček a medaile jsou pod tlačítkem Více. Rozbalení si hra pamatuje, takže hráč, který ho otevřel v 1-01, ho v dalších úrovních kapitoly má otevřené a znovu se nepočítá. Od druhé kapitoly je paleta celá a pole je tam 0.",
   "souhrn.urovne[].zkousekOdmitnuto":
     "Zkoušky, které hra nepustila, protože most porušoval pravidla úrovně (pokusy se nepočítají). zkousekNadRozpocet: z toho proto, že byl dražší než rozpočet; hracuSOdmitnutim: kolika hráčů se to týkalo. Hodně odmítnutí kvůli rozpočtu v první úrovni znamená, že nováčci staví z drahého prvku.",
   "souhrn.urovne[].hracuNadRozpoctem":

@@ -7,6 +7,7 @@ import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Kreslic } from "../../src/data/kreslic";
 import { navrhNaText } from "../../src/data/navrh";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -53,6 +54,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(obsah: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(obsah);
   await akce("okno-nacist").click();

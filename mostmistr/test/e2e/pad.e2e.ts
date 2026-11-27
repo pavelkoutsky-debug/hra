@@ -8,6 +8,7 @@ import { navrhNaText } from "../../src/data/navrh";
 import { Kreslic } from "../../src/zkouska/regrese";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -44,6 +45,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -480,6 +482,7 @@ describe("pruh výsledku a razítko", () => {
   it("zkouška do zlomu razítko ani medaile nedostane", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["1-01"]!.pruchod));
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await dopocitej();
     await naKonec();
@@ -525,6 +528,7 @@ describe("drobné chyby z recenze", () => {
 
   it("zkouška do zlomu se počítá i po návratu do úrovně, když most dřív prošel", async () => {
     await nactiZnovu();
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await dopocitej();
     await naKonec();
@@ -535,6 +539,7 @@ describe("drobné chyby z recenze", () => {
 
   it("chyba importu neukazuje vnitřní názvy", async () => {
     await akce("upravit").click();
+    await rozbalPaletu(stranka);
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill("tohle není most");
     await akce("okno-nacist").click();
@@ -546,6 +551,7 @@ describe("drobné chyby z recenze", () => {
 
   it("tah mostovky, který nejde rozdělit na stejné díly, se rozdělí na co nejmíň dílů", async () => {
     await otevri("1-01");
+    await rozbalPaletu(stranka);
     await akce("smazat-vse").click();
     expect(await udaj("prutu")).toBe("0");
     const p = await pohled();
@@ -592,6 +598,7 @@ describe("úklid vývojářských položek", () => {
       await okno.goto(`${adresa}?uroven=1-01`);
       await okno.locator(PLATNO).waitFor();
       await okno.locator('#okno-zadani[open] button[value="zavrit"]').click();
+      await rozbalPaletu(okno);
       const upozorneni = (await okno.locator('.paleta [data-udaj="zaznam-upozorneni"]').boundingBox())!;
       const nastroje = (await okno.locator('.paleta [data-akce="import"]').boundingBox())!;
       expect(upozorneni.y).toBeGreaterThan(nastroje.y);
@@ -614,6 +621,7 @@ describe("pád mostu na telefonu", () => {
       await s.goto(`${adresa}?uroven=1-01`);
       await s.locator(PLATNO).waitFor();
       await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+      await rozbalPaletu(s);
       await s.evaluate((text) => {
         (document.querySelector('[data-akce="import"]') as HTMLElement).click();
         (document.querySelector("#okno-obsah") as HTMLTextAreaElement).value = text;

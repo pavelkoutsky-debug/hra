@@ -9,6 +9,7 @@ import { HLAVICKY_WEBU, POLITIKA_OBSAHU } from "../../hlavicky";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -141,6 +142,7 @@ describe("stará záložka po novém nasazení", () => {
     await expect.poll(() => s.locator('[data-udaj="fyzika"]').innerText(), { timeout: 10_000 }).toMatch(/^v\d+$/);
     const zavrit = s.locator('#okno-zadani[open] button[value="zavrit"]');
     if ((await zavrit.count()) > 0) await zavrit.click();
+    await rozbalPaletu(s);
     await s.locator('[data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').click();
@@ -176,6 +178,7 @@ describe("stará záložka po novém nasazení", () => {
     await expect.poll(() => s.locator('[data-udaj="fyzika"]').innerText(), { timeout: 10_000 }).toMatch(/^v\d+$/);
     const zavrit = s.locator('#okno-zadani[open] button[value="zavrit"]');
     if ((await zavrit.count()) > 0) await zavrit.click();
+    await rozbalPaletu(s);
     await s.locator('[data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').click();
