@@ -8,6 +8,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 
@@ -416,14 +417,17 @@ describe("zkouška a vyhodnocení", () => {
   });
 
   it("export a import mostu dá tentýž most a tentýž otisk", async () => {
+    await rozbalPaletu(stranka);
     await akce("export").click();
     const text = await stranka.locator("#okno-obsah").inputValue();
     expect(text).toContain('"uroven":"1-01"');
     await stranka.locator("#okno button[value=zavrit]").click();
 
+    await rozbalPaletu(stranka);
     await akce("smazat-vse").click();
     expect(await pocetPrutu()).toBe(0);
 
+    await rozbalPaletu(stranka);
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill("tohle není most");
     await akce("okno-nacist").click();
@@ -450,6 +454,7 @@ describe("zkouška a vyhodnocení", () => {
 describe("další úrovně kapitoly", () => {
   it("auto i dodávka přejedou referenční most úrovně 1-03", async () => {
     await otevriUroven("1-03");
+    await rozbalPaletu(stranka);
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-03"]!.pruchod));
     await akce("okno-nacist").click();
@@ -472,6 +477,7 @@ describe("další úrovně kapitoly", () => {
 
   it("dvě auta za sebou přejedou referenční most přes hluboké údolí", async () => {
     await otevriUroven("1-04");
+    await rozbalPaletu(stranka);
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(RESENI["1-04"]!.pruchod));
     await akce("okno-nacist").click();
@@ -490,6 +496,7 @@ describe("další úrovně kapitoly", () => {
   it("most, který spadnout má, spadne i s autem a výsledek vypíše porušení", async () => {
     await otevriUroven("1-03");
     const pad = RESENI["1-03"]!.pady[0]!;
+    await rozbalPaletu(stranka);
     await akce("import").click();
     await stranka.locator("#okno-obsah").fill(navrhNaText(pad.navrh));
     await akce("okno-nacist").click();

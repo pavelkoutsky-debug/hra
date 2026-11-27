@@ -15,6 +15,7 @@ import { PRIPADY } from "../../urovne/havarie/index";
 import { nactiKampan } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -55,6 +56,7 @@ function postupSKapitolami(): string {
 }
 
 async function nactiMost(s: Page, navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(s);
   await akce(s, "import").click();
   await s.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce(s, "okno-nacist").click();

@@ -6,6 +6,7 @@ import { prijimejDenik } from "./server-deniku";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -31,6 +32,7 @@ async function otevri(id: string, zavritZadani = true): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -110,6 +112,8 @@ describe("výzvy o efektivitu", () => {
     const medaile = (await stranka.locator('[data-udaj="zadani-medaile"]').boundingBox())!;
     expect(medaile.y + medaile.height).toBeLessThan(okno.y + okno.height);
     await stranka.locator('#okno-zadani button[value="zavrit"]').click();
+    // V první kapitole je zkouška do zlomu pod „Více“.
+    await rozbalPaletu(stranka);
     const tlacitko = akce("zlom");
     expect(await tlacitko.isVisible()).toBe(true);
     expect(await tlacitko.innerText()).toContain("Do zlomu");
@@ -122,6 +126,7 @@ describe("výzvy o efektivitu", () => {
 
   it("zkoušku do zlomu hra nepustí, dokud mostovka nevede od břehu k břehu", async () => {
     // Prázdný výkres: tlačítkem i klávesou D.
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("hlaseni")).toBe("Zkouška do zlomu zatěžuje mostovku a na trase mezi 0 a 8 m žádná neleží. Dostav most od břehu k břehu.");
@@ -133,6 +138,7 @@ describe("výzvy o efektivitu", () => {
     most.pruty = most.pruty.filter((p) => p.prvek !== "mostovka-drevo");
     await nactiMost(JSON.stringify(most));
     expect(Number(await telo("pruty"))).toBeGreaterThan(0);
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("hlaseni")).toContain("Dostav most od břehu k břehu");
@@ -164,6 +170,7 @@ describe("výzvy o efektivitu", () => {
 
   it("zkouška do zlomu přikládá zátěž, dokud most nepovolí, a řekne, kolik unesl na korunu", async () => {
     await akce("upravit").click();
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await pockejNaZkousku();
     await nastavCas(6);
@@ -210,6 +217,7 @@ describe("výzvy o efektivitu", () => {
   it("slabší most rekord nezhorší a přehled kampaně ukazuje součet stupňů", async () => {
     await akce("upravit").click();
     await nactiMost(navrhNaText(RESENI["1-01"]!.rozpocet));
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     await pockejNaZkousku();
     expect(await naKonec()).toBe("ZKOUŠKA DO ZLOMU");
@@ -254,6 +262,7 @@ describe("výzvy o efektivitu", () => {
     expect(await telo("pruty")).toBe(String(drahy.pruty.length));
     expect(await stranka.locator(".rozpocet").getAttribute("data-stav")).toBe("nad");
     // Odmítnutí je kvůli rozpočtu, ne kvůli jiné chybě návrhu: tlačítkem i klávesou D.
+    await rozbalPaletu(stranka);
     await akce("zlom").click();
     expect(await telo("rezim")).toBe("stavba");
     expect(await udaj("hlaseni")).toBe("Most je o 10 454 Kč dražší než rozpočet. Před zkouškou ho zlevni.");

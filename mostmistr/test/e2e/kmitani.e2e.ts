@@ -8,6 +8,7 @@ import { Kreslic } from "../../src/data/kreslic";
 import { navrhNaText, type NavrhMostu } from "../../src/data/navrh";
 import { RESENI } from "../../urovne/reseni";
 import { prijimejDenik } from "./server-deniku";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -49,6 +50,7 @@ async function otevri(id: string): Promise<void> {
 }
 
 async function nactiMost(navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce("okno-nacist").click();
@@ -530,6 +532,7 @@ describe("nápověda po krocích", () => {
 
 /** Načte most v úrovni bez osy frekvencí (není na co čekat). */
 async function nactiMostBezOsy(navrh: NavrhMostu): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(navrhNaText(navrh));
   await akce("okno-nacist").click();
@@ -608,6 +611,7 @@ describe("čitelnost stavby", () => {
       // Výňatek ze zadání je krátký a celé zadání je na jedno kliknutí.
       const vynatek = (await s.locator('[data-udaj="zadani"]').boundingBox())!;
       expect(vynatek.height).toBeLessThan(100);
+      await rozbalPaletu(s);
       await s.locator('[data-akce="zadani-cele"]').click();
       await s.locator("#okno-zadani").waitFor({ state: "visible" });
       await s.locator('#okno-zadani[open] button[value="zavrit"]').click();

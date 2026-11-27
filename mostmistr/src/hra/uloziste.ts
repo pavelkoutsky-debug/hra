@@ -45,6 +45,8 @@ export const KLIC_TIPU_POSUNU = "mostmistr.tip-posun";
 export const KLIC_ZVETSENI = "mostmistr.zvetseni";
 /** Zrychlovat při přehrávání zkoušky úseky, kdy se nic neděje? */
 export const KLIC_CEKANI = "mostmistr.cekani";
+/** Má hráč v první kapitole rozbalené „Více“ v paletě (vedlejší nástroje, zadání, slovníček)? */
+export const KLIC_PALETA_VICE = "mostmistr.paleta-vice";
 /** Pustil už hráč v první úrovni kampaně zkoušku? Do té doby se mu tlačítko Zkouška zvýrazní. */
 export const KLIC_PRVNI_ZKOUSKY = "mostmistr.prvni-zkouska";
 /** Otisky mostů, které úrovní prošly: zkouška do zlomu se do výzvy počítá jen jim. */
@@ -266,6 +268,19 @@ export class Uloziste {
 
   set zrychleniCekani(zapnuto: boolean) {
     this.#pis(KLIC_CEKANI, zapnuto ? "1" : "0");
+  }
+
+  /**
+   * Má hráč v paletě první kapitoly rozbalené „Více“? Paleta tam ukazuje jen základ (nástroje
+   * a prvky); kdo si „Více“ otevře, má ho otevřené i v dalších úrovních kapitoly. Dokud hráč
+   * nezvolí jinak, ne.
+   */
+  get paletaVice(): boolean {
+    return this.#cti(KLIC_PALETA_VICE) === "1";
+  }
+
+  set paletaVice(otevreno: boolean) {
+    this.#pis(KLIC_PALETA_VICE, otevreno ? "1" : "0");
   }
 
   /** Kreslit pohyb celého mostu při zkoušce zvětšeně? Dokud hráč nezvolí jinak, ano. */

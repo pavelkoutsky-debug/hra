@@ -8,10 +8,12 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { preview, type PreviewServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
+import { zakodujMost } from "../../src/data/sdileni";
 import type { DavkaDeniku, UdalostDeniku } from "../../src/denik/udalosti";
 import { prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../../src/server/obsluha";
 import { SkladVPameti } from "../../src/server/sklad";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -197,6 +199,7 @@ describe("krok nahoře v přehledu", () => {
     expect((await start(s).innerText()).replace(/[  ]/g, " ")).toBe("Pokračovat: 1-01 Lávka přes potok ▸");
     // Projitá 1-01: pokračuje se v 1-02.
     await otevriUroven(s, "1-01");
+    await rozbalPaletu(s);
     await s.locator('[data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-01"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').click();
@@ -219,7 +222,11 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await otevriUroven(s, "1-01");
     const tlacitko = s.locator('[data-akce="zkouska"]');
     const bublina = s.locator('[data-udaj="vyzva-zkousky"]');
+    const radaStavby = s.locator('[data-udaj="rada-stavby"]');
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
+    // Dokud vede průvodce (duch dalšího dílu mostovky), řádek klávesových rad pod výkresem mlčí.
+    expect(await telo(s, "vedeni")).not.toBeNull();
+    expect(await radaStavby.isVisible()).toBe(false);
     // Zkouška s mezerou v mostovce zvýraznění nemá a deník dostane kód příčiny.
     await tahni(s, [0, 0], [4, 0]);
     await s.waitForTimeout(200);
@@ -230,6 +237,8 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     expect(await tlacitko.getAttribute("class")).toContain("tlacitko--vyzva");
     expect(await bublina.isVisible()).toBe(true);
     expect(await bublina.innerText()).toContain("Teď most vyzkoušej");
+    // Ani bublina u tlačítka Zkouška nemá vedle sebe řádek klávesových rad.
+    expect(await radaStavby.isVisible()).toBe(false);
     // Bublina je pod tlačítkem a míří na něj.
     const t = (await tlacitko.boundingBox())!;
     const b = (await bublina.boundingBox())!;
@@ -294,6 +303,8 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     await s.locator('[data-akce="upravit"]').click();
     await s.waitForTimeout(200);
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
+    // Průvodce skončil: řádek rad je zpátky.
+    expect(await radaStavby.isVisible()).toBe(true);
     // Po první zkoušce, která neprošla, hra řekne, co dál a čím: mostovku podepřít lehkým trámem.
     expect(await s.locator('[data-udaj="hlaseni"]').innerText()).toBe(
       "Mostovka sama neunese ani sebe: její styčníky mezi podporami musí něco držet, třeba trojúhelník z prutů nad ní. V ruce máš prvek „Lehký trám“, je levnější než mostovka; ta patří jen na cestu.",
@@ -330,6 +341,7 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     expect(await telo(s, "pricina")).toMatch(/slož/i);
     expect((await pockejNa(hrac, "zkouska.konec")).data).toMatchObject({ pruchod: false, pricina: "slozeni", mezera: true });
     await otevriUroven(s, "1-02");
+    await rozbalPaletu(s);
     await s.locator('[data-akce="import"]').click();
     await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-02"]!.pruchod));
     await s.locator('[data-akce="okno-nacist"]').click();
@@ -337,4 +349,126 @@ describe("zvýrazněná zkouška v první úrovni", () => {
     expect(await telo(s, "vyzva-zkousky")).toBeNull();
     await kontext.close();
   }, 180_000);
+});
+
+describe("paleta první kapitoly", () => {
+  /** Nástroje a části palety, které jsou v první kapitole pod „Více“. */
+  const VEDLEJSI = ['[data-akce="zrcadlit"]', '[data-akce="smazat-vse"]', '[data-akce="zlom"]', '[data-akce="export"]', '[data-akce="import"]',
+    '[data-akce="sdilet"]', '[data-akce="zebricek"]', '[data-udaj="zadani"]', '[data-akce="zadani-cele"]', '[data-akce="pojmy"]', '[data-udaj="podminky"]'];
+  const ZAKLAD = ['[data-akce="zadani"]', '[data-akce="napoveda"]', '[data-akce="vyber"]', '[data-akce="smazat"]', '[data-akce="zpet"]', '[data-akce="znovu"]',
+    '[data-prvek="mostovka-drevo"]', '[data-prvek="drevo-lehke"]'];
+  const vPalete = (s: Page, volic: string) => s.locator(`#obrazovka-uroven .paleta ${volic}`);
+  const vice = (s: Page) => s.locator('#obrazovka-uroven [data-akce="paleta-vice"]');
+
+  it("1-01 ukazuje základ, Více zbytek a pamatuje si to i v 1-02 a po načtení; 2-01 má paletu celou; zkratky jdou i se zavřeným Více", async () => {
+    const { kontext, s } = await novyKontext();
+    await otevriUroven(s, "1-01");
+    expect(await vice(s).isVisible()).toBe(true);
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("false");
+    for (const volic of ZAKLAD) expect(await vPalete(s, volic).isVisible(), volic).toBe(true);
+    for (const volic of VEDLEJSI) expect(await vPalete(s, volic).isVisible(), volic).toBe(false);
+    // Na prázdné 1-01 je na obrazovce úrovně nejvýš 16 tlačítek a odkazů (bez upozornění na záznam hraní).
+    const tlacitek = await s.evaluate(
+      () =>
+        [...document.querySelectorAll("#obrazovka-uroven button, #obrazovka-uroven a")].filter((e) => {
+          const o = e.getBoundingClientRect();
+          return o.width > 0 && o.height > 0 && e.closest('[data-udaj="zaznam-upozorneni"]') === null;
+        }).length,
+    );
+    expect(tlacitek).toBeLessThanOrEqual(16);
+    await s.screenshot({ path: `${SLOZKA}/paleta-1-01-zavreno.png` });
+
+    // Zkratky schovaných nástrojů fungují i se zavřeným „Více“: D pustí zkoušku do zlomu
+    // (bez mostovky jen poradí, co chybí).
+    await s.locator(PLATNO).focus();
+    await s.keyboard.press("d");
+    await expect.poll(() => s.locator('[data-udaj="hlaseni"]').innerText()).toContain("Zkouška do zlomu zatěžuje mostovku");
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("false");
+
+    const hrac = await cisloHrace(s);
+    await vice(s).click();
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("true");
+    for (const volic of VEDLEJSI) expect(await vPalete(s, volic).isVisible(), volic).toBe(true);
+    // Zrcadlit a Vše pryč jsou pod „Více“, ne mezi základními nástroji nad prvky.
+    const tlacitkoVice = (await vice(s).boundingBox())!;
+    expect((await vPalete(s, '[data-akce="zrcadlit"]').boundingBox())!.y).toBeGreaterThan(tlacitkoVice.y);
+    expect((await vPalete(s, '[data-akce="smazat-vse"]').boundingBox())!.y).toBeGreaterThan(tlacitkoVice.y);
+    expect((await pockejNa(hrac, "paleta.vice")).data).toEqual({ otevreno: true });
+    await s.screenshot({ path: `${SLOZKA}/paleta-1-01-otevreno.png` });
+
+    // Rozbalené „Více“ přežije přechod do další úrovně kapitoly i načtení stránky.
+    await otevriUroven(s, "1-02");
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("true");
+    expect(await vPalete(s, '[data-akce="import"]').isVisible()).toBe(true);
+    await s.reload();
+    await s.locator(PLATNO).waitFor();
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').click();
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("true");
+    expect(await vPalete(s, '[data-akce="zrcadlit"]').isVisible()).toBe(true);
+
+    // Sbalit: Zkratka M zrcadlí most i se zavřeným „Více“ (krok jde vzít zpět).
+    await vPalete(s, '[data-akce="import"]').click();
+    await s.locator("#okno-obsah").fill(navrhNaText(RESENI["1-02"]!.pruchod));
+    await s.locator('[data-akce="okno-nacist"]').click();
+    await vice(s).click();
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("false");
+    expect((await pockejNa(hrac, "paleta.vice", (u) => u.data?.otevreno === false)).data).toEqual({ otevreno: false });
+    expect(await vPalete(s, '[data-akce="zrcadlit"]').isVisible()).toBe(false);
+    const pred = await s.evaluate(() => localStorage.getItem("mostmistr.ulozeni"));
+    await s.locator(PLATNO).focus();
+    await s.keyboard.press("m");
+    await expect.poll(() => s.evaluate(() => localStorage.getItem("mostmistr.ulozeni"))).not.toBe(pred);
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("false");
+
+    // Od druhé kapitoly tlačítko „Více“ není a paleta je celá, i když si ho hráč v první kapitole zavřel.
+    await otevriUroven(s, "2-01");
+    expect(await vice(s).isVisible()).toBe(false);
+    for (const volic of ['[data-akce="zrcadlit"]', '[data-akce="smazat-vse"]', '[data-akce="zlom"]', '[data-akce="export"]', '[data-akce="import"]', '[data-akce="sdilet"]', '[data-akce="pojmy"]'])
+      expect(await vPalete(s, volic).isVisible(), volic).toBe(true);
+    // Zrcadlit stojí mezi nástroji za Výběrem jako dřív.
+    expect(await s.locator('#obrazovka-uroven .paleta__nastroje [data-akce="vyber"] + [data-akce="zrcadlit"]').count()).toBe(1);
+    await s.screenshot({ path: `${SLOZKA}/paleta-2-01.png` });
+    await kontext.close();
+  }, 180_000);
+
+  it("pískoviště a cizí most z odkazu mají paletu celou", async () => {
+    const { kontext, s } = await novyKontext();
+    await s.goto(`${adresa}?sandbox`);
+    await s.locator(PLATNO).waitFor();
+    expect(await vice(s).isVisible()).toBe(false);
+    expect(await vPalete(s, '[data-akce="import"]').isVisible()).toBe(true);
+    // Host z odkazu dostává věty o Sdílení: paleta je celá i v 1-01.
+    await s.goto(`${adresa}?most=${zakodujMost(RESENI["1-01"]!.pruchod)}&uroven=1-01`);
+    await s.locator(PLATNO).waitFor();
+    expect(await telo(s, "host")).toBe("ano");
+    expect(await vice(s).isVisible()).toBe(false);
+    expect(await vPalete(s, '[data-akce="sdilet"]').isVisible()).toBe(true);
+    expect(await vPalete(s, '[data-akce="zrcadlit"]').isVisible()).toBe(true);
+    await kontext.close();
+  }, 120_000);
+
+  it("telefon: v 1-01 jsou prvky nahoře v paletě a nic nepřetéká, se zavřeným i otevřeným Více", async () => {
+    const { kontext, s } = await novyKontext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await s.goto(`${adresa}?uroven=1-01`);
+    await s.locator(PLATNO).waitFor();
+    await s.locator('#okno-zadani[open] button[value="zavrit"]').tap();
+    const mostovka = (await vPalete(s, '[data-prvek="mostovka-drevo"]').boundingBox())!;
+    const zadani = (await vPalete(s, '[data-akce="zadani"]').boundingBox())!;
+    // Prvky jsou nad Zadáním i nástroji a na obrazovce bez posouvání palety.
+    expect(mostovka.y).toBeLessThan(zadani.y);
+    expect(mostovka.y + mostovka.height).toBeLessThanOrEqual(844);
+    expect((await vPalete(s, '[data-prvek="drevo-lehke"]').boundingBox())!.y + 44).toBeLessThanOrEqual(844);
+    await nepretika(s);
+    const platno = (await s.locator(PLATNO).boundingBox())!;
+    expect(platno.height).toBeGreaterThanOrEqual(844 / 3);
+    await s.screenshot({ path: `${SLOZKA}/paleta-1-01-telefon.png` });
+    await vice(s).tap();
+    expect(await vice(s).getAttribute("aria-expanded")).toBe("true");
+    await vPalete(s, '[data-akce="import"]').scrollIntoViewIfNeeded();
+    expect(await vPalete(s, '[data-akce="import"]').isVisible()).toBe(true);
+    await nepretika(s);
+    expect((await s.locator(PLATNO).boundingBox())!.height).toBeCloseTo(platno.height, 0);
+    await s.screenshot({ path: `${SLOZKA}/paleta-1-01-telefon-vice.png` });
+    await kontext.close();
+  }, 120_000);
 });

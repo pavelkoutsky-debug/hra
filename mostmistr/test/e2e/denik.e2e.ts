@@ -14,6 +14,7 @@ import type { DavkaDeniku, EvidovanaVazba, UdalostDeniku } from "../../src/denik
 import { prijmiDenik, prijmiVazbu, type ProstrediServeru } from "../../src/server/obsluha";
 import { spravujVse } from "../../src/server/sprava";
 import { SkladVPameti } from "../../src/server/sklad";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -270,6 +271,8 @@ describe("zpětná vazba", () => {
     await stranka.screenshot({ path: `${SLOZKA}/a5-uzke-okno.png` });
     await stranka.setViewportSize({ width: 1280, height: 720 });
     expect(await stranka.locator('#obrazovka-uroven .lista [data-akce="vazba"]').isVisible()).toBe(true);
+    // V první kapitole je „Napiš nám“ z palety v širokém okně pod „Více“ (v liště je vidět).
+    await rozbalPaletu(stranka);
     await stranka.locator('#obrazovka-uroven .paleta [data-akce="vazba"]').click();
     const okno = stranka.locator("#okno-vazba");
     await okno.waitFor({ state: "visible" });
@@ -354,6 +357,7 @@ describe("hráč, který přijde rovnou do úrovně", () => {
       await expect.poll(() => zadosti.denik).toBe(predtim + 1);
       // Když si to hráč rozmyslí a záznam v okně „Napiš nám“ zase zapne, potvrzení o vypnutí
       // nesmí zůstat viset; po dalším vypnutí odejde zase jen zpráva o vypnutí.
+      await rozbalPaletu(okno);
       await okno.locator('#obrazovka-uroven .paleta [data-akce="vazba"]').click();
       await okno.locator('[data-akce="vazba-zaznam"]').click();
       expect(await okno.locator("body").getAttribute("data-denik")).toBe("zapnuto");
@@ -622,6 +626,7 @@ describe("zpětná vazba z pískoviště", () => {
           { id: 4, a: 5, b: 1, prvek: "ocel-tezka" },
         ],
       };
+      await rozbalPaletu(s);
       await s.locator('[data-akce="import"]').click();
       await s.locator("#okno-obsah").fill(JSON.stringify(most));
       await s.locator('[data-akce="okno-nacist"]').click();

@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { navrhNaText } from "../../src/data/navrh";
 import type { DavkaDeniku, UdalostDeniku } from "../../src/denik/udalosti";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 const PLATNO = "#obrazovka-uroven canvas.vykres__platno";
@@ -34,6 +35,7 @@ async function otevri(s: Page, dotaz: string): Promise<void> {
 }
 
 async function nactiMost(s: Page, text: string): Promise<void> {
+  await rozbalPaletu(s);
   await akce(s, "import").click();
   await s.locator("#okno-obsah").fill(text);
   await akce(s, "okno-nacist").click();

@@ -13,6 +13,7 @@ import { DRUHY_ZVUKU, Poslech, type ZdrojDeje, type Zvuk } from "../../src/zvuk/
 import type { MereniDeje } from "../../src/zvuk/mereni";
 import { nactiKampan, nasadaUrovne } from "../../urovne/index";
 import { RESENI } from "../../urovne/reseni";
+import { rozbalPaletu } from "./pomoc";
 
 const SLOZKA = process.env.MM_SNIMKY ?? new URL("./vystup/", import.meta.url).pathname;
 
@@ -50,6 +51,7 @@ async function zavriZadani(): Promise<void> {
 }
 
 async function nactiMost(text: string): Promise<void> {
+  await rozbalPaletu(stranka);
   await akce("import").click();
   await stranka.locator("#okno-obsah").fill(text);
   await akce("okno-nacist").click();
@@ -149,7 +151,13 @@ describe("zvuk ve hře", () => {
     // Zvuky jsou zatím pracovní, proto hra začíná potichu.
     expect(await telo("zvuk")).toBe("potichu");
     expect(await telo("zvuk-kontext")).toBe("zadny");
-    expect(await akce("zvuk").innerText()).toBe("Zvuk: potichu");
+    expect(await akce("zvuk").getAttribute("aria-label")).toBe("Zvuk: potichu");
+    // Tlačítko je ikona: stav je vidět i z ní (potichu jedna vlna) a bublina říká stav i ovládání.
+    expect(await akce("zvuk").innerText()).toBe("");
+    expect(await akce("zvuk").getAttribute("title")).toMatch(/^Zvuk: potichu\. Hlasitost zvuku/);
+    expect(await stranka.locator('[data-akce="zvuk"] .ikona__vlna--1').isVisible()).toBe(true);
+    expect(await stranka.locator('[data-akce="zvuk"] .ikona__vlna--2').isVisible()).toBe(false);
+    expect(await stranka.locator('[data-akce="zvuk"] .ikona__vypnuto').isVisible()).toBe(false);
     for (const druh of DRUHY_ZVUKU) expect(await zaznelo(druh)).toBe(0);
   });
 
@@ -197,8 +205,10 @@ describe("zvuk ve hře", () => {
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("z");
     expect(await telo("zvuk")).toBe("vypnuto");
-    expect(await akce("zvuk").innerText()).toBe("Zvuk: vypnutý");
+    expect(await akce("zvuk").getAttribute("aria-label")).toBe("Zvuk: vypnutý");
     expect(await akce("zvuk").getAttribute("aria-pressed")).toBe("false");
+    expect(await stranka.locator('[data-akce="zvuk"] .ikona__vypnuto').isVisible()).toBe(true);
+    expect(await stranka.locator('[data-akce="zvuk"] .ikona__vlna--1').isVisible()).toBe(false);
     await stranka.waitForTimeout(300);
 
     const pred = await spion();
@@ -214,7 +224,7 @@ describe("zvuk ve hře", () => {
     await stranka.reload();
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").waitFor();
     expect(await telo("zvuk")).toBe("vypnuto");
-    expect(await akce("zvuk").innerText()).toBe("Zvuk: vypnutý");
+    expect(await akce("zvuk").getAttribute("aria-label")).toBe("Zvuk: vypnutý");
     await prehrajZkousku();
     expect(await spion()).toEqual({ __kontextu: 0, __startu: 0 });
     expect(await zaznelo("zlom")).toBe(0);
@@ -237,7 +247,7 @@ describe("zvuk ve hře", () => {
     await stranka.locator("#obrazovka-uroven canvas.vykres__platno").focus();
     await stranka.keyboard.press("z");
     expect(await telo("zvuk")).toBe("potichu");
-    expect(await akce("zvuk").innerText()).toBe("Zvuk: potichu");
+    expect(await akce("zvuk").getAttribute("aria-label")).toBe("Zvuk: potichu");
     await expect.poll(() => zaznelo("vrzani")).toBe(vrznuti + 1);
   });
 
